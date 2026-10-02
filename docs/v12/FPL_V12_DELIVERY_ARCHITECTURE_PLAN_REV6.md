@@ -19,7 +19,7 @@ This document is the delivery/performance/validation authority for FPL Master V1
 7. **No legacy production execution:** V3/V4/V5 remain frozen and non-executable.
 8. **No performance shortcut may weaken correctness:** do not reduce MC paths, prune exact route search, loosen QA, bypass private-plane rules, or rewrite acceptance evidence to hit latency targets.
 9. **Report delivery and engineering closure are separate verdicts:** `REPORT GREEN` is determined only by the canonical visible-report production gate. P4/PERF-F/warm-cache/53-gate closure remains an engineering lane and may not suppress an otherwise safe `READY_FULL` or truthful `READY_DEGRADED` report.
-10. **Section freshness is resolved, never inferred:** every canonical DEEP section resolves in the fixed order `CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE`; CURRENT-BOUND requires exact lineage/dependency/applicability proof, PRIOR requires source-occurrence provenance, and the 23-section resolved set must pass anti-fabrication validation before rendering.
+10. **Section freshness is resolved, never inferred:** every canonical DEEP section resolves in the fixed order `CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE`; CURRENT-BOUND requires exact lineage/dependency/applicability proof, PRIOR requires source-occurrence provenance, and the legal conditional DEEP set (22 base sections or 23 when S16B is due) must pass anti-fabrication validation before rendering.
 11. **Serving is a stable client contract with last-known-good protection:** `serving_report.json` is the canonical ChatGPT/web/mobile interface; schema v2 exposes occurrence/report slot/GW, delivery/decision/facts/analytics state, freeze time, source freshness, per-section states, lineage and supersedes. Invalid presentation, section-count/order, provenance, report-production, or governed credential/privacy candidates fail before atomic `latest/` replacement and therefore cannot overwrite the prior valid serving snapshot.
 12. **Report-lane workflow success is independent of engineering closure:** Stage3/P4 evidence is always recorded truthfully but is non-blocking for human report delivery. A DEEP occurrence succeeds operationally when private REPORT PROD publication and the allowlisted public operational proof succeed; Stage3/P4/PERF-F remain separate engineering verdicts.
 
@@ -56,9 +56,9 @@ Privacy contract:
 
 | Slot | Visible report |
 |---|---|
-| 04:30 Asia/Jakarta | DEEP, 23 canonical sections |
-| 12:30 Asia/Jakarta | DEEP, 23 canonical sections |
-| 21:30 Asia/Jakarta | DEEP, 23 canonical sections |
+| 04:30 Asia/Jakarta | DEEP, 22 base sections; 23 only when once-per-completed-GW S16B is due |
+| 12:30 Asia/Jakarta | DEEP, exact 22 base sections; S16B absent |
+| 21:30 Asia/Jakarta | DEEP, exact 22 base sections; S16B absent |
 | 23:30 Europe/London | PRICE |
 
 PRICE is defined in **Europe/London local time**, not as a fixed WIB hour:
@@ -526,7 +526,7 @@ MCP access is read-only over the canonical bundle/digest unless a separately gov
 
 ## 15. Canonical human report contract
 
-The DEEP backbone remains exactly the existing 23-section contract:
+The DEEP backbone is an exact 22-section base with one conditional insertion. S16B appears only in the first eligible 04:30 Asia/Jakarta DEEP after a scoring GW is fully complete, post-match evidence is ready, and that GW has not already received S16B. That occurrence has exactly 23 sections; all other DEEP occurrences have exactly 22:
 
 1. DECISION / CURRENT STATUS  
 2. OUR15  
@@ -547,12 +547,12 @@ The DEEP backbone remains exactly the existing 23-section contract:
 15. EVIDENCE QUALITY  
 15B. ICON+ MINI-LEAGUE  
 16. ALL15 TACTICAL / PROBABILITY REVIEW  
-16B. POST-MATCH REVIEW GW1 → NOW  
+16B. POST-MATCH REVIEW *(conditional once per completed GW)*  
 17. SOURCE HEALTH / FRESHNESS / LINEAGE  
 18. ACTION BOARD  
 19. FINAL JUDGEMENT
 
-No new top-level sections are introduced by this delivery plan.
+No new top-level section identity is introduced by this delivery plan. S16B remains between S16 and S17 when due and is absent otherwise; S17/S18/S19 are never renumbered. POST_ALL_MATCH may prepare settlement/calibration evidence but does not emit a duplicate visible review.
 
 S08 is final captain/vice authority. S19 must not contradict S08.
 
@@ -588,7 +588,7 @@ FINAL PRODUCTION READY / CLOSED requires all mandatory hard gates below to be GR
 5. **LATENCY** — supported P6 warm classes meet ≤15 s T0→T1 without correctness shortcuts.
 6. **STABILITY** — Decision Surface Stability is calibrated and integrated only after replay-supported thresholds are frozen.
 7. **POLICY** — point-in-time no-lookahead policy replay passes its declared acceptance against frozen baselines.
-8. **REPORT** — canonical 23-section DEEP and other visible-mode contracts remain structurally and semantically valid.
+8. **REPORT** — canonical conditional 22/23-section DEEP and other visible-mode contracts remain structurally and semantically valid.
 9. **GOVERNANCE** — required CI/governance GREEN on exact latest main and no unresolved production blocker.
 
 Challenger workstreams, PWA and MCP must preserve the no-second-engine invariant.

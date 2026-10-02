@@ -50,7 +50,17 @@ concurrency:
 jobs:
   parse:
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.actor == github.repository_owner) ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (
+          github.actor == github.repository_owner ||
+          github.triggering_actor == github.repository_owner ||
+          (
+            github.actor == 'github-actions[bot]' &&
+            startsWith(inputs.request_id, 'fpl_master_orchestrator_')
+          )
+        )
+      ) ||
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&

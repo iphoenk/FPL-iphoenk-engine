@@ -153,13 +153,15 @@ def canonical_mode_contract(
             section_prefix="S",
             zero_pad=True,
         )
-        if s16b_due is not None:
-            rows = [
-                row
-                for row in rows
-                if str(row.get("section_id") or "").upper() != "S16B"
-                or bool(s16b_due)
-            ]
+        # S16B is conditional and therefore absent by default. A caller
+        # must explicitly prove lifecycle due=true to include it.
+        include_s16b = bool(s16b_due)
+        rows = [
+            row
+            for row in rows
+            if str(row.get("section_id") or "").upper() != "S16B"
+            or include_s16b
+        ]
         if mode == "FINAL":
             final_title, final_body = _canonical_subsection(text, "14I")
             lock_label = re.sub(r"^FINAL\s+[—-]\s*", "", final_title).strip().rstrip(".")

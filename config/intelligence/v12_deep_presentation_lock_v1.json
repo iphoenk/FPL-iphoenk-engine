@@ -1,0 +1,560 @@
+{
+  "schema": "fpl_master_v12_deep_presentation_lock.v1",
+  "reference_occurrence": "DEEP|2026-10-01T04:30:00+07:00",
+  "purpose": "Lock user-visible DEEP presentation only. Does not change canonical data, model, optimizer, MC, universe, or decisions.",
+  "header_order": [
+    "FPL MASTER V12 — DEEP REPORT",
+    "Planning GW",
+    "Logical report slot",
+    "Canonical run",
+    "Report status",
+    "Delivery",
+    "Private delivery",
+    "Presentation QA",
+    "Sections",
+    "MC",
+    "Routes",
+    "Universe",
+    "Selected action",
+    "Serving note"
+  ],
+  "global_rules": {
+    "human_analyst_style": true,
+    "generic_recursive_key_value_dump_forbidden": true,
+    "raw_python_or_json_repr_forbidden": true,
+    "raw_long_machine_enum_as_primary_wording_forbidden": true,
+    "internal_workflow_binding_fingerprint_plumbing_forbidden_in_main_body": true,
+    "preserve_canonical_numbers": true,
+    "no_recalculation_in_presentation": true,
+    "tables_must_use_exact_columns_and_order": true,
+    "extra_table_columns_forbidden": true,
+    "merged_unrelated_tables_forbidden": true,
+    "missing_supported_population_denominator_forbidden": true,
+    "percentage_without_count_denominator_forbidden_when_population_known": true,
+    "eo_can_exceed_100_percent": true
+  },
+  "section_order": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S06B",
+    "S07",
+    "S08",
+    "S09",
+    "S10",
+    "S11",
+    "S12",
+    "S13",
+    "S14",
+    "S14B",
+    "S15",
+    "S15B",
+    "S16",
+    "S16B",
+    "S17",
+    "S18",
+    "S19"
+  ],
+  "sections": {
+    "S01": {
+      "title": "DECISION / CURRENT STATUS",
+      "blocks": [
+        "Multi-axis decision",
+        "Primary decision",
+        "Reason",
+        "Current blockers preventing ACT"
+      ],
+      "tables": [
+        {
+          "name": "Multi-axis decision",
+          "columns": [
+            "Axis",
+            "Status",
+            "Current call"
+          ],
+          "row_labels": [
+            "Transfer",
+            "XI",
+            "Captain",
+            "Chip",
+            "Price",
+            "Personal authentication"
+          ]
+        }
+      ]
+    },
+    "S02": {
+      "title": "OUR15",
+      "prelude_fields": [
+        "Current15 authority",
+        "Snapshot",
+        "Squad completeness",
+        "Bank",
+        "FT",
+        "Sell-value authority"
+      ],
+      "tables": [
+        {
+          "name": "OUR15",
+          "columns": [
+            "Player",
+            "Pos",
+            "Opponent",
+            "Pstart",
+            "xMins",
+            "1GW xPts",
+            "3GW",
+            "5GW",
+            "Note"
+          ],
+          "rows_exact": 15
+        }
+      ]
+    },
+    "S03": {
+      "title": "TRUE DECISION DELTA",
+      "blocks": [
+        "Previous valid visible baseline",
+        "Verdict",
+        "Material unchanged/changed bullets"
+      ],
+      "tables": []
+    },
+    "S04": {
+      "title": "MATERIAL DEVELOPMENTS / CHANGES",
+      "blocks": [
+        "Post-match factual scan",
+        "Positive / breakout signals",
+        "Negative / regression signals",
+        "DefCon-related opportunity signals",
+        "Decision-authority note"
+      ],
+      "tables": []
+    },
+    "S05": {
+      "title": "FIXTURES / REST / CONDITIONS",
+      "blocks": [
+        "Status",
+        "Premier League fixture topology",
+        "Non-PL schedule evidence",
+        "Current topology",
+        "Classification",
+        "Decision-use note"
+      ],
+      "tables": []
+    },
+    "S06": {
+      "title": "FORMATION / XI / BENCH",
+      "blocks": [
+        "Selected formation",
+        "Starting XI grouped GK/DEF/MID/FWD",
+        "Bench",
+        "Bench GK",
+        "Projection",
+        "Formation frontier note"
+      ],
+      "tables": []
+    },
+    "S06B": {
+      "title": "XI BATTLE",
+      "blocks": [
+        "Key battle",
+        "Current winner",
+        "Battle classification",
+        "Primary alternative",
+        "Plain-language reason"
+      ],
+      "tables": [
+        {
+          "name": "Key battle",
+          "columns": [
+            "Player",
+            "Pstart",
+            "xMins",
+            "1GW xPts"
+          ],
+          "rows_min": 2
+        }
+      ]
+    },
+    "S07": {
+      "title": "LINEUP RISK / AUTOSUB LOGIC",
+      "blocks": [
+        "Primary lineup risks",
+        "Current lineup implication",
+        "Autosub order"
+      ],
+      "tables": []
+    },
+    "S08": {
+      "title": "CAPTAIN / VICE CAPTAIN",
+      "blocks": [
+        "State",
+        "Football captain frontier",
+        "Current football-optimal C/VC",
+        "P1.7 safe captain pool",
+        "Mini-league context note"
+      ],
+      "tables": [
+        {
+          "name": "Football captain frontier",
+          "columns": [
+            "Rank",
+            "Player",
+            "xPts",
+            "Phaul",
+            "Pstart",
+            "xMins"
+          ],
+          "rows_exact": 5
+        }
+      ]
+    },
+    "S09": {
+      "title": "CHIP STRATEGY",
+      "blocks": [
+        "Chip ledger",
+        "Current decision",
+        "Reason"
+      ],
+      "tables": [
+        {
+          "name": "Chip ledger",
+          "columns": [
+            "Chip",
+            "Status"
+          ],
+          "rows_exact": 4
+        }
+      ]
+    },
+    "S10": {
+      "title": "ACTIONABLE PRICE RADAR",
+      "blocks": [
+        "Status",
+        "Predictor source age",
+        "Therefore",
+        "OUR15 radar",
+        "Price-only decision note"
+      ],
+      "tables": [
+        {
+          "name": "OUR15 radar",
+          "columns": [
+            "Player",
+            "Price",
+            "Direction",
+            "Progress"
+          ],
+          "rows_exact": 15
+        }
+      ]
+    },
+    "S11": {
+      "title": "WATCHLIST20",
+      "prelude_fields": [
+        "Universe",
+        "Scanner20",
+        "Composition",
+        "Actionable subset"
+      ],
+      "blocks": [
+        "Actionable subset names",
+        "WATCH not ACT",
+        "Weighting"
+      ],
+      "tables": [
+        {
+          "name": "Scanner20",
+          "columns": [
+            "Player",
+            "Pos",
+            "£",
+            "xMins",
+            "Pstart",
+            "DNP",
+            "Score",
+            "Admit",
+            "Evidence"
+          ],
+          "rows_exact": 20,
+          "position_split": {
+            "GK": 5,
+            "DEF": 5,
+            "MID": 5,
+            "FWD": 5
+          }
+        }
+      ]
+    },
+    "S12": {
+      "title": "RISE20 / ETA",
+      "blocks": [
+        "Freshness warning",
+        "Projected crossing count"
+      ],
+      "tables": [
+        {
+          "name": "RISE20",
+          "columns": [
+            "#",
+            "Player",
+            "£",
+            "Progress",
+            "ETA"
+          ],
+          "rows_exact_when_complete": 20
+        }
+      ]
+    },
+    "S13": {
+      "title": "FALL20 / ETA",
+      "blocks": [
+        "Freshness warning",
+        "Projected dated crossings"
+      ],
+      "tables": [
+        {
+          "name": "FALL20",
+          "columns": [
+            "#",
+            "Player",
+            "£",
+            "Progress",
+            "ETA"
+          ],
+          "rows_exact_when_complete": 20
+        }
+      ]
+    },
+    "S14": {
+      "title": "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
+      "blocks": [
+        "Search integrity",
+        "Canonical Monte Carlo",
+        "Verdict",
+        "Plain-language vector conclusion",
+        "Execution economics",
+        "Actionability conclusion"
+      ],
+      "tables": [],
+      "do_not_dump_full_route_frontier": true
+    },
+    "S14B": {
+      "title": "MULTI-GW PLAN / CONTINGENCY",
+      "blocks": [
+        "Current GW plan",
+        "Next GW plan",
+        "Following GW plan",
+        "Core / Hold",
+        "Watch",
+        "Example contingency route",
+        "Current evidence",
+        "Verdict"
+      ],
+      "tables": []
+    },
+    "S15": {
+      "title": "EVIDENCE QUALITY",
+      "blocks": [
+        "No PRIOR represented as CURRENT note"
+      ],
+      "tables": [
+        {
+          "name": "Evidence quality",
+          "columns": [
+            "Evidence domain",
+            "Status"
+          ]
+        }
+      ]
+    },
+    "S15B": {
+      "title": "ICON+ MINI-LEAGUE INTELLIGENCE",
+      "prelude_fields": [
+        "Status",
+        "League coverage",
+        "Current rank",
+        "Points",
+        "Leader gap",
+        "Top-3 gap",
+        "Top-5 gap",
+        "Gap to nearest above",
+        "Cushion over nearest below"
+      ],
+      "blocks": [
+        "Evidence semantics",
+        "Denominator scopes",
+        "Rank battle",
+        "OUR15 exposure, LEAGUE58",
+        "OUR15 exposure, RIVALS57",
+        "OUR15 exposure, DIRECT6",
+        "Direct rivals above us",
+        "Direct6 rival-only threats",
+        "Captain landscape",
+        "Mini-league posture",
+        "Key consequence",
+        "Football-baseline non-override note"
+      ],
+      "denominator_format": "numerator/denominator (percentage%) for every supported population count; zeroes also retain denominator; EO may exceed 100%",
+      "tables": [
+        {
+          "name": "Denominator scopes",
+          "columns": [
+            "Scope",
+            "Definition",
+            "Coverage"
+          ],
+          "rows_exact": 3
+        },
+        {
+          "name": "Rank battle",
+          "columns": [
+            "Rank",
+            "Manager",
+            "Team",
+            "Points",
+            "Gap"
+          ],
+          "rows_exact": 10
+        },
+        {
+          "name": "OUR15 exposure, LEAGUE58",
+          "columns": [
+            "Player",
+            "Owned",
+            "Starter",
+            "Bench",
+            "Captain",
+            "Vice",
+            "EO"
+          ],
+          "rows_exact": 15
+        },
+        {
+          "name": "OUR15 exposure, RIVALS57",
+          "columns": [
+            "Player",
+            "Owned",
+            "Starter",
+            "Captain",
+            "EO"
+          ],
+          "rows_exact": 15
+        },
+        {
+          "name": "OUR15 exposure, DIRECT6",
+          "columns": [
+            "Player",
+            "Owned",
+            "Starter",
+            "Bench",
+            "Captain",
+            "Vice",
+            "EO"
+          ],
+          "rows_exact": 15
+        },
+        {
+          "name": "Direct rivals above us",
+          "columns": [
+            "Rank",
+            "Manager",
+            "Pts",
+            "Gap",
+            "Squad overlap",
+            "XI overlap",
+            "Captain",
+            "Vice"
+          ],
+          "rows_exact": 6
+        },
+        {
+          "name": "Direct6 rival-only threats",
+          "columns": [
+            "Player",
+            "Owned",
+            "Starter",
+            "Captain",
+            "EO"
+          ]
+        },
+        {
+          "name": "Captain landscape",
+          "columns": [
+            "Player",
+            "Football rank",
+            "xPts",
+            "League C",
+            "League EO",
+            "Direct6 C",
+            "Direct6 EO",
+            "Class"
+          ],
+          "rows_exact": 5
+        }
+      ],
+      "forbid_table_merge": true
+    },
+    "S16": {
+      "title": "ALL15 TACTICAL / PROBABILITY REVIEW",
+      "blocks": [
+        "Weights",
+        "Main OUR15 probability observations"
+      ],
+      "player_blocks_exact": 15,
+      "tables": []
+    },
+    "S16B": {
+      "title": "POST-MATCH REVIEW / REASSESSMENT",
+      "visibility": "lifecycle_controlled",
+      "lifecycle_rule": "Appear only when current S16B post-GW lifecycle says due. When due, use two parts: MATCH-BY-MATCH REVIEW and AFTER-GW REASSESSMENT. Do not restore obsolete daily S16B.",
+      "tables": []
+    },
+    "S17": {
+      "title": "SOURCE HEALTH / FRESHNESS / LINEAGE",
+      "tables": [
+        {
+          "name": "Source health",
+          "columns": [
+            "Plane",
+            "Status"
+          ]
+        }
+      ]
+    },
+    "S18": {
+      "title": "ACTION BOARD",
+      "blocks": [
+        "TRANSFER",
+        "XI",
+        "CAPTAIN",
+        "PRICE",
+        "FINANCE",
+        "MAIN WATCH FLAGS"
+      ],
+      "tables": []
+    },
+    "S19": {
+      "title": "FINAL JUDGEMENT",
+      "blocks": [
+        "TRANSFER",
+        "Route",
+        "XI",
+        "Bench",
+        "Captain",
+        "State",
+        "Vice",
+        "Chip",
+        "Mini-league posture",
+        "Final action",
+        "Trigger required before changing HOLD",
+        "Current verdict"
+      ],
+      "tables": []
+    }
+  }
+}

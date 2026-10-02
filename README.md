@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-02T21:11:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T06:20:00+07:00`
 > **Production main at sync:** `95241f03303c6ff25f6118bc783236d431ad5fe9`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -23,6 +23,8 @@ Scheduled visible-report handoff is single-trigger and event-driven: the owner-o
 Occurrence delivery integrity is mode-specific and hash-bound. DEEP verifies the exact per-occurrence `serving_report.md`, the current `latest/report.md` pointer, the private delivery receipt, and the canonical body SHA-256 as one identity. PRICE is DST-bound to 23:30 Europe/London and verifies its exact per-occurrence `report_body.md`; it never assumes `latest/report.md` belongs to PRICE because the generic serving pointer may still reference the latest DEEP occurrence. Public occurrence receipts carry the exact private history path and canonical body hash for downstream exact-slot retrieval without digest substitution.
 
 Occurrence idempotency trusts only orchestrator receipts authored by `github-actions[bot]`; arbitrary public issue-comment text cannot satisfy the ready-receipt guard. The scheduler independently requires exact occurrence identity and private receipt evidence before visible delivery.
+
+Human-facing delivery now has a presentation firewall. Internal enums/reason codes, snake_case state tokens, raw Python/JSON-like dictionaries, and raw key=value diagnostics remain available in canonical machine evidence but must be translated before visible DEEP/PRICE rendering. Healthy visible-body QA fails closed when those machine-language forms leak into the user-facing report; this is presentation-only and does not change V6 facts, V12 mathematics, MC 500k, optimizer decisions, or private audit evidence.
 
 Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 

@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "contract_id": "V12_DEEP_HUMAN_PRESENTATION_LOCK_V1",
+  "presentation_locked": true,
+  "data_and_decision_values_dynamic": true,
+  "section_ids": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "S06",
+    "S06B",
+    "S07",
+    "S08",
+    "S09",
+    "S10",
+    "S11",
+    "S12",
+    "S13",
+    "S14",
+    "S14B",
+    "S15",
+    "S15B",
+    "S16",
+    "S16B",
+    "S17",
+    "S18",
+    "S19"
+  ],
+  "labels": {
+    "S01": "DECISION / CURRENT STATUS",
+    "S02": "OUR15",
+    "S03": "TRUE DECISION DELTA",
+    "S04": "MATERIAL DEVELOPMENTS / CHANGES",
+    "S05": "FIXTURES / REST / CONDITIONS",
+    "S06": "FORMATION / XI / BENCH",
+    "S06B": "XI BATTLE",
+    "S07": "LINEUP RISK / AUTOSUB LOGIC",
+    "S08": "CAPTAIN / VICE CAPTAIN",
+    "S09": "CHIP STRATEGY",
+    "S10": "ACTIONABLE PRICE RADAR",
+    "S11": "WATCHLIST20",
+    "S12": "RISE20 / ETA",
+    "S13": "FALL20 / ETA",
+    "S14": "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
+    "S14B": "MULTI-GW PLAN / CONTINGENCY",
+    "S15": "EVIDENCE QUALITY",
+    "S15B": "ICON+ MINI-LEAGUE INTELLIGENCE",
+    "S16": "ALL15 TACTICAL / PROBABILITY REVIEW",
+    "S16B": "POST-MATCH REVIEW / REASSESSMENT",
+    "S17": "SOURCE HEALTH / FRESHNESS / LINEAGE",
+    "S18": "ACTION BOARD",
+    "S19": "FINAL JUDGEMENT"
+  },
+  "header_order": [
+    "Planning GW",
+    "Logical report slot",
+    "Canonical run / occurrence",
+    "Report status",
+    "Delivery",
+    "Private delivery",
+    "Presentation QA",
+    "Sections",
+    "MC",
+    "Routes",
+    "Universe",
+    "Selected action",
+    "Serving note if needed"
+  ],
+  "contracts": {
+    "S02": {
+      "owned_rows": 15,
+      "columns": [
+        "Player",
+        "Pos",
+        "Opponent",
+        "Pstart",
+        "xMins",
+        "1GW xPts",
+        "3GW",
+        "5GW",
+        "Note"
+      ]
+    },
+    "S08": {
+      "captain_frontier_min_rows": 5,
+      "owned_selected_xi_only": true
+    },
+    "S11": {
+      "rows_when_complete": 20,
+      "position_split": {
+        "GK": 5,
+        "DEF": 5,
+        "MID": 5,
+        "FWD": 5
+      },
+      "columns": [
+        "Player",
+        "Pos",
+        "£",
+        "xMins",
+        "Pstart",
+        "DNP",
+        "Score",
+        "Admit",
+        "Evidence"
+      ]
+    },
+    "S12": {
+      "rows_when_complete": 20,
+      "columns": [
+        "#",
+        "Player",
+        "£",
+        "Progress",
+        "ETA"
+      ]
+    },
+    "S13": {
+      "rows_when_complete": 20,
+      "columns": [
+        "#",
+        "Player",
+        "£",
+        "Progress",
+        "ETA"
+      ]
+    },
+    "S15B": {
+      "population_display": "NUMERATOR_DENOMINATOR_PERCENT",
+      "scopes": [
+        "LEAGUE",
+        "RIVALS",
+        "DIRECT6"
+      ],
+      "top10_required": true,
+      "direct6_required": true,
+      "eo_over_100_allowed": true
+    },
+    "S16": {
+      "owned_rows": 15,
+      "human_player_blocks": true
+    },
+    "S16B": {
+      "lifecycle_authority": "CURRENT_S16B_LIFECYCLE",
+      "not_daily": true,
+      "two_parts_when_due": [
+        "MATCH_BY_MATCH_REVIEW",
+        "AFTER_GW_REASSESSMENT"
+      ]
+    },
+    "S19": {
+      "must_reconcile_with": "S01"
+    }
+  },
+  "forbidden_visible_patterns": [
+    "RAW_PYTHON_DICT",
+    "RAW_JSON_OBJECT_DUMP",
+    "GENERIC_RECURSIVE_KEY_VALUE_DUMP",
+    "RAW_LONG_SNAKE_CASE_AS_PRIMARY_TEXT",
+    "WORKFLOW_DEBUG_PLUMBING_AS_MAIN_CONTENT",
+    "DIGEST_AS_FULL_REPORT"
+  ],
+  "style": [
+    "HUMAN_ANALYST_PROSE",
+    "COMPACT_BULLETS",
+    "READABLE_MARKDOWN_TABLES",
+    "NO_ENGINE_LOG_TONE",
+    "PRESERVE_QUANTITATIVE_EVIDENCE"
+  ],
+  "notes": [
+    "Presentation lock does not freeze data or decisions.",
+    "Current S16B lifecycle supersedes older always-on S16B behavior.",
+    "Canonical engine/audit artifacts may retain internal codes; visible DEEP must not expose them as primary wording."
+  ]
+}

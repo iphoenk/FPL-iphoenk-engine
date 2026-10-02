@@ -949,12 +949,42 @@ def validate_price_report_model(report: Mapping[str, Any]) -> list[str]:
     return list(dict.fromkeys(failures))
 
 
-def _cell(value: Any) -> str:
+_PRICE_MACHINE_ENUM_RE = re.compile(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){2,}\\b")
+
+
+def _price_human_value(value: Any) -> str:
     if value is None:
-        return "UNAVAILABLE"
-    if isinstance(value, (dict, list, tuple)):
-        return str(value).replace("|", "/")
-    return str(value).replace("|", "/")
+        return "Belum tersedia"
+    if isinstance(value, bool):
+        return "Ya" if value else "Tidak"
+    if isinstance(value, Mapping):
+        return "; ".join(
+            f"{str(k).replace('_', ' ')}={_price_human_value(v)}"
+            for k, v in value.items()
+            if k not in {"entry_id", "run_id", "workflow_id"}
+        ) or "Belum tersedia"
+    if isinstance(value, (list, tuple)):
+        return ", ".join(_price_human_value(v) for v in value) or "Tidak ada"
+    text = str(value)
+    direct = {
+        "COMPLETE": "Lengkap",
+        "DEGRADED": "Terbatas",
+        "UNAVAILABLE": "Belum tersedia",
+        "WAIT": "Tunggu",
+        "ACT": "Bertindak",
+        "USER_CONFIRMED": "Dikonfirmasi pengguna",
+        "CURRENT_VALID": "Data skuad saat ini valid",
+    }
+    if text in direct:
+        return direct[text]
+    return _PRICE_MACHINE_ENUM_RE.sub(
+        lambda m: m.group(0).replace("_", " ").lower(),
+        text,
+    )
+
+
+def _cell(value: Any) -> str:
+    return _price_human_value(value).replace("|", "/")
 
 
 def _table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> list[str]:
@@ -973,9 +1003,9 @@ def render_price_report(report: Mapping[str, Any]) -> str:
     ]
     for index, section in enumerate(sections, 1):
         lines.append(f"## PRICE {index} - {section.get('label')}")
-        lines.append(f"STATUS: {section.get('state')}")
+        lines.append(f"Status: {_price_human_value(section.get('state'))}")
         if section.get("degradation_reason"):
-            lines.append(f"DEGRADATION_REASON: {section.get('degradation_reason')}")
+            lines.append(f"Keterangan keterbatasan data: {_price_human_value(section.get('degradation_reason'))}")
         content = dict(section.get("content") or {})
 
         if index == 1:
@@ -1076,15 +1106,42 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 lines.append("INFERENCE: No supportable serious OUT -> IN route is available for economics materialization.")
             lines.append("Affordability and FT/HIT economics are separate contracts.")
         elif index == 9:
-            lines.append("MINI_LEAGUE_STATE: " + str(section.get("state")))
-            for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+            lines.append("Status mini-league: " + _price_human_value(section.get("state")))
+            lines.append(f"Liga: {_cell(content.get('league_name'))}")
+            lines.append(
+                "Cakupan manajer: "
+                f"{_cell(content.get('collected_manager_count'))}/"
+                f"{_cell(content.get('expected_manager_count'))}"
+            )
+            summary = dict(content.get("user_summary") or {})
+            if summary:
+                lines.append(
+                    "Posisi kita: peringkat "
+                    f"{_cell(summary.get('rank'))} dari "
+                    f"{_cell(content.get('expected_manager_count'))}, "
+                    f"{_cell(summary.get('total'))} poin."
+                )
+            lines.append(
+                "Dampak harga terhadap strategi mini-league: "
+                + _cell(content.get("price_route_impact"))
+            )
         elif index == 10:
             for field in ACTION_BOARD_FIELDS:
                 lines.append(f"{field}: {_cell(content.get(field))}")
         elif index == 11:
+            labels = {
+                "official_timestamp": "Data resmi diperbarui",
+                "predictor_timestamp": "Prediksi harga diperbarui",
+                "predictor_freshness": "Kesegaran prediksi",
+                "source_class": "Sumber data",
+                "cycle": "Siklus harga",
+            }
             for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+                if key in {"run_id", "workflow_id", "fingerprint", "sha", "raw_payload"}:
+                    continue
+                lines.append(
+                    f"{labels.get(key, str(key).replace('_', ' ').title())}: {_cell(value)}"
+                )
         elif index == 12:
             lines.append(f"ACTION: {_cell(content.get('action'))}")
             lines.append(f"Key price risk: {_cell(content.get('key_price_risk'))}")

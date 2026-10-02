@@ -964,6 +964,35 @@ def _table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> list[str]:
     return [head, sep, *body]
 
 
+def _humanize_price_visible_text(body: str) -> str:
+    """Translate implementation vocabulary without changing PRICE evidence."""
+    replacements = {
+        "CURRENT_VALID": "Current squad confirmed",
+        "USER_CONFIRMED": "Confirmed by user evidence",
+        "NO_CROSSING_WITHIN_GOVERNED_HORIZON": "No price change expected within the current forecast window",
+        "EXPECTED_CHANGE_DATE": "Estimated price-change window available",
+        "PERSONAL_AUTH_UNAVAILABLE": "Personal account data is not currently available",
+    }
+    text = str(body or "")
+    for raw, friendly in replacements.items():
+        text = text.replace(raw, friendly)
+
+    def enum_repl(match: re.Match[str]) -> str:
+        token = match.group(0)
+        words = token.replace("_", " ").lower()
+        return words[:1].upper() + words[1:]
+
+    text = re.sub(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\\b", enum_repl, text)
+
+    def label_repl(match: re.Match[str]) -> str:
+        indent, key = match.group(1), match.group(2)
+        label = key.replace("_", " ").strip()
+        return f"{indent}{label[:1].upper() + label[1:]}:"
+
+    text = re.sub(r"(?m)^(\\s*)([a-z][a-z0-9_]{2,}):", label_repl, text)
+    return text
+
+
 def render_price_report(report: Mapping[str, Any]) -> str:
     sections = list(report.get("sections") or [])
     lines = [
@@ -1076,15 +1105,56 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 lines.append("INFERENCE: No supportable serious OUT -> IN route is available for economics materialization.")
             lines.append("Affordability and FT/HIT economics are separate contracts.")
         elif index == 9:
-            lines.append("MINI_LEAGUE_STATE: " + str(section.get("state")))
-            for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+            summary = dict(content.get("user_summary") or {})
+            lines.append("Mini-league data: " + str(section.get("state") or "").title())
+            if content.get("league_name"):
+                lines.append("League: " + str(content.get("league_name")))
+            if content.get("collected_manager_count") is not None:
+                lines.append(
+                    "Coverage: "
+                    + str(content.get("collected_manager_count"))
+                    + "/"
+                    + str(content.get("expected_manager_count") or content.get("collected_manager_count"))
+                    + " managers"
+                )
+            if summary:
+                rank = summary.get("rank")
+                total = summary.get("total")
+                if rank is not None or total is not None:
+                    lines.append(
+                        "Our position: rank "
+                        + _cell(rank)
+                        + "; "
+                        + _cell(total)
+                        + " points"
+                    )
+            impact = content.get("price_route_impact")
+            if impact not in (None, "", "UNAVAILABLE"):
+                lines.append("Impact on transfer timing: " + _cell(impact))
+            else:
+                lines.append("Impact on transfer timing: no reliable price-route impact can be calculated yet.")
         elif index == 10:
             for field in ACTION_BOARD_FIELDS:
                 lines.append(f"{field}: {_cell(content.get(field))}")
         elif index == 11:
+            friendly_source_labels = {
+                "official_timestamp": "Official data updated",
+                "predictor_timestamp": "Price predictor updated",
+                "predictor_state": "Price predictor status",
+                "predictor_freshness": "Price predictor freshness",
+                "core_binding_state": "Core data binding",
+                "analytics_state": "Analytics coverage",
+                "analytics_reason": "Analytics limitation",
+                "next_checkpoint": "Next review",
+            }
             for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+                label = friendly_source_labels.get(
+                    str(key),
+                    str(key).replace("_", " ").strip().capitalize(),
+                )
+                if isinstance(value, Mapping):
+                    continue
+                lines.append(f"{label}: {_cell(value)}")
         elif index == 12:
             lines.append(f"ACTION: {_cell(content.get('action'))}")
             lines.append(f"Key price risk: {_cell(content.get('key_price_risk'))}")
@@ -1092,7 +1162,7 @@ def render_price_report(report: Mapping[str, Any]) -> str:
             lines.append(f"Football edge justifies action: {_cell(content.get('football_edge_justifies_action'))}")
             lines.append(f"Next checkpoint: {_cell(content.get('next_checkpoint'))}")
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    return _humanize_price_visible_text("\n".join(lines).rstrip() + "\n")
 
 
 def _parse_sections(body: str) -> tuple[list[str], dict[str, str]]:

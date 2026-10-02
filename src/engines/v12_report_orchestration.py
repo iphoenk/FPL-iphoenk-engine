@@ -2191,9 +2191,14 @@ def _materialize_canonical_report(
     locked_state: Mapping[str, Any] | None = None,
     universe_movers: Mapping[str, Any] | None = None,
     universe_movers_target_label: str | None = None,
+    s16b_due: bool | None = None,
 ) -> dict[str, Any]:
     """One existing V12 structural materializer used by DEEP and post-match."""
-    contract = canonical_mode_contract(canonical_text, structural_mode)
+    contract = canonical_mode_contract(
+        canonical_text,
+        structural_mode,
+        s16b_due=s16b_due,
+    )
     payloads = dict(section_payloads or {})
     sections: list[dict[str, Any]] = []
     locked = dict(locked_state or {})
@@ -2857,13 +2862,8 @@ def materialize_deep_report(
         signal_delta=signal_delta,
         current_gw_locked=current_gw_locked,
         locked_state=locked_state,
+        s16b_due=due,
     )
-    if not due:
-        report["sections"] = [
-            row
-            for row in report.get("sections") or []
-            if str(row.get("section_id") or "").upper() != "S16B"
-        ]
     report["s16b_due"] = due
     scout = [
         dict(row)

@@ -62,8 +62,8 @@ from src.engines.v12_deep_delivery import (
     validate_deep_decision_content_delivery,
 )
 from src.engines.v12_delivery_reliability import (
-    CANONICAL_DEEP_SECTIONS,
     assemble_degraded_deep_report,
+    canonical_deep_sections,
     wait_for_prefetch_terminal,
     write_serving_artifacts,
 )
@@ -94,6 +94,10 @@ from src.engines.v12_stage2_derived_cache import (
     load_or_build_stage2_projections,
 )
 from src.engines.v12_s05_binding import build_report_time_s05_inputs
+from src.engines.v12_s16b_lifecycle import (
+    resolve_s16b_context,
+    state_after_occurrence,
+)
 from src.engines.v12_contextual_dynamics import (
     build_player_trajectory,
     build_post_match_deep_details,
@@ -558,7 +562,12 @@ def _validate_compact_previous_deep(
     *,
     current_report_slot: str,
 ) -> tuple[list[str], dict[str, Any] | None]:
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=payload.get("s16b_due") is True
+        )
+    ]
     failures: list[str] = []
     if str(payload.get("artifact_kind") or "") != "V12_PREVIOUS_DEEP_BASELINE":
         failures.append("ARTIFACT_KIND_INVALID")
@@ -609,7 +618,12 @@ def _validate_latest_serving_compat(
     current_report_slot: str,
 ) -> tuple[list[str], dict[str, Any] | None]:
     """One-generation bridge until the first governed compact LKG is published."""
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=serving.get("s16b_due") is True
+        )
+    ]
     failures: list[str] = []
     if str(serving.get("report_mode") or "").upper() != "DEEP":
         failures.append("SERVING_REPORT_MODE_NOT_DEEP")
@@ -686,6 +700,9 @@ def _load_previous_visible_deep_baseline(
                 ),
                 "validation_failures": [],
                 "math_recomputed": False,
+                "s16b_delivery_state": deepcopy(
+                    payload.get("s16b_delivery_state") or {}
+                ),
             }
         return {
             "state": "UNAVAILABLE",
@@ -721,6 +738,9 @@ def _load_previous_visible_deep_baseline(
                 ),
                 "validation_failures": [],
                 "math_recomputed": False,
+                "s16b_delivery_state": deepcopy(
+                    serving.get("s16b_delivery_state") or {}
+                ),
             }
         return {
             "state": "UNAVAILABLE",

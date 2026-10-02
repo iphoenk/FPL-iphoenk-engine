@@ -62,6 +62,7 @@ from src.engines.v12_deep_delivery import (
     validate_deep_decision_content_delivery,
 )
 from src.engines.v12_delivery_reliability import (
+    CANONICAL_DEEP_SECTIONS,
     assemble_degraded_deep_report,
     canonical_deep_sections,
     wait_for_prefetch_terminal,

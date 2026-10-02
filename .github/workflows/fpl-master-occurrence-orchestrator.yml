@@ -98,8 +98,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh api --paginate "/repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100" \
-            --jq '.[].body' | grep -Fq "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_FULL"; then
+          comments_file="$RUNNER_TEMP/issue-431-comments.txt"
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100" \
+            --jq '.[].body' > "$comments_file"
+          if grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_FULL" "$comments_file" >/dev/null ||
+             grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_DEGRADED" "$comments_file" >/dev/null ||
+             grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_REUSED" "$comments_file" >/dev/null; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "reuse_source=EXISTING_RECEIPT" >> "$GITHUB_OUTPUT"
             exit 0

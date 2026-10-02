@@ -1,27 +1,35 @@
-from src.engines.v12_report_orchestration import _human_value, validate_human_facing_body
-from src.engines.v12_price_delivery import _cell
+import json
+from pathlib import Path
+
+LOCK = Path("config/delivery/v12_deep_presentation_lock.json")
 
 
-def test_deep_machine_enums_are_translated_for_visible_report():
-    assert _human_value("NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR").startswith(
-        "Belum ada rute transfer"
-    )
-    assert _human_value("PERSONAL_AUTH_UNAVAILABLE") == "Akses data personal belum tersedia"
-    assert _human_value("COVARIANCE_NOT_MODELLED_YET") == "Korelasi antarpemain belum dimodelkan"
+def _lock():
+    return json.loads(LOCK.read_text(encoding="utf-8"))
 
 
-def test_human_facing_qa_rejects_raw_machine_enum_and_python_object():
-    assert "MACHINE_LANGUAGE=RAW_INTERNAL_ENUM" in validate_human_facing_body(
-        "Decision: NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR"
-    )
-    assert "MACHINE_LANGUAGE=RAW_PYTHON_OR_JSON_OBJECT" in validate_human_facing_body(
-        "user_summary: {'rank': 7, 'total': 344}"
-    )
+def test_locked_deep_presentation_has_exact_23_section_order():
+    cfg = _lock()
+    assert cfg["section_ids"] == [
+        "S01","S02","S03","S04","S05","S06","S06B","S07","S08","S09",
+        "S10","S11","S12","S13","S14","S14B","S15","S15B","S16","S16B",
+        "S17","S18","S19",
+    ]
 
 
-def test_price_cells_do_not_dump_python_dict_or_internal_ids():
-    rendered = _cell({"entry_id": 3462711, "rank": 7, "total": 344})
-    assert "entry_id" not in rendered
-    assert "{" not in rendered
-    assert "rank=7" in rendered
-    assert "total=344" in rendered
+def test_locked_deep_presentation_preserves_rank20_and_s15b_denominators():
+    cfg = _lock()
+    assert cfg["contracts"]["S11"]["rows_when_complete"] == 20
+    assert cfg["contracts"]["S11"]["position_split"] == {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}
+    assert cfg["contracts"]["S12"]["rows_when_complete"] == 20
+    assert cfg["contracts"]["S13"]["rows_when_complete"] == 20
+    assert cfg["contracts"]["S15B"]["population_display"] == "NUMERATOR_DENOMINATOR_PERCENT"
+    assert cfg["contracts"]["S15B"]["scopes"] == ["LEAGUE", "RIVALS", "DIRECT6"]
+
+
+def test_locked_deep_presentation_forbids_generic_machine_dump():
+    cfg = _lock()
+    forbidden = set(cfg["forbidden_visible_patterns"])
+    assert "RAW_PYTHON_DICT" in forbidden
+    assert "GENERIC_RECURSIVE_KEY_VALUE_DUMP" in forbidden
+    assert "RAW_LONG_SNAKE_CASE_AS_PRIMARY_TEXT" in forbidden

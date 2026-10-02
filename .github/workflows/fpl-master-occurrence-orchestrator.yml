@@ -338,9 +338,11 @@ jobs:
 
               expected_sections = [
                   "S01","S02","S03","S04","S05","S06","S06B","S07","S08","S09",
-                  "S10","S11","S12","S13","S14","S14B","S15","S15B","S16","S16B",
+                  "S10","S11","S12","S13","S14","S14B","S15","S15B","S16",
                   "S17","S18","S19",
               ]
+              if serving.get("s16b_due") is True:
+                  expected_sections.insert(expected_sections.index("S17"), "S16B")
               assert serving.get("section_ids") == expected_sections, serving
               if delivery.get("delivery_status") == "READY_FULL":
                   assert serving.get("pre_render_status") == "PASS", serving

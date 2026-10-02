@@ -37,6 +37,7 @@ jobs:
           import os
           import shlex
           from datetime import datetime
+          from zoneinfo import ZoneInfo
 
           tokens = shlex.split(os.environ["COMMAND"])
           if not tokens or tokens[0] != "/fpl-master-tick":
@@ -75,6 +76,10 @@ jobs:
 
           if mode == "DEEP" and checkpoint not in {"04:30", "12:30", "21:30"}:
               raise SystemExit("DEEP occurrence must be 04:30, 12:30, or 21:30 WIB")
+          if mode == "PRICE":
+              london = dt.astimezone(ZoneInfo("Europe/London"))
+              if london.strftime("%H:%M") != "23:30":
+                  raise SystemExit("PRICE occurrence must bind to 23:30 Europe/London")
 
           report_kind = "full_master" if mode == "DEEP" else "05:30_price"
           occurrence_id = f"{mode}|{slot}"
@@ -227,54 +232,140 @@ jobs:
           test -n "${FPL_PRIVATE_REPORTS_TOKEN:-}"
 
           GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
-            "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
-            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/delivery-status.json"
-
-          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
             "/repos/iphoenk/fpl-reports-private/contents/latest/${SERVING_FILE}?ref=main" \
             --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/serving.json"
 
-          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
-            "/repos/iphoenk/fpl-reports-private/contents/latest/report.md?ref=main" \
-            --jq '{sha:.sha,size:.size}' > "$RUNNER_TEMP/report-meta.json"
+          if [[ "$REPORT_MODE" == "DEEP" ]]; then
+            GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+              "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
+              --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/delivery-status.json"
+          fi
 
-          python - <<'PY'
+          read -r history_dir body_name < <(
+            python - <<'PY'
+          import json
+          import os
+          from datetime import datetime
+          from pathlib import Path
+
+          serving = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "serving.json").read_text(
+                  encoding="utf-8"
+              )
+          )
+          slot = os.environ["REPORT_SLOT"]
+          mode = os.environ["REPORT_MODE"]
+          planning_gw = int(serving.get("planning_gw") or 0)
+          if planning_gw <= 0:
+              raise SystemExit("private digest missing planning_gw")
+          dt = datetime.fromisoformat(slot)
+          start_year = dt.year if dt.month >= 7 else dt.year - 1
+          season = f"{start_year}-{str(start_year + 1)[-2:]}"
+          slot_token = (
+              slot.replace(":", "")
+              .replace("+", "_plus_")
+              .replace("-", "")
+              .replace("T", "_")
+          )
+          body_name = "serving_report.md" if mode == "DEEP" else "report_body.md"
+          print(
+              f"reports/{season}/gw_{planning_gw}/{slot_token}",
+              body_name,
+          )
+          PY
+          )
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/${history_dir}/delivery_receipt.json?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/history-receipt.json"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/${history_dir}/${body_name}?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/history-body.md"
+
+          if [[ "$REPORT_MODE" == "DEEP" ]]; then
+            GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+              "/repos/iphoenk/fpl-reports-private/contents/latest/report.md?ref=main" \
+              --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/latest-body.md"
+          fi
+
+          HISTORY_DIR="$history_dir" BODY_NAME="$body_name" python - <<'PY'
+          import hashlib
           import json
           import os
           from pathlib import Path
 
           root = Path(os.environ["RUNNER_TEMP"])
-          delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
           serving = json.loads((root / "serving.json").read_text(encoding="utf-8"))
-          meta = json.loads((root / "report-meta.json").read_text(encoding="utf-8"))
+          receipt = json.loads(
+              (root / "history-receipt.json").read_text(encoding="utf-8")
+          )
+          mode = os.environ["REPORT_MODE"]
+          slot = os.environ["REPORT_SLOT"]
+          occurrence_id = os.environ["OCCURRENCE_ID"]
 
-          assert delivery.get("occurrence_id") == os.environ["OCCURRENCE_ID"], delivery
-          assert delivery.get("report_slot") == os.environ["REPORT_SLOT"], delivery
-          assert delivery.get("report_mode") == os.environ["REPORT_MODE"], delivery
-          assert delivery.get("delivery_status") in {"READY_FULL", "READY_DEGRADED"}, delivery
-
-          assert serving.get("report_slot") == os.environ["REPORT_SLOT"], serving
-          assert serving.get("report_mode") == os.environ["REPORT_MODE"], serving
+          assert serving.get("report_slot") == slot, serving
+          assert serving.get("report_mode") == mode, serving
           assert serving.get("runner_status") == "PASS", serving
 
-          if os.environ["REPORT_MODE"] == "DEEP":
-              expected = [
+          assert receipt.get("report_slot") == slot, receipt
+          assert receipt.get("report_mode") == mode, receipt
+          assert receipt.get("private_delivery_status") == "PASS", receipt
+
+          body = (root / "history-body.md").read_bytes()
+          assert body, "exact historical report body is empty"
+          body_sha = hashlib.sha256(body).hexdigest()
+          expected_sha = str(serving.get("canonical_body_sha256") or "")
+          assert len(expected_sha) == 64, serving
+          assert body_sha == expected_sha, {
+              "history_body_sha256": body_sha,
+              "expected_canonical_body_sha256": expected_sha,
+          }
+          assert receipt.get("canonical_body_sha256") == expected_sha, receipt
+
+          if mode == "DEEP":
+              delivery = json.loads(
+                  (root / "delivery-status.json").read_text(encoding="utf-8")
+              )
+              assert delivery.get("occurrence_id") == occurrence_id, delivery
+              assert delivery.get("report_slot") == slot, delivery
+              assert delivery.get("report_mode") == mode, delivery
+              assert delivery.get("delivery_status") in {
+                  "READY_FULL",
+                  "READY_DEGRADED",
+              }, delivery
+
+              expected_sections = [
                   "S01","S02","S03","S04","S05","S06","S06B","S07","S08","S09",
                   "S10","S11","S12","S13","S14","S14B","S15","S15B","S16","S16B",
                   "S17","S18","S19",
               ]
-              assert serving.get("section_ids") == expected, serving
+              assert serving.get("section_ids") == expected_sections, serving
               if delivery.get("delivery_status") == "READY_FULL":
                   assert serving.get("pre_render_status") == "PASS", serving
                   assert serving.get("post_render_status") == "PASS", serving
                   assert serving.get("human_facing_status") == "PASS", serving
 
-          assert int(meta.get("size") or 0) > 0, meta
+              latest_body = (root / "latest-body.md").read_bytes()
+              assert latest_body, "latest DEEP serving body is empty"
+              assert hashlib.sha256(latest_body).hexdigest() == body_sha, (
+                  "latest/report.md does not match exact historical DEEP body"
+              )
+              delivery_status = delivery["delivery_status"]
+          else:
+              # PRICE currently publishes its canonical full body in exact
+              # per-occurrence history; latest/report.md may still point to DEEP.
+              delivery_status = "READY_FULL"
 
+          history_path = (
+              f"{os.environ['HISTORY_DIR']}/{os.environ['BODY_NAME']}"
+          )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"delivery_status={delivery['delivery_status']}\n")
-              fh.write(f"report_sha={meta['sha']}\n")
-              fh.write(f"report_size={meta['size']}\n")
+              fh.write(f"delivery_status={delivery_status}\n")
+              fh.write(f"report_sha={body_sha}\n")
+              fh.write(f"report_size={len(body)}\n")
+              fh.write(f"history_path={history_path}\n")
+              fh.write(f"canonical_body_sha256={body_sha}\n")
           PY
 
       - name: Publish occurrence receipt
@@ -293,6 +384,8 @@ jobs:
           DELIVERY_STATUS: ${{ steps.verify.outputs.delivery_status }}
           REPORT_SHA: ${{ steps.verify.outputs.report_sha }}
           REPORT_SIZE: ${{ steps.verify.outputs.report_size }}
+          HISTORY_PATH: ${{ steps.verify.outputs.history_path }}
+          CANONICAL_BODY_SHA256: ${{ steps.verify.outputs.canonical_body_sha256 }}
         shell: bash
         run: |
           set -euo pipefail
@@ -324,8 +417,10 @@ jobs:
             echo "- reuse_source: \`${REUSE_SOURCE:-NONE}\`"
             echo "- prefetch_run: \`${PREFETCH_RUN:-UNAVAILABLE}\`"
             echo "- report_run: \`${REPORT_RUN:-UNAVAILABLE}\`"
-            echo "- private_report_sha: \`${REPORT_SHA:-UNAVAILABLE}\`"
+            echo "- private_report_sha256: \`${REPORT_SHA:-UNAVAILABLE}\`"
+            echo "- canonical_body_sha256: \`${CANONICAL_BODY_SHA256:-UNAVAILABLE}\`"
             echo "- private_report_size: \`${REPORT_SIZE:-UNAVAILABLE}\`"
+            echo "- private_report_path: \`${HISTORY_PATH:-UNAVAILABLE}\`"
             echo "- user_visible_required: \`true\`"
             echo "- generated_at_utc: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
           } > "$body"

@@ -285,7 +285,7 @@ def test_synthetic_private_public_acceptance_surface_split(tmp_path):
     expected_ids = [
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
         "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S14", "S14B", "S15", "S15B", "S16",
         "S17", "S18", "S19",
     ]
     copied_bundle = json.loads(

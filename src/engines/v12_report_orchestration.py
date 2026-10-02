@@ -3572,7 +3572,7 @@ def render_match_text(report: Mapping[str, Any]) -> str:
         else:
             lines.extend(_render_generic_human_content(content))
         blocks.append("\n".join(lines))
-    return "\n\n".join(blocks)
+    return _humanize_visible_report_text("\n\n".join(blocks))
 
 
 def _visible_section_heading(section_id: Any, label: Any) -> str:
@@ -4997,8 +4997,7 @@ def _render_deep_visible_contract_lines(
                     default=str,
                 ).encode("utf-8")
             ).hexdigest()
-        )
-        visible_rows = []
+        )        visible_rows = []
         for rank, row in enumerate(rows, start=1):
             element_id = int(row.get("element_id") or 0)
             confidence = row.get("confidence")
@@ -5865,6 +5864,59 @@ def _render_deep_visible_contract_lines(
     return lines, tuple(excluded)
 
 
+def _humanize_visible_report_text(body: str) -> str:
+    """Translate internal enum/debug vocabulary at the presentation boundary only."""
+    replacements = {
+        "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR": "No transfer route has enough evidence to beat holding the current squad over 1, 3 and 5 gameweeks.",
+        "PERSONAL_AUTH_UNAVAILABLE": "Personal account data is not currently available",
+        "EXECUTION_FINANCE_DEGRADED": "Exact transfer finances are incomplete",
+        "CAPTAIN_NEAR_TIE_OR_FRESH_EVIDENCE_PENDING": "Captain choice is close and still needs fresher evidence",
+        "PRICE_PREDICTOR_STALE": "Price prediction data is stale",
+        "COVARIANCE_NOT_MODELLED_YET": "Player-to-player correlation is not yet included in this estimate",
+        "INDEPENDENCE_APPROXIMATION_PENDING_COVARIANCE_MODEL": "Uses an independence approximation because player correlation is not yet modelled",
+        "CURRENT_VALID": "Current squad confirmed",
+        "USER_CONFIRMED": "Confirmed by user evidence",
+        "MINUTES_ROLE_IMPROVING": "Minutes and role are improving",
+        "STABLE_OR_NOISY": "No clear material change",
+        "BREAKOUT_PROCESS": "Underlying performance is improving",
+        "OUTPUT_CONFIRMING_PROCESS": "Recent returns support the underlying performance",
+        "OUTPUT_WITHOUT_PROCESS": "Recent returns are not yet supported by the underlying performance",
+        "REGRESSION_RISK": "Regression risk",
+        "MINUTES_BREAKOUT": "Playing-time outlook is improving",
+        "MINUTES_DECLINE": "Playing-time outlook is worsening",
+        "ROLE_BREAKOUT": "Role is improving",
+        "ROLE_DECLINE": "Role is worsening",
+        "LINKUP_BREAKOUT": "Team link-up is improving",
+        "LINKUP_BROKEN": "Team link-up has weakened",
+        "NO_MATERIAL_CHANGE": "No material change",
+        "WEATHER_UNAVAILABLE_OUTSIDE_RELIABLE_FORECAST_HORIZON": "Weather is still too far away for a reliable forecast",
+        "OUTSIDE_RELIABLE_FORECAST_HORIZON": "too far away for a reliable weather forecast",
+        "ACTIONABLE_MONITOR": "Strong watchlist candidate",
+        "NO_CROSSING_WITHIN_GOVERNED_HORIZON": "No price change expected within the current forecast window",
+        "EXPECTED_CHANGE_DATE": "Estimated price-change window available",
+    }
+    text = str(body or "")
+    for raw, friendly in replacements.items():
+        text = text.replace(raw, friendly)
+
+    def enum_repl(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if token in {"OUR15", "RISE20", "FALL20"} or re.fullmatch(r"S\\d{2}B?", token):
+            return token
+        words = token.replace("_", " ").lower()
+        return words[:1].upper() + words[1:]
+
+    text = re.sub(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\\b", enum_repl, text)
+
+    def label_repl(match: re.Match[str]) -> str:
+        indent, key = match.group(1), match.group(2)
+        label = key.replace("_", " ").strip()
+        return f"{indent}{label[:1].upper() + label[1:]}:"
+
+    text = re.sub(r"(?m)^(\\s*)([a-z][a-z0-9_]{2,}):", label_repl, text)
+    return text
+
+
 def render_deep_text(report: Mapping[str, Any]) -> str:
     """Human-facing DEEP renderer retaining nested analytic evidence."""
     sections = [
@@ -6013,6 +6065,16 @@ def validate_human_facing_body(
     ]
     if re.search(r"\b[0-9a-f]{40}\b", lower):
         failures.append("MACHINE_LANGUAGE=RAW_BRANCH_SHA")
+    raw_enums = [
+        token for token in re.findall(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\\b", text)
+        if token not in {"OUR15", "RISE20", "FALL20"}
+    ]
+    if raw_enums:
+        failures.append("MACHINE_LANGUAGE=RAW_ENUM:" + raw_enums[0])
+    if re.search(r"(?m)^\\s*[a-z][a-z0-9_]{2,}:", text):
+        failures.append("MACHINE_LANGUAGE=SNAKE_CASE_LABEL")
+    if re.search(r"(?m)^\\s*\\{['\"]", text):
+        failures.append("MACHINE_LANGUAGE=RAW_DICT")
     return failures
 
 
@@ -6169,4 +6231,3 @@ def weather_report_time_evidence(
         "weather_may_independently_create_action": False,
         "raw_provider_plumbing_visible": False,
     }
-

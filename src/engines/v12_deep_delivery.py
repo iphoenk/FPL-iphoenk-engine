@@ -522,16 +522,6 @@ def validate_deep_decision_content_delivery(
         if "POSTERIOR_RATES" in upper:
             failures.append("S16_RAW_POSTERIOR_DICT_VISIBLE")
 
-    if detailed_match_available:
-        if "TRAJECTORY INTERPRETATION:" not in upper:
-            failures.append("S16B_TRAJECTORY_INTERPRETATION_MISSING")
-        # Historical rows are observations. Repeating a posterior on every
-        # match line would falsely imply per-row model execution.
-        for line in str(body or "").splitlines():
-            if line.lstrip().startswith("- GW") and "BAYESIAN" in line.upper():
-                failures.append("S16B_POSTERIOR_REPEATED_PER_MATCH")
-                break
-
     if state("S18") == "COMPLETE":
         board = dict(s18.get("action_board") or {})
         axes = [

@@ -138,6 +138,43 @@ def test_d_p2_workflow_is_non_recurring_non_authoritative_and_reuses_v6():
     assert "uses: ./.github/workflows/v12-p6-warm-worker.yml" in text
 
 
+def test_fpl_master_occurrence_orchestrator_bot_dispatch_is_prefetch_only():
+    policy = load_policy()
+    assert authorize_dispatch(
+        policy,
+        actor="github-actions[bot]",
+        repository_owner="iphoenk",
+        mode="report_prefetch",
+        reason="fpl_master_orchestrator_37000000000",
+    ) == "report_prefetch"
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="report_prefetch",
+            reason="fpl_master_orchestrator",
+        )
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="master_orchestrated",
+            reason="fpl_master_orchestrator_37000000000",
+        )
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="manual_recovery",
+            reason="fpl_master_orchestrator_37000000000",
+            manual_confirm="RECOVER_V6",
+        )
+
+
 def test_d_p2_bot_dispatch_is_narrowly_authorized_for_report_prefetch_only():
     policy = load_policy()
     assert authorize_dispatch(

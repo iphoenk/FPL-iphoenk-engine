@@ -6840,26 +6840,8 @@ def run_deep(
         lineup = None
 
 
-    post_match_review = _stage(
-        ledger,
-        "S16B_POST_MATCH_GW1_NOW",
-        lambda: _post_match_review(
-            projections=projections,
-            foundation=foundation,
-            owned_ids=owned_ids,
-            current_gw=max(1, planning_gw - 1),
-        ),
-        required=True,
-    ) if projections and foundation else None
-    if post_match_review is None:
-        post_match_review = {
-            "our15": [],
-            "material_universe_candidates": [],
-            "full_universe_scan": {},
-            "recency_weighting": "UNAVAILABLE",
-            "bayesian_update": "UNAVAILABLE",
-            "linkup_dependency": "UNAVAILABLE",
-        }
+    post_match_review: dict[str, Any] = {}
+    s16b_context: dict[str, Any] = {}
 
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json",
@@ -6944,6 +6926,82 @@ def run_deep(
         projections=projections,
         predictor=predictor,
     )
+
+    s16b_context = resolve_s16b_context(
+        report_slot=report_slot,
+        report_mode="DEEP",
+        fixtures=fixtures or [],
+        player_match_rows=(foundation or {}).get("player_match_rows") or [],
+        prior_delivery_state=previous_deep.get("s16b_delivery_state"),
+    )
+    ledger.append(
+        {
+            "stage": "S16B_LIFECYCLE",
+            "status": "PASS",
+            "required": True,
+            "reason": s16b_context.get("due_reason"),
+            "evidence": {
+                "completed_gw": s16b_context.get("completed_gw"),
+                "s16b_due": s16b_context.get("s16b_due"),
+                "expected_section_count": s16b_context.get(
+                    "expected_section_count"
+                ),
+                "gw_completion": s16b_context.get("gw_completion"),
+                "post_match_evidence": s16b_context.get(
+                    "post_match_evidence"
+                ),
+            },
+        }
+    )
+    if s16b_context.get("s16b_due") is True:
+        post_match_review = _stage(
+            ledger,
+            "S16B_POST_MATCH_COMPLETED_GW",
+            lambda: _post_match_review(
+                projections=projections,
+                foundation=foundation,
+                fixtures=fixtures or [],
+                bootstrap=bootstrap,
+                owned_ids=owned_ids,
+                completed_gw=int(s16b_context.get("completed_gw") or 0),
+                watchlist=watchlist,
+                previous_report=previous_deep.get("report"),
+            ),
+            required=True,
+        ) or {}
+        expected_fixtures = int(
+            (s16b_context.get("gw_completion") or {}).get(
+                "expected_fixture_count"
+            )
+            or 0
+        )
+        if (
+            int(post_match_review.get("fixtures_expected") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("fixtures_reviewed") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("unique_fixture_count") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("duplicate_fixture_count") or -1)
+            != 0
+            or len(
+                (
+                    post_match_review.get("after_gw_reassessment") or {}
+                ).get("owned15_review")
+                or []
+            )
+            != 15
+        ):
+            raise IntegratedRunnerError(
+                "S16B_DUE_CONTENT_INCOMPLETE: fixture/exact15 contract failed"
+            )
+    else:
+        _skip_stage(
+            ledger,
+            "S16B_POST_MATCH_COMPLETED_GW",
+            str(s16b_context.get("due_reason") or "S16B_NOT_DUE"),
+            required=False,
+        )
 
     calendar_elements = set(owned_ids)
     calendar_elements.update(
@@ -8025,10 +8083,18 @@ def run_deep(
             available_count=len(all15_rows),
             expected_count=15,
         ),
-        "S16B": _section(
-            "COMPLETE" if post_match_review.get("our15") else "DEGRADED",
-            post_match_review,
-            None if post_match_review.get("our15") else "GW1→Now match-level evidence unavailable for this occurrence",
+        **(
+            {
+                "S16B": _section(
+                    "COMPLETE",
+                    post_match_review,
+                    None,
+                    available_count=post_match_review.get("fixtures_reviewed"),
+                    expected_count=post_match_review.get("fixtures_expected"),
+                )
+            }
+            if s16b_context.get("s16b_due") is True
+            else {}
         ),
         "S17": _section(
             "COMPLETE",
@@ -8190,6 +8256,7 @@ def run_deep(
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
+        s16b_due=s16b_context.get("s16b_due") is True,
         checkpoint_time=checkpoint_time,
         mathematical_decision_stack=math_stack,
     )
@@ -8316,6 +8383,9 @@ def run_deep(
         "report_slot": report_slot,
         "report_mode": "DEEP",
         "planning_gw": planning_gw,
+        "s16b_due": s16b_context.get("s16b_due") is True,
+        "s16b_context": s16b_context,
+        "s16b_delivery_state": s16b_delivery_state,
         "runner_status": runner_status,
         "canonical_expected_section_ids": contract.get("expected_section_ids"),
         "rendered_section_ids": parsed_ids,
@@ -8386,6 +8456,17 @@ def run_deep(
         "no_second_model_authority": True,
         "monte_carlo_fabricated": False,
     }
+    s16b_delivery_state = state_after_occurrence(
+        s16b_context,
+        occurrence_id=f"DEEP|{report_slot}",
+        generated_at=datetime.now().astimezone().isoformat(),
+        body_fingerprint=(
+            hashlib.sha256(body.encode("utf-8")).hexdigest()
+            if s16b_context.get("s16b_due") is True
+            else None
+        ),
+    )
+
     bundle = {
         "schema": "FPL_MASTER_V12_INTEGRATED_REPORT_BUNDLE_V2",
         "authority": str(CANONICAL_PATH.relative_to(ROOT)),

@@ -152,7 +152,17 @@ def authorize_dispatch(
         and prefetch_control.get("precompute_dispatch_counts_as_scheduler_proof") is False
         and prefetch_control.get("precompute_dispatch_counts_as_completed_operational_slot") is False
     )
-    if actor != repository_owner and not recovery_guard_actor and not precompute_guard_actor:
+    occurrence_orchestrator_guard_actor = (
+        mode == "report_prefetch"
+        and actor == "github-actions[bot]"
+        and str(reason).startswith("fpl_master_orchestrator_")
+    )
+    if (
+        actor != repository_owner
+        and not recovery_guard_actor
+        and not precompute_guard_actor
+        and not occurrence_orchestrator_guard_actor
+    ):
         raise WorkflowControlError("V6 governed dispatch actor is not authorized")
     if not str(reason).strip():
         raise WorkflowControlError("V6 governed dispatch requires an audit reason")

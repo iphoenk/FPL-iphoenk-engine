@@ -7010,6 +7010,11 @@ def run_deep(
             raise IntegratedRunnerError(
                 "S16B_DUE_CONTENT_INCOMPLETE: fixture/exact15 contract failed"
             )
+        s16b_context["post_match_review"] = post_match_review
+        (output_dir / ".s16b_context.json").write_text(
+            json.dumps(s16b_context, ensure_ascii=False, default=str),
+            encoding="utf-8",
+        )
     else:
         _skip_stage(
             ledger,

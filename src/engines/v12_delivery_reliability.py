@@ -1324,8 +1324,11 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
     ),
     "S16": ("rows", "why_not_duplicate_of_our15"),
     "S16B": (
-        "our15", "material_universe_candidates", "full_universe_scan",
-        "recency_weighting", "bayesian_update", "linkup_dependency",
+        "gw", "fixtures_expected", "fixtures_reviewed", "unique_fixture_count",
+        "duplicate_fixture_count", "match_by_match_review",
+        "after_gw_reassessment", "full_universe_denominator",
+        "recency_weighting", "bayesian_update", "candidate_traceability",
+        "fixture_ids_expected", "fixture_ids_reviewed",
     ),
     "S17": ("engine_data_status", "source_health", "auth_authority", "lineage"),
     "S18": (
@@ -1443,69 +1446,71 @@ def _serving_project_rows(
 
 
 def _serving_project_s16b(content: dict[str, Any]) -> None:
-    compact_our15 = []
-    for raw in content.get("our15") or []:
+    """Keep the bounded, human-relevant S16B package; never ship raw universe dumps."""
+    compact_matches: list[dict[str, Any]] = []
+    for raw in content.get("match_by_match_review") or []:
         if not isinstance(raw, Mapping):
             continue
-        row = _serving_pick(
+        match = _serving_pick(
             raw,
             (
-                "element_id", "player", "trajectory",
-                "bayesian_state", "linkup_dependency",
+                "fixture_id", "result", "venue", "home_team", "away_team",
+                "formation_system", "coach_pattern", "tactical_takeaways",
             ),
         )
-        trajectory = row.get("trajectory")
-        if isinstance(trajectory, Mapping):
-            projected = _serving_pick(
-                trajectory,
-                (
-                    "trajectory_classification",
-                    "role_minutes_evolution",
-                    "matches",
-                ),
-            )
-            projected["matches"] = _serving_project_rows(
-                projected.get("matches"),
-                (
-                    "gw", "opponent_team_id", "home", "starter", "minutes",
-                    "result", "fpl_points", "goals", "assists", "xg",
-                    "npxg", "xa", "xgi", "shots", "shots_on_target",
-                    "box_touches", "key_passes", "chances_created",
-                    "big_chances", "set_piece_role", "set_piece_involvement",
-                    "penalty_role", "penalty_involvement",
-                    "defensive_contribution", "team_formation",
-                    "opponent_formation", "role", "price_movement",
-                    "outlook_1_3_5gw",
-                ),
-            )
-            row["trajectory"] = projected
-        compact_our15.append(row)
-    content["our15"] = compact_our15
-
-    compact_candidates = []
-    for raw in content.get("material_universe_candidates") or []:
-        if not isinstance(raw, Mapping):
-            continue
-        compact_candidates.append(
-            {
-                **_serving_pick(
-                    raw,
-                    (
-                        "element_id", "name", "primary_classification",
-                        "horizon_1gw", "horizon_3gw", "horizon_5gw",
-                    ),
-                ),
-                "trajectory": _serving_pick(
-                    raw.get("trajectory") if isinstance(raw.get("trajectory"), Mapping) else {},
-                    ("trajectory_classification",),
-                ),
-                "minutes": _serving_pick(
-                    raw.get("minutes") if isinstance(raw.get("minutes"), Mapping) else {},
-                    ("xmins", "p_start"),
-                ),
-            }
+        match["our_players"] = _serving_project_rows(
+            raw.get("our_players"),
+            (
+                "element_id", "player", "starter_sub_unused", "minutes",
+                "fpl_points", "position_role", "xg", "xa", "xgi", "shots",
+                "shots_on_target", "box_touches", "key_passes",
+                "chances_created", "big_chances", "set_pieces", "penalties",
+                "defensive_contribution", "substitution_timing",
+                "analytical_read",
+            ),
         )
-    content["material_universe_candidates"] = compact_candidates
+        match["watch_candidates"] = _serving_project_rows(
+            raw.get("watch_candidates"),
+            (
+                "fixture_id", "player_id", "player", "evidence_reason",
+                "role_observation", "underlying_observation", "minutes_evidence",
+                "classification",
+            ),
+        )
+        compact_matches.append(match)
+    content["match_by_match_review"] = compact_matches
+
+    reassessment = content.get("after_gw_reassessment")
+    if not isinstance(reassessment, Mapping):
+        return
+    compact = _serving_pick(
+        reassessment,
+        ("summary", "full_universe_scan", "decision_implications"),
+    )
+    compact["owned15_review"] = _serving_project_rows(
+        reassessment.get("owned15_review"),
+        (
+            "element_id", "player", "pre_gw", "gw_evidence", "post_gw",
+            "classification", "evidence_classification", "role_change",
+            "minutes_change", "consequence", "act_authority",
+        ),
+    )
+    compact["watchlist_delta"] = _serving_project_rows(
+        reassessment.get("watchlist_delta"),
+        (
+            "element_id", "player", "previous_rank", "current_rank",
+            "movement_state", "state",
+        ),
+    )
+    compact["new_watch_candidates"] = _serving_project_rows(
+        reassessment.get("new_watch_candidates"),
+        (
+            "fixture_id", "player_id", "player", "evidence_reason",
+            "role_observation", "underlying_observation", "minutes_evidence",
+            "classification", "full_universe_outcome",
+        ),
+    )
+    content["after_gw_reassessment"] = compact
 
 
 def _serving_project_content(

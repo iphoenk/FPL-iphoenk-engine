@@ -577,54 +577,101 @@ def test_j_current15_supportable_requires_exactly_15_rich_individual_analyses():
     assert "posterior" in body.lower()
 
 
-def test_k_detailed_gw1_now_evidence_requires_match_by_match_visible_rows():
+def test_k_due_s16b_requires_match_review_exact15_and_universe_denominator():
     s16b = _section(
         "S16B",
-        "POST-MATCH REVIEW GW1 → NOW",
+        "POST-MATCH REVIEW",
         {
-            "recency_weighting": "EXPONENTIAL_HALF_LIFE_GW",
-            "bayesian_update": "POSTERIOR_RECENT_RATE_WITH_SHRINKAGE",
-            "our15": [
+            "gw": 6,
+            "fixtures_expected": 1,
+            "fixtures_reviewed": 1,
+            "unique_fixture_count": 1,
+            "duplicate_fixture_count": 0,
+            "match_by_match_review": [
                 {
-                    "element_id": 1,
-                    "player": "P01",
-                    "bayesian_state": {"goal_rate": 0.2},
-                    "trajectory": {
-                        "trajectory_classification": "STABLE",
-                        "role_minutes_evolution": {},
-                        "matches": [
-                            {
-                                "gw": 1,
-                                "opponent_team_id": 2,
-                                "home": True,
-                                "starter": True,
-                                "minutes": 90,
-                                "fpl_points": 6,
-                                "goals": 1,
-                                "assists": 0,
-                                "xg": 0.4,
-                                "npxg": 0.4,
-                                "xa": 0.1,
-                                "xgi": 0.5,
-                                "shots": 3,
-                                "shots_on_target": 2,
-                                "box_touches": 5,
-                                "key_passes": 1,
-                                "chances_created": 1,
-                                "big_chances": 1,
-                                "team_formation": "4-3-3",
-                                "opponent_formation": "4-4-2",
-                            }
-                        ],
-                    },
+                    "fixture_id": "601",
+                    "result": "ARS 2–1 CHE",
+                    "formation_system": {"home": "4-3-3", "away": "4-2-3-1"},
+                    "coach_pattern": {},
+                    "our_players": [
+                        {
+                            "element_id": 1,
+                            "player": "P01",
+                            "starter_sub_unused": "STARTER",
+                            "minutes": 90,
+                            "fpl_points": 6,
+                            "position_role": "9",
+                            "xg": 0.4,
+                            "xa": 0.1,
+                            "xgi": 0.5,
+                            "shots": 3,
+                            "shots_on_target": 2,
+                            "box_touches": 5,
+                            "key_passes": 1,
+                            "chances_created": 1,
+                            "big_chances": 1,
+                            "set_pieces": "UNAVAILABLE",
+                            "penalties": "UNAVAILABLE",
+                            "defensive_contribution": "UNAVAILABLE",
+                            "substitution_timing": "UNAVAILABLE",
+                            "analytical_read": {
+                                "role_change": "ROLE_STABLE",
+                                "minutes_change": "UNAVAILABLE",
+                                "underlying_change": "STABLE",
+                                "start_security": 0.95,
+                                "sustainability": "STABLE_OR_NOISY",
+                                "one_match_noise": True,
+                                "next_gw_implication": "HOLD",
+                            },
+                        }
+                    ],
+                    "watch_candidates": [],
+                    "tactical_takeaways": {},
                 }
             ],
+            "after_gw_reassessment": {
+                "summary": {
+                    "our15_upgrades": 0,
+                    "our15_downgrades": 0,
+                    "our15_stable": 15,
+                    "watchlist_new": 0,
+                    "watchlist_up": 0,
+                    "watchlist_down": 0,
+                    "watchlist_out": 0,
+                    "actionable": 0,
+                },
+                "owned15_review": [
+                    {
+                        "element_id": i,
+                        "player": f"P{i:02d}",
+                        "pre_gw": {},
+                        "gw_evidence": {},
+                        "post_gw": {},
+                        "classification": "STABLE",
+                        "role_change": "ROLE_STABLE",
+                        "minutes_change": "UNAVAILABLE",
+                        "consequence": "HOLD",
+                    }
+                    for i in range(1, 16)
+                ],
+                "watchlist_delta": [],
+                "new_watch_candidates": [],
+                "decision_implications": {
+                    "act_authority": False,
+                    "canonical_transfer_decision_owner": "S14/P1.7/STAGE3",
+                },
+            },
+            "full_universe_denominator": 667,
         },
     )
     report = _deep_report([_route()], extra_sections=[s16b])
     body = render_deep_text(report)
-    assert "- GW1" in body
-    assert "npxG 0.4" in body
+    assert "S16B.1" in body
+    assert "MATCH-BY-MATCH REVIEW" in body
+    assert "ARS 2–1 CHE" in body
+    assert "S16B.2" in body
+    assert "AFTER-GW REASSESSMENT" in body
+    assert "Full-universe denominator: 667" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 

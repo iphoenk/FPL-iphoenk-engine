@@ -24,7 +24,7 @@ from typing import Any, Callable, Mapping, Sequence
 from src.engines.v12_section_resolver import resolve_section, validate_resolved_sections
 
 
-CANONICAL_DEEP_SECTIONS: tuple[tuple[str, str], ...] = (
+CANONICAL_DEEP_BASE_SECTIONS: tuple[tuple[str, str], ...] = (
     ("S01", "DECISION / CURRENT STATUS"),
     ("S02", "OUR15"),
     ("S03", "DECISION DELTA"),
@@ -44,11 +44,30 @@ CANONICAL_DEEP_SECTIONS: tuple[tuple[str, str], ...] = (
     ("S15", "EVIDENCE QUALITY"),
     ("S15B", "ICON+ MINI-LEAGUE"),
     ("S16", "ALL15 TACTICAL / PROBABILITY REVIEW"),
-    ("S16B", "POST-MATCH REVIEW GW1 → NOW"),
     ("S17", "SOURCE HEALTH / FRESHNESS / LINEAGE"),
     ("S18", "ACTION BOARD"),
     ("S19", "FINAL JUDGEMENT"),
 )
+CANONICAL_S16B_SECTION = ("S16B", "POST-MATCH REVIEW")
+_S16B_INSERT_INDEX = next(
+    index
+    for index, (section_id, _) in enumerate(CANONICAL_DEEP_BASE_SECTIONS)
+    if section_id == "S17"
+)
+
+
+def canonical_deep_sections(*, s16b_due: bool) -> tuple[tuple[str, str], ...]:
+    if not s16b_due:
+        return CANONICAL_DEEP_BASE_SECTIONS
+    return tuple(
+        list(CANONICAL_DEEP_BASE_SECTIONS[:_S16B_INSERT_INDEX])
+        + [CANONICAL_S16B_SECTION]
+        + list(CANONICAL_DEEP_BASE_SECTIONS[_S16B_INSERT_INDEX:])
+    )
+
+
+# Backward-compatible import name now means the normal 22-section DEEP backbone.
+CANONICAL_DEEP_SECTIONS = CANONICAL_DEEP_BASE_SECTIONS
 
 TERMINAL_SCOPE_STATES = {
     "AVAILABLE",
@@ -301,7 +320,10 @@ def _previous_visible_bundle_from_directory(
     """Load governed previous presentation state without scanning history."""
     if directory is None:
         return None
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    legal_catalogs = {
+        tuple(section_id for section_id, _ in canonical_deep_sections(s16b_due=False)),
+        tuple(section_id for section_id, _ in canonical_deep_sections(s16b_due=True)),
+    }
     try:
         current_dt = datetime.fromisoformat(
             str(current_report_slot or "").replace("Z", "+00:00")
@@ -327,6 +349,7 @@ def _previous_visible_bundle_from_directory(
     compact = _read_json(directory / "previous_deep_baseline.json", None)
     if isinstance(compact, Mapping):
         sections = compact.get("sections")
+        actual_ids = tuple(str(value) for value in compact.get("section_ids") or [])
         valid = bool(
             str(compact.get("artifact_kind") or "")
             == "V12_PREVIOUS_DEEP_BASELINE"
@@ -338,9 +361,9 @@ def _previous_visible_bundle_from_directory(
             and str(compact.get("human_facing_status") or "").upper() == "PASS"
             and compact.get("math_recomputed") is False
             and strictly_older(compact.get("report_slot"))
-            and list(compact.get("section_ids") or []) == expected_ids
+            and actual_ids in legal_catalogs
             and isinstance(sections, Mapping)
-            and list(sections) == expected_ids
+            and tuple(sections) == actual_ids
         )
         if valid:
             return {
@@ -362,9 +385,12 @@ def _previous_visible_bundle_from_directory(
                             "section_id": section_id,
                             **deepcopy(dict(sections[section_id])),
                         }
-                        for section_id in expected_ids
+                        for section_id in actual_ids
                     ],
                 },
+                "s16b_delivery_state": deepcopy(
+                    compact.get("s16b_delivery_state") or {}
+                ),
             }
         return None
 
@@ -372,6 +398,7 @@ def _previous_visible_bundle_from_directory(
     digest = _read_json(directory / "deep.json", None)
     if isinstance(serving, Mapping) and isinstance(digest, Mapping):
         sections = serving.get("sections")
+        actual_ids = tuple(sections) if isinstance(sections, Mapping) else ()
         valid = bool(
             str(serving.get("report_mode") or "").upper() == "DEEP"
             and str(serving.get("delivery_status") or "").upper() == "READY_FULL"
@@ -385,7 +412,7 @@ def _previous_visible_bundle_from_directory(
             and str(serving.get("report_slot") or "")
             == str(digest.get("report_slot") or "")
             and isinstance(sections, Mapping)
-            and list(sections) == expected_ids
+            and actual_ids in legal_catalogs
         )
         if valid:
             return {
@@ -407,9 +434,12 @@ def _previous_visible_bundle_from_directory(
                             "section_id": section_id,
                             **deepcopy(dict(sections[section_id])),
                         }
-                        for section_id in expected_ids
+                        for section_id in actual_ids
                     ],
                 },
+                "s16b_delivery_state": deepcopy(
+                    serving.get("s16b_delivery_state") or {}
+                ),
             }
         return None
 
@@ -475,8 +505,9 @@ def assemble_degraded_deep_report(
     root_failure: str,
     root_stage: str | None = None,
     previous_visible_deep_dir: Path | None = None,
+    s16b_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Create one usable 23-section DEEP report without inventing analytics."""
+    """Create one usable conditional DEEP report without inventing analytics."""
     root_stage = str(
         root_stage
         or (
@@ -501,6 +532,9 @@ def assemble_degraded_deep_report(
 
     facts_status, facts_generated_at = _official_fact_status(runtime_root)
     prefetch = inspect_prefetch_terminal(runtime_root, report_slot=report_slot)
+    lifecycle = dict(s16b_context or {})
+    s16b_due = lifecycle.get("s16b_due") is True
+    catalog = canonical_deep_sections(s16b_due=s16b_due)
 
     sections = [
         _fallback_section(
@@ -513,7 +547,7 @@ def assemble_degraded_deep_report(
                 previous_slot=previous_slot,
             ),
         )
-        for section_id, label in CANONICAL_DEEP_SECTIONS
+        for section_id, label in catalog
     ]
     by_id = {row["section_id"]: row for row in sections}
 
@@ -587,6 +621,34 @@ def assemble_degraded_deep_report(
             "false_downstream_failures": 0,
         },
     }
+    if s16b_due:
+        by_id["S16B"] = {
+            "section_id": "S16B",
+            "label": "POST-MATCH REVIEW",
+            "state": "DEGRADED",
+            "degradation_reason": root_failure,
+            "source_state": "CURRENT",
+            "content": {
+                "presentation_status": "CURRENT",
+                "gw": lifecycle.get("completed_gw"),
+                "fixtures_expected": (
+                    (lifecycle.get("gw_completion") or {}).get(
+                        "expected_fixture_count"
+                    )
+                ),
+                "fixtures_reviewed": 0,
+                "match_by_match_review": [],
+                "after_gw_reassessment": {
+                    "owned15_review": [],
+                    "watchlist_delta": [],
+                    "summary": {},
+                    "status": "DEGRADED",
+                },
+                "full_universe_denominator": "UNAVAILABLE",
+                "degradation_reason": root_failure,
+            },
+        }
+
     by_id["S17"] = {
         "section_id": "S17",
         "label": "SOURCE HEALTH / FRESHNESS / LINEAGE",
@@ -636,7 +698,7 @@ def assemble_degraded_deep_report(
         },
     }
 
-    ordered = [by_id[section_id] for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    ordered = [by_id[section_id] for section_id, _ in catalog]
     resolver_failures = validate_resolved_sections(ordered)
     if resolver_failures:
         raise RuntimeError(
@@ -677,8 +739,9 @@ def assemble_degraded_deep_report(
         "mode": "DEEP",
         "sections": ordered,
         "numbered_headings": 19,
-        "rendered_blocks_including_suffix_sections": 23,
-        "rendered_blocks_including_15B": 23,
+        "rendered_blocks_including_suffix_sections": len(ordered),
+        "rendered_blocks_including_15B": len(ordered),
+        "s16b_due": s16b_due,
         "exact_canonical_order": True,
     }
     body = render_degraded_deep_text(
@@ -698,7 +761,8 @@ def assemble_degraded_deep_report(
         "delivery_status": "READY_DEGRADED",
         "root_failure": root_failure,
         "runner_state": "BLOCKED_UPSTREAM",
-        "canonical_expected_section_ids": [x[0] for x in CANONICAL_DEEP_SECTIONS],
+        "canonical_expected_section_ids": [x[0] for x in catalog],
+        "s16b_due": s16b_due,
         "rendered_section_ids": [x["section_id"] for x in ordered],
         "canonical_catalog_complete": True,
         "pre_render_qa_status": "DEGRADED_PRESENTATION_PASS",
@@ -722,6 +786,14 @@ def assemble_degraded_deep_report(
         "runner_status": "DEGRADED",
         "delivery_status": "READY_DEGRADED",
         "root_failure": root_failure,
+        "s16b_due": s16b_due,
+        "s16b_context": lifecycle,
+        "s16b_delivery_state": dict(
+            lifecycle.get("delivery_state_after")
+            or lifecycle.get("delivery_state_before")
+            or (previous_bundle or {}).get("s16b_delivery_state")
+            or {}
+        ),
         "stage_ledger": stage_ledger,
         "section_manifest": [
             {"section_id": row["section_id"], "status": row["state"]}
@@ -729,12 +801,12 @@ def assemble_degraded_deep_report(
         ],
         "pre_render_qa": {
             "status": "DEGRADED_PRESENTATION_PASS",
-            "section_count": 23,
+            "section_count": len(ordered),
             "decision_first": True,
         },
         "post_render_qa": {
             "status": "DEGRADED_PRESENTATION_PASS",
-            "section_count": 23,
+            "section_count": len(ordered),
             "final_judgement_present": True,
         },
         "human_facing_qa": {"status": "PASS", "failures": []},
@@ -841,11 +913,15 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
         if isinstance(row, Mapping)
     ]
     ids = [str(row.get("section_id") or "") for row in sections]
-    expected = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    s16b_due = bundle.get("s16b_due") is True
+    expected = [
+        section_id
+        for section_id, _ in canonical_deep_sections(s16b_due=s16b_due)
+    ]
     if ids != expected:
         failures.append("SECTION_ORDER_OR_COUNT")
-    if len(sections) != 23:
-        failures.append("SECTION_COUNT_NOT_23")
+    if len(sections) != len(expected):
+        failures.append(f"SECTION_COUNT_NOT_EXPECTED:{len(sections)}/{len(expected)}")
     if not sections or sections[0].get("section_id") != "S01":
         failures.append("DECISION_NOT_FIRST")
     if not sections or sections[-1].get("section_id") != "S19":
@@ -988,7 +1064,12 @@ def build_presentation_qa_manifest(bundle: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(row, Mapping)
     ]
 
-    exact_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    exact_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=bundle.get("s16b_due") is True
+        )
+    ]
     actual_ids = [str(row.get("section_id") or "") for row in sections]
     prior_mislabelled = False
     for row in sections:
@@ -1056,6 +1137,8 @@ def build_presentation_qa_manifest(bundle: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "section_count": len(sections),
+        "expected_section_count": len(exact_ids),
+        "s16b_due": bundle.get("s16b_due") is True,
         "section_order_exact": actual_ids == exact_ids,
         "our15_count": len(s02_rows),
         "our15_complete_when_claimed": our15_ok,
@@ -1103,8 +1186,10 @@ def validate_presentation_qa_manifest(manifest: Mapping[str, Any]) -> list[str]:
     for key in expected_true:
         if manifest.get(key) is not True:
             failures.append(key.upper())
-    if int(manifest.get("section_count") or 0) != 23:
-        failures.append("SECTION_COUNT_NOT_23")
+    if int(manifest.get("section_count") or 0) != int(
+        manifest.get("expected_section_count") or 0
+    ):
+        failures.append("SECTION_COUNT_NOT_EXPECTED")
     if int(manifest.get("root_failure_count") or 0) > 1:
         failures.append("ROOT_FAILURE_COUNT_GT_1")
     if int(manifest.get("downstream_false_failures") or 0) != 0:
@@ -1554,6 +1639,8 @@ def build_serving_snapshot(bundle: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "report_slot": bundle.get("report_slot"),
         "report_mode": bundle.get("report_mode"),
+        "s16b_due": bundle.get("s16b_due") is True,
+        "s16b_delivery_state": deepcopy(bundle.get("s16b_delivery_state") or {}),
         "GW": planning_gw if planning_gw not in (None, 0, "") else "UNAVAILABLE",
         "delivery_status": delivery_status,
         "decision": decision,
@@ -1607,7 +1694,12 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     if str(snapshot.get("delivery_status") or "") not in DELIVERY_STATES:
         failures.append("INVALID_DELIVERY_STATUS")
     sections = snapshot.get("sections")
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=snapshot.get("s16b_due") is True
+        )
+    ]
     if not isinstance(sections, Mapping) or list(sections) != expected_ids:
         failures.append("SERVING_SECTION_ORDER_OR_COUNT")
     if not str(snapshot.get("decision") or "").strip():
@@ -1635,6 +1727,8 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
             "section_states",
             "lineage",
             "supersedes",
+            "s16b_due",
+            "s16b_delivery_state",
         )
         for key in required:
             if key not in snapshot:

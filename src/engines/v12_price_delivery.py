@@ -21,6 +21,9 @@ from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_price20,
     build_watchlist20,
+    humanize_visible_label,
+    humanize_visible_text,
+    humanize_visible_value,
 )
 
 
@@ -33,6 +36,14 @@ ACTION_BOARD_FIELDS = (
     "COST OF WAITING",
     "ABORT / REVERSAL",
 )
+ACTION_BOARD_VISIBLE_LABELS = {
+    "NOW": "Sekarang",
+    "NEXT": "Langkah berikutnya",
+    "TRIGGER TO ACT": "Kapan harus bertindak",
+    "LATEST SAFE DECISION POINT": "Batas aman keputusan",
+    "COST OF WAITING": "Risiko menunggu",
+    "ABORT / REVERSAL": "Kapan batal / balik arah",
+}
 ACTIONS = frozenset({"WAIT", "PREPARE", "ACT"})
 POSITION_BY_TYPE = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
 CURRENT_AUTH_STATES = frozenset({"AVAILABLE", "AUTH_AVAILABLE", "CURRENT", "PASS"})
@@ -950,11 +961,7 @@ def validate_price_report_model(report: Mapping[str, Any]) -> list[str]:
 
 
 def _cell(value: Any) -> str:
-    if value is None:
-        return "UNAVAILABLE"
-    if isinstance(value, (dict, list, tuple)):
-        return str(value).replace("|", "/")
-    return str(value).replace("|", "/")
+    return humanize_visible_value(value).replace("|", "/")
 
 
 def _table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> list[str]:
@@ -968,22 +975,27 @@ def render_price_report(report: Mapping[str, Any]) -> str:
     sections = list(report.get("sections") or [])
     lines = [
         f"FPL MASTER V12 | PRICE | GW{report.get('planning_gw')}",
-        "FACT: Official FPL factual evidence. MODEL: price/model evidence. INFERENCE: decision-layer synthesis.",
+        "FACT: data resmi FPL. MODEL: sinyal model harga. INFERENCE: kesimpulan untuk keputusan FPL.",
         "",
     ]
     for index, section in enumerate(sections, 1):
         lines.append(f"## PRICE {index} - {section.get('label')}")
-        lines.append(f"STATUS: {section.get('state')}")
+        lines.append(f"Status: {humanize_visible_value(section.get('state'))}")
         if section.get("degradation_reason"):
-            lines.append(f"DEGRADATION_REASON: {section.get('degradation_reason')}")
+            lines.append(
+                "Catatan keterbatasan: "
+                + humanize_visible_value(section.get("degradation_reason"))
+            )
         content = dict(section.get("content") or {})
 
         if index == 1:
-            lines.append(f"ACTION: {content.get('action')}")
-            lines.append(f"Material change: {_cell(content.get('material_change'))}")
-            lines.append(f"Affordability: {_cell(content.get('affordability_changed'))}")
-            lines.append(f"Price pressure: {_cell(content.get('price_pressure'))}")
-            lines.append("Football decision precedence: price alone does not force ACT.")
+            lines.append(
+                f"Keputusan: {humanize_visible_value(content.get('action'))}"
+            )
+            lines.append(f"Perubahan material: {_cell(content.get('material_change'))}")
+            lines.append(f"Kondisi affordability: {_cell(content.get('affordability_changed'))}")
+            lines.append(f"Tekanan harga: {_cell(content.get('price_pressure'))}")
+            lines.append("Harga saja tidak cukup untuk memaksa transfer.")
         elif index == 2:
             rows = list(content.get("rows") or [])
             lines.extend(_table(
@@ -1002,11 +1014,11 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 ) for row in rows],
             ))
             lines.append(
-                "Evidence: source="
+                "Sumber OUR15: "
                 + _cell(content.get("source_class"))
-                + " gw="
+                + "; GW "
                 + _cell(content.get("gw"))
-                + " timestamp="
+                + "; diamati "
                 + _cell(content.get("observed_at"))
             )
         elif index == 3:
@@ -1020,7 +1032,7 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                     ) for row in changes],
                 ))
             else:
-                lines.append("FACT: No current event official price delta rows in the bound snapshot.")
+                lines.append("FACT: belum ada baris perubahan harga resmi pada snapshot ini.")
             lines.append("MODEL: " + _cell(content.get("predictor_delta_state")))
         elif index == 4:
             alerts = list(content.get("alerts") or [])
@@ -1033,7 +1045,7 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                     ) for row in alerts],
                 ))
             else:
-                lines.append("INFERENCE: No evidence-backed team-needs price alert is currently proven.")
+                lines.append("INFERENCE: belum ada kebutuhan tim yang cukup kuat untuk memicu aksi karena harga.")
         elif index == 5:
             rows = list(content.get("rows") or [])
             lines.extend(_table(
@@ -1073,26 +1085,63 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                     ) for row in routes],
                 ))
             else:
-                lines.append("INFERENCE: No supportable serious OUT -> IN route is available for economics materialization.")
-            lines.append("Affordability and FT/HIT economics are separate contracts.")
+                lines.append("INFERENCE: belum ada rute transfer serius OUT → IN yang ekonominya dapat dibuktikan.")
+            lines.append("Keterjangkauan dan biaya FT/hit dinilai terpisah.")
         elif index == 9:
-            lines.append("MINI_LEAGUE_STATE: " + str(section.get("state")))
-            for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+            lines.append(
+                "Kondisi mini-league: "
+                + humanize_visible_value(section.get("state"))
+            )
+            if content.get("league_name"):
+                lines.append(f"Mini-league: {_cell(content.get('league_name'))}")
+            expected = content.get("expected_manager_count")
+            collected = content.get("collected_manager_count")
+            if expected is not None or collected is not None:
+                lines.append(
+                    "Cakupan manajer: "
+                    f"{_cell(collected)}/{_cell(expected)}"
+                )
+            summary = content.get("user_summary")
+            if isinstance(summary, Mapping):
+                rank = summary.get("rank")
+                total = summary.get("total")
+                entry = summary.get("entry_id")
+                parts = []
+                if rank is not None and expected is not None:
+                    parts.append(f"peringkat {rank}/{expected}")
+                elif rank is not None:
+                    parts.append(f"peringkat {rank}")
+                if total is not None:
+                    parts.append(f"{total} poin")
+                if entry is not None:
+                    parts.append(f"entry {entry}")
+                if parts:
+                    lines.append("Posisi kita: " + ", ".join(parts))
+            impact = content.get("price_route_impact")
+            if impact is not None:
+                lines.append(
+                    "Dampak harga ke rute transfer: "
+                    + _cell(impact)
+                )
         elif index == 10:
             for field in ACTION_BOARD_FIELDS:
-                lines.append(f"{field}: {_cell(content.get(field))}")
+                lines.append(
+                    f"{ACTION_BOARD_VISIBLE_LABELS[field]}: "
+                    f"{_cell(content.get(field))}"
+                )
         elif index == 11:
             for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+                lines.append(
+                    f"{humanize_visible_label(key)}: {_cell(value)}"
+                )
         elif index == 12:
-            lines.append(f"ACTION: {_cell(content.get('action'))}")
-            lines.append(f"Key price risk: {_cell(content.get('key_price_risk'))}")
-            lines.append(f"Affordability threatened: {_cell(content.get('affordability_threatened'))}")
-            lines.append(f"Football edge justifies action: {_cell(content.get('football_edge_justifies_action'))}")
-            lines.append(f"Next checkpoint: {_cell(content.get('next_checkpoint'))}")
+            lines.append(f"Keputusan: {_cell(content.get('action'))}")
+            lines.append(f"Risiko harga utama: {_cell(content.get('key_price_risk'))}")
+            lines.append(f"Affordability terancam: {_cell(content.get('affordability_threatened'))}")
+            lines.append(f"Keunggulan football cukup untuk bertindak: {_cell(content.get('football_edge_justifies_action'))}")
+            lines.append(f"Checkpoint berikutnya: {_cell(content.get('next_checkpoint'))}")
         lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+    return humanize_visible_text("\n".join(lines).rstrip() + "\n")
 
 
 def _parse_sections(body: str) -> tuple[list[str], dict[str, str]]:
@@ -1174,19 +1223,32 @@ def validate_price_visible_body(
 
     action_section = sections.get("PRICE10", "")
     for field in ACTION_BOARD_FIELDS:
-        if not re.search(rf"(?m)^{re.escape(field)}:\s*\S", action_section):
+        visible_label = ACTION_BOARD_VISIBLE_LABELS[field]
+        if not re.search(
+            rf"(?m)^{re.escape(visible_label)}:\s*\S",
+            action_section,
+        ):
             failures.append(f"VISIBLE_ACTION_BOARD_FIELD_MISSING={field}")
 
+    expected_action = humanize_visible_value(report.get("action"))
     first = sections.get("PRICE1", "")
-    action_match = re.search(r"(?m)^ACTION:\s*(WAIT|PREPARE|ACT)\s*$", first)
+    action_match = re.search(r"(?m)^Keputusan:\s*(.+?)\s*$", first)
     if not action_match:
         failures.append("VISIBLE_PRICE_ACTION_MISSING")
-    elif action_match.group(1) != str(report.get("action") or "").upper():
+    elif action_match.group(1).strip() != expected_action:
         failures.append("VISIBLE_PRICE_ACTION_MISMATCH")
 
     final = sections.get("PRICE12", "")
-    if not re.search(r"(?m)^ACTION:\s*(WAIT|PREPARE|ACT)\s*$", final):
+    final_match = re.search(r"(?m)^Keputusan:\s*(.+?)\s*$", final)
+    if not final_match:
         failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_ACTION_MISSING")
+    elif final_match.group(1).strip() != expected_action:
+        failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_ACTION_MISMATCH")
+
+    if re.search(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b", str(body or "")):
+        failures.append("VISIBLE_MACHINE_LANGUAGE_RAW_ENUM")
+    if re.search(r"\{\s*['\"][A-Za-z0-9_]+['\"]\s*:", str(body or "")):
+        failures.append("VISIBLE_MACHINE_LANGUAGE_RAW_DICT")
 
     return list(dict.fromkeys(failures))
 

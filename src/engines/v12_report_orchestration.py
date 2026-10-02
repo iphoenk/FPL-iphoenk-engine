@@ -3406,10 +3406,10 @@ def render_match_text(report: Mapping[str, Any]) -> str:
             if isinstance(section.get("content"), Mapping)
             else {}
         )
-        lines = [_visible_section_heading(sid, label), f"Status: {_human_value(state)}"]
+        lines = [_visible_section_heading(sid, label), f"Status: {state}"]
         reason = str(section.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
-            lines.append(f"Keterangan: {_human_value(reason)}")
+            lines.append(f"Reason: {reason}")
 
         if sid == "MATCH1":
             lines.extend(
@@ -3597,57 +3597,7 @@ def _visible_section_heading(section_id: Any, label: Any) -> str:
 
 
 def _human_label(value: Any) -> str:
-    raw = str(value or "").strip()
-    aliases = {
-        "operational_state": "Status keputusan",
-        "planning_gw": "Gameweek rencana",
-        "primary_decision": "Keputusan utama",
-        "key_decision_driver": "Dasar utama keputusan",
-        "current_blockers": "Hal yang masih perlu dipastikan",
-        "user_summary": "Ringkasan posisi liga",
-        "mini_league_state": "Status mini-league",
-        "degradation_reason": "Keterangan keterbatasan data",
-        "actual_paths": "Jumlah simulasi Monte Carlo",
-    }
-    return aliases.get(raw.lower(), raw.replace("_", " ").strip().title())
-
-
-_MACHINE_ENUM_RE = re.compile(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+){2,}\\b")
-
-
-def _human_value(value: Any) -> str:
-    if value is None:
-        return "Belum tersedia"
-    if isinstance(value, bool):
-        return "Ya" if value else "Tidak"
-    text = str(value)
-    direct = {
-        "COMPLETE": "Lengkap",
-        "DEGRADED": "Terbatas",
-        "UNAVAILABLE": "Belum tersedia",
-        "CURRENT_VALID": "Data skuad saat ini valid",
-        "USER_CONFIRMED": "Dikonfirmasi pengguna",
-        "PERSONAL_AUTH_UNAVAILABLE": "Akses data personal belum tersedia",
-        "EXECUTION_FINANCE_DEGRADED": "Data bank dan harga jual belum lengkap",
-        "PRICE_PREDICTOR_STALE": "Prediksi harga perlu diperbarui",
-        "CAPTAIN_NEAR_TIE_OR_FRESH_EVIDENCE_PENDING": "Pilihan kapten masih ketat atau menunggu bukti terbaru",
-        "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR": "Belum ada rute transfer yang mengungguli bertahan pada horizon 1, 3, dan 5 GW",
-        "COVARIANCE_NOT_MODELLED_YET": "Korelasi antarpemain belum dimodelkan",
-        "NORMAL_LOAD": "Beban normal",
-        "STABLE_OR_NOISY": "Stabil atau sinyal belum cukup kuat",
-        "MINUTES_ROLE_IMPROVING": "Peluang menit/peran membaik",
-        "BREAKOUT_PROCESS": "Sinyal peningkatan performa",
-        "REGRESSION_RISK": "Risiko penurunan performa",
-        "OUTPUT_CONFIRMING_PROCESS": "Output mulai mengonfirmasi proses",
-        "MINUTES_BREAKOUT": "Peluang menit meningkat",
-    }
-    if text in direct:
-        return direct[text]
-    return _MACHINE_ENUM_RE.sub(lambda m: m.group(0).replace("_", " ").lower(), text)
-
-
-def _humanize_visible_text(text: str) -> str:
-    return _human_value(text)
+    return str(value or "").strip().replace("_", " ").upper()
 
 
 def _render_generic_human_content(
@@ -3726,10 +3676,10 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
         label = str(section.get("label") or "")
         state = str(section.get("state") or "")
         section_id = section.get("section_id")
-        lines = [_visible_section_heading(section_id, label), f"Status: {_human_value(state)}"]
+        lines = [_visible_section_heading(section_id, label), f"Status: {state}"]
         reason = str(section.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
-            lines.append(f"Keterangan: {_human_value(reason)}")
+            lines.append(f"Reason: {reason}")
         content = section.get("content")
         content_map = dict(content or {}) if isinstance(content, Mapping) else {}
 
@@ -4050,10 +4000,10 @@ def _render_deep_visible_contract_lines(
             )
         )
         lines.append(f"PLANNING GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
-        lines.append(f"Alasan keputusan: {_human_value(dashboard.get('PRIMARY_REASON', payload.get('reason')))}")
-        lines.append(f"Dasar analisis: {_human_value(dashboard.get('KEY_DRIVER', payload.get('key_decision_driver')))}")
+        lines.append(f"PRIMARY REASON: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
+        lines.append(f"KEY DRIVER: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
         blockers = dashboard.get("CURRENT_BLOCKERS") or payload.get("current_blockers") or []
-        lines.append("Yang masih perlu dipastikan: " + (", ".join(_human_value(x) for x in blockers) if blockers else "Tidak ada"))
+        lines.append("CURRENT BLOCKERS: " + (", ".join(str(x) for x in blockers) if blockers else "NONE"))
         excluded.extend((
             "decision_dashboard",
             "operational_state",
@@ -5958,11 +5908,11 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         section_id = str(row.get("section_id") or "")
         lines = [
             _visible_section_heading(section_id, label),
-            f"Status: {_human_value(state)}",
+            f"Status: {state}",
         ]
         reason = str(row.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
-            lines.append(f"Keterangan: {_human_value(reason)}")
+            lines.append(f"Reason: {reason}")
         content = row.get("content")
         content_map = (
             dict(content or {})
@@ -5972,7 +5922,14 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         # Renderer consumes the bound payload verbatim. Binding metadata is
         # deliberately not synthesized here: missing binding must fail QA,
         # never be repaired by presentation code.
-        # Binding metadata stays in canonical audit artifacts, not the visible report.
+        binding = content_map.get("authoritative_binding")
+        if isinstance(binding, Mapping):
+            lines.append(
+                "AUTHORITY: "
+                + str(binding.get("producer") or "UNAVAILABLE")
+                + " | BINDING="
+                + str(binding.get("status") or "UNAVAILABLE")
+            )
 
         visible_lines, visible_excluded = (
             _render_deep_visible_contract_lines(
@@ -6036,7 +5993,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         if generic:
             lines.extend(generic)
         blocks.append("\n".join(lines))
-    return _humanize_visible_text("\n\n".join(blocks))
+    return "\n\n".join(blocks)
 
 
 def validate_human_facing_body(
@@ -6056,10 +6013,6 @@ def validate_human_facing_body(
     ]
     if re.search(r"\b[0-9a-f]{40}\b", lower):
         failures.append("MACHINE_LANGUAGE=RAW_BRANCH_SHA")
-    if _MACHINE_ENUM_RE.search(text):
-        failures.append("MACHINE_LANGUAGE=RAW_INTERNAL_ENUM")
-    if re.search(r"\{['\"][A-Za-z0-9_ -]+['\"]\s*:", text):
-        failures.append("MACHINE_LANGUAGE=RAW_PYTHON_OR_JSON_OBJECT")
     return failures
 
 

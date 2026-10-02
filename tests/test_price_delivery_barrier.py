@@ -200,6 +200,10 @@ def test_a_healthy_price_exact20_eta_12_sections_and_human_pass():
     assert len(report["watchlist20"]["rows"]) == 20
     assert len(report["rise20"]["rows"]) == 20
     assert len(report["fall20"]["rows"]) == 20
+    assert not re.search(r"\\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\\b", body)
+    assert not re.search(r"\\{\\s*['\"][A-Za-z0-9_]+['\"]\\s*:", body)
+    assert "MINI_LEAGUE_STATE" not in body
+    assert "user_summary:" not in body
 
 
 def test_b_dynamic_current15_precedence_and_next_gw_re_resolve():

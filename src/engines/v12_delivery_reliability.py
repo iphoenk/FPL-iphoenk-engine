@@ -622,13 +622,13 @@ def assemble_degraded_deep_report(
         },
     }
     if s16b_due:
-        by_id["S16B"] = {
-            "section_id": "S16B",
-            "label": "POST-MATCH REVIEW",
-            "state": "DEGRADED",
-            "degradation_reason": root_failure,
-            "source_state": "CURRENT",
-            "content": {
+        proven_review = lifecycle.get("post_match_review")
+        if isinstance(proven_review, Mapping) and proven_review:
+            s16b_content = deepcopy(dict(proven_review))
+            s16b_content["presentation_status"] = "CURRENT"
+            s16b_content["degradation_reason"] = root_failure
+        else:
+            s16b_content = {
                 "presentation_status": "CURRENT",
                 "gw": lifecycle.get("completed_gw"),
                 "fixtures_expected": (
@@ -637,6 +637,8 @@ def assemble_degraded_deep_report(
                     )
                 ),
                 "fixtures_reviewed": 0,
+                "unique_fixture_count": 0,
+                "duplicate_fixture_count": 0,
                 "match_by_match_review": [],
                 "after_gw_reassessment": {
                     "owned15_review": [],
@@ -646,7 +648,14 @@ def assemble_degraded_deep_report(
                 },
                 "full_universe_denominator": "UNAVAILABLE",
                 "degradation_reason": root_failure,
-            },
+            }
+        by_id["S16B"] = {
+            "section_id": "S16B",
+            "label": "POST-MATCH REVIEW",
+            "state": "DEGRADED",
+            "degradation_reason": root_failure,
+            "source_state": "CURRENT",
+            "content": s16b_content,
         }
 
     by_id["S17"] = {

@@ -1,4 +1,12 @@
 name: FPL V6 hourly fresh-data acquisition
+run-name: >-
+  ${{
+    github.event_name == 'workflow_dispatch' &&
+    format('V6 {0} {1} {2} {3}', inputs.mode, inputs.report_kind, inputs.logical_slot, inputs.reason) ||
+    github.event_name == 'issue_comment' &&
+    format('V6 issue-comment {0}', github.event.comment.id) ||
+    github.event.issue.title
+  }}
 
 on:
   workflow_dispatch:

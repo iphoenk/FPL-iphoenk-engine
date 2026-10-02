@@ -6934,6 +6934,20 @@ def run_deep(
         player_match_rows=(foundation or {}).get("player_match_rows") or [],
         prior_delivery_state=previous_deep.get("s16b_delivery_state"),
     )
+    # Same-occurrence scratch only. This is not an authority and is deleted
+    # before serving publication; it lets fail-operational assembly preserve a
+    # lifecycle decision already proven by this run.
+    s16b_context["delivery_state_after"] = state_after_occurrence(
+        s16b_context,
+        occurrence_id=f"DEEP|{report_slot}",
+        generated_at=datetime.now().astimezone().isoformat(),
+        body_fingerprint=None,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / ".s16b_context.json").write_text(
+        json.dumps(s16b_context, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
     ledger.append(
         {
             "stage": "S16B_LIFECYCLE",
@@ -8678,13 +8692,19 @@ def main() -> int:
                 f"root_failure={root_failure} error_class={type(exc).__name__}",
                 flush=True,
             )
+            scratch_path = output_dir / ".s16b_context.json"
+            degraded_s16b_context = _read_json(scratch_path, {}) or {}
             bundle = assemble_degraded_deep_report(
                 runtime_root=runtime_root,
                 report_slot=args.report_slot,
                 output_dir=output_dir,
                 root_failure=root_failure,
                 previous_visible_deep_dir=previous_dir,
+                s16b_context=degraded_s16b_context,
             )
+        scratch_path = output_dir / ".s16b_context.json"
+        if scratch_path.exists():
+            scratch_path.unlink()
         write_serving_artifacts(bundle=bundle, output_dir=output_dir)
     print(
         json.dumps(

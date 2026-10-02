@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-02T19:17:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-02T20:57:28+07:00`
 > **Production main at sync:** `95241f03303c6ff25f6118bc783236d431ad5fe9`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -19,6 +19,8 @@ The core principle is:
 Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual binding: the exact governed V6 report-prefetch must reach terminal SUCCESS and be read back from runtime-data-v6 before `/v12-report-run` is started. Unrelated issue comments are isolated from governed V6 concurrency so they cannot replace a pending prefetch.
 
 Scheduled visible-report handoff is single-trigger and event-driven: the owner-only `/fpl-master-tick` occurrence command is handled by `.github/workflows/fpl-master-occurrence-orchestrator.yml`, which dispatches the existing governed V6 report-prefetch and canonical V12 integrated runner with one unique request identity, waits for both exact child runs, verifies the same-occurrence private serving publication, and writes a durable non-private receipt to issue #431. The orchestrator has no cron and is not a second scheduler, model, optimizer, factual plane, or publisher. Repeated commands for an already-ready occurrence reuse the existing private delivery state instead of recomputing the report. The receipt proves backend occurrence completion; user-visible delivery remains a separate ChatGPT-side acknowledgment barrier.
+
+Occurrence delivery integrity is mode-specific and hash-bound. DEEP verifies the exact per-occurrence `serving_report.md`, the current `latest/report.md` pointer, the private delivery receipt, and the canonical body SHA-256 as one identity. PRICE is DST-bound to 23:30 Europe/London and verifies its exact per-occurrence `report_body.md`; it never assumes `latest/report.md` belongs to PRICE because the generic serving pointer may still reference the latest DEEP occurrence. Public occurrence receipts carry the exact private history path and canonical body hash for downstream exact-slot retrieval without digest substitution.
 
 Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 

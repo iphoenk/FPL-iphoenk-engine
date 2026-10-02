@@ -776,3 +776,27 @@ def test_degraded_public_proof_remains_operational_only():
     assert "selected_route" not in line.lower()
     assert "current_team" not in line.lower()
     assert scan_public_text(line) == []
+
+
+def test_occurrence_orchestrator_binds_price_to_london_2330():
+    workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'ZoneInfo("Europe/London")' in workflow
+    assert 'PRICE occurrence must bind to 23:30 Europe/London' in workflow
+
+
+def test_occurrence_orchestrator_verifies_exact_private_body_hash_and_mode_specific_history():
+    workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'body_name = "serving_report.md" if mode == "DEEP" else "report_body.md"' in workflow
+    assert 'history-receipt.json' in workflow
+    assert 'private_delivery_status") == "PASS"' in workflow
+    assert 'hashlib.sha256(body).hexdigest()' in workflow
+    assert 'receipt.get("canonical_body_sha256") == expected_sha' in workflow
+    assert 'latest/report.md does not match exact historical DEEP body' in workflow
+    assert 'latest/report.md may still point to DEEP' in workflow
+    assert 'private_report_path:' in workflow
+    assert 'canonical_body_sha256:' in workflow
+

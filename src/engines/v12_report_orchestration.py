@@ -87,6 +87,146 @@ MACHINE_TERMS = (
     "bound run id",
     "workflow run id",
 )
+
+VISIBLE_TOKEN_LABELS = {
+    "COMPLETE": "Lengkap",
+    "AVAILABLE": "Tersedia",
+    "UNAVAILABLE": "Belum tersedia",
+    "DEGRADED": "Terbatas",
+    "PARTIAL": "Sebagian",
+    "CURRENT": "Terkini",
+    "CURRENT_VALID": "Valid saat ini",
+    "FRESH": "Terkini",
+    "STALE": "Belum diperbarui",
+    "GREEN": "Sehat",
+    "PASS": "Lulus",
+    "FAIL": "Gagal",
+    "WAIT": "Tunggu",
+    "PREPARE": "Siapkan",
+    "ACT": "Tindak sekarang",
+    "MONITOR": "Pantau",
+    "HOLD": "Pertahankan",
+    "USER_CONFIRMED": "Dikonfirmasi pengguna",
+    "AUTH_AVAILABLE": "Akses tersedia",
+    "AUTH_OK": "Akses tersedia",
+    "PERSONAL_AUTH_UNAVAILABLE": "Akses data pribadi belum tersedia",
+    "EXECUTION_FINANCE_DEGRADED": "Data bank dan harga jual belum lengkap",
+    "CAPTAIN_NEAR_TIE_OR_FRESH_EVIDENCE_PENDING": "Pilihan kapten masih berdekatan atau menunggu bukti terbaru",
+    "PRICE_PREDICTOR_STALE": "Prediksi harga belum diperbarui",
+    "NO_POSITIVE_MC_SUPPORTED_ROUTE_CLEARS_1_3_5GW_VECTOR": "Belum ada rute transfer yang mengalahkan HOLD secara meyakinkan pada horizon 1, 3, dan 5 GW",
+    "MINUTES_ROLE_IMPROVING": "Menit bermain dan peran membaik",
+    "STABLE_OR_NOISY": "Stabil atau sinyalnya belum cukup kuat",
+    "BREAKOUT_PROCESS": "Proses permainan menunjukkan potensi breakout",
+    "OUTPUT_CONFIRMING_PROCESS": "Output mulai mengonfirmasi proses permainan",
+    "REGRESSION_RISK": "Ada risiko regresi",
+    "MINUTES_BREAKOUT": "Peluang menit bermain meningkat tajam",
+    "NORMAL_LOAD": "Beban jadwal normal",
+    "COVARIANCE_NOT_MODELLED_YET": "Korelasi antarpemain belum dimodelkan",
+    "V12_INTEGRATED_REPORT_RUNNER": "Mesin laporan V12",
+    "P1_8_SUBMITTED_PICKS_BEHAVIOURAL_BASELINE": "Baseline picks mini-league terbaru yang tersedia",
+    "OFFICIAL_FPL_OCCURRENCE_FACTS": "Fakta resmi FPL untuk occurrence ini",
+    "V12_OCCURRENCE_MODEL_OUTPUTS": "Output model V12 untuk occurrence ini",
+    "V12_DECISION_INFERENCE": "Kesimpulan keputusan V12",
+    "READY_FULL": "Siap lengkap",
+    "READY_DEGRADED": "Siap dengan keterbatasan",
+    "NOT_APPLICABLE": "Tidak berlaku",
+    "NONE_MATERIAL": "Tidak ada perubahan material",
+    "UNRESOLVED": "Belum terkonfirmasi",
+    "UNKNOWN": "Belum diketahui",
+    "TRUE": "Ya",
+    "FALSE": "Tidak",
+}
+VISIBLE_PHRASE_LABELS = {
+    "P1.2 package utility + canonical P1.4 MC + P1.8 bounded mini-league overlay": (
+        "penilaian paket transfer + simulasi Monte Carlo + konteks mini-league"
+    ),
+    "NO MATERIAL DECISION CHANGE": "Tidak ada perubahan keputusan yang material",
+}
+VISIBLE_LABELS = {
+    "operational_state": "Status keputusan",
+    "planning_gw": "GW perencanaan",
+    "primary_decision": "Keputusan utama",
+    "reason": "Alasan",
+    "key_decision_driver": "Pendorong utama",
+    "current_blockers": "Kendala saat ini",
+    "presentation_status": "Status penyajian",
+    "source_class": "Sumber",
+    "observed_at": "Diamati",
+    "applicable_gw": "GW berlaku",
+    "auth_state": "Akses data pribadi",
+    "finance_availability": "Kelengkapan data finansial",
+    "runner_state": "Status mesin laporan",
+    "price_route_impact": "Dampak harga terhadap rute transfer",
+    "mini_league_state": "Kondisi mini-league",
+    "expected_manager_count": "Jumlah manajer",
+    "collected_manager_count": "Manajer terambil",
+    "league_name": "Mini-league",
+}
+
+
+def humanize_visible_label(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    mapped = VISIBLE_LABELS.get(raw)
+    if mapped:
+        return mapped
+    return raw.replace("_", " ").strip().capitalize()
+
+
+def humanize_visible_value(value: Any) -> str:
+    if value is None:
+        return "Belum tersedia"
+    if isinstance(value, bool):
+        return "Ya" if value else "Tidak"
+    if isinstance(value, Mapping):
+        parts = []
+        for key, item in value.items():
+            if item in (None, "", [], {}):
+                continue
+            parts.append(
+                f"{humanize_visible_label(key)}: {humanize_visible_value(item)}"
+            )
+        return "; ".join(parts) if parts else "Belum tersedia"
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        items = [humanize_visible_value(item) for item in value]
+        return ", ".join(item for item in items if item) or "Tidak ada"
+
+    text = str(value).strip()
+    if not text:
+        return "Belum tersedia"
+    upper = text.upper()
+    if upper in VISIBLE_TOKEN_LABELS:
+        return VISIBLE_TOKEN_LABELS[upper]
+    if text in VISIBLE_PHRASE_LABELS:
+        return VISIBLE_PHRASE_LABELS[text]
+    if "/" in text and re.fullmatch(r"[A-Z0-9_]+(?:/[A-Z0-9_]+)+", text):
+        return " / ".join(humanize_visible_value(part) for part in text.split("/"))
+    for token, replacement in sorted(
+        VISIBLE_TOKEN_LABELS.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        text = text.replace(token, replacement)
+    if re.fullmatch(r"[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+", text):
+        return text.replace("_", " ").lower().capitalize()
+    return text
+
+
+def humanize_visible_text(text: Any) -> str:
+    out = str(text or "")
+    for token, replacement in sorted(
+        VISIBLE_PHRASE_LABELS.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        out = out.replace(token, replacement)
+    for token, replacement in sorted(
+        VISIBLE_TOKEN_LABELS.items(), key=lambda item: len(item[0]), reverse=True
+    ):
+        out = re.sub(rf"\b{re.escape(token)}\b", replacement, out)
+    out = re.sub(
+        r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b",
+        lambda match: match.group(0).replace("_", " ").lower().capitalize(),
+        out,
+    )
+    return out
 SIGNAL_DELTA_FIELDS = (
     "availability",
     "p_start",
@@ -2735,10 +2875,10 @@ def _render_package_frontier_lines(
     lines.append("#### PACKAGE FRONTIER")
     mc = dict(payload.get("monte_carlo") or {})
     lines.append(
-        "MC PATHS: "
-        f"{mc.get('actual_paths', 'UNAVAILABLE')} | "
-        f"canonical_pass={mc.get('canonical_pass', 'UNAVAILABLE')} | "
-        f"convergence={(mc.get('convergence_evidence') or {}).get('status', 'UNAVAILABLE')}"
+        "Monte Carlo: "
+        f"{mc.get('actual_paths', 'Belum tersedia')} simulasi | "
+        f"validasi canonical={humanize_visible_value(mc.get('canonical_pass'))} | "
+        f"konvergensi={humanize_visible_value((mc.get('convergence_evidence') or {}).get('status'))}"
     )
     if not routes:
         lines.append("UNAVAILABLE — package routes not materialized")
@@ -2806,7 +2946,7 @@ def _render_package_frontier_lines(
             f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
             f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
             f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
-            f"HIT/FT {transfer_cost} | "
+            f"FT/hit {humanize_visible_value(transfer_cost)} | "
             f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
             f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "
             f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
@@ -2825,7 +2965,7 @@ def _render_package_frontier_lines(
             f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
             f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
             f"REVERSAL RISK {row.get('sensitivity', 'UNAVAILABLE')} | "
-            f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
+            f"Kesimpulan {humanize_visible_value(row.get('action_verdict', 'UNAVAILABLE'))}"
         )
     return lines
 
@@ -3597,7 +3737,7 @@ def _visible_section_heading(section_id: Any, label: Any) -> str:
 
 
 def _human_label(value: Any) -> str:
-    return str(value or "").strip().replace("_", " ").upper()
+    return humanize_visible_label(value)
 
 
 def _render_generic_human_content(
@@ -3628,14 +3768,16 @@ def _render_generic_human_content(
             lines.append(f"{_human_label(key_text)}: UNAVAILABLE")
             continue
         if isinstance(value, (str, int, float, bool)):
-            lines.append(f"{_human_label(key_text)}: {value}")
+            lines.append(
+                f"{_human_label(key_text)}: {humanize_visible_value(value)}"
+            )
             continue
         if isinstance(value, Mapping):
             compact = []
             for subkey, subvalue in value.items():
                 if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
                     compact.append(
-                        f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                        f"{_human_label(subkey)}={humanize_visible_value(subvalue)}"
                     )
             if compact:
                 lines.append(f"{_human_label(key_text)}: " + " | ".join(compact))
@@ -3652,7 +3794,7 @@ def _render_generic_human_content(
             if len(scalar_items) == len(items):
                 lines.append(
                     f"{_human_label(key_text)}: "
-                    + ", ".join(str(item) for item in scalar_items)
+                    + ", ".join(humanize_visible_value(item) for item in scalar_items)
                 )
                 continue
             for index, item in enumerate(items, start=1):
@@ -3662,7 +3804,7 @@ def _render_generic_human_content(
                 for subkey, subvalue in item.items():
                     if isinstance(subvalue, (str, int, float, bool)) or subvalue is None:
                         compact.append(
-                            f"{_human_label(subkey)}={subvalue if subvalue is not None else 'UNAVAILABLE'}"
+                            f"{_human_label(subkey)}={humanize_visible_value(subvalue)}"
                         )
                 if compact:
                     lines.append(f"- {index}. " + " | ".join(compact))
@@ -4000,10 +4142,27 @@ def _render_deep_visible_contract_lines(
             )
         )
         lines.append(f"PLANNING GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
-        lines.append(f"PRIMARY REASON: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
-        lines.append(f"KEY DRIVER: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
+        lines.append(
+            "Alasan utama: "
+            + humanize_visible_value(
+                dashboard.get("PRIMARY_REASON", payload.get("reason"))
+            )
+        )
+        lines.append(
+            "Pendorong utama: "
+            + humanize_visible_value(
+                dashboard.get("KEY_DRIVER", payload.get("key_decision_driver"))
+            )
+        )
         blockers = dashboard.get("CURRENT_BLOCKERS") or payload.get("current_blockers") or []
-        lines.append("CURRENT BLOCKERS: " + (", ".join(str(x) for x in blockers) if blockers else "NONE"))
+        lines.append(
+            "Kendala saat ini: "
+            + (
+                ", ".join(humanize_visible_value(x) for x in blockers)
+                if blockers
+                else "Tidak ada"
+            )
+        )
         excluded.extend((
             "decision_dashboard",
             "operational_state",
@@ -4018,14 +4177,13 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         authority = dict(payload.get("current15_authority") or {})
         lines.append(
-            "CURRENT15 AUTHORITY: "
-            f"SOURCE_CLASS={authority.get('source_class')} | "
-            f"SOURCE={authority.get('source')} | "
-            f"OBSERVED_AT={authority.get('observed_at')} | "
-            f"APPLICABLE_GW={authority.get('applicable_gw')} | "
-            f"AUTH={authority.get('auth_state')} | "
-            f"FINANCE={authority.get('finance_availability')} | "
-            f"STALE={authority.get('stale')}"
+            "Sumber OUR15: "
+            f"{humanize_visible_value(authority.get('source_class'))} | "
+            f"diamati {humanize_visible_value(authority.get('observed_at'))} | "
+            f"berlaku untuk GW {humanize_visible_value(authority.get('applicable_gw'))} | "
+            f"akses {humanize_visible_value(authority.get('auth_state'))} | "
+            f"data finansial {humanize_visible_value(authority.get('finance_availability'))} | "
+            f"stale {humanize_visible_value(authority.get('stale'))}"
         )
         rows = [
             dict(row)
@@ -5839,8 +5997,8 @@ def _render_deep_visible_contract_lines(
                 lines.append(
                     "- "
                     f"{item.get('name') or item.get('element_id')} | "
-                    f"{item.get('primary_classification')} | "
-                    f"trend={trajectory.get('trajectory_classification')} | "
+                    f"{humanize_visible_value(item.get('primary_classification'))} | "
+                    f"tren={humanize_visible_value(trajectory.get('trajectory_classification'))} | "
                     f"xMins={(item.get('minutes') or {}).get('xmins')} | "
                     f"P(start)={(item.get('minutes') or {}).get('p_start')} | "
                     f"1/3/5GW={item.get('horizon_1gw')}/{item.get('horizon_3gw')}/{item.get('horizon_5gw')}"
@@ -5993,7 +6151,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         if generic:
             lines.extend(generic)
         blocks.append("\n".join(lines))
-    return "\n\n".join(blocks)
+    return humanize_visible_text("\n\n".join(blocks))
 
 
 def validate_human_facing_body(
@@ -6013,7 +6171,13 @@ def validate_human_facing_body(
     ]
     if re.search(r"\b[0-9a-f]{40}\b", lower):
         failures.append("MACHINE_LANGUAGE=RAW_BRANCH_SHA")
-    return failures
+    if re.search(r"\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b", text):
+        failures.append("MACHINE_LANGUAGE=RAW_ENUM")
+    if re.search(r"\{\s*['\"][A-Za-z0-9_]+['\"]\s*:", text):
+        failures.append("MACHINE_LANGUAGE=RAW_DICT")
+    if re.search(r"\b[a-z][a-z0-9_]+=", text):
+        failures.append("MACHINE_LANGUAGE=RAW_KEY_VALUE")
+    return list(dict.fromkeys(failures))
 
 
 def compact_engine_data_status(

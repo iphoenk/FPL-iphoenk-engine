@@ -800,3 +800,11 @@ def test_occurrence_orchestrator_verifies_exact_private_body_hash_and_mode_speci
     assert 'private_report_path:' in workflow
     assert 'canonical_body_sha256:' in workflow
 
+
+def test_occurrence_orchestrator_trusts_only_bot_authored_receipts():
+    workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'select(.user.login == "github-actions[bot]")' in workflow
+    assert 'FPL_MASTER_RECEIPT occurrence_id=' in workflow
+

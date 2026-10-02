@@ -253,10 +253,11 @@ def test_deep_materializer_renders_every_canonical_block_in_exact_order():
         signal_delta={"status": "BASELINE UNAVAILABLE", "rows": []},
     )
     assert report["numbered_headings"] == 19
-    assert report["rendered_blocks_including_15B"] == 23
-    assert report["rendered_blocks_including_suffix_sections"] == 23
+    assert report["rendered_blocks_including_15B"] == 22
+    assert report["rendered_blocks_including_suffix_sections"] == 22
     assert report["exact_canonical_order"] is True
-    assert len(report["sections"]) == 23
+    assert len(report["sections"]) == 22
+    assert all(row["section_id"] != "S16B" for row in report["sections"])
     assert report["sections"][0]["label"] == "DECISION / CURRENT STATUS"
     assert report["sections"][-1]["label"] == "FINAL JUDGEMENT"
     assert all(row["state"] == "UNAVAILABLE" for row in report["sections"])
@@ -1677,7 +1678,11 @@ def test_report_plane_mode_catalogs_cannot_drift_from_canonical_v12():
         "FINAL": FINAL_MANDATORY_SECTIONS,
     }
     for mode, runtime_catalog in expected.items():
-        contract = canonical_mode_contract(canonical, mode)
+        contract = canonical_mode_contract(
+            canonical,
+            mode,
+            s16b_due=False if mode == "DEEP" else None,
+        )
         assert list(runtime_catalog) == contract["expected_section_ids"], mode
 
 
@@ -1716,7 +1721,7 @@ def test_deep_renderer_headings_are_visible_qa_parseable_and_canonical_ordered()
     body = render_deep_text(report)
     parsed, _, _ = _parse_sections(body)
     assert parsed == canonical_mode_contract(
-        canonical, "DEEP"
+        canonical, "DEEP", s16b_due=False
     )["expected_section_ids"]
 
 

@@ -453,6 +453,51 @@ def validate_deep_decision_content_delivery(
         if delta.get("no_recomputation_no_numeric_delta") is not True:
             failures.append("S03_NUMERIC_DELTA_GUARD_MISSING")
 
+    s04 = content("S04")
+    if state("S04") == "COMPLETE":
+        news_rows = [
+            dict(row)
+            for row in s04.get("material_news") or []
+            if isinstance(row, Mapping)
+        ]
+        allowed_news_classes = {
+            "OFFICIAL",
+            "RELIABLE_REPORT",
+            "MULTIPLE_CREDIBLE_REPORTS",
+            "RUMOR / UNVERIFIED",
+            "MODEL_SIGNAL",
+            "INFERENCE",
+        }
+        for index, row in enumerate(news_rows, start=1):
+            source_class = str(row.get("source_class") or "").upper()
+            evidence_status = str(row.get("evidence_status") or "").upper()
+            if source_class not in allowed_news_classes:
+                failures.append(f"S04_SOURCE_CLASS_INVALID={index}")
+            if (
+                source_class == "RUMOR / UNVERIFIED"
+                and evidence_status != "UNVERIFIED"
+            ):
+                failures.append(f"S04_RUMOR_PRESENTED_AS_FACT={index}")
+            if row.get("act_authority") is not False:
+                failures.append(f"S04_NEWS_ACT_AUTHORITY_VIOLATION={index}")
+            if row.get("news_observation_is_model_update") is not False:
+                failures.append(f"S04_NEWS_MODEL_UPDATE_VIOLATION={index}")
+
+        consequence = dict(s04.get("decision_consequence") or {})
+        if consequence.get("news_self_authorizes_act") is not False:
+            failures.append("S04_NEWS_SELF_AUTHORIZES_ACT")
+        if consequence.get("news_observation_is_model_update") is not False:
+            failures.append("S04_NEWS_OBSERVATION_EQUALS_MODEL_UPDATE")
+        if consequence.get("model_numbers_mutated_here") is not False:
+            failures.append("S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION")
+        if consequence.get("optimizer_authority_remains_s14") is not True:
+            failures.append("S04_OPTIMIZER_AUTHORITY_NOT_S14")
+        if news_rows:
+            if "MATERIAL NEWS SINCE PREVIOUS DEEP" not in upper:
+                failures.append("S04_MATERIAL_NEWS_NOT_VISIBLE")
+        elif "NO MATERIAL NEW EXTERNAL NEWS" not in upper:
+            failures.append("S04_NO_NEWS_SENTINEL_MISSING")
+
     s07 = content("S07")
     if state("S07") == "COMPLETE":
         battles = [

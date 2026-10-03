@@ -4388,18 +4388,39 @@ def _render_deep_visible_contract_lines(
                 f"Projection: 1GW {r.get('projection_1gw', 'UNAVAILABLE')}; "
                 f"3GW {r.get('projection_3gw', 'UNAVAILABLE')}; 5GW {r.get('projection_5gw', 'UNAVAILABLE')}."
             )
+            probabilities = dict(r.get("probabilities") or {})
+            underlying = dict(r.get("underlying") or {})
             lines.append(
-                "Posterior/current evidence: "
-                + _compact(r.get("role_detail") or r.get("tactical_role_label") or r.get("posterior_signal"))
+                "Probability: "
+                f"Pgoal {_num(probabilities.get('p_goal'))}; "
+                f"Passist {_num(probabilities.get('p_assist'))}; "
+                f"Preturn {_num(probabilities.get('p_return'))}; "
+                f"Phaul {_num(probabilities.get('p_haul'))}; "
+                f"Pblank {_num(probabilities.get('p_blank'))}."
             )
             lines.append(
-                "Fixture/security: "
-                + _compact(r.get("fixture_detail") or r.get("injury_rotation_warning") or r.get("workload"))
+                "Underlying: "
+                f"xG90 {_num(underlying.get('xg90'))}; "
+                f"npxG90 {_num(underlying.get('npxg90'))}; "
+                f"xA90 {_num(underlying.get('xa90'))}; "
+                f"xGI90 {_num(underlying.get('xgi90'))}."
             )
             lines.append(
-                "Price/mini-league context: "
-                + _compact(r.get("price_optionality") or r.get("price_relevance"))
+                "Role/Bayesian: "
+                + _compact(r.get("role_detail") or r.get("tactical_role_label"))
+                + " | Bayesian "
+                + _compact(r.get("bayesian_state"))
+            )
+            lines.append(
+                "Workload/rest + fixture/security: "
+                + _compact(r.get("workload_context") or r.get("workload"))
                 + " | "
+                + _compact(r.get("fixture_detail") or r.get("injury_rotation_warning"))
+            )
+            lines.append(
+                "Price context: "
+                + _compact(r.get("price_optionality") or r.get("price_relevance"))
+                + " | ML relevance: "
                 + _compact(r.get("mini_league_relevance"))
             )
 

@@ -105,6 +105,7 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_universe_scan,
 )
 from src.engines.v12_competitive_window import resolve_competitive_window
+from src.engines.v12_material_news import build_official_fpl_material_news
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -7823,6 +7824,55 @@ def run_deep(
             "current semantic contract"
         )
 
+    our_news_ids = [
+        int(row.get("element_id") or row.get("element") or 0)
+        for row in owned
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or row.get("element") or 0) > 0
+    ]
+    watchlist_news_ids = [
+        int(row.get("element_id") or row.get("element") or 0)
+        for row in (watchlist or {}).get("rows") or []
+        if isinstance(row, Mapping)
+        and int(row.get("element_id") or row.get("element") or 0) > 0
+    ]
+    material_news = build_official_fpl_material_news(
+        bootstrap,
+        our_element_ids=our_news_ids,
+        watchlist_element_ids=watchlist_news_ids,
+        report_timestamp=report_slot,
+        previous_report_timestamp=(
+            str(previous_deep.get("report_slot") or "") or None
+        ),
+    )
+    news_groups = {
+        "OUR15": [row for row in material_news if row.get("audience") == "OUR15"],
+        "WATCHLIST / TARGETS": [
+            row for row in material_news
+            if row.get("audience") == "WATCHLIST / TARGETS"
+        ],
+        "TEAM / TACTICAL": [],
+        "OTHER MATERIAL": [],
+    }
+    model_developments = (
+        [
+            {
+                "classification": "NEW",
+                "source_class": "MODEL_SIGNAL",
+                "scope": "FULL_ELIGIBLE_UNIVERSE",
+                "summary": (
+                    f"{(post_match_review.get('full_universe_scan') or {}).get('material_count')} "
+                    "material GW1→Now trajectories are present in the bound model scan"
+                ),
+                "evidence_time": report_slot,
+                "news_observation_is_model_update": False,
+                "act_authority": False,
+            }
+        ]
+        if (post_match_review.get("full_universe_scan") or {}).get("material_count")
+        else []
+    )
+
     evidence_quality = _evidence_quality_surface(
         official=official,
         personal_resolution=personal_resolution,
@@ -7913,37 +7963,40 @@ def run_deep(
         "S04": _section(
             "COMPLETE",
             {
-                "changes": (
-                    [
-                        {
-                            "classification": "NEW",
-                            "scope": "POST_MATCH_UNIVERSE_SCAN",
-                            "event_kind": "ANALYTICAL_SIGNAL",
-                            "subject": "FULL_ELIGIBLE_UNIVERSE",
-                            "summary": (
-                                f"{(post_match_review.get('full_universe_scan') or {}).get('material_count')} "
-                                "material GW1→Now trajectories are present in the bound post-match scan"
-                            ),
-                            "evidence_time": report_slot,
-                        }
-                    ]
-                    if (post_match_review.get("full_universe_scan") or {}).get("material_count")
-                    else [
-                        {
-                            "classification": "UNCHANGED",
-                            "scope": "BOUND_OCCURRENCE",
-                            "event_kind": "CONFIRMING",
-                            "subject": "DECISION_STATE",
-                            "summary": (
-                                "No new factual development in the bound occurrence independently "
-                                "changes the decision."
-                            ),
-                            "evidence_time": report_slot,
-                        }
-                    ]
+                "news_summary": (
+                    "MATERIAL NEWS PRESENT"
+                    if material_news
+                    else "NO MATERIAL NEW EXTERNAL NEWS"
                 ),
+                "material_news": material_news,
+                "news_groups": news_groups,
+                "model_developments": model_developments,
+                "decision_consequence": {
+                    "transfer_state": decision_dashboard.get("TRANSFER"),
+                    "xi_state": decision_dashboard.get("XI"),
+                    "captain_state": decision_dashboard.get("CAPTAIN"),
+                    "price_state": decision_dashboard.get("PRICE"),
+                    "news_self_authorizes_act": False,
+                    "news_observation_is_model_update": False,
+                    "model_numbers_mutated_here": False,
+                    "optimizer_authority_remains_s14": True,
+                },
+                "source_policy": {
+                    "allowed_source_classes": [
+                        "OFFICIAL",
+                        "RELIABLE_REPORT",
+                        "MULTIPLE_CREDIBLE_REPORTS",
+                        "RUMOR / UNVERIFIED",
+                        "MODEL_SIGNAL",
+                        "INFERENCE",
+                    ],
+                    "rumor_is_fact": False,
+                    "rumor_may_authorize_act": False,
+                    "news_observation_equals_model_update": False,
+                },
+                "changes": model_developments,
                 "decision_change_sources": {
-                    "FACTUAL_EVENT": "injury / lineup / fixture / official availability",
+                    "FACTUAL_EVENT": "official/report-time injury, lineup, fixture or availability evidence",
                     "MODEL_RECOMPUTATION": "P1.x occurrence execution",
                     "STAGEC_UNIVERSE_SIGNAL": "full-universe breakout/regression scanner",
                     "POST_MATCH_MATERIALITY": "GW1→Now contextual trajectory",

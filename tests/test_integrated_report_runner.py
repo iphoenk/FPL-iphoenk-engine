@@ -1744,3 +1744,64 @@ def test_core_slot_binding_fails_closed_on_nearby_but_wrong_slot():
     )
     assert result["status"] == "PARTIAL"
     assert result["reason"] == "CORE_SLOT_MISMATCH"
+
+
+def test_s04_report_time_evidence_binding_is_live_in_core_regression():
+    from src.engines.v12_material_news import build_report_time_material_news
+
+    rows = build_report_time_material_news(
+        {
+            "contract": "report_time_evidence_v1",
+            "signals": [
+                {
+                    "source_id": "premier_league_official_news",
+                    "source_class": "VERIFIED_NEWS",
+                    "topic": "AVAILABILITY",
+                    "subject": "P7",
+                    "stance": "HOLD",
+                    "observed_at": "2026-10-03T04:00:00Z",
+                    "source_url": "https://www.premierleague.com/example",
+                    "summary": "Manager confirms P7 trained.",
+                },
+                {
+                    "source_id": "rotowire",
+                    "source_class": "SECONDARY_AVAILABILITY",
+                    "topic": "PREDICTED_LINEUP",
+                    "subject": "P8",
+                    "stance": "START",
+                    "observed_at": "2026-10-03T04:10:00Z",
+                    "source_url": "https://www.rotowire.com/example",
+                    "summary": "P8 projected to start.",
+                },
+                {
+                    "source_id": "reddit_fantasypl",
+                    "source_class": "COMMUNITY_SIGNAL",
+                    "topic": "ROTATION_OBSERVATION",
+                    "subject": "P7",
+                    "stance": "BENCH",
+                    "observed_at": "2026-10-03T04:20:00Z",
+                    "source_url": "https://www.reddit.com/r/FantasyPL/example",
+                    "summary": "Possible P7 benching is circulating.",
+                },
+            ],
+        },
+        {
+            "teams": [{"id": 1, "name": "Test FC"}],
+            "elements": [
+                {"id": 7, "web_name": "P7", "team": 1},
+                {"id": 8, "web_name": "P8", "team": 1},
+            ],
+        },
+        our_element_ids=[7],
+        watchlist_element_ids=[8],
+        report_timestamp="2026-10-03T12:30:00+07:00",
+    )
+    assert [row["source_class"] for row in rows] == [
+        "OFFICIAL",
+        "RELIABLE_REPORT",
+        "RUMOR / UNVERIFIED",
+    ]
+    assert rows[0]["audience"] == "OUR15"
+    assert rows[1]["audience"] == "WATCHLIST / TARGETS"
+    assert rows[2]["evidence_status"] == "UNVERIFIED"
+    assert all(row["act_authority"] is False for row in rows)

@@ -1986,3 +1986,45 @@ def test_stage_b_bgw_requires_cross_section_decision_propagation():
     assert "S05_BGW_S14_FRONTIER_REVIEW_MISSING" not in repaired
     assert "S05_BGW_S14B_REOPTIMIZE_MISSING" not in repaired
     assert "S05_BGW_S19_RECONCILIATION_MISSING" not in repaired
+
+
+def test_s04_delivery_barrier_rejects_rumor_as_fact_and_model_mutation():
+    content = {
+        "material_news": [
+            {
+                "subject": "P7",
+                "summary": "Possible benching",
+                "source_class": "RUMOR / UNVERIFIED",
+                "source_name": "community",
+                "evidence_status": "CONFIRMED",
+                "decision_relevance": "MONITOR",
+                "audience": "OUR15",
+                "news_observation_is_model_update": False,
+                "act_authority": False,
+            }
+        ],
+        "decision_consequence": {
+            "news_self_authorizes_act": False,
+            "news_observation_is_model_update": False,
+            "model_numbers_mutated_here": True,
+            "optimizer_authority_remains_s14": True,
+        },
+    }
+    failures = validate_deep_decision_content_delivery(
+        {
+            "sections": [
+                {
+                    "section_id": "S04",
+                    "state": "COMPLETE",
+                    "content": content,
+                }
+            ]
+        },
+        (
+            "S04 MATERIAL DEVELOPMENTS / CHANGES\n"
+            "### MATERIAL NEWS SINCE PREVIOUS DEEP\n"
+            "P7 — RUMOR / UNVERIFIED\n"
+        ),
+    )
+    assert "S04_RUMOR_PRESENTED_AS_FACT=1" in failures
+    assert "S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION" in failures

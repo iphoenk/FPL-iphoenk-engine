@@ -742,7 +742,7 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
                     "expected_points": 7.0,
                     "league_scope": scope,
                     "rivals_scope": scope,
-                    "direct_scope": scope,
+                    "competitive_scope": scope,
                     "exposure_leverage_class": "BALANCED",
                 },
                 {
@@ -753,7 +753,7 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
                     "expected_points": 6.5,
                     "league_scope": scope,
                     "rivals_scope": scope,
-                    "direct_scope": scope,
+                    "competitive_scope": scope,
                     "exposure_leverage_class": "PROTECTION",
                 },
             ],

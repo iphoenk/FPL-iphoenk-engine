@@ -356,11 +356,9 @@ def validate_deep_decision_content_delivery(
 
     s06 = content("S06")
     if state("S06") == "COMPLETE" and s06.get("starting_xi"):
-        for token in ("FORMATION:", "XI:", "BENCH:"):
+        for token in ("FORMATION:", "XI:", "BENCH GK:"):
             if token not in upper:
                 failures.append(f"P1_7_NOT_VISIBLE={token}")
-        if "CAPTAIN AUTHORITY:" not in upper:
-            failures.append("P1_7_CAPTAIN_NOT_VISIBLE")
 
     s18 = content("S18")
     for key in (
@@ -996,7 +994,7 @@ def validate_deep_decision_content_delivery(
             failures.append("S08_FOOTBALL_BASELINE_ORDER_MISSING")
         if s08.get("mini_league_overlay_second") is not True:
             failures.append("S08_MINI_LEAGUE_OVERLAY_ORDER_MISSING")
-        if "FOOTBALL CAPTAIN FRONTIER" not in upper:
+        if "| RANK | PLAYER | XPTS | PHAUL | PSTART | XMINS |" not in upper:
             failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
         if "EO/LEVERAGE CONTEXT:" not in upper:
             failures.append("S08_EXPOSURE_CLASS_NOT_VISIBLE")

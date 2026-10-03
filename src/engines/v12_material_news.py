@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Mapping, Sequence
 
 
@@ -52,6 +53,7 @@ def build_official_fpl_material_news(
     our_element_ids: Sequence[int],
     watchlist_element_ids: Sequence[int],
     report_timestamp: str,
+    previous_report_timestamp: str | None = None,
 ) -> list[dict[str, Any]]:
     """Build supportable material availability news from Official FPL only.
 
@@ -73,6 +75,24 @@ def build_official_fpl_material_news(
         news = str(raw.get("news") or "").strip()
         if element_id <= 0 or not news:
             continue
+
+        news_added = raw.get("news_added")
+        new_since_previous: bool | str = True
+        if previous_report_timestamp and news_added:
+            try:
+                news_dt = datetime.fromisoformat(str(news_added).replace("Z", "+00:00"))
+                previous_dt = datetime.fromisoformat(
+                    str(previous_report_timestamp).replace("Z", "+00:00")
+                )
+                if news_dt.tzinfo is not None and previous_dt.tzinfo is not None:
+                    if news_dt <= previous_dt:
+                        continue
+                else:
+                    new_since_previous = "UNVERIFIED_TIMESTAMP"
+            except ValueError:
+                new_since_previous = "UNVERIFIED_TIMESTAMP"
+        elif previous_report_timestamp and not news_added:
+            new_since_previous = "UNVERIFIED_TIMESTAMP"
         if element_id in our_ids:
             audience = "OUR15"
         elif element_id in watch_ids:
@@ -96,8 +116,9 @@ def build_official_fpl_material_news(
                     "source_class": "OFFICIAL",
                     "source_name": "Official FPL",
                     "published_or_observed_timestamp": (
-                        raw.get("news_added") or report_timestamp
+                        news_added or report_timestamp
                     ),
+                    "new_since_previous_deep": new_since_previous,
                     "affected_player_team": {
                         "element_id": element_id,
                         "team_id": raw.get("team"),

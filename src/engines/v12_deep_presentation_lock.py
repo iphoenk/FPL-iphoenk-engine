@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -126,3 +127,164 @@ def validate_deep_presentation_lock_contract(
         if rules.get(key) is not True:
             failures.append(f"GLOBAL_RULE_NOT_LOCKED={key}")
     return failures
+
+_SECTION_HEADING_RE = re.compile(r"^##\s+(\d{1,2})(B?)\.\s+", re.MULTILINE)
+_TABLE_DIVIDER_RE = re.compile(r"^\|(?:\s*:?-{3,}:?\s*\|)+\s*$")
+
+
+def _rendered_sections(body: str) -> dict[str, str]:
+    matches = list(_SECTION_HEADING_RE.finditer(str(body or "")))
+    sections: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        sid = f"S{int(match.group(1)):02d}{match.group(2)}"
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(body)
+        sections[sid] = body[start:end]
+    return sections
+
+
+def _rendered_tables(section_text: str) -> list[dict[str, Any]]:
+    lines = section_text.splitlines()
+    tables: list[dict[str, Any]] = []
+    index = 0
+    while index + 1 < len(lines):
+        header = lines[index].strip()
+        divider = lines[index + 1].strip()
+        if header.startswith("|") and header.endswith("|") and _TABLE_DIVIDER_RE.match(divider):
+            columns = tuple(cell.strip() for cell in header.strip("|").split("|"))
+            rows: list[tuple[str, ...]] = []
+            index += 2
+            while index < len(lines):
+                row = lines[index].strip()
+                if not (row.startswith("|") and row.endswith("|")):
+                    break
+                rows.append(tuple(cell.strip() for cell in row.strip("|").split("|")))
+                index += 1
+            tables.append({"columns": columns, "rows": rows})
+            continue
+        index += 1
+    return tables
+
+
+def validate_rendered_deep_presentation(
+    body: str,
+    report: Mapping[str, Any] | None = None,
+    contract: Mapping[str, Any] | None = None,
+) -> list[str]:
+    """Validate actual rendered Markdown against the executable DEEP lock."""
+    cfg = dict(contract or load_deep_presentation_lock())
+    sections_cfg = dict(cfg.get("sections") or {})
+    rendered = _rendered_sections(body)
+    failures: list[str] = []
+
+    due = bool((report or {}).get("s16b_due"))
+    expected = [
+        sid for sid in cfg.get("section_order") or []
+        if sid != "S16B" or due
+    ]
+    if list(rendered) != expected:
+        failures.append("RENDERED_SECTION_ORDER_MISMATCH=" + ",".join(rendered))
+
+    state_by_sid = {
+        str(row.get("section_id") or "").upper(): str(row.get("state") or "").upper()
+        for row in (report or {}).get("sections") or []
+        if isinstance(row, Mapping)
+    }
+
+    for sid in expected:
+        section_text = rendered.get(sid, "")
+        spec = dict(sections_cfg.get(sid) or {})
+        actual_tables = _rendered_tables(section_text)
+        expected_tables = list(spec.get("tables") or [])
+        state = state_by_sid.get(sid, "COMPLETE")
+        if state == "COMPLETE":
+            if len(actual_tables) != len(expected_tables):
+                failures.append(
+                    f"{sid}_RENDERED_TABLE_COUNT={len(actual_tables)}/{len(expected_tables)}"
+                )
+            for idx, table_spec in enumerate(expected_tables):
+                if idx >= len(actual_tables):
+                    break
+                actual = actual_tables[idx]
+                columns = tuple(table_spec.get("columns") or ())
+                if actual["columns"] != columns:
+                    failures.append(f"{sid}_RENDERED_COLUMNS_MISMATCH={idx + 1}")
+                row_count = len(actual["rows"])
+                required_exact = table_spec.get("rows_exact")
+                if required_exact is None:
+                    required_exact = table_spec.get("rows_exact_when_complete")
+                minimum = table_spec.get("rows_min")
+                if required_exact is not None and row_count != int(required_exact):
+                    failures.append(
+                        f"{sid}_RENDERED_ROWS={idx + 1}:{row_count}/{required_exact}"
+                    )
+                if minimum is not None and row_count < int(minimum):
+                    failures.append(
+                        f"{sid}_RENDERED_ROWS_MIN={idx + 1}:{row_count}/{minimum}"
+                    )
+
+        if sid == "S11" and state == "COMPLETE" and actual_tables:
+            rows = actual_tables[0]["rows"]
+            pos_index = actual_tables[0]["columns"].index("Pos")
+            counts: dict[str, int] = {}
+            for row in rows:
+                if pos_index < len(row):
+                    pos = row[pos_index].upper()
+                    counts[pos] = counts.get(pos, 0) + 1
+            if counts != {"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}:
+                failures.append("S11_RENDERED_POSITION_SPLIT_MISMATCH")
+
+        if sid == "S16" and state == "COMPLETE":
+            block_count = len(re.findall(r"(?m)^### PLAYER\s+\d+\s+—\s+", section_text))
+            if block_count != int(spec.get("player_blocks_exact") or 15):
+                failures.append(f"S16_RENDERED_PLAYER_BLOCKS={block_count}/15")
+
+    upper = str(body or "").upper()
+    for token in (
+        "FULL ICON+ COMPOSITION",
+        "POSITION FORMULAE:",
+        "SCAN-DERIVED CHALLENGERS",
+        "RAW_PAYLOAD_HASH",
+        "ELEMENT_ID",
+        "DIRECT6",
+        "DIRECT SIX",
+    ):
+        if token in upper:
+            failures.append("RENDERED_FORBIDDEN_TOKEN=" + token)
+
+    if re.search(r"\{\s*['\"][A-Za-z0-9_]+['\"]\s*:", str(body or "")):
+        failures.append("RENDERED_RAW_MAPPING_REPR")
+    if re.search(
+        r"\b(?:raw_payload_hash|source_age_minutes|authoritative_binding|payload_fingerprint)\b",
+        str(body or ""),
+        re.I,
+    ):
+        failures.append("RENDERED_INTERNAL_SNAKE_CASE")
+
+    s15b = rendered.get("S15B", "")
+    if s15b and state_by_sid.get("S15B") == "COMPLETE":
+        for table in _rendered_tables(s15b):
+            for col_index, column in enumerate(table["columns"]):
+                if column not in {
+                    "Coverage", "Owned", "Starter", "Bench", "Captain", "Vice", "EO",
+                    "Squad overlap", "XI overlap", "League C", "League EO",
+                    "Competitive C", "Competitive EO",
+                }:
+                    continue
+                for row in table["rows"]:
+                    if col_index >= len(row):
+                        continue
+                    value = row[col_index]
+                    if value == "UNAVAILABLE":
+                        continue
+                    if not re.fullmatch(
+                        r"-?\d+(?:\.\d+)?/-?\d+(?:\.\d+)? \(-?\d+(?:\.\d+)?%\)",
+                        value,
+                    ):
+                        failures.append(
+                            f"S15B_POPULATION_FORMAT_INVALID={column}:{value}"
+                        )
+                        break
+
+    return list(dict.fromkeys(failures))
+

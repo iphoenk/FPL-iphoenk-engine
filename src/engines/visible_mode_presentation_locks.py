@@ -30,7 +30,7 @@ def validate_deadline_final_presentation_lock(contract: Mapping[str, Any] | None
         failures.append("DEADLINE_HEADER_ADDITIONS_MISMATCH")
     overlay = dict(cfg.get("deadline_overlay") or {})
     expected_tables = {
-        "S05": [
+        "S04": [
             ("Player","News","Availability impact","Evidence tier","As of","Decision impact"),
             ("Player","Predicted status","Evidence tier","Confidence","Decision consequence"),
         ],
@@ -99,7 +99,7 @@ def validate_match_presentation_lock(contract: Mapping[str, Any] | None = None) 
     if list((sections.get("MATCH12") or {}).get("fields") or []) != ["Next critical observation","Why it matters","When to reassess"]:
         failures.append("MATCH12_FIELDS_MISMATCH")
     rules=dict(cfg.get("rules") or {})
-    for key in ("generic_recursive_key_value_dump_forbidden","raw_python_or_json_repr_forbidden","element_id_forbidden_in_visible_tables","raw_internal_field_names_forbidden","machine_enum_as_primary_wording_forbidden","counts_require_denominator_and_percentage_when_population_known","healthy_submitted_picks_scope_survives_stale_standings"):
+    for key in ("generic_recursive_key_value_dump_forbidden","raw_python_or_json_repr_forbidden","element_id_forbidden_in_visible_tables","raw_internal_field_names_forbidden","machine_enum_as_primary_wording_forbidden","counts_require_denominator_and_percentage_when_population_known","healthy_submitted_picks_scope_survives_stale_standings","match10_uses_shared_competitive_window_resolver","fresh_direct_rival_semantics_forbidden"):
         if rules.get(key) is not True:
             failures.append(f"MATCH_RULE_NOT_LOCKED={key}")
     return failures

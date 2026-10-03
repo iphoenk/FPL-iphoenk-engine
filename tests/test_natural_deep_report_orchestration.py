@@ -1661,12 +1661,12 @@ def test_deep_package_frontier_complete_requires_full_universe_search_proof():
     )
     assert complete_row["state"] == "COMPLETE"
     body = render_deep_text(complete)
-    assert "### UNIVERSE SCAN / OPTIMAL TEAM IMPACT" in body
-    assert "UNIVERSE 667/667" in body
-    assert "OUTGOING 15/15" in body
+    assert "### SEARCH INTEGRITY" in body
+    assert "Universe denominator: 667/667" in body
+    assert "Outgoing denominator: 15/15" in body
+    assert "### BEST CHALLENGER" in body
     assert "Candidate A" in body
-    assert "UTILITY ΔHOLD 3.4" in body
-    assert "Owned Weak Link -> Candidate A" in body
+    assert "SCAN-DERIVED CHALLENGERS" not in body
 
 
 
@@ -1826,7 +1826,7 @@ def test_locked_deadline_overlay_runs_in_required_deep_ci():
                 "execution_readiness": "READY",
                 "unresolved_blocker": "None",
             },
-            "S05": {
+            "S04": {
                 "late_news_rows": [{
                     "player": "P1",
                     "news": "Available",
@@ -1864,6 +1864,7 @@ def test_locked_deadline_overlay_runs_in_required_deep_ci():
         },
         "sections": [
             {"section_id": "S01", "label": "DECISION / CURRENT STATUS", "state": "COMPLETE", "content": {}},
+            {"section_id": "S04", "label": "MATERIAL DEVELOPMENTS / CHANGES", "state": "COMPLETE", "content": {}},
             {"section_id": "S05", "label": "FIXTURES / REST / CONDITIONS", "state": "COMPLETE", "content": {}},
             {"section_id": "S08", "label": "CAPTAIN / VICE-CAPTAIN FRONTIER", "state": "COMPLETE", "content": {}},
             {"section_id": "S14", "label": "PACKAGE OPTIMIZER / TRANSFER FRONTIER", "state": "DEGRADED", "degradation_reason": "controlled fixture", "content": {}},

@@ -22,6 +22,7 @@ from src.engines.price_radar import (
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_competitive_window import resolve_competitive_window
 from src.engines.v12_section_resolver import (
     resolve_section,
     validate_resolved_sections,
@@ -2651,187 +2652,98 @@ def _render_package_frontier_lines(
     *,
     section_state: str,
 ) -> list[str]:
-    """Render the full-universe team-impact surface without recomputing models."""
+    """Render one bounded S14 decision surface from canonical route evidence."""
     payload = dict(content or {})
-    proof = dict(
-        payload.get("package_search_proof")
-        or payload.get("search_proof")
-        or {}
-    )
-    challengers = [
-        dict(row)
-        for row in (
-            payload.get("package_universe_challengers")
-            or payload.get("universe_challengers")
-            or ()
-        )
-        if isinstance(row, Mapping)
-    ]
+    proof = dict(payload.get("package_search_proof") or payload.get("search_proof") or {})
     routes = [
-        dict(row)
-        for row in (
+        dict(row) for row in (
             payload.get("package_routes")
             or payload.get("routes")
             or payload.get("frontier")
             or ()
-        )
-        if isinstance(row, Mapping)
+        ) if isinstance(row, Mapping)
     ]
-    lines = ["### UNIVERSE SCAN / OPTIMAL TEAM IMPACT"]
-    if proof:
-        lines.append(
-            "SEARCH PROOF: "
-            f"OUR15 {proof.get('owned_evaluated', 'UNAVAILABLE')}/"
-            f"{proof.get('owned_expected', 'UNAVAILABLE')} | "
-            f"UNIVERSE {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/"
-            f"{proof.get('eligible_universe_expected', 'UNAVAILABLE')} | "
-            f"OUTGOING {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15 | "
-            f"LEGAL ROUTES {proof.get('legal_route_count', 'UNAVAILABLE')} | "
-            f"HOLD {proof.get('hold_included', 'UNAVAILABLE')} | "
-            f"LOSSY PRUNING {proof.get('lossy_pruning', 'UNAVAILABLE')} | "
-            f"AUTHORITY {proof.get('search_authority', 'UNAVAILABLE')}"
-        )
-    else:
-        lines.append(
-            f"SEARCH PROOF: {section_state} — current full-universe proof unavailable"
-        )
-
-    lines.append("#### SCAN-DERIVED CHALLENGERS")
-    if not challengers:
-        lines.append("UNAVAILABLE — no supportable scan-derived challenger rows")
-    for row in challengers:
-        components = row.get("football_score_components", "UNAVAILABLE")
-        distribution = row.get("expected_points_distribution", "UNAVAILABLE")
-        lines.append(
-            "- "
-            f"#{row.get('rank', 'NA')} {row.get('player') or row.get('element_id')} "
-            f"({row.get('position', 'NA')}, {row.get('club', 'NA')}) | "
-            f"BEST OUT {row.get('best_outgoing', 'UNAVAILABLE')} | "
-            f"ROUTE {row.get('package_route', 'UNAVAILABLE')} | "
-            f"FOOTBALL {row.get('football_score', 'UNAVAILABLE')} "
-            f"[20/25/30/25={components}] | "
-            f"P(avail/start/cameo/DNP)="
-            f"{row.get('p_available', 'UNAVAILABLE')}/"
-            f"{row.get('p_start', 'UNAVAILABLE')}/"
-            f"{row.get('p_cameo', 'UNAVAILABLE')}/"
-            f"{row.get('p_dnp', 'UNAVAILABLE')} | "
-            f"xMins {row.get('xmins', 'UNAVAILABLE')} | "
-            f"P(return/blank/haul)="
-            f"{row.get('p_return', 'UNAVAILABLE')}/"
-            f"{row.get('p_blank', 'UNAVAILABLE')}/"
-            f"{row.get('p_haul', 'UNAVAILABLE')} | "
-            f"xPtsDist {distribution} | "
-            f"TACTICAL {row.get('tactical_role', 'UNAVAILABLE')} | "
-            f"SP/PEN {row.get('set_piece_penalty_role', 'UNAVAILABLE')} | "
-            f"1GW {row.get('gw_plus_1', 'UNAVAILABLE')} | "
-            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
-            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
-            f"UTILITY ΔHOLD {row.get('package_utility_delta_vs_hold', 'UNAVAILABLE')} | "
-            f"PRICE {row.get('price_economics', 'UNAVAILABLE')} | "
-            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
-            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
-            f"IVW {row.get('information_value_of_waiting', 'UNAVAILABLE')} | "
-            f"ICON+ {row.get('mini_league_leverage', 'UNAVAILABLE')} | "
-            f"UPSIDE {row.get('main_upside', 'UNAVAILABLE')} | "
-            f"RISK {row.get('main_risk', 'UNAVAILABLE')} | "
-            f"ACTION {row.get('action', 'UNAVAILABLE')}"
-        )
-
-    lines.append("#### PACKAGE FRONTIER")
     mc = dict(payload.get("monte_carlo") or {})
-    lines.append(
-        "MC PATHS: "
-        f"{mc.get('actual_paths', 'UNAVAILABLE')} | "
-        f"canonical_pass={mc.get('canonical_pass', 'UNAVAILABLE')} | "
-        f"convergence={(mc.get('convergence_evidence') or {}).get('status', 'UNAVAILABLE')}"
+    selected_id = str(payload.get("selected_route_id") or "HOLD")
+    hold = next((row for row in routes if str(row.get("route") or "").upper() == "HOLD"), {})
+    selected = next((row for row in routes if str(row.get("route") or "") == selected_id), {})
+    best = selected if selected_id.upper() != "HOLD" and selected else next(
+        (row for row in routes if str(row.get("route") or "").upper() != "HOLD"),
+        {},
     )
-    if not routes:
-        lines.append("UNAVAILABLE — package routes not materialized")
 
-    def move_label(move: Mapping[str, Any]) -> str:
-        return str(
-            move.get("name")
-            or move.get("player")
-            or move.get("element")
-            or "UNAVAILABLE"
-        )
+    lines = ["### SEARCH INTEGRITY"]
+    if proof:
+        lines.extend([
+            f"OUR15 denominator: {proof.get('owned_evaluated', 'UNAVAILABLE')}/{proof.get('owned_expected', 'UNAVAILABLE')}",
+            f"Universe denominator: {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/{proof.get('eligible_universe_expected', 'UNAVAILABLE')}",
+            f"Outgoing denominator: {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15",
+            f"Legal routes: {proof.get('legal_route_count', 'UNAVAILABLE')}",
+            f"HOLD included: {proof.get('hold_included', 'UNAVAILABLE')}",
+            f"Lossy pruning: {proof.get('lossy_pruning', 'UNAVAILABLE')}",
+            f"Search authority: {proof.get('search_authority', 'UNAVAILABLE')}",
+        ])
+    else:
+        lines.append(f"Search proof: {section_state}; current full-universe proof unavailable.")
 
-    for row in routes:
-        moves_raw = row.get("moves")
-        if isinstance(moves_raw, Mapping):
-            moves = dict(moves_raw)
-            outs = [
-                dict(item) for item in moves.get("out") or []
-                if isinstance(item, Mapping)
-            ]
-            ins = [
-                dict(item) for item in moves.get("in") or []
-                if isinstance(item, Mapping)
-            ]
-            structured_move_text = (
-                ", ".join(move_label(item) for item in outs)
-                + " → "
-                + ", ".join(move_label(item) for item in ins)
-            )
-        else:
-            moves = {}
-            outs = []
-            ins = []
-            structured_move_text = (
-                " | ".join(str(item) for item in (moves_raw or []))
-                if isinstance(moves_raw, (list, tuple))
-                else str(moves_raw or "UNAVAILABLE")
-            )
-        if str(row.get("route") or "").upper() == "HOLD":
-            move_text = "HOLD → HOLD"
-        else:
-            move_text = structured_move_text
-        outgoing_value = sum(
-            float(item.get("sell_value"))
-            for item in outs
-            if item.get("sell_value") is not None
-        ) if any(item.get("sell_value") is not None for item in outs) else None
-        incoming_cost = sum(
-            float(item.get("buy_price", item.get("price")))
-            for item in ins
-            if item.get("buy_price", item.get("price")) is not None
-        ) if any(item.get("buy_price", item.get("price")) is not None for item in ins) else None
-        transfer_cost_raw = row.get("transfer_cost")
-        transfer_cost = (
-            dict(transfer_cost_raw)
-            if isinstance(transfer_cost_raw, Mapping)
-            else {"legacy_value": transfer_cost_raw}
+    lines.append("### CANONICAL MONTE CARLO")
+    convergence = dict(mc.get("convergence_evidence") or {})
+    lines.extend([
+        f"Actual paths: {mc.get('actual_paths', 'UNAVAILABLE')}",
+        f"Correlated/common-random status: {mc.get('common_random_numbers', mc.get('correlated_common_random_status', 'UNAVAILABLE'))}",
+        f"Convergence: {convergence.get('status', mc.get('convergence', 'UNAVAILABLE'))}",
+        f"Mean delta: {mc.get('mean_delta', mc.get('mean', 'UNAVAILABLE'))}",
+        f"P>HOLD: {mc.get('p_beats_hold', mc.get('p_gt_hold', 'UNAVAILABLE'))}",
+        f"Q10: {mc.get('Q10', 'UNAVAILABLE')} | median: {mc.get('median', 'UNAVAILABLE')} | Q90: {mc.get('Q90', 'UNAVAILABLE')}",
+        f"Expected regret: {mc.get('expected_regret', 'UNAVAILABLE')}",
+    ])
+
+    verdict = selected_id if selected_id else "HOLD"
+    lines.append("### VERDICT")
+    lines.append(verdict)
+
+    lines.append("### BEST CHALLENGER")
+    if best:
+        moves = dict(best.get("moves") or {}) if isinstance(best.get("moves"), Mapping) else {}
+        outs = [
+            str(x.get("name") or x.get("player") or x.get("element") or "UNAVAILABLE")
+            for x in moves.get("out") or [] if isinstance(x, Mapping)
+        ]
+        ins = [
+            str(x.get("name") or x.get("player") or x.get("element") or "UNAVAILABLE")
+            for x in moves.get("in") or [] if isinstance(x, Mapping)
+        ]
+        route_text = (
+            f"{', '.join(outs) or 'HOLD'} → {', '.join(ins) or 'HOLD'}"
+            if moves else str(best.get("route") or "UNAVAILABLE")
         )
-        lines.append(
-            "- "
-            f"{row.get('route_kind', 'ROUTE')} | "
-            f"{row.get('route', 'UNAVAILABLE')} | OUT → IN {move_text} | "
-            f"SELL {outgoing_value if outgoing_value is not None else 'UNAVAILABLE'} | "
-            f"BUY {incoming_cost if incoming_cost is not None else 'UNAVAILABLE'} | "
-            f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
-            f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
-            f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
-            f"HIT/FT {transfer_cost} | "
-            f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
-            f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "
-            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
-            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
-            f"RAW GAIN {row.get('raw_gain', 'UNAVAILABLE')} | "
-            f"NET GAIN {row.get('net_gain', 'UNAVAILABLE')} | "
-            f"P>HOLD {row.get('p_beats_hold', 'UNAVAILABLE')} | "
-            f"Q10 {row.get('Q10', 'UNAVAILABLE')} | "
-            f"Q25 {row.get('Q25', 'UNAVAILABLE')} | "
-            f"MEDIAN {row.get('median', 'UNAVAILABLE')} | "
-            f"Q75 {row.get('Q75', 'UNAVAILABLE')} | "
-            f"Q90 {row.get('Q90', 'UNAVAILABLE')} | "
-            f"TACTICAL/FIXTURE {row.get('tactical_fixture_effect', 'UNAVAILABLE')} | "
-            f"PRICE/OPTIONALITY {row.get('price_risk', 'UNAVAILABLE')} | "
-            f"ICON+ UTILITY {row.get('mini_league_utility', 'UNAVAILABLE')} | "
-            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
-            f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
-            f"REVERSAL RISK {row.get('sensitivity', 'UNAVAILABLE')} | "
-            f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
-        )
+        lines.extend([
+            f"Route: {route_text}",
+            f"1GW: {best.get('gw1_net', best.get('one_gw', 'UNAVAILABLE'))}",
+            f"3GW: {best.get('three_gw', 'UNAVAILABLE')}",
+            f"5GW: {best.get('five_gw', 'UNAVAILABLE')}",
+            f"P>HOLD: {best.get('p_beats_hold', 'UNAVAILABLE')}",
+            f"Median: {best.get('median', 'UNAVAILABLE')} | Q90: {best.get('Q90', 'UNAVAILABLE')}",
+            f"Regret: {best.get('expected_regret', 'UNAVAILABLE')}",
+            f"Robustness: {best.get('robustness', 'UNAVAILABLE')}",
+        ])
+    else:
+        lines.append("No non-HOLD challenger is supportable.")
+
+    economics = dict(payload.get("execution_economics_authority") or {})
+    route_econ = best if best else hold
+    transfer_cost = dict(route_econ.get("transfer_cost") or {}) if isinstance(route_econ.get("transfer_cost"), Mapping) else {}
+    lines.append("### EXECUTION ECONOMICS")
+    lines.extend([
+        f"FT: {transfer_cost.get('free_transfers', payload.get('free_transfers', 'UNAVAILABLE'))}",
+        f"Hit: {transfer_cost.get('hit_cost', transfer_cost.get('points_cost', 'UNAVAILABLE'))}",
+        f"Bank: {route_econ.get('bank_before', economics.get('bank', 'UNAVAILABLE'))}",
+        f"Sell-value availability: {economics.get('sell_value_status', payload.get('sell_value_status', 'UNAVAILABLE'))}",
+        f"Affordability: {route_econ.get('affordability', 'UNAVAILABLE')}",
+        f"Executability: {route_econ.get('executable', 'UNAVAILABLE')}",
+    ])
+    lines.append("### ACTIONABILITY CONCLUSION")
+    lines.append(str(route_econ.get("action_verdict") or payload.get("operational_action") or verdict))
     return lines
 
 
@@ -3231,6 +3143,37 @@ def materialize_match_report(
         "official_finalization_authoritative": True,
     }
     icon = dict(icon_live or {})
+    if icon:
+        submitted_scope = dict(icon.get("submitted_picks_exposure") or {})
+        standings_scope = dict(icon.get("live_standings_rank") or {})
+        user_summary = dict(icon.get("user_summary") or {})
+        our_rank = (
+            icon.get("current_live_rank")
+            or user_summary.get("rank")
+            or icon.get("our_rank")
+        )
+        league_size = (
+            icon.get("expected_manager_count")
+            or submitted_scope.get("expected_count")
+            or standings_scope.get("expected_count")
+            or icon.get("league_size")
+        )
+        competitive_window = resolve_competitive_window(our_rank, league_size)
+        icon["competitive_window"] = competitive_window
+        expected_ranks = set(competitive_window.get("ranks") or [])
+        rival_source = icon.get("competitive_rival_live_consequence")
+        if rival_source is None:
+            rival_source = (icon.get("rival_live_points") or {}).get("rows") or []
+        icon["competitive_rival_live_consequence"] = [
+            dict(row)
+            for row in rival_source or []
+            if isinstance(row, Mapping)
+            and (
+                not expected_ranks
+                or int(row.get("rank") or 0) in expected_ranks
+            )
+        ]
+        icon.pop("direct_rival_live_consequence", None)
     icon_state = (
         "COMPLETE"
         if str(icon.get("status") or "").upper() in {"FRESH", "COMPLETE"}
@@ -3698,14 +3641,14 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S05": ("fixtures",),
     "S06": ("formation", "starting_xi", "bench", "lineup_score", "formation_comparison"),
     "S06B": (
-        "stance",
-        "raw_ev_formation",
-        "mini_league_objective_formation",
-        "formation_alternatives",
-        "high_eo_protection",
-        "differential_slots",
+        "battle_rows",
+        "battles",
+        "current_winner",
+        "battle_classification",
+        "primary_alternative",
+        "reason",
     ),
-    "S07": ("battles",),
+    "S07": ("risk_rows", "lineup_implication", "bench_gk", "autosub_order"),
     "S08": (
         "decision_state",
         "captain",
@@ -3846,1395 +3789,488 @@ def _render_deep_visible_contract_lines(
     owned_ids: set[int],
     owned_names: Mapping[int, str],
 ) -> tuple[list[str], tuple[str, ...]]:
-    """Render the existing DEEP content into the visible-body QA contract.
+    """Render DEEP strictly from the locked human-facing presentation contract.
 
-    This is presentation only. It does not recompute xPts, xMins, posterior,
-    tactical scores, price predictions, ownership, or mini-league facts.
+    This layer only projects already-bound canonical values. It never recomputes
+    football, price, mini-league, optimizer, Monte Carlo, or lineup decisions.
     """
     payload = dict(content or {})
     lines: list[str] = []
-    excluded: list[str] = []
+    excluded: list[str] = list(payload.keys())
 
-    def bgw_visible_line(sid: str, context: Mapping[str, Any]) -> str:
-        return (
-            f"BGW PROPAGATION {sid}: "
-            f"ACTIVE={context.get('active')} | "
-            f"TOPOLOGY={context.get('gw_topology')} | "
-            f"BLANK_TEAMS={context.get('blank_team_ids')} | "
-            f"BLANK_OWNED={context.get('blank_owned_element_ids')} | "
-            f"BLANK_IN_FINAL_XI={context.get('blank_owned_in_final_xi')}"
-        )
+    def _name(value: Any) -> str:
+        if isinstance(value, Mapping):
+            element = value.get("element", value.get("element_id"))
+            explicit = value.get("player") or value.get("name")
+            if explicit:
+                return str(explicit)
+            try:
+                return owned_names.get(int(element), str(element))
+            except (TypeError, ValueError):
+                return str(element or "UNAVAILABLE")
+        try:
+            element = int(value)
+        except (TypeError, ValueError):
+            return str(value if value not in (None, "") else "UNAVAILABLE")
+        return owned_names.get(element, str(element))
+
+    def _num(value: Any) -> str:
+        if value is None:
+            return "UNAVAILABLE"
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return str(value)
+        if numeric.is_integer():
+            return str(int(numeric))
+        return f"{numeric:.2f}".rstrip("0").rstrip(".")
+
+    def _ratio(
+        row: Mapping[str, Any],
+        count_key: str,
+        pct_key: str,
+        *,
+        numerator_key: str | None = None,
+    ) -> str:
+        denominator = row.get("denominator")
+        numerator = row.get(numerator_key or count_key)
+        if denominator in (None, 0) or numerator is None:
+            return "UNAVAILABLE"
+        pct = row.get(pct_key)
+        if pct is None:
+            try:
+                pct = 100.0 * float(numerator) / float(denominator)
+            except (TypeError, ValueError, ZeroDivisionError):
+                return "UNAVAILABLE"
+        return f"{_num(numerator)}/{_num(denominator)} ({float(pct):.1f}%)"
+
+    def _count_ratio(numerator: Any, denominator: Any) -> str:
+        if numerator is None or denominator in (None, 0):
+            return "UNAVAILABLE"
+        try:
+            pct = 100.0 * float(numerator) / float(denominator)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return "UNAVAILABLE"
+        return f"{_num(numerator)}/{_num(denominator)} ({pct:.1f}%)"
+
+    def _coverage(scope: Mapping[str, Any]) -> str:
+        return _count_ratio(scope.get("collected"), scope.get("expected"))
+
+    def _compact(value: Any) -> str:
+        if value in (None, "", [], {}):
+            return "UNAVAILABLE"
+        if isinstance(value, Mapping):
+            return "; ".join(
+                f"{str(k).replace('_', ' ')}={_compact(v)}"
+                for k, v in value.items()
+                if v not in (None, "", [], {})
+            ) or "UNAVAILABLE"
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            return ", ".join(_compact(v) for v in value) or "UNAVAILABLE"
+        return str(value)
 
     if section_id == "S01":
         dashboard = dict(payload.get("decision_dashboard") or {})
-        lines.append("### MULTI-AXIS DECISION DASHBOARD")
-        lines.extend(
-            _markdown_table(
-                ("axis", "state"),
-                [
-                    ("TRANSFER", dashboard.get("TRANSFER")),
-                    ("XI", dashboard.get("XI")),
-                    ("CAPTAIN", dashboard.get("CAPTAIN")),
-                    ("CHIP", dashboard.get("CHIP")),
-                    ("PRICE", dashboard.get("PRICE")),
-                    ("PERSONAL AUTH", dashboard.get("PERSONAL_AUTH")),
-                ],
-            )
+        calls = {
+            "TRANSFER": payload.get("primary_decision") or dashboard.get("PRIMARY_REASON"),
+            "XI": "See S06/S07",
+            "CAPTAIN": "See S08",
+            "CHIP": "See S09",
+            "PRICE": "See S10",
+            "PERSONAL_AUTH": dashboard.get("PERSONAL_AUTH"),
+        }
+        labels = (
+            ("TRANSFER", "Transfer"),
+            ("XI", "XI"),
+            ("CAPTAIN", "Captain"),
+            ("CHIP", "Chip"),
+            ("PRICE", "Price"),
+            ("PERSONAL_AUTH", "Personal authentication"),
         )
-        lines.append(f"PLANNING GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
-        lines.append(f"PRIMARY REASON: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
-        lines.append(f"KEY DRIVER: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
-        blockers = dashboard.get("CURRENT_BLOCKERS") or payload.get("current_blockers") or []
-        lines.append("CURRENT BLOCKERS: " + (", ".join(str(x) for x in blockers) if blockers else "NONE"))
-        excluded.extend((
-            "decision_dashboard",
-            "operational_state",
-            "planning_gw",
-            "primary_decision",
-            "reason",
-            "key_decision_driver",
-            "current_blockers",
-            "current_planning_gw",
+        lines.extend(_markdown_table(
+            ("Axis", "Status", "Current call"),
+            [(label, dashboard.get(key), calls.get(key)) for key, label in labels],
         ))
+        lines.append(f"Planning GW: {dashboard.get('PLANNING_GW', payload.get('planning_gw'))}")
+        lines.append(f"Reason: {dashboard.get('PRIMARY_REASON', payload.get('reason'))}")
+        lines.append(f"Key driver: {dashboard.get('KEY_DRIVER', payload.get('key_decision_driver'))}")
 
     elif section_id == "S02":
+        rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        lines.extend(_markdown_table(
+            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
+            [(
+                r.get("player") or r.get("name"),
+                r.get("position"),
+                r.get("opponent"),
+                r.get("p_start"),
+                r.get("xmins"),
+                r.get("projection_1gw"),
+                r.get("projection_3gw"),
+                r.get("projection_5gw"),
+                " | ".join(
+                    str(v) for v in (
+                        r.get("tactical_role_label"),
+                        r.get("injury_rotation_warning"),
+                        r.get("price_relevance"),
+                    ) if v not in (None, "", "NONE_MATERIAL", [])
+                ) or "No material note",
+            ) for r in rows],
+        ))
         authority = dict(payload.get("current15_authority") or {})
         lines.append(
-            "CURRENT15 AUTHORITY: "
-            f"SOURCE_CLASS={authority.get('source_class')} | "
-            f"SOURCE={authority.get('source')} | "
-            f"OBSERVED_AT={authority.get('observed_at')} | "
-            f"APPLICABLE_GW={authority.get('applicable_gw')} | "
-            f"AUTH={authority.get('auth_state')} | "
-            f"FINANCE={authority.get('finance_availability')} | "
-            f"STALE={authority.get('stale')}"
+            "Current squad evidence: "
+            f"{authority.get('source_class', 'UNAVAILABLE')} | "
+            f"as of {authority.get('observed_at', 'UNAVAILABLE')} | "
+            f"authentication {authority.get('auth_state', 'UNAVAILABLE')}"
         )
-        rows = [
-            dict(row)
-            for row in payload.get("rows") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.extend(
-            _markdown_table(
-                (
-                    "element",
-                    "player",
-                    "pos",
-                    "club",
-                    "price",
-                    "sell",
-                    "opponent",
-                    "H/A",
-                    "avail",
-                    "P(start)",
-                    "xMins",
-                    "1GW",
-                    "3GW",
-                    "5GW",
-                    "role",
-                    "tactical",
-                    "warning",
-                    "price state",
-                    "ownership source",
-                ),
-                [
-                    (
-                        row.get("element_id"),
-                        row.get("player") or row.get("name"),
-                        row.get("position"),
-                        row.get("club"),
-                        row.get("current_price"),
-                        row.get("selling_price"),
-                        row.get("opponent"),
-                        row.get("home_away"),
-                        row.get("availability", row.get("p_available")),
-                        row.get("p_start"),
-                        row.get("xmins"),
-                        row.get("projection_1gw", row.get("gw_plus_1")),
-                        row.get("projection_3gw", row.get("three_gw")),
-                        row.get("projection_5gw", row.get("five_gw")),
-                        row.get("tactical_role_label", row.get("tactical_role")),
-                        row.get("tactical_score"),
-                        row.get("injury_rotation_warning", "NONE_MATERIAL"),
-                        row.get("price_relevance", "NONE_MATERIAL"),
-                        row.get("ownership_source"),
-                    )
-                    for row in rows
-                ],
-            )
-        )
-        excluded.extend(("rows", "current15_authority", "personal_resolution"))
 
     elif section_id == "S03":
         delta = dict(payload.get("decision_delta") or {})
         baseline = str(delta.get("baseline_state") or "UNAVAILABLE").upper()
-        lines.append(f"PREVIOUS VALID VISIBLE DEEP BASELINE: {baseline}")
+        lines.append(f"Previous valid baseline: {baseline}")
+        delta_rows = [dict(r) for r in delta.get("rows") or [] if isinstance(r, Mapping)]
+        changed = [r for r in delta_rows if str(r.get("change") or "").upper() == "CHANGED"]
+        unchanged = [r for r in delta_rows if str(r.get("change") or "").upper() != "CHANGED"]
         if baseline != "AVAILABLE":
-            lines.append(
-                "BASELINE UNAVAILABLE — previous valid visible DEEP occurrence is not bound; "
-                "no numerical or decision delta is inferred."
-            )
+            lines.append("Verdict: baseline unavailable; no numerical or decision delta is inferred.")
+        elif changed:
+            lines.append("Changed: " + "; ".join(
+                f"{r.get('signal')}: {r.get('04:30_or_baseline_state')} → {r.get('12:30_state')}"
+                for r in changed
+            ))
+            lines.append("Unchanged: " + (", ".join(str(r.get("signal")) for r in unchanged) or "None material"))
+            lines.append("Verdict: reassess only the changed decision-critical evidence.")
         else:
-            delta_rows = [
-                dict(row)
-                for row in delta.get("rows") or []
-                if isinstance(row, Mapping)
-            ]
-            if delta_rows:
-                lines.extend(
-                    _markdown_table(
-                        (
-                            "decision_item",
-                            "previous",
-                            "current",
-                            "material_change",
-                            "reason",
-                            "evidence_time",
-                        ),
-                        [
-                            (
-                                row.get("decision_item"),
-                                row.get("previous"),
-                                row.get("current"),
-                                row.get("material_change"),
-                                row.get("reason"),
-                                row.get("evidence_time"),
-                            )
-                            for row in delta_rows
-                        ],
-                    )
-                )
-            else:
-                lines.append("NO MATERIAL DECISION CHANGE")
-        excluded.append("decision_delta")
+            lines.append("Changed: None material.")
+            lines.append("Unchanged: decision-critical baseline remains stable.")
+            lines.append("Verdict: NO MATERIAL DECISION CHANGE.")
 
     elif section_id == "S04":
-        material_news = [
-            dict(row)
-            for row in payload.get("material_news") or []
-            if isinstance(row, Mapping)
-        ]
         groups = dict(payload.get("news_groups") or {})
         lines.append("### MATERIAL NEWS SINCE PREVIOUS DEEP")
         lines.append(str(payload.get("news_summary") or "NO MATERIAL NEW EXTERNAL NEWS"))
-        for group_name in (
-            "OUR15",
-            "WATCHLIST / TARGETS",
-            "TEAM / TACTICAL",
-            "OTHER MATERIAL",
-        ):
-            rows = [
-                dict(row)
-                for row in groups.get(group_name) or []
-                if isinstance(row, Mapping)
-            ]
-            lines.append(f"#### {group_name}")
+        for group_name in ("OUR15", "WATCHLIST / TARGETS", "TEAM / TACTICAL", "OTHER MATERIAL"):
+            rows = [dict(r) for r in groups.get(group_name) or [] if isinstance(r, Mapping)]
+            lines.append(f"### {group_name}")
             if not rows:
-                lines.append("- None material / supportable in this occurrence.")
+                lines.append("None material.")
                 continue
             for row in rows:
+                source_class = str(row.get("source_class") or "UNAVAILABLE")
+                marker = "UNVERIFIED" if source_class == "RUMOR / UNVERIFIED" else source_class
                 lines.append(
-                    f"- **{row.get('subject') or 'UNAVAILABLE'}** — "
-                    f"{row.get('source_class') or 'UNAVAILABLE'}"
+                    f"- {row.get('subject') or row.get('affected_player_team') or 'Material item'}: "
+                    f"{row.get('summary') or row.get('headline') or 'UNAVAILABLE'} "
+                    f"[{marker}; {row.get('published_or_observed_timestamp') or 'time unavailable'}]"
                 )
-                lines.append(
-                    "  "
-                    f"{row.get('summary') or row.get('headline') or 'UNAVAILABLE'} | "
-                    f"Source: {row.get('source_name') or 'UNAVAILABLE'} | "
-                    f"As of: {row.get('published_or_observed_timestamp') or 'UNAVAILABLE'} | "
-                    f"Evidence: {row.get('evidence_status') or 'UNAVAILABLE'} | "
-                    f"Impact: {row.get('decision_relevance') or 'MONITOR'}"
-                )
-
-        developments = [
-            dict(row)
-            for row in payload.get("model_developments") or []
-            if isinstance(row, Mapping)
-        ]
+        developments = [dict(r) for r in payload.get("model_developments") or [] if isinstance(r, Mapping)]
         lines.append("### MODEL / FOOTBALL DEVELOPMENTS")
         if developments:
-            for row in developments:
-                lines.append(
-                    f"- {row.get('classification') or 'OBSERVED'} | "
-                    f"{row.get('scope') or 'UNAVAILABLE'} | "
-                    f"{row.get('summary') or 'UNAVAILABLE'}"
-                )
+            lines.extend(f"- {r.get('summary') or _compact(r)}" for r in developments)
         else:
-            lines.append("- No new model-detected material change in this occurrence.")
-
+            lines.append("None material.")
         consequence = dict(payload.get("decision_consequence") or {})
         lines.append("### DECISION CONSEQUENCE")
         lines.append(
-            " | ".join(
-                (
-                    f"TRANSFER={consequence.get('transfer_state')}",
-                    f"XI={consequence.get('xi_state')}",
-                    f"C/VC={consequence.get('captain_state')}",
-                    f"PRICE={consequence.get('price_state')}",
-                )
-            )
+            f"Transfer {consequence.get('transfer_state', 'UNAVAILABLE')}; "
+            f"XI {consequence.get('xi_state', 'UNAVAILABLE')}; "
+            f"Captain {consequence.get('captain_state', 'UNAVAILABLE')}; "
+            f"Price {consequence.get('price_state', 'UNAVAILABLE')}. "
+            "News is evidence only; ACT authority remains in S14."
         )
-        lines.append(
-            "NEWS SELF-AUTHORIZES ACT: "
-            f"{consequence.get('news_self_authorizes_act')} | "
-            "NEWS OBSERVATION IS MODEL UPDATE: "
-            f"{consequence.get('news_observation_is_model_update')} | "
-            "MODEL NUMBERS MUTATED IN S04: "
-            f"{consequence.get('model_numbers_mutated_here')} | "
-            "OPTIMIZER AUTHORITY REMAINS S14: "
-            f"{consequence.get('optimizer_authority_remains_s14')}"
-        )
-        excluded.extend((
-            "material_news",
-            "news_groups",
-            "news_summary",
-            "model_developments",
-            "decision_consequence",
-            "source_policy",
-            "changes",
-            "decision_change_sources",
-        ))
 
     elif section_id == "S05":
-        lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
+        lines.append(f"Fixture topology: {payload.get('gw_topology') or 'UNAVAILABLE'}")
+        fixtures = payload.get("fixtures") or []
+        if fixtures:
+            lines.append("PL fixtures: " + _compact(fixtures))
         coverage = dict(payload.get("competition_coverage") or {})
-        lines.append(
-            "COMPETITION COVERAGE: "
-            f"PL={coverage.get('official_pl')} | "
-            f"NON_PL_BOUND={coverage.get('verified_non_pl_schedule_bound')} | "
-            f"NON_PL_EVENTS={coverage.get('verified_non_pl_event_count')} | "
-            f"CLUB_SCHEDULE_STATUS={coverage.get('club_schedule_status')} | "
-            f"PLAYER_OBSERVATION_STATUS={coverage.get('player_observation_status')} | "
-            f"WEATHER_BINDING_STATUS={coverage.get('weather_binding_status')} | "
-            f"CATEGORIES={coverage.get('competition_categories_data_driven')}"
-        )
-        flags = dict(payload.get("period_flags") or {})
-        lines.append(
-            "PERIOD FLAGS: "
-            f"DGW_TEAMS={flags.get('double_gw_teams')} | "
-            f"BGW_TEAMS={flags.get('blank_gw_teams')} | "
-            f"REARRANGED={flags.get('rearranged_fixture')} | "
-            f"INTERNATIONAL={flags.get('international_schedule_present')} | "
-            f"CONGESTED={flags.get('congested_player_present')} | "
-            f"SHORT_REST={flags.get('short_rest_player_present')}"
-        )
-        workload = [
-            dict(row)
-            for row in payload.get("player_workload") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.append("### PLAYER WORKLOAD / TRAVEL")
-        lines.extend(
-            _markdown_table(
-                (
-                    "player",
-                    "gw_state",
-                    "load_state",
-                    "non_pl_competitions",
-                    "next_non_pl",
-                    "rest_non_pl_to_pl_h",
-                    "prev_match",
-                    "next_pl",
-                    "matches_3/7/14/21",
-                    "minutes_3/7/14/21",
-                    "days_rest",
-                    "cross_border",
-                    "long_haul",
-                    "tz_shift",
-                    "return_to_club_h",
-                    "call_up",
-                    "tournament_absence",
-                    "return_date",
-                    "reintegration",
-                ),
-                [
-                    (
-                        row.get("player") or row.get("element_id"),
-                        row.get("gw_state"),
-                        row.get("load_state"),
-                        row.get("non_pl_competitions"),
-                        row.get("next_non_pl_event"),
-                        row.get("rest_hours_after_next_non_pl_to_pl"),
-                        row.get("previous_match_datetime"),
-                        row.get("next_pl_fixture_datetime"),
-                        row.get("matches_last_days"),
-                        row.get("minutes_last_days"),
-                        row.get("days_rest"),
-                        row.get("cross_border_travel"),
-                        row.get("long_haul"),
-                        row.get("timezone_shift_hours"),
-                        row.get("return_to_club_interval_hours"),
-                        row.get("confirmed_call_up"),
-                        row.get("tournament_absence"),
-                        row.get("return_date"),
-                        row.get("reintegration_state"),
-                    )
-                    for row in workload
-                ],
+        if coverage:
+            lines.append(
+                "Schedule evidence: "
+                f"PL={coverage.get('official_pl', 'UNAVAILABLE')}; "
+                f"non-PL={coverage.get('verified_non_pl_schedule_bound', 'UNAVAILABLE')}; "
+                f"weather={coverage.get('weather_binding_status', 'UNAVAILABLE')}."
             )
-        )
-        multi_fixture_rows = [
-            row for row in workload
-            if str(row.get("gw_state") or "").upper() in {"DOUBLE", "BLANK"}
+        workloads = [dict(r) for r in payload.get("player_workload") or [] if isinstance(r, Mapping)]
+        material_load = [
+            r for r in workloads
+            if str(r.get("load_state") or "").upper() not in {"", "NORMAL", "AVAILABLE", "LOW"}
+            or r.get("long_haul") is True
         ]
-        lines.append("### DGW / BGW PLAYER DETAIL")
-        if multi_fixture_rows:
-            for row in multi_fixture_rows:
-                lines.append(
-                    f"- {row.get('player') or row.get('element_id')}: "
-                    f"{row.get('gw_state')} | fixtures={row.get('planning_gw_fixtures')}"
-                )
-        else:
-            lines.append("NONE — no relevant DGW/BGW player in bound evidence")
-        weather = [
-            dict(row)
-            for row in payload.get("weather") or []
-            if isinstance(row, Mapping)
-        ]
-        weather_bound = any(
-            str(row.get("fpl_impact") or "UNAVAILABLE").upper()
-            in {"NORMAL", "LOW", "MATERIAL"}
-            for row in weather
-        )
         lines.append(
-            "WEATHER SOURCE: "
-            + ("REPORT_TIME_BOUND" if weather_bound else "DEGRADED")
+            "Rest/workload: "
+            + ("; ".join(
+                f"{r.get('player') or r.get('name') or 'Player'} {r.get('load_state') or ''} "
+                f"(rest {r.get('days_rest', 'UNAVAILABLE')}d)"
+                for r in material_load[:8]
+            ) if material_load else "No material workload flag.")
         )
-        lines.append("### WEATHER")
-        lines.extend(
-            _markdown_table(
-                (
-                    "fixture_id",
-                    "venue",
-                    "kickoff",
-                    "condition/state",
-                    "temp",
-                    "precipitation",
-                    "wind",
-                    "FPL impact",
-                    "evidence timestamp",
-                ),
-                [
-                    (
-                        row.get("fixture_id"),
-                        row.get("venue"),
-                        row.get("kickoff"),
-                        row.get("condition") or row.get("state"),
-                        row.get("temperature_c"),
-                        row.get("precipitation_probability"),
-                        row.get("wind_kph"),
-                        row.get("fpl_impact"),
-                        row.get("evidence_timestamp"),
-                    )
-                    for row in weather
-                ],
-            )
-        )
-        lines.append(
-            "MODEL GOVERNANCE: workload/travel feeds P1.1 review only; "
-            "STATIC_FATIGUE_PENALTY=False; WEATHER_MUTATES_FOOTBALL_MODEL=False; "
-            "DGW_CROSS_FIXTURE_COVARIANCE_CLAIMED=False"
-        )
-        excluded.extend(
-            (
-                "fixtures",
-                "verified_schedule_events",
-                "player_workload",
-                "weather",
-                "opponent_strength",
-            )
-        )
+        weather = payload.get("weather")
+        lines.append("Weather: " + (_compact(weather) if weather else "No material weather signal."))
+        lines.append("Decision use: context only; no separate optimizer or news authority.")
 
     elif section_id == "S06":
-        def player_name(value: Any) -> str:
+        xi = list(payload.get("starting_xi") or [])
+        formation = payload.get("formation")
+        lines.append(f"Formation: {formation or 'UNAVAILABLE'}")
+        grouped: dict[str, list[str]] = {"GK": [], "DEF": [], "MID": [], "FWD": []}
+        fallback: list[str] = []
+        for value in xi:
             if isinstance(value, Mapping):
-                element = value.get("element", value.get("element_id"))
-                name = value.get("name") or value.get("player")
-                if name:
-                    return str(name)
-                try:
-                    return owned_names.get(int(element), str(element))
-                except (TypeError, ValueError):
-                    return str(element)
-            try:
-                element = int(value)
-            except (TypeError, ValueError):
-                return str(value)
-            return owned_names.get(element, str(element))
-
-        xi_raw = list(payload.get("starting_xi") or [])
-        bench = dict(payload.get("bench") or {})
-        xi_names = [player_name(row) for row in xi_raw]
-        bench_names: list[str] = []
-        if bench.get("gk") is not None:
-            bench_names.append(player_name(bench.get("gk")))
-        bench_names.extend(
-            player_name(row)
-            for row in (bench.get("order") or [])
-        )
-        lines.append(f"FORMATION: {payload.get('formation') or 'UNAVAILABLE'}")
-        lines.append("XI: " + ", ".join(xi_names))
-        lines.append("BENCH: " + ", ".join(bench_names))
+                pos = str(value.get("position") or value.get("pos") or "").upper()
+                name = _name(value)
+                if pos in grouped:
+                    grouped[pos].append(name)
+                else:
+                    fallback.append(name)
+            else:
+                fallback.append(_name(value))
+        for pos in ("GK", "DEF", "MID", "FWD"):
+            if grouped[pos]:
+                lines.append(f"{pos}: " + ", ".join(grouped[pos]))
+        if fallback:
+            lines.append("XI: " + ", ".join(fallback))
+        bench_raw = payload.get("bench")
+        bench = dict(bench_raw) if isinstance(bench_raw, Mapping) else {}
+        bench_gk = bench.get("bench_gk") or bench.get("gk") or bench.get("goalkeeper")
+        order = bench.get("outfield_autosub_priority") or bench.get("order") or bench.get("outfield") or []
+        if not isinstance(order, Sequence) or isinstance(order, (str, bytes)):
+            order = []
+        lines.append(f"Bench GK: {_name(bench_gk)}")
+        for idx, value in enumerate(list(order)[:3], start=1):
+            lines.append(f"Bench {idx}: {_name(value)}")
         score = dict(payload.get("lineup_score") or {})
         lines.append(
-            "XI_BASE_XPTS: "
-            + str(payload.get("xi_base_xpts", score.get("xpts_mean", "UNAVAILABLE")))
+            f"Projection: XI base xPts={payload.get('xi_base_xpts', score.get('xpts_mean', 'UNAVAILABLE'))}; "
+            f"captain-adjusted={payload.get('captain_adjusted_xpts', 'UNAVAILABLE')}."
         )
-        lines.append(
-            "CAPTAIN_ADJUSTED_XPTS: "
-            + str(payload.get("captain_adjusted_xpts", "UNAVAILABLE"))
-        )
-        lines.append(
-            "LINEUP_ROUTE_UTILITY: "
-            + str(payload.get("lineup_route_utility", "UNAVAILABLE"))
-        )
-        lines.append(
-            "SCORE SEMANTICS: "
-            + str((payload.get("score_semantics") or {}).get("relationship", "UNAVAILABLE"))
-        )
-        bgw = dict(payload.get("bgw_context") or {})
-        lines.append(bgw_visible_line("S06", bgw))
-        lines.append(
-            "BGW LINEUP REVIEW REQUIRED: "
-            + str(payload.get("bgw_lineup_review_required"))
-        )
-        comparisons = [
-            dict(item)
-            for item in payload.get("formation_comparison") or []
-            if isinstance(item, Mapping)
-        ]
+        comparisons = [dict(r) for r in payload.get("formation_comparison") or [] if isinstance(r, Mapping)]
         if comparisons:
-            lines.append("FORMATION ALTERNATIVES:")
-            lines.extend(
-                _markdown_table(
-                    ("formation", "projected_points", "route_utility", "downside", "upside", "selected"),
-                    [
-                        (
-                            item.get("formation"),
-                            item.get("expected_fpl_points_with_captain_vice"),
-                            item.get("route_utility"),
-                            item.get("distributional_downside"),
-                            item.get("supportable_upside"),
-                            item.get("selected"),
-                        )
-                        for item in comparisons
-                    ],
-                )
-            )
-        else:
-            lines.append("FORMATION ALTERNATIVES: NONE MATERIAL / NONE SUPPORTABLE")
-        excluded.extend((
-            "starting_xi", "bench", "formation_comparison", "lineup_score",
-            "bgw_context", "bgw_lineup_review_required",
-        ))
+            close = sorted(
+                comparisons,
+                key=lambda r: float(r.get("expected_fpl_points_with_captain_vice") or -9999),
+                reverse=True,
+            )[:2]
+            lines.append("Frontier note: " + " vs ".join(
+                f"{r.get('formation')} {r.get('expected_fpl_points_with_captain_vice')} xPts"
+                for r in close
+            ))
 
     elif section_id == "S06B":
-        lines.append(f"MINI-LEAGUE STANCE: {payload.get('stance') or 'UNAVAILABLE'}")
-        league = dict(payload.get("league_context") or {})
-        lines.append(
-            "LEAGUE POSITION: "
-            f"rank={league.get('our_rank', 'UNAVAILABLE')} / "
-            f"{league.get('manager_count', 'UNAVAILABLE')} | "
-            f"points={league.get('our_total_points', 'UNAVAILABLE')} | "
-            f"leader_gap={league.get('points_to_leader', 'UNAVAILABLE')} | "
-            f"top3_gap={league.get('points_to_top_3', 'UNAVAILABLE')} | "
-            f"top5_gap={league.get('points_to_top_5', 'UNAVAILABLE')} | "
-            f"rival_above_gap={league.get('points_to_nearest_above', 'UNAVAILABLE')} | "
-            f"rival_below_cushion={league.get('points_ahead_nearest_below', 'UNAVAILABLE')}"
-        )
-        lines.append(f"RAW EV FORMATION: {payload.get('raw_ev_formation') or 'UNAVAILABLE'}")
-        lines.append(
-            "MINI-LEAGUE OBJECTIVE FORMATION: "
-            + str(payload.get("mini_league_objective_formation") or "UNAVAILABLE")
-        )
-        lines.append(
-            "PROJECTED POINTS DIFFERENCE: "
-            + str(payload.get("projected_points_difference", "UNAVAILABLE"))
-        )
-        lines.append(
-            "OBJECTIVES SAME: "
-            + str(payload.get("objectives_same", "UNAVAILABLE"))
-        )
-        lines.append(
-            "RATIONAL DIFFERENTIAL EXPOSURE: "
-            + str(payload.get("rational_differential_exposure", "UNAVAILABLE"))
-        )
-        lines.append(
-            "AGGRESSIVE DOWNSIDE: "
-            + str(payload.get("aggressive_downside") or "UNAVAILABLE")
-        )
-        alternatives = [
-            dict(item)
-            for item in payload.get("formation_alternatives") or []
-            if isinstance(item, Mapping)
-        ]
-        if alternatives:
-            lines.extend(
-                _markdown_table(
-                    ("formation", "projected_points", "utility", "downside", "upside", "selected"),
-                    [
-                        (
-                            item.get("formation"),
-                            item.get("expected_fpl_points_with_captain_vice"),
-                            item.get("route_utility"),
-                            item.get("distributional_downside"),
-                            item.get("supportable_upside"),
-                            item.get("selected"),
-                        )
-                        for item in alternatives
-                    ],
-                )
-            )
-        lines.append(
-            "HIGH-EO PROTECTION: "
-            + ", ".join(
-                str(item.get("player") or item.get("element_id"))
-                for item in payload.get("high_eo_protection") or []
-                if isinstance(item, Mapping)
-            )
-        )
-        lines.append(
-            "DIFFERENTIAL SLOTS: "
-            + ", ".join(
-                str(item.get("player") or item.get("element_id"))
-                for item in payload.get("differential_slots") or []
-                if isinstance(item, Mapping)
-            )
-        )
-        excluded.extend((
-            "formation_alternatives",
-            "high_eo_protection",
-            "differential_slots",
-        ))
+        rows = [dict(r) for r in payload.get("battle_rows") or [] if isinstance(r, Mapping)]
+        if rows:
+            lines.extend(_markdown_table(
+                ("Player", "Pstart", "xMins", "1GW xPts"),
+                [(r.get("player"), r.get("p_start"), r.get("xmins"), r.get("projection_1gw")) for r in rows],
+            ))
+        else:
+            lines.append("No material XI battle is currently identified.")
+        lines.append(f"Winner: {payload.get('current_winner') or 'UNAVAILABLE'}")
+        lines.append(f"Classification: {payload.get('battle_classification') or 'UNAVAILABLE'}")
+        lines.append(f"Primary alternative: {payload.get('primary_alternative') or 'UNAVAILABLE'}")
+        lines.append(f"Reason: {payload.get('reason') or 'UNAVAILABLE'}")
 
     elif section_id == "S07":
-        battles = [
-            dict(item)
-            for item in payload.get("battles") or []
-            if isinstance(item, Mapping)
-        ]
-        lines.extend(
-            _markdown_table(
-                (
-                    "player_a", "player_b", "P(start) A", "P(start) B", "xMins A", "xMins B",
-                    "1GW A", "1GW B", "Phaul A", "Phaul B", "fixture A", "fixture B",
-                    "workload A", "workload B", "role A", "role B",
-                    "Rivals EO A", "Rivals EO B", "Competitive EO A", "Competitive EO B",
-                    "starter", "utility delta", "reason"
-                ),
-                [
-                    (
-                        item.get("player_a"),
-                        item.get("player_b"),
-                        item.get("p_start_a"),
-                        item.get("p_start_b"),
-                        item.get("xmins_a"),
-                        item.get("xmins_b"),
-                        item.get("projection_1gw_a"),
-                        item.get("projection_1gw_b"),
-                        item.get("p_haul_a"),
-                        item.get("p_haul_b"),
-                        item.get("fixture_a"),
-                        item.get("fixture_b"),
-                        item.get("workload_a"),
-                        item.get("workload_b"),
-                        item.get("role_a"),
-                        item.get("role_b"),
-                        item.get("eo_a"),
-                        item.get("eo_b"),
-                        item.get("competitive_eo_a"),
-                        item.get("competitive_eo_b"),
-                        item.get("final_starter"),
-                        item.get("utility_margin"),
-                        item.get("tactical_reason"),
-                    )
-                    for item in battles
-                ],
-            )
+        rows = [dict(r) for r in payload.get("risk_rows") or [] if isinstance(r, Mapping)]
+        if rows:
+            for row in rows:
+                flags = row.get("flags") or []
+                lines.append(
+                    f"- {row.get('player')}: Pstart {row.get('p_start')}; xMins {row.get('xmins')}; "
+                    f"flags {', '.join(str(v) for v in flags) if flags else 'none material'}; "
+                    f"implication {row.get('implication') or 'monitor'}."
+                )
+        else:
+            lines.append("No material lineup-risk player is currently identified.")
+        lines.append(f"Lineup implication: {payload.get('lineup_implication') or 'UNAVAILABLE'}")
+        order = payload.get("autosub_order") or []
+        lines.append(
+            "Autosub order: "
+            + (", ".join(f"{i}. {v}" for i, v in enumerate(order, 1)) if order else "UNAVAILABLE")
         )
-        excluded.append("battles")
+        lines.append(f"Bench GK: {payload.get('bench_gk') or 'UNAVAILABLE'}")
 
     elif section_id == "S08":
-        lines.append(
-            "CAPTAIN DECISION STATE: "
-            + str(payload.get("decision_state") or "UNAVAILABLE")
-        )
-        proof = dict(payload.get("candidate_universe_proof") or {})
-        lines.append(
-            "CAPTAIN LEGALITY: "
-            f"C∈CURRENT15={proof.get('captain_in_current15')} | "
-            f"VC∈CURRENT15={proof.get('vice_in_current15')} | "
-            f"C∈XI={proof.get('captain_in_final_xi')} | "
-            f"VC∈XI={proof.get('vice_in_final_xi')} | "
-            f"C!=VC={proof.get('captain_vice_distinct')} | "
-            f"FRONTIER⊆XI={proof.get('frontier_subset_of_final_xi')}"
-        )
-
-        def _cap_ratio(scope: Mapping[str, Any], key: str, pct_key: str) -> str:
-            denominator = scope.get("denominator")
-            numerator = scope.get(key)
-            pct = scope.get(pct_key)
-            if denominator in (None, 0) or numerator is None:
-                return "UNAVAILABLE"
-            pct_text = "UNAVAILABLE" if pct is None else f"{float(pct):.1f}%"
-            return f"{numerator}/{denominator} ({pct_text})"
-
-        def _cap_eo(scope: Mapping[str, Any]) -> str:
-            denominator = scope.get("denominator")
-            units = scope.get("effective_multiplier_sum")
-            pct = scope.get("eo_pct")
-            if denominator in (None, 0) or units is None or pct is None:
-                return "UNAVAILABLE"
-            return f"{units}/{denominator} ({float(pct):.1f}%)"
-
-        frontier = [
-            dict(row)
-            for row in payload.get("captain_frontier") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.append("### OWNED FINAL-XI CAPTAIN FRONTIER")
-        if frontier:
-            rows = []
-            for item in frontier:
-                goal = dict(item.get("goal_involvement") or {})
-                fixture = dict(item.get("fixture") or {})
-                workload = dict(item.get("workload_context") or {})
-                league = dict(item.get("league_scope") or {})
-                rivals = dict(item.get("rivals_scope") or {})
-                competitive = dict(item.get("competitive_scope") or {})
-                rows.append(
-                    (
-                        item.get("football_rank"),
-                        item.get("football_score"),
-                        item.get("player") or item.get("element_id"),
-                        item.get("expected_points"),
-                        item.get("q10"),
-                        item.get("q50"),
-                        item.get("q90"),
-                        item.get("p_start"),
-                        item.get("xmins"),
-                        goal.get("p_goal"),
-                        goal.get("p_assist"),
-                        goal.get("p_return"),
-                        item.get("haul_probability"),
-                        item.get("blank_probability"),
-                        item.get("penalties"),
-                        item.get("set_pieces"),
-                        fixture.get("opponent"),
-                        "H" if fixture.get("home") is True else "A" if fixture.get("home") is False else "UNAVAILABLE",
-                        (
-                            f"{workload.get('load_state')} | rest={workload.get('days_rest')}d | "
-                            f"long_haul={workload.get('long_haul')} | tz={workload.get('timezone_shift_hours')}"
-                        ),
-                        _cap_ratio(league, "captain_count", "captain_pct"),
-                        _cap_eo(league),
-                        _cap_ratio(rivals, "captain_count", "captain_pct"),
-                        _cap_eo(rivals),
-                        _cap_ratio(competitive, "captain_count", "captain_pct"),
-                        _cap_eo(competitive),
-                        item.get("exposure_leverage_class"),
-                    )
-                )
-            lines.extend(
-                _markdown_table(
-                    (
-                        "football rank",
-                        "football score",
-                        "player",
-                        "xPts",
-                        "Q10",
-                        "Q50",
-                        "Q90",
-                        "P(start)",
-                        "xMins",
-                        "P(goal)",
-                        "P(assist)",
-                        "P(return)",
-                        "P(haul)",
-                        "P(blank)",
-                        "penalty",
-                        "set-piece",
-                        "fixture",
-                        "H/A",
-                        "workload/rest/travel",
-                        "LEAGUE C",
-                        "LEAGUE EO",
-                        "RIVALS C",
-                        "RIVALS EO",
-                        "COMPETITIVE C",
-                        "COMPETITIVE EO",
-                        "EXPOSURE / LEVERAGE CLASS",
-                    ),
-                    rows,
-                )
-            )
-        else:
-            lines.append("UNAVAILABLE — no legal final-XI captain frontier materialized")
-
+        frontier = [dict(r) for r in payload.get("captain_frontier") or [] if isinstance(r, Mapping)][:5]
+        lines.extend(_markdown_table(
+            ("Rank", "Player", "xPts", "Phaul", "Pstart", "xMins"),
+            [(
+                r.get("football_rank") or idx,
+                r.get("player") or r.get("name"),
+                r.get("xpts") or r.get("expected_points"),
+                r.get("p_haul"),
+                r.get("p_start"),
+                r.get("xmins"),
+            ) for idx, r in enumerate(frontier, 1)],
+        ))
         captain = dict(payload.get("captain") or {})
         vice = dict(payload.get("vice_captain") or {})
         lines.append(
-            "FOOTBALL-OPTIMAL C/VC: "
-            f"C={captain.get('player') or captain.get('element_id')} | "
-            f"VC={vice.get('player') or vice.get('element_id')}"
+            f"Current call: C {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
+            f"VC {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
+            f"state {payload.get('decision_state') or 'UNAVAILABLE'}."
         )
-        lines.append(
-            "P1.7 SAFE POOL: "
-            + ", ".join(str(x) for x in payload.get("captain_safe_pool") or [])
-        )
-        lines.append(
-            "CAPTAIN RECONCILIATION: "
-            + str(payload.get("reconciliation_reason") or "UNAVAILABLE")
-        )
-        lines.append(
-            "CAPTAIN AUTHORITY: "
-            + str(payload.get("authority") or "UNAVAILABLE")
-        )
-        excluded.extend(
-            (
-                "captain",
-                "vice_captain",
-                "captain_frontier",
-                "captain_safe_pool",
-                "candidate_universe_proof",
-                "near_tie_authority",
+        if frontier:
+            lines.append(
+                "EO/leverage context: "
+                + "; ".join(
+                    f"{r.get('player') or r.get('name')}: {str(r.get('exposure_leverage_class') or 'context unavailable').replace('_', ' ')}"
+                    for r in frontier
+                )
             )
-        )
+        lines.append(f"Reconciliation: {payload.get('reconciliation_reason') or 'No material override.'}")
 
     elif section_id == "S09":
-        lines.append("### CHIP LEDGER")
         ledger = payload.get("chip_ledger")
-        if isinstance(ledger, Mapping):
-            for chip_name, chip_value in ledger.items():
-                if isinstance(chip_value, Mapping):
-                    lines.append(
-                        f"- {str(chip_name).upper()}: "
-                        + " | ".join(f"{k}={v}" for k, v in chip_value.items())
-                    )
-                else:
-                    lines.append(f"- {str(chip_name).upper()}: {chip_value}")
-        else:
-            lines.append(f"- CHIP LEDGER: {ledger or 'UNAVAILABLE'}")
-        lines.append(
-            "REMAINING CHIP SET: derive only from authoritative chip ledger; "
-            "never resurrect USED chips as executable options."
+        ledger_map = dict(ledger) if isinstance(ledger, Mapping) else {}
+        aliases = (
+            ("Bench Boost", ("BB", "BENCH_BOOST", "bench_boost")),
+            ("Wildcard", ("WC", "WILDCARD", "wildcard")),
+            ("Triple Captain", ("TC", "TRIPLE_CAPTAIN", "triple_captain")),
+            ("Free Hit", ("FH", "FREE_HIT", "free_hit")),
         )
-        lines.append(
-            "FREE HIT OPTIMIZATION: when FH is the only remaining first-half chip, "
-            "compare current-window uplift against preservation/opportunity cost."
-        )
-        bgw = dict(payload.get("bgw_context") or {})
-        lines.append(bgw_visible_line("S09", bgw))
-        lines.append(
-            "BGW CHIP REVIEW REQUIRED: "
-            + str(payload.get("bgw_chip_review_required"))
-        )
-        excluded.extend(("bgw_context", "bgw_chip_review_required"))
-
-    elif section_id == "S14":
-        bgw = dict(payload.get("bgw_context") or {})
-        lines.append(bgw_visible_line("S14", bgw))
-        lines.append(
-            "BGW FRONTIER REVIEW REQUIRED: "
-            + str(payload.get("bgw_frontier_review_required"))
-        )
-        lines.append(
-            "BGW CONTEXT IS NOT SECOND OPTIMIZER: "
-            + str(payload.get("bgw_is_context_not_second_optimizer"))
-        )
-        excluded.extend((
-            "bgw_context",
-            "bgw_frontier_review_required",
-            "bgw_is_context_not_second_optimizer",
-        ))
-
-    elif section_id == "S14B":
-        lines.append("STAGING IS A ROADMAP, NOT A TRANSFER COMMITMENT.")
-        bgw = dict(payload.get("bgw_context") or {})
-        lines.append(bgw_visible_line("S14B", bgw))
-        lines.append(
-            "BGW REOPTIMIZATION TRIGGER: "
-            + str(payload.get("bgw_reoptimization_trigger"))
-        )
-        staging = [
-            dict(item)
-            for item in payload.get("staging_rows") or []
-            if isinstance(item, Mapping)
-        ]
-        lines.extend(
-            _markdown_table(
-                ("Timing", "Planned Move", "Status", "Trigger", "Expected Gain", "Dependency"),
-                [
-                    (
-                        item.get("timing"),
-                        item.get("planned_move"),
-                        item.get("status"),
-                        item.get("trigger"),
-                        item.get("expected_gain"),
-                        item.get("dependency"),
-                    )
-                    for item in staging
-                ],
-            )
-        )
-        classifications = [
-            dict(item)
-            for item in payload.get("squad_classification") or []
-            if isinstance(item, Mapping)
-        ]
-        if classifications:
-            lines.extend(
-                _markdown_table(
-                    ("player", "classification", "reason"),
-                    [
-                        (
-                            item.get("player"),
-                            item.get("classification"),
-                            item.get("reason"),
-                        )
-                        for item in classifications
-                    ],
-                )
-            )
-        excluded.extend((
-            "staging_rows", "squad_classification",
-            "bgw_context", "bgw_reoptimization_trigger",
-        ))
+        chip_rows = []
+        for label, keys in aliases:
+            value = next((ledger_map.get(k) for k in keys if k in ledger_map), None)
+            chip_rows.append((label, _compact(value if value is not None else "UNAVAILABLE")))
+        lines.extend(_markdown_table(("Chip", "Status"), chip_rows))
+        lines.append(f"Current decision: {payload.get('considered_now') if payload.get('considered_now') is not None else 'No chip action'}")
+        lines.append(f"Reason: {payload.get('hold_reason') or payload.get('trigger') or 'UNAVAILABLE'}")
 
     elif section_id == "S10":
-        rows = [
-            dict(row)
-            for row in payload.get("rows") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.extend(
-            _markdown_table(
-                (
-                    "element_id",
-                    "player",
-                    "current_price",
-                    "sell_value",
-                    "direction",
-                    "progress",
-                    "projected_offset0",
-                    "prediction_strength",
-                    "next_cycle",
-                    "cycles_to_change",
-                    "date_state",
-                    "eta",
-                    "evidence_timestamp",
-                    "source_age_minutes",
-                    "freshness",
-                    "decision_implication",
-                ),
-                [
-                    (
-                        row.get("element_id"),
-                        row.get("name") or row.get("player"),
-                        row.get("current_price"),
-                        row.get("authenticated_sell_value"),
-                        row.get("predictor_direction"),
-                        row.get("predictor_progress"),
-                        row.get("predictor_projected_percent"),
-                        row.get("prediction_strength"),
-                        row.get("next_official_price_cycle_wib"),
-                        row.get("cycles_to_expected_change"),
-                        row.get("date_state"),
-                        row.get("eta_context")
-                        or row.get("estimated_change_window")
-                        or row.get("date_state"),
-                        row.get("evidence_timestamp"),
-                        row.get("source_age_minutes"),
-                        row.get("freshness"),
-                        row.get("decision_implication"),
-                    )
-                    for row in rows
-                ],
+        rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        lines.extend(_markdown_table(
+            ("Player", "Price", "Direction", "Progress"),
+            [(
+                r.get("player") or r.get("player_name") or r.get("name"),
+                r.get("current_price"),
+                r.get("direction"),
+                r.get("official_or_provider_progress", r.get("current_progress_percent", r.get("projected_percent"))),
+            ) for r in rows],
+        ))
+        if rows:
+            first = rows[0]
+            lines.append(
+                f"Predictor status: {first.get('freshness', 'UNAVAILABLE')}; "
+                f"source age minutes: {first.get('source_age_minutes', 'UNAVAILABLE')}."
             )
-        )
-        excluded.append("rows")
+        lines.append("Price-only conclusion: price evidence never overrides the football decision by itself.")
 
     elif section_id == "S11":
-        rows = [
-            dict(row)
-            for row in payload.get("scanner20") or payload.get("rows") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.append("### POSITIONAL SCANNER20")
+        rows = [dict(r) for r in (payload.get("scanner20") or payload.get("rows") or []) if isinstance(r, Mapping)]
+        lines.extend(_markdown_table(
+            ("Player", "Pos", "£", "xMins", "Pstart", "DNP", "Score", "Admit", "Evidence"),
+            [(
+                r.get("player") or r.get("player_name") or r.get("name"),
+                r.get("position") or r.get("pos"),
+                r.get("price") or r.get("current_price"),
+                r.get("xmins"),
+                r.get("p_start"),
+                r.get("dnp") or r.get("p_dnp"),
+                r.get("score") or r.get("watchlist_score"),
+                r.get("admit") or r.get("admission") or r.get("actionable"),
+                r.get("evidence") or r.get("evidence_summary") or r.get("reason"),
+            ) for r in rows],
+        ))
+        actionable = [dict(r) for r in payload.get("actionable_watchlist") or [] if isinstance(r, Mapping)]
         lines.append(
-            "POSITION FORMULAE: "
-            + json.dumps(
-                payload.get("position_formulae") or {},
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            )
+            "Actionable subset: "
+            + (", ".join(str(r.get("player") or r.get("name")) for r in actionable) if actionable else "None")
         )
-        lines.extend(
-            _markdown_table(
-                (
-                    "rank",
-                    "element_id",
-                    "player_name",
-                    "position",
-                    "price",
-                    "xmins",
-                    "p_start",
-                    "p_dnp",
-                    "ownership_tag",
-                    "pos_formula",
-                    "pos_coverage",
-                    "admitted",
-                    "predictor",
-                    "football_score",
-                    "watch_action",
-                ),
-                [
-                    (
-                        rank,
-                        row.get("element_id", row.get("element")),
-                        row.get("name"),
-                        row.get("position"),
-                        row.get("current_price"),
-                        row.get("xmins"),
-                        row.get("p_start"),
-                        row.get("p_dnp"),
-                        "NON_OWNED",
-                        (row.get("position_specific_evidence") or {}).get("formula_id"),
-                        (row.get("position_specific_evidence") or {}).get("coverage"),
-                        (row.get("admission_gate") or {}).get("admitted"),
-                        {
-                            "direction": row.get("predictor_direction"),
-                            "progress": row.get("predictor_progress"),
-                        },
-                        row.get("football_score"),
-                        row.get("watchlist_action"),
-                    )
-                    for rank, row in enumerate(rows, start=1)
-                ],
-            )
-        )
-        actionable = [
-            dict(row)
-            for row in payload.get("actionable_watchlist") or []
-            if isinstance(row, Mapping)
-        ]
-        actionable_ids = {
-            int(row.get("element_id") or row.get("element") or 0)
-            for row in actionable
-        }
-        lines.append("### WATCHLIST20 USER CONTRACT")
-        lines.extend(
-            _markdown_table(
-                (
-                    "Player", "Pos", "£", "xMins", "Pstart", "DNP",
-                    "Score", "Admit", "Evidence", "Delta",
-                ),
-                [
-                    (
-                        row.get("name") or row.get("player"),
-                        row.get("position"),
-                        row.get("current_price"),
-                        row.get("xmins"),
-                        row.get("p_start"),
-                        row.get("p_dnp"),
-                        row.get("football_score"),
-                        (row.get("admission_gate") or {}).get("admitted"),
-                        _human_summary(
-                            (row.get("position_specific_evidence") or {}).get(
-                                "present_features"
-                            )
-                            or (row.get("position_specific_evidence") or {}).get(
-                                "coverage"
-                            )
-                        ),
-                        (
-                            "ACTIONABLE"
-                            if int(row.get("element_id") or row.get("element") or 0)
-                            in actionable_ids
-                            else row.get("delta_state")
-                            or row.get("delta")
-                            or row.get("movement")
-                            or "UNAVAILABLE"
-                        ),
-                    )
-                    for row in rows
-                ],
-            )
-        )
-        lines.append("### ACTIONABLE WATCHLIST")
-        if actionable:
-            lines.extend(
-                _markdown_table(
-                    (
-                        "element_id",
-                        "player",
-                        "position",
-                        "xmins",
-                        "p_start",
-                        "p_dnp",
-                        "position evidence",
-                        "admission checks",
-                        "action",
-                    ),
-                    [
-                        (
-                            row.get("element_id"),
-                            row.get("name"),
-                            row.get("position"),
-                            row.get("xmins"),
-                            row.get("p_start"),
-                            row.get("p_dnp"),
-                            (row.get("position_specific_evidence") or {}).get("present_features"),
-                            (row.get("admission_gate") or {}).get("checks"),
-                            row.get("action") or "WATCH",
-                        )
-                        for row in actionable
-                    ],
-                )
-            )
-        else:
-            lines.append("NONE — no Scanner20 player clears all admission/security/evidence gates")
-        lines.append(
-            "WATCHLIST GOVERNANCE: Scanner20 exact 5/5/5/5 when COMPLETE; "
-            "Actionable Watchlist is an unpadded subset; price is overlay only; "
-            "Watchlist cannot emit ACT."
-        )
-        excluded.extend(("rows", "scanner20", "actionable_watchlist"))
 
     elif section_id in {"S12", "S13"}:
-        rows = [
-            dict(row)
-            for row in payload.get("rows") or []
-            if isinstance(row, Mapping)
-        ]
-        fields = (
-            "rank",
-            "element_id",
-            "player_name",
-            "current_price",
-            "ownership_percent",
-            "ownership_tag",
-            "direction",
-            "current_progress_percent",
-            "projection_offset_0_percent",
-            "predicted_change_cycle",
-            "predicted_change_at",
-            "eta_human",
-            "model_urgency",
-            "confidence",
-            "source",
-            "observed_at",
-            "source_age_minutes",
-            "freshness",
-            "date_state",
-            "raw_payload_hash",
-        )
-        payload_hash = str(
-            payload.get("predictor_payload_hash")
-            or hashlib.sha256(
-                json.dumps(
-                    rows,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                    default=str,
-                ).encode("utf-8")
-            ).hexdigest()
-        )
-        visible_rows = []
-        for rank, row in enumerate(rows, start=1):
-            element_id = int(row.get("element_id") or 0)
-            confidence = row.get("confidence")
-            if isinstance(confidence, Mapping):
-                confidence = json.dumps(
-                    confidence,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                    default=str,
-                )
-            visible_rows.append(
-                {
-                    "rank": rank,
-                    "element_id": element_id,
-                    "player_name": (
-                        row.get("player")
-                        or row.get("player_name")
-                        or f"element:{element_id}"
-                    ),
-                    "current_price": row.get("current_price"),
-                    "ownership_percent": row.get(
-                        "selected_by_percent",
-                        row.get("ownership_percent", "UNAVAILABLE"),
-                    ),
-                    "ownership_tag": (
-                        "OWNED"
-                        if element_id in owned_ids
-                        else "NON_OWNED"
-                    ),
-                    "direction": row.get("direction"),
-                    "current_progress_percent": row.get(
-                        "official_or_provider_progress",
-                        row.get(
-                            "current_progress_percent",
-                            "UNAVAILABLE",
-                        ),
-                    ),
-                    "projection_offset_0_percent": row.get(
-                        "projected_percent",
-                        row.get(
-                            "projection_offset_0_percent",
-                            "UNAVAILABLE",
-                        ),
-                    ),
-                    "predicted_change_cycle": (
-                        row.get("cycles_to_expected_change")
-                        or row.get("predicted_change_cycle")
-                        or row.get("date_state")
-                        or "UNAVAILABLE"
-                    ),
-                    "predicted_change_at": (
-                        row.get("estimated_change_at_wib")
-                        or row.get("predicted_change_at")
-                        or row.get("date_state")
-                        or "UNAVAILABLE"
-                    ),
-                    "eta_human": (
-                        row.get("eta_context")
-                        or row.get("eta_human")
-                        or row.get("estimated_change_window")
-                        or row.get("date_state")
-                        or "UNAVAILABLE"
-                    ),
-                    "model_urgency": (
-                        row.get("impact_on_our_decision")
-                        or row.get("model_urgency")
-                        or "WATCH"
-                    ),
-                    "confidence": confidence or "UNAVAILABLE",
-                    "source": (
-                        row.get("estimate_source")
-                        or row.get("source")
-                        or "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR"
-                    ),
-                    "observed_at": (
-                        row.get("evidence_timestamp")
-                        or row.get("observed_at")
-                        or "UNAVAILABLE"
-                    ),
-                    "source_age_minutes": row.get("source_age_minutes"),
-                    "freshness": row.get("freshness"),
-                    "date_state": row.get("date_state"),
-                    "raw_payload_hash": (
-                        row.get("raw_payload_hash")
-                        or payload_hash
-                    ),
-                }
+        rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        lines.extend(_markdown_table(
+            ("#", "Player", "£", "Progress", "ETA"),
+            [(
+                idx,
+                r.get("player") or r.get("player_name") or r.get("name"),
+                r.get("current_price"),
+                r.get("official_or_provider_progress", r.get("current_progress_percent", r.get("projected_percent"))),
+                r.get("eta_human") or r.get("estimated_change_at_wib") or r.get("predicted_change_at") or r.get("date_state"),
+            ) for idx, r in enumerate(rows, 1)],
+        ))
+        if rows:
+            lines.append(
+                f"Predictor freshness: {rows[0].get('freshness', 'UNAVAILABLE')}; "
+                f"source age minutes: {rows[0].get('source_age_minutes', 'UNAVAILABLE')}."
             )
-        lines.extend(
-            _markdown_table(
-                fields,
-                [
-                    tuple(row.get(field) for field in fields)
-                    for row in visible_rows
-                ],
+
+    elif section_id == "S14":
+        lines.append("Decision layer: full canonical search retained internally; visible output is bounded to search proof, canonical Monte Carlo, verdict, one best challenger, execution economics, and actionability.")
+        if payload.get("bgw_context"):
+            bgw = dict(payload.get("bgw_context") or {})
+            lines.append(
+                f"BGW context: active={bgw.get('active')} | topology={bgw.get('gw_topology')}."
             )
-        )
-        lines.append("### PRICE DECISION CONTRACT")
-        lines.extend(
-            _markdown_table(
-                (
-                    "Rank", "Player", "Current price", "Progress",
-                    "Δ progress", "Δ rank", "Velocity", "ETA",
-                    "State", "OUR15/target relevance",
-                ),
-                [
-                    (
-                        rank,
-                        (
-                            row.get("player")
-                            or row.get("player_name")
-                            or f"element:{int(row.get('element_id') or 0)}"
-                        ),
-                        row.get("current_price"),
-                        row.get(
-                            "official_or_provider_progress",
-                            row.get("current_progress_percent", "UNAVAILABLE"),
-                        ),
-                        row.get(
-                            "delta_progress",
-                            row.get("progress_delta", "UNAVAILABLE"),
-                        ),
-                        row.get(
-                            "delta_rank",
-                            row.get("rank_delta", "UNAVAILABLE"),
-                        ),
-                        row.get(
-                            "velocity",
-                            row.get("progress_velocity", "UNAVAILABLE"),
-                        ),
-                        (
-                            row.get("eta_context")
-                            or row.get("eta_human")
-                            or row.get("estimated_change_window")
-                            or row.get("predicted_change_at")
-                            or row.get("date_state")
-                            or "NO RELIABLE ETA"
-                        ),
-                        row.get("date_state")
-                        or row.get("direction")
-                        or "UNAVAILABLE",
-                        (
-                            "OUR15"
-                            if int(row.get("element_id") or 0) in owned_ids
-                            else row.get("target_relevance")
-                            or row.get("impact_on_our_decision")
-                            or row.get("model_urgency")
-                            or "NON_OWNED"
-                        ),
-                    )
-                    for rank, row in enumerate(rows, start=1)
-                ],
+
+    elif section_id == "S14B":
+        staging = [dict(r) for r in payload.get("staging_rows") or [] if isinstance(r, Mapping)]
+        for idx, label in enumerate(("Current GW", "Next GW", "Following GW")):
+            row = staging[idx] if idx < len(staging) else {}
+            lines.append(
+                f"{label}: {row.get('planned_move') or 'UNAVAILABLE'} | "
+                f"status {row.get('status') or 'UNAVAILABLE'} | "
+                f"trigger {row.get('trigger') or 'UNAVAILABLE'}."
             )
-        )
-        lines.append(
-            "ETA is a governed official-cycle timestamp/window or NO RELIABLE ETA; "
-            "provider progress is never presented as a probability."
-        )
-        excluded.extend(("rows", "predictor_payload_hash"))
+        classes = [dict(r) for r in payload.get("squad_classification") or [] if isinstance(r, Mapping)]
+        core = [r.get("player") for r in classes if str(r.get("classification") or "").upper() == "CORE / HOLD"]
+        watch = [r.get("player") for r in classes if str(r.get("classification") or "").upper() == "WATCH"]
+        lines.append("Core/Hold: " + (", ".join(str(v) for v in core if v) or "UNAVAILABLE"))
+        lines.append("Watch: " + (", ".join(str(v) for v in watch if v) or "UNAVAILABLE"))
+        contingency = payload.get("contingency_route")
+        lines.append("Contingency route: " + _compact(contingency))
+        lines.append(f"Verdict: {payload.get('staging_verdict') or 'Reoptimize from fresh evidence; roadmap is non-binding.'}")
 
     elif section_id == "S15":
         evidence = dict(payload.get("evidence_quality") or {})
-        lines.append("### EVIDENCE QUALITY BY SOURCE CATEGORY")
-        lines.extend(
-            _markdown_table(
-                ("category", "state", "source / detail"),
-                [
-                    (
-                        key,
-                        (value or {}).get("state") if isinstance(value, Mapping) else value,
-                        _human_summary({
-                            k: v
-                            for k, v in dict(value or {}).items()
-                            if k != "state"
-                        }) if isinstance(value, Mapping) else "",
-                    )
-                    for key, value in evidence.items()
-                ],
-            )
-        )
-        execution = dict(payload.get("model_execution") or {})
-        lines.append("MODEL EXECUTION: " + " | ".join(f"{k}={v}" for k, v in execution.items()))
-        excluded.extend(("evidence_quality", "model_execution"))
+        lines.extend(_markdown_table(
+            ("Evidence domain", "Status"),
+            [(
+                str(key).replace("_", " ").title(),
+                (value or {}).get("state") if isinstance(value, Mapping) else value,
+            ) for key, value in evidence.items()],
+        ))
+        details = [
+            f"{str(key).replace('_', ' ').title()}: "
+            + _compact({k: v for k, v in dict(value).items() if k != "state"})
+            for key, value in evidence.items()
+            if isinstance(value, Mapping) and any(k != "state" and v not in (None, "", [], {}) for k, v in value.items())
+        ]
+        if details:
+            lines.append("Source detail: " + " | ".join(details[:6]))
 
     elif section_id == "S15B":
         coverage = str(payload.get("coverage_state") or "").upper()
         expected = payload.get("expected_manager_count")
         available = payload.get("submitted_picks_available_count")
-        disclosed_gw = payload.get("disclosed_picks_gw")
-        coverage_pct = (
-            round(100.0 * float(available) / float(expected), 1)
-            if available is not None and expected not in (None, 0)
-            else None
-        )
         lines.append(
-            "MINI_LEAGUE_DENOMINATOR: "
-            + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
+            "Status: " + ("COMPLETE" if coverage == "FULL" else "DEGRADED")
+            + f" | League coverage {_count_ratio(available, expected)}"
         )
-        lines.append(
-            "MINI_LEAGUE_COVERAGE: "
-            f"collected={available}/{expected} "
-            f"({coverage_pct if coverage_pct is not None else 'UNAVAILABLE'}%) | "
-            f"disclosed_picks=GW{disclosed_gw} | "
-            f"label={payload.get('disclosed_picks_label') or 'BEHAVIOURAL BASELINE'}"
-        )
-        lines.append(
-            "EVIDENCE SEMANTICS: submitted picks are the latest disclosed behavioural "
-            "baseline, never a forecast of still-private planning-GW selections."
-        )
-
         context = dict(payload.get("current_league_context") or {})
-        rank_battle = [
-            dict(item)
-            for item in payload.get("rank_battle") or []
-            if isinstance(item, Mapping)
-        ]
-        top10_row = next(
-            (row for row in rank_battle if int(row.get("rank") or 0) == 10),
-            {},
-        )
+        rank_battle = [dict(r) for r in payload.get("rank_battle") or [] if isinstance(r, Mapping)]
+        top10_row = next((r for r in rank_battle if int(r.get("rank") or 0) == 10), {})
         top10_gap = context.get("points_to_top_10")
         if top10_gap is None and top10_row and context.get("our_total_points") is not None:
             try:
-                top10_gap = int(top10_row.get("total_points") or 0) - int(
-                    context.get("our_total_points") or 0
-                )
+                top10_gap = int(top10_row.get("total_points") or 0) - int(context.get("our_total_points") or 0)
             except (TypeError, ValueError):
                 top10_gap = None
         lines.append(
-            "LEAGUE LANDSCAPE: "
-            f"rank={context.get('our_rank')} / {context.get('manager_count')} | "
-            f"points={context.get('our_total_points')} | "
-            f"leader_gap={context.get('points_to_leader')} | "
-            f"top3_gap={context.get('points_to_top_3')} | "
-            f"top5_gap={context.get('points_to_top_5')} | "
-            f"top10_cutoff_gap={top10_gap if top10_gap is not None else 'UNAVAILABLE'} | "
-            f"nearest_above={context.get('points_to_nearest_above')} | "
-            f"nearest_below={context.get('points_ahead_nearest_below')} | "
-            f"rank_delta={context.get('rank_delta', 'UNAVAILABLE')} | "
-            f"points_delta={context.get('points_delta', 'UNAVAILABLE')}"
+            "League landscape: "
+            f"rank {context.get('our_rank')}/{context.get('manager_count')} | "
+            f"points {context.get('our_total_points')} | leader gap {context.get('points_to_leader')} | "
+            f"top-3 gap {context.get('points_to_top_3')} | top-5 gap {context.get('points_to_top_5')} | "
+            f"top-10 cutoff gap {top10_gap if top10_gap is not None else 'UNAVAILABLE'} | "
+            f"nearest above {context.get('points_to_nearest_above')} | "
+            f"nearest below {context.get('points_ahead_nearest_below')}."
         )
-
-        def _mini_num(value: Any) -> str:
-            if value is None:
-                return "UNAVAILABLE"
-            try:
-                numeric = float(value)
-            except (TypeError, ValueError):
-                return str(value)
-            if numeric.is_integer():
-                return str(int(numeric))
-            return f"{numeric:.2f}".rstrip("0").rstrip(".")
-
-        def _mini_ratio(
-            row: Mapping[str, Any],
-            count_key: str,
-            pct_key: str,
-            *,
-            numerator_key: str | None = None,
-        ) -> str:
-            denominator = row.get("denominator")
-            numerator = (
-                row.get(numerator_key)
-                if numerator_key is not None
-                else row.get(count_key)
-            )
-            pct = row.get(pct_key)
-            if denominator in (None, 0) or numerator is None:
-                return "UNAVAILABLE"
-            pct_text = "UNAVAILABLE" if pct is None else f"{float(pct):.1f}%"
-            return f"{_mini_num(numerator)}/{_mini_num(denominator)} ({pct_text})"
-
-        def _coverage(scope: Mapping[str, Any]) -> str:
-            expected_scope = scope.get("expected")
-            collected = scope.get("collected")
-            if expected_scope in (None, 0) or collected is None:
-                return "UNAVAILABLE"
-            try:
-                pct = 100.0 * float(collected) / float(expected_scope)
-            except (TypeError, ValueError, ZeroDivisionError):
-                return "UNAVAILABLE"
-            return f"{_mini_num(collected)}/{_mini_num(expected_scope)} ({pct:.1f}%)"
-
-        def _mini_player(row: Mapping[str, Any], *, owned: bool) -> str:
-            name = str(
-                row.get("player")
-                or row.get("name")
-                or row.get("element_id")
-                or "UNAVAILABLE"
-            )
-            return f"**{name}**" if owned else name
+        lines.append(
+            "Evidence semantics: submitted picks are a disclosed behavioural baseline, not a forecast of private future selections."
+        )
 
         scopes = dict(payload.get("denominator_scopes") or {})
         definitions = {
@@ -5243,497 +4279,150 @@ def _render_deep_visible_contract_lines(
             "COMPETITIVE": "Dynamic rank-relative Competitive Window excluding us",
         }
         lines.append("### DENOMINATOR SCOPES")
-        lines.extend(
-            _markdown_table(
-                ("Scope", "Definition", "Coverage"),
-                [
-                    (
-                        key,
-                        value.get("definition") or definitions.get(key) or value.get("label"),
-                        _coverage(value),
-                    )
-                    for key in ("LEAGUE", "RIVALS", "COMPETITIVE")
-                    for value in [dict(scopes.get(key) or {})]
-                ],
-            )
-        )
+        lines.extend(_markdown_table(
+            ("Scope", "Definition", "Coverage"),
+            [(key, dict(scopes.get(key) or {}).get("definition") or definitions[key], _coverage(dict(scopes.get(key) or {}))) for key in ("LEAGUE", "RIVALS", "COMPETITIVE")],
+        ))
 
-        lines.append("### LEAGUE POSITION CONTEXT")
-        if rank_battle:
-            lines.extend(
-                _markdown_table(
-                    ("Rank", "Manager", "Team", "Points", "Gap"),
-                    [
-                        (
-                            item.get("rank"),
-                            item.get("manager"),
-                            item.get("team"),
-                            item.get("total_points"),
-                            item.get("gap_vs_us"),
-                        )
-                        for item in rank_battle
-                    ],
-                )
-            )
-        else:
-            lines.append("UNAVAILABLE — Top-10 standings not supportable")
-
-        full_comp = [
-            dict(item)
-            for item in payload.get("league_full_composition") or []
-            if isinstance(item, Mapping)
-        ]
-        lines.append("### FULL ICON+ COMPOSITION — SUPPORTING LEAGUE LENS")
-        lines.append(
-            f"UNIQUE PLAYERS: {payload.get('league_unique_player_count')} | "
-            f"COMPLETE={payload.get('league_full_composition_complete')}"
-        )
-        if full_comp:
-            lines.extend(
-                _markdown_table(
-                    (
-                        "Pos", "Player", "Owned", "Starter", "Bench",
-                        "Captain", "Vice", "EO", "OUR15"
-                    ),
-                    [
-                        (
-                            item.get("position"),
-                            _mini_player(item, owned=bool(item.get("our15"))),
-                            _mini_ratio(item, "ownership_count", "ownership_pct"),
-                            _mini_ratio(item, "starter_count", "starter_pct"),
-                            _mini_ratio(item, "bench_count", "bench_pct"),
-                            _mini_ratio(item, "captain_count", "captain_pct"),
-                            _mini_ratio(item, "vice_count", "vice_pct"),
-                            _mini_ratio(
-                                item,
-                                "effective_multiplier_sum",
-                                "eo_pct",
-                                numerator_key="effective_multiplier_sum",
-                            ),
-                            item.get("our15"),
-                        )
-                        for item in full_comp
-                    ],
-                )
-            )
-        else:
-            lines.append("UNAVAILABLE — complete unique-player composition not materialized")
+        lines.append("### TOP 10 MACRO CONTEXT")
+        lines.extend(_markdown_table(
+            ("Rank", "Manager", "Team", "Points", "Gap"),
+            [(r.get("rank"), r.get("manager"), r.get("team"), r.get("total_points"), r.get("gap_vs_us")) for r in rank_battle],
+        ))
 
         exposure_specs = (
-            (
-                "LEAGUE",
-                "league_our15_exposure",
-                ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"),
-                True,
-            ),
-            (
-                "RIVALS",
-                "rivals_our15_exposure",
-                ("Player", "Owned", "Starter", "Captain", "EO"),
-                False,
-            ),
-            (
-                "COMPETITIVE WINDOW",
-                "competitive_our15_exposure",
-                ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"),
-                True,
-            ),
+            ("OUR15 LEAGUE", "league_our15_exposure", ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"), True),
+            ("OUR15 RIVALS", "rivals_our15_exposure", ("Player", "Owned", "Starter", "Captain", "EO"), False),
+            ("OUR15 COMPETITIVE WINDOW", "competitive_our15_exposure", ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"), True),
         )
-        for display_scope, payload_key, headers, include_bench_vice in exposure_specs:
-            exposure_rows = [
-                dict(item)
-                for item in payload.get(payload_key) or []
-                if isinstance(item, Mapping)
-            ]
-            lines.append(f"### OUR15 EXPOSURE, {display_scope}")
-            if not exposure_rows:
-                lines.append("UNAVAILABLE — exposure rows not materialized")
-                continue
+        for title, key, headers, full in exposure_specs:
+            rows = [dict(r) for r in payload.get(key) or [] if isinstance(r, Mapping)]
             table_rows = []
-            for item in exposure_rows:
-                base = [
-                    _mini_player(item, owned=True),
-                    _mini_ratio(item, "ownership_count", "ownership_pct"),
-                    _mini_ratio(item, "starter_count", "starter_pct"),
+            for r in rows:
+                values = [
+                    r.get("player") or r.get("name"),
+                    _ratio(r, "ownership_count", "ownership_pct"),
+                    _ratio(r, "starter_count", "starter_pct"),
                 ]
-                if include_bench_vice:
-                    base.extend(
-                        [
-                            _mini_ratio(item, "bench_count", "bench_pct"),
-                            _mini_ratio(item, "captain_count", "captain_pct"),
-                            _mini_ratio(item, "vice_count", "vice_pct"),
-                        ]
-                    )
+                if full:
+                    values.extend([
+                        _ratio(r, "bench_count", "bench_pct"),
+                        _ratio(r, "captain_count", "captain_pct"),
+                        _ratio(r, "vice_count", "vice_pct"),
+                    ])
                 else:
-                    base.append(_mini_ratio(item, "captain_count", "captain_pct"))
-                base.append(
-                    _mini_ratio(
-                        item,
-                        "effective_multiplier_sum",
-                        "eo_pct",
-                        numerator_key="effective_multiplier_sum",
-                    )
-                )
-                table_rows.append(tuple(base))
+                    values.append(_ratio(r, "captain_count", "captain_pct"))
+                values.append(_ratio(r, "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"))
+                table_rows.append(tuple(values))
+            lines.append(f"### {title}")
             lines.extend(_markdown_table(headers, table_rows))
 
         competitive = dict(payload.get("competitive_window") or {})
-        legacy_fixed = False
-        if not competitive and payload.get("direct_rival_scope"):
-            legacy_fixed = True
-            competitive = dict(payload.get("direct_rival_scope") or {})
-            lines.append(
-                "HISTORICAL LEGACY FIXED-RIVAL SNAPSHOT — retained exactly as historical "
-                "evidence; not synthesized into a Competitive Window."
-            )
-        if not legacy_fixed:
-            coverage_meta = dict(competitive.get("coverage") or {})
-            lines.append(
-                "COMPETITIVE WINDOW: "
-                f"mode={competitive.get('window_mode')} | "
-                f"rank={competitive.get('our_rank')}/{competitive.get('league_size')} | "
-                f"above={competitive.get('above_count')} | "
-                f"below={competitive.get('below_count')} | "
-                f"rivals={competitive.get('rival_count')} | "
-                f"coverage={coverage_meta.get('collected')}/{coverage_meta.get('expected')} "
-                f"({coverage_meta.get('percentage')}%)"
-            )
-
-        competitive_rivals = [
-            dict(item)
-            for item in (
-                payload.get("competitive_rivals")
-                if not legacy_fixed
-                else payload.get("direct_rivals")
-            )
-            or []
-            if isinstance(item, Mapping)
-        ]
-        lines.append("### COMPETITIVE RIVALS" if not legacy_fixed else "### HISTORICAL FIXED-RIVAL COHORT")
-        if competitive_rivals:
-            lines.extend(
-                _markdown_table(
-                    (
-                        "Rank", "Manager", "Pts", "Gap", "Position vs us",
-                        "Squad overlap", "XI overlap", "Captain", "Vice"
-                    ),
-                    [
-                        (
-                            item.get("rank"),
-                            item.get("manager"),
-                            item.get("total_points"),
-                            item.get("gap_vs_us"),
-                            item.get("position_vs_us") if not legacy_fixed else "HISTORICAL",
-                            f"{item.get('overlap_count')}/{item.get('overlap_denominator')}",
-                            f"{item.get('xi_overlap_count')}/{item.get('xi_overlap_denominator')}",
-                            item.get("captain"),
-                            item.get("vice"),
-                        )
-                        for item in competitive_rivals
-                    ],
-                )
-            )
-        else:
-            lines.append("UNAVAILABLE — no supportable competitive-rival picks")
-
-        threats = [
-            dict(item)
-            for item in (
-                payload.get("competitive_window_threats")
-                if not legacy_fixed
-                else payload.get("rival_threats")
-            )
-            or []
-            if isinstance(item, Mapping)
-        ]
         lines.append(
-            "### COMPETITIVE-WINDOW RIVAL-ONLY THREATS"
-            if not legacy_fixed
-            else "### HISTORICAL FIXED-RIVAL THREATS"
+            "COMPETITIVE WINDOW: "
+            f"rank {competitive.get('our_rank')}/{competitive.get('league_size')} | "
+            f"above {competitive.get('above_count')} | below {competitive.get('below_count')} | "
+            f"rivals {competitive.get('rival_count')} | ranks "
+            + ", ".join(str(v) for v in competitive.get("ranks") or [])
         )
-        if threats:
-            lines.extend(
-                _markdown_table(
-                    ("Player", "Owned", "Starter", "Captain", "EO"),
-                    [
-                        (
-                            _mini_player(item, owned=False),
-                            _mini_ratio(item, "ownership_count", "ownership_pct"),
-                            _mini_ratio(item, "starter_count", "starter_pct"),
-                            _mini_ratio(item, "captain_count", "captain_pct"),
-                            _mini_ratio(
-                                item,
-                                "effective_multiplier_sum",
-                                "eo_pct",
-                                numerator_key="effective_multiplier_sum",
-                            ),
-                        )
-                        for item in threats
-                    ],
-                )
-            )
-        else:
-            lines.append("NONE MATERIAL / UNAVAILABLE")
-
-        captain_rows = [
-            dict(item)
-            for item in payload.get("captain_leverage") or []
-            if isinstance(item, Mapping)
-        ]
-        lines.append("### CAPTAIN LANDSCAPE")
-        lines.append("EXPOSURE / LEVERAGE CLASS: contextual mini-league evidence; football captain ranking remains primary.")
-        if captain_rows:
-            lines.extend(
-                _markdown_table(
-                    (
-                        "Player", "Football rank", "xPts", "League C", "League EO",
-                        "Competitive C", "Competitive EO", "Class"
-                    ),
-                    [
-                        (
-                            item.get("player"),
-                            item.get("football_rank"),
-                            item.get("expected_points"),
-                            _mini_ratio(
-                                dict(item.get("league_scope") or {}),
-                                "captain_count",
-                                "captain_pct",
-                            ),
-                            _mini_ratio(
-                                dict(item.get("league_scope") or {}),
-                                "effective_multiplier_sum",
-                                "eo_pct",
-                                numerator_key="effective_multiplier_sum",
-                            ),
-                            _mini_ratio(
-                                dict(item.get("competitive_scope") or {}),
-                                "captain_count",
-                                "captain_pct",
-                            ),
-                            _mini_ratio(
-                                dict(item.get("competitive_scope") or {}),
-                                "effective_multiplier_sum",
-                                "eo_pct",
-                                numerator_key="effective_multiplier_sum",
-                            ),
-                            str(item.get("exposure_leverage_class") or "UNAVAILABLE").replace("_", " ").title(),
-                        )
-                        for item in captain_rows
-                    ],
-                )
-            )
-        else:
-            lines.append("UNAVAILABLE — captain landscape not materialized")
-
-        implication = dict(payload.get("strategy_implication") or {})
-        lines.append("### MINI-LEAGUE POSTURE")
-        lines.append(
-            f"POSTURE: {implication.get('human_posture')} "
-            f"(underlying model posture={implication.get('model_posture')})"
-        )
-        lines.append(
-            f"TRANSFER: {implication.get('transfer_action')} | "
-            f"RULE: {implication.get('transfer_rule')}"
-        )
-        lines.append(f"XI: {implication.get('xi_rule')}")
-        lines.append(f"CAPTAIN: {implication.get('captain_rule')}")
-        lines.append(
-            "FOOTBALL BASELINE REMAINS PRIMARY; Competitive Window is contextual "
-            "and may break near-ties only through existing P1.8 governance."
-        )
-
-        excluded.extend(
-            (
-                "current_league_context",
-                "exposures",
-                "rank_battle",
-                "league_full_composition",
-                "league_full_composition_complete",
-                "league_unique_player_count",
-                "league_our15_exposure",
-                "rivals_our15_exposure",
-                "our15_rival_exposure",
-                "competitive_window",
-                "competitive_rivals",
-                "competitive_our15_exposure",
-                "competitive_window_threats",
-                "captain_leverage",
-                "strategy_implication",
-                "report_contract",
-                "denominator_scopes",
-                "disclosed_picks_gw",
-                "disclosed_picks_are_baseline_not_gw_forecast",
-                "disclosed_picks_label",
-                "direct_rival_scope",
-                "direct_rivals",
-                "direct_rival_our15_exposure",
-                "rival_threats",
-            )
-        )
-
-    elif section_id == "S18":
-        board = dict(payload.get("action_board") or {})
-        axes = [
-            dict(row)
-            for row in board.get("axes") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.append("### MULTI-AXIS ACTION BOARD")
-        lines.extend(
-            _markdown_table(
-                (
-                    "axis", "NOW", "NEXT", "TRIGGER TO ACT",
-                    "LATEST SAFE DECISION POINT", "COST OF WAITING", "ABORT / REVERSAL"
-                ),
-                [
-                    (
-                        row.get("axis"),
-                        row.get("NOW"),
-                        _human_summary(row.get("NEXT")),
-                        _human_summary(row.get("TRIGGER TO ACT")),
-                        _human_summary(row.get("LATEST SAFE DECISION POINT")),
-                        _human_summary(row.get("COST OF WAITING")),
-                        _human_summary(row.get("ABORT / REVERSAL")),
-                    )
-                    for row in axes
-                ],
-            )
-        )
-        alt = board.get("best_alternative")
-        lines.append(
-            "BEST ALTERNATIVE: "
-            + _human_summary(alt)
-            + f" | EXECUTABLE={board.get('best_alternative_executable')}"
-        )
-        excluded.extend((
-            "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
-            "LATEST SAFE DECISION POINT", "COST OF WAITING",
-            "ABORT / REVERSAL", "BEST ALTERNATIVE",
+        competitive_rivals = [dict(r) for r in payload.get("competitive_rivals") or [] if isinstance(r, Mapping)]
+        lines.append("### COMPETITIVE RIVALS")
+        lines.extend(_markdown_table(
+            ("Rank", "Manager", "Pts", "Gap", "Position vs us", "Squad overlap", "XI overlap", "Captain", "Vice"),
+            [(
+                r.get("rank"),
+                r.get("manager"),
+                r.get("total_points"),
+                r.get("gap_vs_us"),
+                r.get("position_vs_us"),
+                _count_ratio(r.get("overlap_count"), r.get("overlap_denominator")),
+                _count_ratio(r.get("xi_overlap_count"), r.get("xi_overlap_denominator")),
+                r.get("captain"),
+                r.get("vice"),
+            ) for r in competitive_rivals],
         ))
 
-    elif section_id == "S19":
-        judgement = dict(payload.get("final_judgement") or {})
+        threats = [dict(r) for r in payload.get("competitive_window_threats") or [] if isinstance(r, Mapping)]
+        lines.append("### COMPETITIVE-WINDOW RIVAL-ONLY THREATS")
+        lines.extend(_markdown_table(
+            ("Player", "Owned", "Starter", "Captain", "EO"),
+            [(
+                r.get("player") or r.get("name"),
+                _ratio(r, "ownership_count", "ownership_pct"),
+                _ratio(r, "starter_count", "starter_pct"),
+                _ratio(r, "captain_count", "captain_pct"),
+                _ratio(r, "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+            ) for r in threats],
+        ))
+
+        captain_rows = [dict(r) for r in payload.get("captain_leverage") or [] if isinstance(r, Mapping)]
+        lines.append("### CAPTAIN LANDSCAPE")
+        lines.extend(_markdown_table(
+            ("Player", "Football rank", "xPts", "League C", "League EO", "Competitive C", "Competitive EO", "Class"),
+            [(
+                r.get("player"),
+                r.get("football_rank"),
+                r.get("expected_points"),
+                _ratio(dict(r.get("league_scope") or {}), "captain_count", "captain_pct"),
+                _ratio(dict(r.get("league_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+                _ratio(dict(r.get("competitive_scope") or {}), "captain_count", "captain_pct"),
+                _ratio(dict(r.get("competitive_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
+                str(r.get("exposure_leverage_class") or "UNAVAILABLE").replace("_", " ").title(),
+            ) for r in captain_rows],
+        ))
+        implication = dict(payload.get("strategy_implication") or {})
         lines.append(
-            "FINAL TRANSFER: "
-            f"{judgement.get('transfer_action')} | "
-            f"ROUTE={judgement.get('selected_route_id')} | "
-            f"EXECUTABLE={judgement.get('selected_route_executable')}"
+            f"Mini-league posture: {implication.get('human_posture') or 'UNAVAILABLE'}; "
+            "football baseline remains primary and Competitive Window is contextual."
         )
-        lines.append(
-            f"FORMATION: {judgement.get('formation')} | XI={judgement.get('xi')}"
-        )
-        lines.append(
-            f"BENCH GK: {judgement.get('bench_gk')} | "
-            f"OUTFIELD AUTOSUB 1/2/3: {judgement.get('bench_order')}"
-        )
-        football = dict(judgement.get("football_optimal_captain") or {})
-        final_cap = dict(judgement.get("final_captain") or {})
-        vice = dict(judgement.get("vice") or {})
-        lines.append(
-            "FOOTBALL-OPTIMAL CAPTAIN: "
-            f"{football.get('player') or football.get('element_id')} "
-            f"(rank={football.get('football_rank')}, xPts={football.get('xpts')})"
-        )
-        lines.append(
-            "FINAL CAPTAIN: "
-            f"{final_cap.get('player') or final_cap.get('element_id')} | "
-            f"STATE={judgement.get('captain_state')} | "
-            f"VICE={vice.get('player') or vice.get('element_id')}"
-        )
-        ml_context = dict(judgement.get("mini_league_captain_context") or {})
-        lines.append(
-            "MINI-LEAGUE CAPTAIN CONTEXT: "
-            f"class={ml_context.get('exposure_leverage_class')} | "
-            f"baseline={ml_context.get('label')} GW{ml_context.get('behavioural_baseline_gw')}"
-        )
-        lines.append(
-            "S19 CONSUMED: "
-            + ", ".join(str(x) for x in judgement.get("consumed_sections") or [])
-        )
-        lines.append(
-            "RECONCILIATION: "
-            + str(judgement.get("reconciliation_reason") or "UNAVAILABLE")
-        )
-        lines.append(
-            f"CHIP: {judgement.get('chip')} | POSTURE: {judgement.get('mini_league_posture')}"
-        )
-        lines.append(
-            f"IMMEDIATE WATCH: {judgement.get('immediate_watch')} | "
-            f"3GW: {judgement.get('three_gw_direction')}"
-        )
-        lines.append(
-            f"NEXT TRIGGER: {judgement.get('next_trigger')} | "
-            f"REVERSAL: {judgement.get('reversal_trigger')}"
-        )
-        bgw = dict(judgement.get("bgw_context") or {})
-        lines.append(bgw_visible_line("S19", bgw))
-        lines.append(
-            "BGW RECONCILED: "
-            + str(judgement.get("bgw_reconciled"))
-        )
-        excluded.append("final_judgement")
 
     elif section_id == "S16":
-        lines.append(
-            "MODEL WEIGHTS: 20% PROVEN/HISTORICAL | 25% Tactical/Role | "
-            "30% Current Underlying | 25% Fixture/Security"
-        )
-        rows = [
-            dict(row)
-            for row in payload.get("rows") or []
-            if isinstance(row, Mapping)
-        ]
-        lines.extend(
-            _markdown_table(
-                (
-                    "player", "Pavail", "Pstart", "xMins",
-                    "Pgoal", "Passist", "Preturn", "Phaul", "Pblank",
-                    "1GW", "3GW", "5GW",
-                    "xG90", "npxG90", "xA90", "xGI90",
-                    "shots", "SIB", "SOT", "BC", "box", "KP", "CC",
-                    "role / pen / set-piece", "DefCon", "workload/rest",
-                    "fixture", "Bayesian / posterior", "upside", "risk", "ML relevance", "action"
-                ),
-                [
-                    (
-                        row.get("player") or row.get("name"),
-                        row.get("availability", row.get("p_available")),
-                        row.get("p_start"),
-                        row.get("xmins"),
-                        (row.get("probabilities") or {}).get("p_goal"),
-                        (row.get("probabilities") or {}).get("p_assist"),
-                        (row.get("probabilities") or {}).get("p_return"),
-                        (row.get("probabilities") or {}).get("p_haul"),
-                        (row.get("probabilities") or {}).get("p_blank"),
-                        row.get("projection_1gw", row.get("gw_plus_1")),
-                        row.get("projection_3gw", row.get("three_gw")),
-                        row.get("projection_5gw", row.get("five_gw")),
-                        (row.get("underlying") or {}).get("xg90"),
-                        (row.get("underlying") or {}).get("npxg90"),
-                        (row.get("underlying") or {}).get("xa90"),
-                        (row.get("underlying") or {}).get("xgi90"),
-                        (row.get("underlying") or {}).get("shots"),
-                        (row.get("underlying") or {}).get("shots_in_box"),
-                        (row.get("underlying") or {}).get("shots_on_target"),
-                        (row.get("underlying") or {}).get("big_chances"),
-                        (row.get("underlying") or {}).get("box_touches"),
-                        (row.get("underlying") or {}).get("key_passes"),
-                        (row.get("underlying") or {}).get("chances_created"),
-                        _human_summary(row.get("role_detail")),
-                        _human_summary(row.get("defensive_contribution")),
-                        _human_summary(row.get("workload_context")),
-                        _human_summary(row.get("fixture_detail")),
-                        _human_summary(row.get("bayesian_state")),
-                        row.get("main_upside"),
-                        _human_summary(row.get("main_risk")),
-                        _human_summary(row.get("mini_league_relevance")),
-                        row.get("action") or row.get("decision") or "WATCH",
-                    )
-                    for row in rows
-                ],
+        rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        for idx, r in enumerate(rows, 1):
+            lines.append(f"### PLAYER {idx} — {r.get('player') or r.get('name') or 'UNAVAILABLE'}")
+            lines.append(
+                f"Availability: {r.get('p_available', r.get('pavail', 'UNAVAILABLE'))}; "
+                f"Pstart {r.get('p_start', 'UNAVAILABLE')}; xMins {r.get('xmins', 'UNAVAILABLE')}."
             )
-        )
-        excluded.extend(("rows", "position_mechanisms"))
+            lines.append(
+                f"Projection: 1GW {r.get('projection_1gw', 'UNAVAILABLE')}; "
+                f"3GW {r.get('projection_3gw', 'UNAVAILABLE')}; 5GW {r.get('projection_5gw', 'UNAVAILABLE')}."
+            )
+            probabilities = dict(r.get("probabilities") or {})
+            underlying = dict(r.get("underlying") or {})
+            lines.append(
+                "Probability: "
+                f"Pgoal {_num(probabilities.get('p_goal'))}; "
+                f"Passist {_num(probabilities.get('p_assist'))}; "
+                f"Preturn {_num(probabilities.get('p_return'))}; "
+                f"Phaul {_num(probabilities.get('p_haul'))}; "
+                f"Pblank {_num(probabilities.get('p_blank'))}."
+            )
+            lines.append(
+                "Underlying: "
+                f"xG90 {_num(underlying.get('xg90'))}; "
+                f"npxG90 {_num(underlying.get('npxg90'))}; "
+                f"xA90 {_num(underlying.get('xa90'))}; "
+                f"xGI90 {_num(underlying.get('xgi90'))}."
+            )
+            lines.append(
+                "Role/Bayesian: "
+                + _compact(r.get("role_detail") or r.get("tactical_role_label"))
+                + " | Bayesian "
+                + _compact(r.get("bayesian_state"))
+            )
+            lines.append(
+                "Workload/rest + fixture/security: "
+                + _compact(r.get("workload_context") or r.get("workload"))
+                + " | "
+                + _compact(r.get("fixture_detail") or r.get("injury_rotation_warning"))
+            )
+            lines.append(
+                "Price context: "
+                + _compact(r.get("price_optionality") or r.get("price_relevance"))
+                + " | ML relevance: "
+                + _compact(r.get("mini_league_relevance"))
+            )
 
     elif section_id == "S16B":
         gw = payload.get("gw")
@@ -5905,17 +4594,81 @@ def _render_deep_visible_contract_lines(
             "debug",
         ))
 
+
     elif section_id == "S17":
-        lines.extend(
-            (
-                "FACT: OFFICIAL_FPL_OCCURRENCE_FACTS",
-                "MODEL: V12_OCCURRENCE_MODEL_OUTPUTS",
-                "INFERENCE: V12_DECISION_INFERENCE",
-            )
+        status = dict(payload.get("engine_data_status") or {})
+        source_health = dict(payload.get("source_health") or {})
+        fact_state = status.get("V6 data") or status.get("v6_data") or source_health.get("official_fpl") or "UNAVAILABLE"
+        model_state = status.get("Model refresh") or status.get("model_refresh") or payload.get("model_state") or "UNAVAILABLE"
+        inference_state = status.get("Publication") or status.get("publication") or "AVAILABLE"
+        lines.extend(_markdown_table(
+            ("Plane", "Status"),
+            (("FACT", fact_state), ("MODEL", model_state), ("INFERENCE", inference_state)),
+        ))
+        lines.append(
+            "Source health: "
+            + " | ".join(
+                f"{str(k).replace('_', ' ')}={v}"
+                for k, v in source_health.items()
+                if isinstance(v, (str, int, float, bool)) and v not in ("", None)
+            )[:900]
         )
 
-    return lines, tuple(excluded)
+    elif section_id == "S18":
+        board = dict(payload.get("action_board") or {})
+        axes = [dict(r) for r in board.get("axes") or [] if isinstance(r, Mapping)]
+        by_axis = {str(r.get("axis") or "").upper(): r for r in axes}
+        for display, keys in (
+            ("TRANSFER", ("TRANSFER",)),
+            ("XI", ("XI",)),
+            ("CAPTAIN", ("CAPTAIN",)),
+            ("PRICE", ("PRICE",)),
+            ("FINANCE", ("FINANCE", "AUTH/FINANCE")),
+            ("MAIN WATCH FLAGS", ("MAIN WATCH FLAGS", "WATCH", "NEWS")),
+        ):
+            row = next((by_axis[k] for k in keys if k in by_axis), {})
+            lines.append(f"### {display}")
+            if row:
+                lines.append(
+                    f"Now: {_compact(row.get('NOW'))}. Next: {_compact(row.get('NEXT'))}. "
+                    f"Trigger: {_compact(row.get('TRIGGER TO ACT'))}. "
+                    f"Latest safe point: {_compact(row.get('LATEST SAFE DECISION POINT'))}. "
+                    f"Cost of waiting: {_compact(row.get('COST OF WAITING'))}. "
+                    f"Abort/reversal: {_compact(row.get('ABORT / REVERSAL'))}."
+                )
+            else:
+                fallback = payload.get(display) or payload.get(display.replace(" ", "_"))
+                lines.append(_compact(fallback))
+        lines.append("Best alternative: " + _compact(board.get("best_alternative") or payload.get("BEST ALTERNATIVE")))
 
+    elif section_id == "S19":
+        judgement = dict(payload.get("final_judgement") or {})
+        xi = judgement.get("xi") or []
+        bench_order = judgement.get("bench_order") or []
+        final_cap = dict(judgement.get("final_captain") or {})
+        vice = dict(judgement.get("vice") or {})
+        lines.append(f"Transfer: {judgement.get('transfer_action') or 'UNAVAILABLE'}")
+        lines.append(f"Route: {judgement.get('selected_route_id') or 'UNAVAILABLE'}")
+        lines.append(
+            f"XI: formation {judgement.get('formation') or 'UNAVAILABLE'}; "
+            + (", ".join(_name(v) for v in xi) if isinstance(xi, Sequence) and not isinstance(xi, (str, bytes)) else _compact(xi))
+        )
+        lines.append(
+            f"Bench: GK {_name(judgement.get('bench_gk'))}; "
+            + (", ".join(f"{i}. {_name(v)}" for i, v in enumerate(bench_order, 1)) if isinstance(bench_order, Sequence) and not isinstance(bench_order, (str, bytes)) else _compact(bench_order))
+        )
+        lines.append(
+            f"Captain: {final_cap.get('player') or final_cap.get('name') or 'UNAVAILABLE'} "
+            f"({judgement.get('captain_state') or 'UNAVAILABLE'}); "
+            f"Vice: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
+        )
+        lines.append(f"Chip: {_compact(judgement.get('chip'))}")
+        lines.append(f"Mini-league posture: {judgement.get('mini_league_posture') or 'UNAVAILABLE'}")
+        lines.append(f"Final action: {judgement.get('transfer_action') or 'UNAVAILABLE'}")
+        lines.append(f"Trigger: {judgement.get('next_trigger') or 'UNAVAILABLE'}")
+        lines.append(f"Verdict: {judgement.get('reconciliation_reason') or judgement.get('reversal_trigger') or 'UNAVAILABLE'}")
+
+    return lines, tuple(excluded)
 
 def render_deep_text(report: Mapping[str, Any]) -> str:
     """Human-facing DEEP renderer with bounded Deadline/Final presentation overlay."""
@@ -5990,10 +4743,9 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         binding = content_map.get("authoritative_binding")
         if isinstance(binding, Mapping):
             lines.append(
-                "AUTHORITY: "
-                + str(binding.get("producer") or "UNAVAILABLE")
-                + " | BINDING="
-                + str(binding.get("status") or "UNAVAILABLE")
+                "Authority: canonical bound evidence"
+                if str(binding.get("status") or "").upper() == "BOUND"
+                else "Authority: unavailable"
             )
 
         if deadline_mode and section_id == "GW_LOCK_PACKAGE":

@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-03T06:30:00+07:00`
-> **Production main at sync:** `95241f03303c6ff25f6118bc783236d431ad5fe9`  
+> **Last runtime/documentation sync:** `2026-10-03T07:24:00+07:00`
+> **Production main at sync:** `f706397895b210c152e205c6767018778cd48599`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -24,13 +24,13 @@ Occurrence delivery integrity is mode-specific and hash-bound. DEEP verifies the
 
 Occurrence idempotency trusts only orchestrator receipts authored by `github-actions[bot]`; arbitrary public issue-comment text cannot satisfy the ready-receipt guard. The scheduler independently requires exact occurrence identity and private receipt evidence before visible delivery.
 
-Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful 23-section private report as either `READY_FULL` or `READY_DEGRADED`. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
+Mandatory visible DEEP delivery is also fail-operational at the presentation boundary: orchestration and the integrated runner both guard exact-slot prefetch terminality, the runner performs a bounded runtime-data-v6 re-fetch before declaring upstream blockage, and a due occurrence must publish one truthful private report as either `READY_FULL` or `READY_DEGRADED`. Normal DEEP uses the exact 22-section base. S16B is inserted between S16 and S17 only in the first eligible 04:30 Asia/Jakarta DEEP after a scoring GW is fully complete, post-match evidence is settled, and that GW has not already received S16B, producing exactly 23 sections for that occurrence. Degraded output never fabricates Stage3/MC proof, marks only the actual root stage failed, labels reused analytics `PRIOR`, and can be atomically upgraded to `READY_FULL` for the same occurrence. Private `latest/report.json`, `latest/report.md`, and `latest/delivery_status.json` form the canonical serving surface for ChatGPT/web/mobile consumers.
 
-Report-first production now separates **REPORT PROD** from **ENGINEERING** acceptance. A DEEP occurrence is publishable when the canonical 23-section report, presentation/human-facing QA, truthful CURRENT/PRIOR provenance, S01↔S19 consistency, and serving snapshot pass. P4 scenario closure, PERF-F latency, warm-cache benchmarks, and the 53 technical-gate closure remain mandatory engineering evidence but are not publication prerequisites. This changes delivery gating only; V6 factual authority and Canonical V12 decision mathematics remain unchanged.
+Report-first production now separates **REPORT PROD** from **ENGINEERING** acceptance. A DEEP occurrence is publishable when its canonical conditional 22/23-section report, presentation/human-facing QA, truthful CURRENT/PRIOR provenance, S01↔S19 consistency, and serving snapshot pass. P4 scenario closure, PERF-F latency, warm-cache benchmarks, and the 53 technical-gate closure remain mandatory engineering evidence but are not publication prerequisites. This changes delivery gating only; V6 factual authority and Canonical V12 decision mathematics remain unchanged.
 
 The integrated report delivery lane materializes only the private serving surface required at runtime: `personal/`, `latest/`, and `reports/`. Engineering-only `acceptance/` and `scenarios/` are excluded from report-lane checkout; this changes I/O only and does not weaken report production, privacy, provenance, or analytics gates.
 
-Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. All 23 resolved sections are provenance-validated before rendering, so stale analytics cannot be silently relabelled as current.
+Canonical DEEP section assembly is source-resolved per section in the locked order **CURRENT → CURRENT-BOUND → PRIOR → UNAVAILABLE**. `CURRENT-BOUND` requires exact lineage, unchanged dependencies, and mathematical applicability proof; `PRIOR` always carries its source occurrence and is historical context only. The 22-section base, plus conditional S16B when due, is provenance-validated before rendering so stale analytics cannot be silently relabelled as current.
 
 `serving_report.json` is the stable client-facing contract for ChatGPT/web/mobile. Schema v2 carries occurrence/report slot/GW, delivery and decision status, freeze time, source freshness, per-section states, lineage and supersedes. Canonical artifacts are validated before any private `latest/` pointer replacement; a candidate that fails report-production, presentation, or governed credential/privacy validation cannot overwrite the last-known-good serving snapshot.
 
@@ -38,7 +38,7 @@ Production report workflow treats Stage3/P4 closure as **engineering evidence on
 
 Private publisher failures emit only bounded allowlisted reason codes to operational logs. REPORT_PRODUCTION_GATE failures expose gate identifiers only; unknown publisher exceptions are reduced to a generic failure code, so delivery incidents can be repaired from evidence without leaking private report content or credentials.
 
-Client serving JSON uses an explicit presentation projection for the canonical 23 DEEP sections. Heavy audit/reproducibility structures remain in the private canonical `report_bundle.json`; the client artifact preserves presentation semantics and provenance while enforcing a low-single-digit-MiB regression ceiling.
+Client serving JSON uses an explicit presentation projection for the canonical conditional 22/23 DEEP sections. Heavy audit/reproducibility structures remain in the private canonical `report_bundle.json`; the client artifact preserves presentation semantics and provenance while enforcing a low-single-digit-MiB regression ceiling.
 S19 carries the canonical operational decision token alongside its human-readable final judgement so the fail-closed S01↔S19 consistency gate compares the same authoritative WAIT/PREPARE/ACT state without weakening presentation semantics.
 
 Delivery, privacy, latency, historical-validation and consumption architecture are governed by `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`. Revision 6 supersedes earlier Delivery Architecture Plan wording where inconsistent.
@@ -513,7 +513,7 @@ The repositories and models we reviewed are useful, but many are intentionally n
 | **Transfers** | best single transfer or solver from supplied projections | legal **1/2/3+ transfer packages**, funded routes, exact affordability, hits/FT economics, 1/2/3/5-GW horizons, robustness, regret and reversal |
 | **Decision search** | optimizer starts from a reduced candidate list | serious transfer decisions carry explicit full-universe search proof and owned-squad outgoing scan |
 | **Mini-league** | global ownership or EO only | league/rival/direct-rival exposure, captaincy and rank utility applied **after** the football-optimal baseline |
-| **Post-match learning** | latest form snapshot | **GW1-to-now** match-by-match review of minutes, role, underlying vs returns, tactical changes, injury/rotation and signal vs noise |
+| **Post-match learning** | latest form snapshot | **once-per-completed-GW** match-by-match review plus after-GW reassessment, delivered only through eligible S16B |
 | **External opinions** | analyst/model output directly blended into score | external analyst/model evidence is a **challenger**, not factual authority; disagreement is preserved instead of averaged away |
 | **Personal data** | squad and recommendations stored beside public compute | **public factual/compute plane separated from private personal/decision plane** |
 | **Delivery** | generate a report and stop | precompute/cache, semantic cross-section validation, fail-closed rendering, delivery state and visible report proof |
@@ -558,7 +558,7 @@ Canonical DEEP reporting covers:
 - evidence quality and source health;
 - mini-league exposure and direct-rival context;
 - ALL15 tactical/probability review;
-- GW1-to-now post-match review;
+- conditional once-per-completed-GW S16B post-match review;
 - action board and final judgement.
 
 The detailed section contract is intentionally maintained outside this README so the front page stays readable.

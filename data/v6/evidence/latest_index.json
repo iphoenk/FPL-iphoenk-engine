@@ -1,0 +1,188 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-10-03T20:28:03.817032+00:00",
+  "source_count": 13,
+  "sources": [
+    {
+      "source_id": "statsbomb",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "SCHEDULED_CACHE",
+      "changed": false,
+      "checked_at": "2026-10-02T21:45:05.784378+00:00",
+      "path": "data/v6/current/statsbomb.json",
+      "independence_group": "statsbomb",
+      "source_snapshot_ids": [
+        "statsbomb:competitions:e6cd42f5d8956d6aa30fb917ce8d4c3b3df1879a93f02f8feba820930a6971fa"
+      ]
+    },
+    {
+      "source_id": "vaastav_fpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.104080+00:00",
+      "path": "data/v6/current/vaastav_fpl.json",
+      "independence_group": "official_fpl_history",
+      "source_snapshot_ids": [
+        "vaastav_fpl:fixtures:e4a111287465dac04ef4d5bd6e5e10125c606a37b711c48735dc863ee8a261e8",
+        "vaastav_fpl:merged_gw:8a82823f87672ccfc648af978e08b51a3717f0616e2658322d4e432d70c0ac84",
+        "vaastav_fpl:player_idlist:9cb57527a286cad92c69b352597b19d1e6f79d842b8282f877b9a755c7a6767b",
+        "vaastav_fpl:players_raw:d8f3f3ceafa3ec45fd58efef035e98a22efc7a2b73ee93e2090d4a04b136fe5d"
+      ]
+    },
+    {
+      "source_id": "espn",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-10-03T20:28:02.282148+00:00",
+      "path": "data/v6/current/espn.json",
+      "independence_group": "espn",
+      "source_snapshot_ids": [
+        "espn:scoreboard:1dc6f931b93cb55ba2e29c6751acc675dfb798308a40ea03f380b4bed025f877"
+      ]
+    },
+    {
+      "source_id": "thesportsdb_v1",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.284822+00:00",
+      "path": "data/v6/current/thesportsdb_v1.json",
+      "independence_group": "thesportsdb",
+      "source_snapshot_ids": [
+        "thesportsdb_v1:league:57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+        "thesportsdb_v1:next_event:ae0dd502f1532adff5e8cf6a5419dc597f594da38b2169fb4d86d079328e7751",
+        "thesportsdb_v1:past_event:592e458dc9bb8d59b288365470edfc1c22dffb774673794dbd40c8af137f0a3f"
+      ]
+    },
+    {
+      "source_id": "opta_the_analyst",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.324193+00:00",
+      "path": "data/v6/current/opta_the_analyst.json",
+      "independence_group": "opta_family",
+      "source_snapshot_ids": [
+        "opta_the_analyst:premier_league_stats:8f7cf5682491857faafabf4b88dfad22f0b97f67da849fcebe9bbd31e686d3aa"
+      ]
+    },
+    {
+      "source_id": "official_fpl",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-10-03T20:28:02.329099+00:00",
+      "path": "data/v6/current/official_fpl.json",
+      "independence_group": "official_fpl",
+      "source_snapshot_ids": [
+        "official_fpl:bootstrap:7d56cc95cd9b2cd33dc01a9b7480393d4d219423a419ce93257800377e85a799",
+        "official_fpl:event_live_gw1:0974be7e805ad6b65b3345bee327fee541c4e445837b2871473ed9ba1d794d87",
+        "official_fpl:event_live_gw2:2bc0e5b3ca2035f0f0cce42a4c77d699d6c316bc290342cddf562b1a317f5715",
+        "official_fpl:event_live_gw3:c33c2af4674b0a9d4276b412a441ebae8b87e01a3d093cd113446e7ef6a02482",
+        "official_fpl:event_live_gw4:a4ebf3dac44cb598e6f62a1dd5333e3d5ce7206303dbda62f513830ae7cfd095",
+        "official_fpl:event_live_gw5:aeee6dd5b56567b04ef9b4e5b9828ee4d81e094803dc0e6553cd3b394178c6dd",
+        "official_fpl:event_status:dd14199f8a25fc74661700f5de91003b6e7c2b7c19fdcab01756a742afbfed23",
+        "official_fpl:fixtures:113c3c674e681542b8a7926a02036cab9d438f7f1c0bd5d4410afa367a31ad04"
+      ]
+    },
+    {
+      "source_id": "rotowire",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-10-03T20:28:02.492729+00:00",
+      "path": "data/v6/current/rotowire.json",
+      "independence_group": "rotowire",
+      "source_snapshot_ids": [
+        "rotowire:lineups:b170b2298a21b610ea88a9f499e783945cd1543ecbd15917730e0631f33e9869"
+      ]
+    },
+    {
+      "source_id": "premierleague_stats",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.510053+00:00",
+      "path": "data/v6/current/premierleague_stats.json",
+      "independence_group": "premierleague_stats",
+      "source_snapshot_ids": [
+        "premierleague_stats:stats:6cc63037f099b458a862c2e059481e0c5a3396f2ff47bbda0aeb5faab2a3e90d"
+      ]
+    },
+    {
+      "source_id": "fotmob",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.568020+00:00",
+      "path": "data/v6/current/fotmob.json",
+      "independence_group": "fotmob",
+      "source_snapshot_ids": [
+        "fotmob:league:4b30f045c8b51ff58898168301cb7909b577e8f108f6d8fba5f7b59d718eaa59"
+      ]
+    },
+    {
+      "source_id": "wikidata",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.668543+00:00",
+      "path": "data/v6/current/wikidata.json",
+      "independence_group": "wikidata",
+      "source_snapshot_ids": [
+        "wikidata:premier_league_clubs:4be1ce3597d1f25f688e4b3ea8877e7538192cba05acdcc54822f72198f008c4"
+      ]
+    },
+    {
+      "source_id": "understat",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_UNCHANGED",
+      "changed": false,
+      "checked_at": "2026-10-03T20:28:02.974469+00:00",
+      "path": "data/v6/current/understat.json",
+      "independence_group": "understat",
+      "source_snapshot_ids": [
+        "understat:epl_2026:5df04c0d78e72b374d01c7efa2155f843d8bfa02d465bfb35e3cf4c9ca4e7839",
+        "understat:players_api:eb69348194434b1880777e20ed9827310dc443e5365c594a801ec1ef13e05eb0"
+      ]
+    },
+    {
+      "source_id": "statmuse",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_CHANGED",
+      "changed": true,
+      "checked_at": "2026-10-03T20:28:02.990527+00:00",
+      "path": "data/v6/current/statmuse.json",
+      "independence_group": "statmuse",
+      "source_snapshot_ids": [
+        "statmuse:player_xg:21a12d43bb9005ecf6974412e338fba1cf72ed1653eed121e1e71dcd617f7dbe",
+        "statmuse:team_xg:b4a94926f000c1fcf6d4b37ea3cc3e36c4f3ce22d2ea8085e50929724b1df9e7"
+      ]
+    },
+    {
+      "source_id": "official_price_predictor",
+      "health": "GREEN",
+      "availability": "AVAILABLE",
+      "effective_state": "LIVE_DERIVED",
+      "changed": true,
+      "checked_at": "2026-10-03T20:28:02.992713+00:00",
+      "path": "data/v6/current/official_price_predictor.json",
+      "independence_group": "official_fpl",
+      "source_snapshot_ids": []
+    }
+  ]
+}

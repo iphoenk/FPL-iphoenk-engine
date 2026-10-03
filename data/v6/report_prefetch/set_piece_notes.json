@@ -1,0 +1,235 @@
+{
+  "authority": "OFFICIAL_FPL",
+  "generated_at": "2026-10-03T21:31:40.019853+00:00",
+  "governance": {
+    "direct_start_probability_mutation": false,
+    "direct_xmins_mutation": false,
+    "direct_xpts_mutation": false,
+    "evidence_only": true
+  },
+  "lineage": {
+    "authority": "OFFICIAL_FPL",
+    "checked_at": "2026-10-03T21:31:40.299157+00:00",
+    "endpoint_class": "set_piece_notes",
+    "entry_id": null,
+    "gw": null,
+    "http_status": 200,
+    "league_id": null,
+    "normalization_version": "v6-report-prefetch-1",
+    "origin": "LIVE_FETCHED",
+    "pagination_coverage": null,
+    "payload_digest": "5595e122f4cd20eddda9d46c2b280c6d8a1882a90cad7ff3c658bd1d704a7889"
+  },
+  "payload": {
+    "last_updated": "2026-09-28T08:01:10Z",
+    "teams": [
+      {
+        "id": 1,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 19,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "notes": [
+          {
+            "external_link": true,
+            "info_message": "Check back for additional notes soon",
+            "source_link": ""
+          }
+        ]
+      }
+    ]
+  },
+  "report_kind": "full_master",
+  "report_prefetch_run_id": "2a79087c-f3c7-4ce8-9b7f-c665a06488b4",
+  "schema_version": 1,
+  "semantic_class": "FACT",
+  "slot_identity": "2026-2027|full_master|2026-10-04T04:30:00+07:00",
+  "status": "AVAILABLE",
+  "target_logical_report_slot": "2026-10-04T04:30:00+07:00"
+}

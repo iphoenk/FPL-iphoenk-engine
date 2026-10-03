@@ -32,6 +32,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
@@ -111,7 +112,7 @@ jobs:
           # stale event snapshot. Fall back to the event payload if the API is
           # unavailable.
           repo = os.environ.get("GITHUB_REPOSITORY", "")
-          pr_number = pr.get("number")
+          pr_number = pr.get("number") or os.environ.get("PR_NUMBER")
           token = os.environ.get("GITHUB_TOKEN", "")
           if repo and pr_number and token:
               import urllib.request

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
+
+from src.engines.report_time_intelligence import validate_evidence
 
 
 SOURCE_CLASSES = {
@@ -130,3 +132,156 @@ def build_official_fpl_material_news(
             )
         )
     return rows
+
+
+def _subject_key(value: Any) -> str:
+    return "".join(ch for ch in str(value or "").casefold() if ch.isalnum())
+
+
+def build_report_time_material_news(
+    evidence_payload: Mapping[str, Any] | None,
+    bootstrap: Mapping[str, Any],
+    *,
+    our_element_ids: Sequence[int],
+    watchlist_element_ids: Sequence[int],
+    report_timestamp: str,
+) -> list[dict[str, Any]]:
+    """Surface already-bound report-time evidence without creating new authority.
+
+    This consumes the existing report_time_evidence_v1 contract only. It never
+    fetches the web, never mutates V6/DSS/model numbers, and ignores unrelated
+    subjects so S04 does not become a generic news dump.
+    """
+    payload = dict(evidence_payload or {})
+    if payload.get("contract") != "report_time_evidence_v1":
+        return []
+
+    try:
+        now = datetime.fromisoformat(str(report_timestamp).replace("Z", "+00:00"))
+    except ValueError:
+        return []
+    if now.tzinfo is None:
+        return []
+    validation = validate_evidence(
+        payload,
+        now=now.astimezone(timezone.utc),
+    )
+
+    our_ids = {int(value) for value in our_element_ids if int(value) > 0}
+    watch_ids = {int(value) for value in watchlist_element_ids if int(value) > 0}
+    player_audience: dict[str, str] = {}
+    relevant_team_keys: set[str] = set()
+    team_name_by_id = {
+        int(row.get("id") or 0): str(row.get("name") or row.get("short_name") or "")
+        for row in bootstrap.get("teams") or []
+        if isinstance(row, Mapping) and int(row.get("id") or 0) > 0
+    }
+    for raw in bootstrap.get("elements") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        try:
+            element_id = int(raw.get("id") or 0)
+        except (TypeError, ValueError):
+            continue
+        audience = (
+            "OUR15"
+            if element_id in our_ids
+            else "WATCHLIST / TARGETS"
+            if element_id in watch_ids
+            else None
+        )
+        if audience is None:
+            continue
+        for name in (
+            raw.get("web_name"),
+            raw.get("first_name"),
+            raw.get("second_name"),
+            " ".join(
+                value
+                for value in (
+                    str(raw.get("first_name") or "").strip(),
+                    str(raw.get("second_name") or "").strip(),
+                )
+                if value
+            ),
+        ):
+            key = _subject_key(name)
+            if key:
+                player_audience[key] = audience
+        try:
+            team_id = int(raw.get("team") or 0)
+        except (TypeError, ValueError):
+            team_id = 0
+        team_key = _subject_key(team_name_by_id.get(team_id))
+        if team_key:
+            relevant_team_keys.add(team_key)
+
+    class_map = {
+        "VERIFIED_NEWS": "OFFICIAL",
+        "SECONDARY_AVAILABILITY": "RELIABLE_REPORT",
+        "COMMUNITY_SIGNAL": "RUMOR / UNVERIFIED",
+        "PUNDIT_CONSENSUS": "INFERENCE",
+        "FIXTURE_STRATEGY_EXPERT": "INFERENCE",
+        "MODEL_CHALLENGER": "INFERENCE",
+    }
+    material: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in validation.get("accepted") or []:
+        if not isinstance(raw, Mapping) or raw.get("current") is not True:
+            continue
+        source_class_raw = str(raw.get("source_class") or "")
+        source_class = class_map.get(source_class_raw)
+        if source_class is None:
+            continue
+
+        subject = str(raw.get("subject") or "").strip()
+        summary = str(raw.get("summary") or "").strip()
+        subject_key = _subject_key(subject)
+        audience = player_audience.get(subject_key)
+        if audience is None and subject_key in relevant_team_keys:
+            audience = "TEAM / TACTICAL"
+        if audience is None:
+            searchable = _subject_key(subject + " " + summary)
+            matched_player = next(
+                (
+                    value
+                    for key, value in player_audience.items()
+                    if key and key in searchable
+                ),
+                None,
+            )
+            if matched_player is not None:
+                audience = matched_player
+            elif any(key and key in searchable for key in relevant_team_keys):
+                audience = "TEAM / TACTICAL"
+        if audience is None:
+            continue
+
+        source_id = str(raw.get("source_id") or "UNAVAILABLE")
+        fingerprint = (source_id, subject_key, summary.casefold())
+        if fingerprint in seen:
+            continue
+        seen.add(fingerprint)
+        material.append(
+            normalize_material_news_item(
+                {
+                    "subject": subject or "UNAVAILABLE",
+                    "headline": summary or subject or "UNAVAILABLE",
+                    "summary": summary or subject or "UNAVAILABLE",
+                    "source_class": source_class,
+                    "source_name": source_id,
+                    "published_or_observed_timestamp": raw.get("observed_at"),
+                    "affected_player_team": subject or "UNAVAILABLE",
+                    "evidence_status": (
+                        "UNVERIFIED"
+                        if source_class == "RUMOR / UNVERIFIED"
+                        else "CURRENT_REPORT_TIME_EVIDENCE"
+                    ),
+                    "decision_relevance": (
+                        f"{raw.get('topic') or 'NEWS'} / {raw.get('stance') or 'MONITOR'}"
+                    ),
+                    "audience": audience,
+                }
+            )
+        )
+    return material

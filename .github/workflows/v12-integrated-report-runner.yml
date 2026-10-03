@@ -170,6 +170,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Cache Camoufox browser
+        if: needs.parse.outputs.report_mode != 'PRICE'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/camoufox
+          key: camoufox-v1-${{ runner.os }}-${{ hashFiles('app/requirements-report-web.txt') }}
+
+      - name: Install Camoufox report-time transport
+        if: needs.parse.outputs.report_mode != 'PRICE'
+        continue-on-error: true
+        working-directory: app
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          pip install -r requirements-report-web.txt
+          python -m camoufox fetch
+
       - name: Prepare branch-only real DEEP acceptance snapshot
         if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && needs.parse.outputs.report_mode == 'DEEP'
         working-directory: app
@@ -575,6 +592,15 @@ jobs:
           # Do not fail the job here. The runner owns a second bounded guard and
           # will publish READY_DEGRADED if terminality cannot be reached.
           PY
+
+      - name: Capture report-time public information with Camoufox
+        if: needs.parse.outputs.report_mode != 'PRICE'
+        continue-on-error: true
+        working-directory: app
+        run: |
+          mkdir -p artifacts/v12-report
+          python -m src.engines.report_time_web_capture \
+            --output artifacts/v12-report/report_time_web_capture.json
 
       - name: Execute occurrence-bound integrated report
         id: report

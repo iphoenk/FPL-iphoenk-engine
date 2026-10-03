@@ -1678,3 +1678,74 @@ def test_s04_report_time_evidence_binding_is_live_in_core_regression():
     assert rows[1]["audience"] == "WATCHLIST / TARGETS"
     assert rows[2]["evidence_status"] == "UNVERIFIED"
     assert all(row["act_authority"] is False for row in rows)
+
+
+def test_deep_renderer_separates_identity_s15_and_s17_surfaces():
+    report = {
+        "report_mode": "DEEP",
+        "report_slot": "2026-10-03T21:30:00+07:00",
+        "planning_gw": 6,
+        "s16b_due": False,
+        "delivery_status": "READY_FULL",
+        "exact_occurrence_bound": True,
+        "sections": [
+            {
+                "section_id": "S15",
+                "label": "EVIDENCE QUALITY",
+                "state": "COMPLETE",
+                "content": {
+                    "overall_evidence_confidence": "MEDIUM-HIGH",
+                    "evidence_assessment": {
+                        "Finance": {
+                            "quality": "🟡 Partial",
+                            "decision_impact": "Sell values are not authoritative.",
+                        },
+                        "Price movement": {
+                            "quality": "🟡 Stale",
+                            "decision_impact": "Monitor only; cannot independently trigger ACT.",
+                        },
+                    },
+                    "evidence_limitations": [
+                        "Sell values are not fully authoritative/decision-usable.",
+                        "Price predictor snapshot is stale; monitor only.",
+                    ],
+                    "decision_implication": "Evidence supports WAIT/HOLD.",
+                    "prior_current_semantics": "PRIOR evidence is never represented as CURRENT.",
+                },
+            },
+            {
+                "section_id": "S17",
+                "label": "SOURCE HEALTH / FRESHNESS / LINEAGE",
+                "state": "COMPLETE",
+                "content": {
+                    "technical_planes": [
+                        {"plane": "Official factual plane", "status": "🟢 Healthy"},
+                        {"plane": "Exact-occurrence binding", "status": "🟢 Verified"},
+                        {"plane": "Private serving / delivery", "status": "🟢 PASS · READY_FULL"},
+                    ],
+                    "freshness_summary": "Price snapshot stale; other required pipelines within contract.",
+                    "lineage_summary": "Visible report is bound to exact DEEP occurrence 03 Oct 2026 21:30 WIB.",
+                    "audit_note": "Run IDs and hashes remain in canonical audit artifacts.",
+                },
+            },
+        ],
+    }
+    body = render_deep_text(report)
+    assert body.startswith(
+        "FPL MASTER V12 — DEEP REPORT\n"
+        "Planning GW: GW6\n"
+        "Logical report slot: 03 Oct 2026, 21:30 WIB\n"
+        "Report: 🟢 READY_FULL · Exact occurrence\n"
+        "Sections: 2/22 lifecycle-visible · S16B not due"
+    )
+    assert "| Evidence domain | Quality | Decision impact |" in body
+    assert "Overall evidence confidence: MEDIUM-HIGH" in body
+    assert "Evidence limitations:" in body
+    assert "Decision implication: Evidence supports WAIT/HOLD." in body
+    assert "PRIOR != CURRENT:" in body
+    assert "| Plane | Status |" in body
+    assert "Freshness: Price snapshot stale; other required pipelines within contract." in body
+    assert "Lineage: Visible report is bound to exact DEEP occurrence" in body
+    assert "Private delivery:" not in body
+    assert "Canonical run:" not in body
+    assert "Selected action:" not in body

@@ -1252,7 +1252,9 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "OUR15 EXPOSURE, COMPETITIVE WINDOW" in body
     assert "COMPETITIVE-WINDOW RIVAL-ONLY THREATS" in body
     assert "CAPTAIN LANDSCAPE" in body
-    assert "EXPOSURE / LEVERAGE CLASS" in body
+    assert "Competitive C" in body
+    assert "Competitive EO" in body
+    assert "| Class |" in body
     assert "BEHAVIOURAL BASELINE" in body
     assert "COMPETITIVE RIVALS" in body
     assert "Position vs us" in body

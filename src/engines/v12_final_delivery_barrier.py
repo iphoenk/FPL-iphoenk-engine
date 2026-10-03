@@ -134,7 +134,8 @@ def validate_final_delivery_barrier(
                 prefix="DEEP",
             )
         )
-        failures.extend(validate_deep_decision_content_delivery(report, text))\n        failures.extend(validate_rendered_deep_presentation(text, report))
+        failures.extend(validate_deep_decision_content_delivery(report, text))
+        failures.extend(validate_rendered_deep_presentation(text, report))
 
     elif mode == "MATCH":
         failures.extend(

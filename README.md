@@ -1,7 +1,7 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-03T14:48:00+07:00`
-> **Production main at sync:** `ecc6ac16cc6e0887f29c0c967b92becf0999f14c`  
+> **Last runtime/documentation sync:** `2026-10-03T20:28:03+07:00`
+> **Production main at sync:** `ee628dafd09968bb0cf24851ed515a94ffa44334`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
 A governed Fantasy Premier League decision engine that separates **public football facts and reproducible compute** from **private manager-specific state and decisions**.
@@ -15,6 +15,8 @@ The active architecture is deliberately simple:
 The core principle is:
 
 > **V6 tells V12 what is factually true. V12 decides what those facts mean for FPL.**
+
+Visible DEEP presentation is governed by the executable V12 presentation lock: canonical section payloads are rendered through locked section schemas, then the actual Markdown body is validated fail-closed before publication. Deadline news/leak evidence is centralized in S04, and live mini-league comparison uses the same dynamic Competitive Window resolver as DEEP.
 
 Mandatory integrated DEEP delivery is fail-closed on same-occurrence factual binding: the exact governed V6 report-prefetch must reach terminal SUCCESS and be read back from runtime-data-v6 before `/v12-report-run` is started. Unrelated issue comments are isolated from governed V6 concurrency so they cannot replace a pending prefetch.
 

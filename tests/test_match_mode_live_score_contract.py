@@ -243,11 +243,14 @@ def test_match13_materializes_from_locked_submitted_picks_and_passes_semantics(t
 
     body = render_match_text(report)
     assert body.count("## MATCH ") == 13
-    assert "SCORING AUTHORITY: LOCKED_SUBMITTED_PICKS" in body
-    assert "BENCH GK: P15" in body
-    assert "OUTFIELD AUTOSUB PRIORITY: 1 P12, 2 P13, 3 P14" in body
-    assert "BONUS/BPS STATUS: PROVISIONAL" in body
-    assert "NEXT CRITICAL OBSERVATION: fixture 101 full-time" in body
+    assert "Submitted FPL picks locked at deadline." in body
+    assert "| GK | P15 |" in body
+    assert "| 1 | P12 |" in body and "| 2 | P13 |" in body and "| 3 | P14 |" in body
+    assert "## MATCH 7 — BONUS / BPS" in body
+    assert "Status: Provisional" in body
+    assert "Next critical observation\nfixture 101 full-time" in body
+    assert "element_id" not in body
+    assert "LOCKED_SUBMITTED_PICKS" not in body
 
     content_contract = report["content_contract"]
     semantic = validate_v12_visible_content_contract(

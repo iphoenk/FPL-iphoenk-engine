@@ -55,3 +55,34 @@ def test_s16b_keeps_current_post_gw_lifecycle():
     assert contract["sections"]["S16B"]["visibility"] == "lifecycle_controlled"
     assert "MATCH-BY-MATCH REVIEW" in contract["sections"]["S16B"]["lifecycle_rule"]
     assert "AFTER-GW REASSESSMENT" in contract["sections"]["S16B"]["lifecycle_rule"]
+
+def test_header_s15_s17_information_architecture_is_locked():
+    contract = load_deep_presentation_lock()
+    assert contract["header_order"] == [
+        "FPL MASTER V12 — DEEP REPORT",
+        "Planning GW",
+        "Logical report slot",
+        "Report",
+        "Sections",
+    ]
+    assert contract["sections"]["S15"]["tables"][0]["columns"] == [
+        "Evidence domain", "Quality", "Decision impact"
+    ]
+    assert contract["sections"]["S15"]["blocks"] == [
+        "Overall evidence confidence",
+        "Evidence limitations",
+        "Decision implication",
+        "PRIOR != CURRENT",
+    ]
+    assert contract["sections"]["S17"]["tables"][0]["columns"] == [
+        "Plane", "Status"
+    ]
+    assert contract["sections"]["S17"]["blocks"] == [
+        "Freshness",
+        "Lineage",
+        "Audit note (optional compact)",
+    ]
+    assert contract["ownership_matrix"]["Price evidence decision usability"] == "S15"
+    assert contract["ownership_matrix"]["Price pipeline health"] == "S17"
+    assert contract["ownership_matrix"]["Workflow/run IDs"] == "S17_AUDIT_ONLY"
+

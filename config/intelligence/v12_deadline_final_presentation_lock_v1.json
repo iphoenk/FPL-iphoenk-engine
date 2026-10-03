@@ -1,0 +1,190 @@
+{
+  "schema": "fpl_master_v12_deadline_final_presentation_lock.v1",
+  "inherits": "config/intelligence/v12_deep_presentation_lock_v1.json",
+  "purpose": "Lock Deadline/Final visible presentation as a strict overlay on the DEEP presentation contract. Presentation reads canonical truth only and does not change model, optimizer, MC, universe, finance authority, or decisions.",
+  "checkpoints": [
+    "T-24h DEEP",
+    "T-12h DEEP",
+    "T-6h DEEP",
+    "T-3h DEEP",
+    "T-2h DELTA",
+    "T-1h DELTA + execution card",
+    "T-30m FINAL REVIEW",
+    "T-15m GO / NO-GO",
+    "T-5m FINAL CONFIRMATION"
+  ],
+  "header_additions": [
+    "Official deadline",
+    "Countdown",
+    "Checkpoint",
+    "Decision state"
+  ],
+  "rules": {
+    "deep_backbone_must_remain_exact": true,
+    "no_deep_column_changes": true,
+    "deadline_is_overlay_not_replacement": true,
+    "generic_recursive_key_value_dump_forbidden": true,
+    "raw_python_or_json_repr_forbidden": true,
+    "raw_machine_enum_as_primary_wording_forbidden": true,
+    "raw_internal_ids_forbidden": true,
+    "raw_workflow_run_sha_fingerprint_forbidden_in_main_body": true,
+    "latest_news_must_be_human_summary": true,
+    "predicted_xi_leak_tier_must_be_human_summary": true,
+    "s15b_must_remain_exact_deep_lock": true,
+    "s16b_lifecycle_must_not_be_modified": true,
+    "legal_not_equal_affordable": true,
+    "affordable_not_equal_executable": true,
+    "value_of_waiting_explicit": true,
+    "unknown_finance_must_not_be_fabricated": true
+  },
+  "deadline_overlay": {
+    "S01": {
+      "title": "Deadline state",
+      "fields": [
+        "Countdown",
+        "Transfer legality",
+        "Execution readiness",
+        "Unresolved blocker"
+      ]
+    },
+    "S03": {
+      "fields": [
+        "Change since previous deadline checkpoint",
+        "What changed",
+        "What did not change",
+        "Does this change WAIT / PREPARE / ACT"
+      ]
+    },
+    "S05": {
+      "tables": [
+        {
+          "name": "Latest actionable team news",
+          "columns": [
+            "Player",
+            "News",
+            "Availability impact",
+            "Evidence tier",
+            "As of",
+            "Decision impact"
+          ]
+        },
+        {
+          "name": "Predicted XI / leak tier",
+          "columns": [
+            "Player",
+            "Predicted status",
+            "Evidence tier",
+            "Confidence",
+            "Decision consequence"
+          ]
+        }
+      ],
+      "evidence_tiers": [
+        "Official",
+        "Reliable reporter",
+        "Strong leak",
+        "Unconfirmed",
+        "Rumor"
+      ]
+    },
+    "S08": {
+      "tables": [
+        {
+          "name": "Deadline captain status",
+          "columns": [
+            "Role",
+            "Player",
+            "State",
+            "Reversal trigger"
+          ],
+          "rows_exact": 2,
+          "row_labels": [
+            "Captain",
+            "Vice"
+          ]
+        }
+      ]
+    },
+    "S14": {
+      "tables": [
+        {
+          "name": "Deadline route table",
+          "columns": [
+            "Route",
+            "Legal",
+            "Affordable",
+            "1GW",
+            "3GW",
+            "5GW",
+            "P>HOLD",
+            "Value of waiting",
+            "Reversal / Abort",
+            "Action"
+          ]
+        }
+      ],
+      "rules": [
+        "HOLD always present",
+        "No speculative finance",
+        "Value of waiting explicit"
+      ]
+    },
+    "S15B": {
+      "inherit_exactly": "S15B from v12_deep_presentation_lock_v1.json",
+      "extra_tables_forbidden": true
+    },
+    "S18": {
+      "tables": [
+        {
+          "name": "Deadline Action Board",
+          "columns": [
+            "Field",
+            "Current call"
+          ],
+          "rows_exact": 7,
+          "rows": [
+            "NOW",
+            "NEXT",
+            "TRIGGER TO ACT",
+            "LATEST SAFE DECISION POINT",
+            "COST OF WAITING",
+            "ABORT / REVERSAL",
+            "BEST ALTERNATIVE"
+          ]
+        }
+      ]
+    }
+  },
+  "final_overlay": {
+    "gw_lock_package": {
+      "placement": "before alternatives",
+      "table_columns": [
+        "Field",
+        "Value"
+      ],
+      "rows": [
+        "Target GW",
+        "Transfers out",
+        "Transfers in",
+        "Number of moves",
+        "FT / hit treatment",
+        "Bank after",
+        "Formation",
+        "Exact XI (11)",
+        "Bench GK",
+        "Outfield bench priority 1-3",
+        "Captain",
+        "Vice-captain",
+        "Chip",
+        "Primary action",
+        "Abort trigger",
+        "Fallback",
+        "Evidence timestamp",
+        "Canonical authority version"
+      ],
+      "rows_exact": 18,
+      "unknown_finance": "UNKNOWN / UNAVAILABLE",
+      "alternatives_below_lock_package_only": true
+    }
+  }
+}

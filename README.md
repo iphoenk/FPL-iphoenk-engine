@@ -55,4 +55,4 @@ Production truth comes from governed CI/runtime evidence, not from a hard-coded 
 
 > **Caveat:** this is a decision-support system, not an oracle. FPL outcomes remain stochastic and source evidence can change quickly.
 
-> **Last runtime/documentation sync:** `2026-10-03T20:55:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T20:58:00+07:00`

@@ -636,7 +636,7 @@ jobs:
               --output-md artifacts/v12-report/profile_summary.md >/dev/null 2>&1 || true
           fi
           python -m src.engines.v12_delivery_security scan-log --path "$private_log"
-          grep -E '^\[(V12_STAGE|V12_STAGE2_CACHE|P1_2B_PERF)\]' "$private_log" || true
+          grep -E '^\[(V12_STAGE|V12_STAGE2_CACHE|P1_2B_PERF|V12_DELIVERY)\]' "$private_log" || true
           exit "$runner_status"
 
       - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance

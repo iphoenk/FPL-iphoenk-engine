@@ -1013,6 +1013,8 @@ def _table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> list[str]:
 def _human_scalar(value: Any) -> str:
     if value is None or value == "":
         return "UNAVAILABLE"
+    if isinstance(value, Mapping) or isinstance(value, (list, tuple, set)):
+        return "UNAVAILABLE"
     if isinstance(value, bool):
         return "Yes" if value else "No"
     text = str(value)

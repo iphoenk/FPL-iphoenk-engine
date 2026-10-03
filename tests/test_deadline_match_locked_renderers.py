@@ -37,7 +37,7 @@ def test_match_locked_renderer_exact_human_tables_and_no_internal_ids():
             _section("MATCH7", {"status":"PROVISIONAL","rows":[{"player":"P7","bonus":3,"bps":40}]}),
             _section("MATCH8", {"rows":[{"player":"P3","event":"YELLOW_CARD","detail":"Booked","match_status":"LIVE","decision_implication":"Observe"}]}),
             _section("MATCH9", {"rows":[{"player":"X","club":"ABC","signal":"Role","evidence":"Live role","sustainable_noisy":"SUSTAINABLE","our15_next_opponent_implication":"Watch"}]}),
-            _section("MATCH10", {"league_name":"ICON+","submitted_picks_exposure":{"state":"COMPLETE","available_count":58,"expected_count":58},"live_standings_rank":{"state":"DEGRADED"},"current_live_rank":7,"current_live_points":351,"material_player_exposure":[{"player":"P7","owned":17,"starter":16,"captain":5,"vice":3,"eo":82,"denominator":58,"live_consequence":"Shield"}],"direct_rival_live_consequence":[{"manager":"Rival","live_points":360,"gap":9,"captain":"P7","key_threat":"X","key_shield":"P7"}]}),
+            _section("MATCH10", {"league_name":"ICON+","submitted_picks_exposure":{"state":"COMPLETE","available_count":58,"expected_count":58},"live_standings_rank":{"state":"DEGRADED"},"current_live_rank":7,"current_live_points":351,"competitive_window":{"our_rank":7,"league_size":58},"material_player_exposure":[{"player":"P7","owned":17,"starter":16,"captain":5,"vice":3,"eo":82,"denominator":58,"live_consequence":"Shield"}],"competitive_rival_live_consequence":[{"rank":6,"manager":"Rival","live_points":360,"gap":9,"captain":"P7","key_threat":"X","key_shield":"P7"}]}),
             _section("MATCH11", {"rows":[{"player_team":"P9","learning":"More advanced","evidence":"Role","next_gw_implication":"Reassess","action_state":"REASSESS"}]}),
             _section("MATCH12", {"observation":"P9 full-time role","why_it_matters":"Clarifies minutes and role","when_to_reassess":"After FT"}),
             _section("MATCH13", {"generated_at":"2026-10-03T08:00:00+07:00","event_live":"AVAILABLE","submitted_picks":"AVAILABLE","prediction_snapshot":"AVAILABLE","mini_league_submitted_picks":"AVAILABLE","live_standings":"DEGRADED","match_evidence_feed":"AVAILABLE"}),
@@ -51,7 +51,7 @@ def test_match_locked_renderer_exact_human_tables_and_no_internal_ids():
     assert "| Player | Event | Detail | Match status | Decision implication |" in body
     assert "| Player | Club | Signal | Evidence | Sustainable / noisy | OUR15 / next-opponent implication |" in body
     assert "| Player / Team | Learning | Evidence | Next-GW implication | Action state |" in body
-    assert "| P7 | 17/58 (29.3%) | 16/58 (27.6%) | 5/58 (8.6%) | 3/58 (5.2%) | 82/58 (141.4%) | Shield |" in body
+    assert "| P7 | 17/58 (29.3%) | 16/58 (27.6%) | 5/58 (8.6%) | 3/58 (5.2%) | 82/58 (141.4%) | Shield |" in body\n    assert "COMPETITIVE WINDOW LIVE CONSEQUENCE" in body\n    assert "rivals=9" in body
     assert "element_id" not in body
     assert "LOCKED_SUBMITTED_PICKS" not in body
     assert "BLOCKED_BY_CAPTAIN_APPEARANCE" not in body
@@ -68,7 +68,7 @@ def test_deadline_overlay_exact_tables_are_additive_not_deep_replacement():
             "decision_state":"WAIT",
             "S01":{"transfer_legality":"LEGAL","execution_readiness":"READY","unresolved_blocker":"None"},
             "S03":{"change_since_previous_checkpoint":"No material change","what_changed":"Fresh team news","what_did_not_change":"Football frontier","decision_change":"WAIT"},
-            "S05":{"late_news_rows":[{"player":"P1","news":"Available","availability_impact":"No downgrade","evidence_tier":"OFFICIAL","as_of":"16:20 WIB","decision_impact":"No change"}],"predicted_xi_rows":[{"player":"P1","predicted_status":"START","evidence_tier":"RELIABLE_REPORTER","confidence":"HIGH","decision_consequence":"No change"}]},
+            "S04":{"late_news_rows":[{"player":"P1","news":"Available","availability_impact":"No downgrade","evidence_tier":"OFFICIAL","as_of":"16:20 WIB","decision_impact":"No change"}],"predicted_xi_rows":[{"player":"P1","predicted_status":"START","evidence_tier":"RELIABLE_REPORTER","confidence":"HIGH","decision_consequence":"No change"}]},
             "S08":{"captain_rows":[{"role":"Captain","player":"P7","state":"LOCKED","reversal_trigger":"Official absence"},{"role":"Vice","player":"P8","state":"LOCKED","reversal_trigger":"Captain reversal"}]},
             "S14":{"route_rows":[{"route":"HOLD","legal":True,"affordable":True,"1gw":0.0,"3gw":0.0,"5gw":0.0,"p_hold":1.0,"value_of_waiting":"High","reversal_abort":"New material evidence","action":"WAIT"}]},
             "S18":{"action_board":{"NOW":"WAIT","NEXT":"Check late news","TRIGGER TO ACT":"Material edge","LATEST SAFE DECISION POINT":"T-5m","COST OF WAITING":"Low","ABORT / REVERSAL":"New negative evidence","BEST ALTERNATIVE":"HOLD"}},
@@ -82,7 +82,7 @@ def test_deadline_overlay_exact_tables_are_additive_not_deep_replacement():
             _section("S18",{"action_board":{}}),
         ],
     }
-    report["sections"][4]["degradation_reason"]="No optimizer rows in controlled presentation fixture"
+    report["sections"][5]["degradation_reason"]="No optimizer rows in controlled presentation fixture"
     body=render_deep_text(report)
     assert body.startswith("FPL MASTER V12 — DEADLINE REPORT")
     assert "Official deadline: 03 Oct 2026, 17:00 WIB" in body

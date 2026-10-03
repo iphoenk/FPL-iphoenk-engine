@@ -112,6 +112,23 @@ def test_camoufox_public_source_policy_is_bounded_to_information_acquisition():
             assert "/members" not in url.casefold()
 
 
+def test_report_time_registry_prefers_camoufox_without_replacing_official_api():
+    registry = json.loads(
+        (ROOT / "config" / "sources" / "report_time_registry.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    policy = registry["policy"]
+    assert policy["preferred_public_browser_transport"] == "CAMOUFOX"
+    assert (
+        policy["camoufox_capture_policy_ref"]
+        == "config/sources/camoufox_public_sources.json"
+    )
+    assert policy["camoufox_is_acquisition_only"] is True
+    assert policy["camoufox_never_replaces_official_api"] is True
+    assert policy["official_fpl_remains_native_authority"] is True
+
+
 def test_camoufox_dependency_is_exact_stable_pin():
     requirement = (
         ROOT / "requirements-report-web.txt"

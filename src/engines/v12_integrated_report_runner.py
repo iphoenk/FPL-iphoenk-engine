@@ -3237,8 +3237,9 @@ def _mini_league_deep_detail(
             total = int(row.get("league_total") or 0)
         except (TypeError, ValueError):
             continue
-        if rank <= 10 or (
-            our_rank_i is not None and abs(rank - our_rank_i) <= 3
+        if rank <= min(
+            10,
+            int(context.get("manager_count") or len(standing_ids)),
         ):
             rank_battle.append(
                 {
@@ -4477,7 +4478,7 @@ def _xi_battles(
         for row in (mini or {}).get("exposures") or []
         if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
     }
-    direct = {
+    competitive = {
         int(row.get("element_id") or 0): dict(row)
         for row in (mini_detail or {}).get("competitive_our15_exposure") or []
         if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
@@ -4502,8 +4503,8 @@ def _xi_battles(
         xb = dict(pb.get("xmins") or {})
         ea = exposures.get(aid) or {}
         eb = exposures.get(bid) or {}
-        da = direct.get(aid) or {}
-        db = direct.get(bid) or {}
+        da = competitive.get(aid) or {}
+        db = competitive.get(bid) or {}
         wa = workload.get(aid) or {}
         wb = workload.get(bid) or {}
         one_a = onegw(pa)

@@ -4501,7 +4501,7 @@ def _render_deep_visible_contract_lines(
                 workload = dict(item.get("workload_context") or {})
                 league = dict(item.get("league_scope") or {})
                 rivals = dict(item.get("rivals_scope") or {})
-                direct = dict(item.get("direct_scope") or {})
+                competitive = dict(item.get("competitive_scope") or {})
                 rows.append(
                     (
                         item.get("football_rank"),
@@ -4530,8 +4530,8 @@ def _render_deep_visible_contract_lines(
                         _cap_eo(league),
                         _cap_ratio(rivals, "captain_count", "captain_pct"),
                         _cap_eo(rivals),
-                        _cap_ratio(direct, "captain_count", "captain_pct"),
-                        _cap_eo(direct),
+                        _cap_ratio(competitive, "captain_count", "captain_pct"),
+                        _cap_eo(competitive),
                         item.get("exposure_leverage_class"),
                     )
                 )
@@ -4561,8 +4561,8 @@ def _render_deep_visible_contract_lines(
                         "LEAGUE EO",
                         "RIVALS C",
                         "RIVALS EO",
-                        "DIRECT C",
-                        "DIRECT EO",
+                        "COMPETITIVE C",
+                        "COMPETITIVE EO",
                         "EXPOSURE / LEVERAGE CLASS",
                     ),
                     rows,

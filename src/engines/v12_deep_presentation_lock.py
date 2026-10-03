@@ -312,37 +312,39 @@ def validate_rendered_deep_presentation(
                 failures.append(f"S16_RENDERED_PLAYER_BLOCKS={block_count}/15")
 
     raw_body = str(body or "")
-    first_heading = _SECTION_HEADING_RE.search(raw_body)
-    header_text = raw_body[: first_heading.start()] if first_heading else raw_body
-    header_lines = [line.strip() for line in header_text.splitlines() if line.strip()]
-    if header_lines[:1] != ["FPL MASTER V12 — DEEP REPORT"]:
-        failures.append("HEADER_TITLE_MISSING_OR_NOT_FIRST")
-    expected_header_labels = ("Planning GW:", "Logical report slot:", "Report:", "Sections:")
-    actual_header_fields = header_lines[1:5]
-    if len(actual_header_fields) != 4 or any(
-        not actual_header_fields[index].startswith(label)
-        for index, label in enumerate(expected_header_labels)
-    ):
-        failures.append("HEADER_EXACT_4_FIELD_CONTRACT_MISMATCH")
-    if len(header_lines) != 5:
-        failures.append(f"HEADER_VISIBLE_LINE_COUNT={len(header_lines)}/5")
-    header_upper = header_text.upper()
-    for token in (
-        "CANONICAL RUN",
-        "ORCHESTRATOR RUN",
-        "REPORT RUN",
-        "PRIVATE DELIVERY",
-        "PRESENTATION QA",
-        "SHA",
-        "FINGERPRINT",
-        "MC500",
-        "ROUTES:",
-        "UNIVERSE:",
-        "SELECTED ACTION",
-        "SERVING NOTE",
-    ):
-        if token in header_upper:
-            failures.append("HEADER_FORBIDDEN_DETAIL=" + token)
+    mode = str((report or {}).get("report_mode") or "DEEP").strip().upper()
+    if mode == "DEEP":
+        first_heading = _SECTION_HEADING_RE.search(raw_body)
+        header_text = raw_body[: first_heading.start()] if first_heading else raw_body
+        header_lines = [line.strip() for line in header_text.splitlines() if line.strip()]
+        if header_lines[:1] != ["FPL MASTER V12 — DEEP REPORT"]:
+            failures.append("HEADER_TITLE_MISSING_OR_NOT_FIRST")
+        expected_header_labels = ("Planning GW:", "Logical report slot:", "Report:", "Sections:")
+        actual_header_fields = header_lines[1:5]
+        if len(actual_header_fields) != 4 or any(
+            not actual_header_fields[index].startswith(label)
+            for index, label in enumerate(expected_header_labels)
+        ):
+            failures.append("HEADER_EXACT_4_FIELD_CONTRACT_MISMATCH")
+        if len(header_lines) != 5:
+            failures.append(f"HEADER_VISIBLE_LINE_COUNT={len(header_lines)}/5")
+        header_upper = header_text.upper()
+        for token in (
+            "CANONICAL RUN",
+            "ORCHESTRATOR RUN",
+            "REPORT RUN",
+            "PRIVATE DELIVERY",
+            "PRESENTATION QA",
+            "SHA",
+            "FINGERPRINT",
+            "MC500",
+            "ROUTES:",
+            "UNIVERSE:",
+            "SELECTED ACTION",
+            "SERVING NOTE",
+        ):
+            if token in header_upper:
+                failures.append("HEADER_FORBIDDEN_DETAIL=" + token)
 
     s15_text = rendered.get("S15", "")
     if state_by_sid.get("S15") == "COMPLETE":

@@ -5570,6 +5570,108 @@ def _render_deep_visible_contract_lines(
             )
         )
 
+    elif section_id == "S18":
+        board = dict(payload.get("action_board") or {})
+        axes = [
+            dict(row)
+            for row in board.get("axes") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MULTI-AXIS ACTION BOARD")
+        lines.extend(
+            _markdown_table(
+                (
+                    "axis", "NOW", "NEXT", "TRIGGER TO ACT",
+                    "LATEST SAFE DECISION POINT", "COST OF WAITING", "ABORT / REVERSAL"
+                ),
+                [
+                    (
+                        row.get("axis"),
+                        row.get("NOW"),
+                        _human_summary(row.get("NEXT")),
+                        _human_summary(row.get("TRIGGER TO ACT")),
+                        _human_summary(row.get("LATEST SAFE DECISION POINT")),
+                        _human_summary(row.get("COST OF WAITING")),
+                        _human_summary(row.get("ABORT / REVERSAL")),
+                    )
+                    for row in axes
+                ],
+            )
+        )
+        alt = board.get("best_alternative")
+        lines.append(
+            "BEST ALTERNATIVE: "
+            + _human_summary(alt)
+            + f" | EXECUTABLE={board.get('best_alternative_executable')}"
+        )
+        excluded.extend((
+            "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
+            "LATEST SAFE DECISION POINT", "COST OF WAITING",
+            "ABORT / REVERSAL", "BEST ALTERNATIVE",
+        ))
+
+    elif section_id == "S19":
+        judgement = dict(payload.get("final_judgement") or {})
+        lines.append(
+            "FINAL TRANSFER: "
+            f"{judgement.get('transfer_action')} | "
+            f"ROUTE={judgement.get('selected_route_id')} | "
+            f"EXECUTABLE={judgement.get('selected_route_executable')}"
+        )
+        lines.append(
+            f"FORMATION: {judgement.get('formation')} | XI={judgement.get('xi')}"
+        )
+        lines.append(
+            f"BENCH GK: {judgement.get('bench_gk')} | "
+            f"OUTFIELD AUTOSUB 1/2/3: {judgement.get('bench_order')}"
+        )
+        football = dict(judgement.get("football_optimal_captain") or {})
+        final_cap = dict(judgement.get("final_captain") or {})
+        vice = dict(judgement.get("vice") or {})
+        lines.append(
+            "FOOTBALL-OPTIMAL CAPTAIN: "
+            f"{football.get('player') or football.get('element_id')} "
+            f"(rank={football.get('football_rank')}, xPts={football.get('xpts')})"
+        )
+        lines.append(
+            "FINAL CAPTAIN: "
+            f"{final_cap.get('player') or final_cap.get('element_id')} | "
+            f"STATE={judgement.get('captain_state')} | "
+            f"VICE={vice.get('player') or vice.get('element_id')}"
+        )
+        ml_context = dict(judgement.get("mini_league_captain_context") or {})
+        lines.append(
+            "MINI-LEAGUE CAPTAIN CONTEXT: "
+            f"class={ml_context.get('exposure_leverage_class')} | "
+            f"baseline={ml_context.get('label')} GW{ml_context.get('behavioural_baseline_gw')}"
+        )
+        lines.append(
+            "S19 CONSUMED: "
+            + ", ".join(str(x) for x in judgement.get("consumed_sections") or [])
+        )
+        lines.append(
+            "RECONCILIATION: "
+            + str(judgement.get("reconciliation_reason") or "UNAVAILABLE")
+        )
+        lines.append(
+            f"CHIP: {judgement.get('chip')} | POSTURE: {judgement.get('mini_league_posture')}"
+        )
+        lines.append(
+            f"IMMEDIATE WATCH: {judgement.get('immediate_watch')} | "
+            f"3GW: {judgement.get('three_gw_direction')}"
+        )
+        lines.append(
+            f"NEXT TRIGGER: {judgement.get('next_trigger')} | "
+            f"REVERSAL: {judgement.get('reversal_trigger')}"
+        )
+        bgw = dict(judgement.get("bgw_context") or {})
+        lines.append(bgw_visible_line("S19", bgw))
+        lines.append(
+            "BGW RECONCILED: "
+            + str(judgement.get("bgw_reconciled"))
+        )
+        excluded.append("final_judgement")
+
     elif section_id == "S16":
         lines.append(
             "MODEL WEIGHTS: 20% PROVEN/HISTORICAL | 25% Tactical/Role | "

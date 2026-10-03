@@ -336,7 +336,7 @@ def test_f_directional_exact20_requires_twenty_actual_direction_rows():
 
 def test_g_eta_omitted_from_relevant_visible_rows_fails_qa():
     report = _healthy_report()
-    body = render_price_report(report).replace("ETA/status", "ETA")
+    body = render_price_report(report).replace("ETA / Status", "ETA")
     failures = validate_price_visible_body(body, report=report)
     assert any("ETA_MISSING" in failure for failure in failures)
 
@@ -344,7 +344,7 @@ def test_g_eta_omitted_from_relevant_visible_rows_fails_qa():
 def test_h_incomplete_action_board_fails_qa():
     report = _healthy_report()
     body = render_price_report(report)
-    body = re.sub(r"(?m)^ABORT / REVERSAL:.*\n", "", body)
+    body = re.sub(r"(?m)^\| ABORT / REVERSAL \|.*\n", "", body)
     failures = validate_price_visible_body(body, report=report)
     assert "VISIBLE_ACTION_BOARD_FIELD_MISSING=ABORT / REVERSAL" in failures
 

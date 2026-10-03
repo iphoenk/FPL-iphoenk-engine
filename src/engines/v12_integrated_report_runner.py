@@ -105,7 +105,10 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_universe_scan,
 )
 from src.engines.v12_competitive_window import resolve_competitive_window
-from src.engines.v12_material_news import build_official_fpl_material_news
+from src.engines.v12_material_news import (
+    build_official_fpl_material_news,
+    build_report_time_material_news,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -7837,7 +7840,7 @@ def run_deep(
         if isinstance(row, Mapping)
         and int(row.get("element_id") or row.get("element") or 0) > 0
     ]
-    material_news = build_official_fpl_material_news(
+    official_material_news = build_official_fpl_material_news(
         bootstrap,
         our_element_ids=our_news_ids,
         watchlist_element_ids=watchlist_news_ids,
@@ -7846,6 +7849,29 @@ def run_deep(
             str(previous_deep.get("report_slot") or "") or None
         ),
     )
+    report_time_evidence = _read_json(
+        runtime_data_root / "data/report_time_evidence.json",
+        {},
+    ) or {}
+    report_time_material_news = build_report_time_material_news(
+        report_time_evidence,
+        bootstrap,
+        our_element_ids=our_news_ids,
+        watchlist_element_ids=watchlist_news_ids,
+        report_timestamp=report_slot,
+    )
+    material_news: list[dict[str, Any]] = []
+    material_news_seen: set[tuple[str, str, str]] = set()
+    for news_item in [*official_material_news, *report_time_material_news]:
+        key = (
+            str(news_item.get("source_name") or ""),
+            str(news_item.get("subject") or ""),
+            str(news_item.get("summary") or ""),
+        )
+        if key in material_news_seen:
+            continue
+        material_news_seen.add(key)
+        material_news.append(news_item)
     news_groups = {
         "OUR15": [row for row in material_news if row.get("audience") == "OUR15"],
         "WATCHLIST / TARGETS": [

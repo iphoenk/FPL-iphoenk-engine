@@ -575,6 +575,24 @@ def validate_visible_report_body(
     elif mini_league_denominator_complete_required and not mini_league_complete:
         failures.append("VISIBLE_MINI_LEAGUE_DENOMINATOR_INCOMPLETE")
 
+    if "S15B" in expected_set:
+        historical_fixed_scope = bool(
+            re.search(
+                r"(?i)HISTORICAL\s+LEGACY\s+FIXED-RIVAL\s+SNAPSHOT",
+                body,
+            )
+        )
+        if not historical_fixed_scope:
+            forbidden_fresh_mini_patterns = (
+                r"(?i)\bDIRECT6\b",
+                r"(?i)\bdirect\s+six\b",
+                r"(?i)\bsix\s+direct\s+rivals\b",
+                r"(?i)\bdirect\s+rivals\s+above\s+us\b",
+                r"(?i)\brivals\s+above\s+us\b",
+            )
+            if any(re.search(pattern, body) for pattern in forbidden_fresh_mini_patterns):
+                failures.append("VISIBLE_LEGACY_FIXED_RIVAL_SCOPE_PRESENT")
+
     body_hash = sha256(body.encode("utf-8")).hexdigest()
     return {
         "status": "PASS" if not failures else "FAIL",

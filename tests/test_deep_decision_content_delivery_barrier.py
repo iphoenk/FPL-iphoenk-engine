@@ -776,10 +776,10 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
     )
     report = _deep_report([_route()], extra_sections=[s02, s06, s08])
     body = render_deep_text(report)
-    assert "FORMATION:" in body and "XI:" in body and "BENCH:" in body
-    assert "CAPTAIN AUTHORITY:" in body
-    assert "OWNED FINAL-XI CAPTAIN FRONTIER" in body
-    assert "EXPOSURE / LEVERAGE CLASS" in body
+    assert "Formation:" in body and "XI:" in body and "Bench GK:" in body
+    assert "| Rank | Player | xPts | Phaul | Pstart | xMins |" in body
+    assert "Current call: C P01; VC P02; state LOCK." in body
+    assert "EO/leverage context:" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 

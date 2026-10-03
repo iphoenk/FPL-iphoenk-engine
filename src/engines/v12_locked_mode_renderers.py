@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 from src.engines.visible_mode_presentation_locks import load_match_presentation_lock
+from src.engines.v12_competitive_window import resolve_competitive_window
 
 _MATCH_EVENT_LABELS = {
     "RED_CARD": "Red card",
@@ -301,9 +302,26 @@ def render_match_locked_text(report: Mapping[str, Any]) -> str:
                 ))
             else:
                 lines.append("Detailed player exposure unavailable; healthy submitted-picks coverage is retained above.")
-            rivals=[dict(r) for r in (content.get("direct_rival_live_consequence") or (content.get("rival_live_points") or {}).get("rows") or []) if isinstance(r, Mapping)]
+            window=dict(content.get("competitive_window") or {})
+            if window:
+                resolved=resolve_competitive_window(
+                    window.get("our_rank") or content.get("current_live_rank"),
+                    window.get("league_size") or expected,
+                )
+                ranks=resolved.get("ranks") or []
+                lines.append(
+                    "Competitive Window: "
+                    + (", ".join(str(x) for x in ranks) if ranks else "UNAVAILABLE")
+                    + f" | rivals={resolved.get('rival_count', 'UNAVAILABLE')}"
+                )
+            historical_legacy=content.get("historical_legacy_snapshot") is True
+            rivals_source=content.get("competitive_rival_live_consequence")
+            if rivals_source is None and historical_legacy:
+                rivals_source=content.get("direct_rival_live_consequence")
+            rivals=[dict(r) for r in (rivals_source or []) if isinstance(r, Mapping)]
             if rivals:
                 lines.append("")
+                lines.append("### COMPETITIVE WINDOW LIVE CONSEQUENCE")
                 lines.extend(_table(
                     ("Manager","Live points","Gap","Captain","Key threat","Key shield"),
                     [(
@@ -389,7 +407,7 @@ def deadline_section_overlay_lines(section_id: str, report: Mapping[str, Any]) -
             f"What did not change: {_scalar(block.get('what_did_not_change'))}",
             f"Does this change WAIT / PREPARE / ACT: {_scalar(block.get('decision_change'))}",
         ])
-    elif section_id=="S05":
+    elif section_id=="S04":
         news=[dict(r) for r in block.get("late_news_rows") or [] if isinstance(r, Mapping)]
         if news:
             lines.append("### Latest actionable team news")

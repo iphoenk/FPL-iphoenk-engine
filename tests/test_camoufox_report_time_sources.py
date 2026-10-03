@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import json
 from contextlib import AbstractContextManager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from src.engines.report_time_web_capture import build_targets
+from src.engines.camoufox_report_time_evidence import build_evidence
+from src.engines.report_time_intelligence import validate_evidence
+from src.engines.report_time_web_capture import build_targets, run as run_web_capture
 from src.sources.camoufox_transport import CaptureTarget, capture_targets
 from src.utils import ROOT
 
@@ -216,4 +219,144 @@ def test_v12_workflow_keeps_camoufox_optional_and_out_of_price_lane():
     assert "requirements-report-web.txt" in workflow
     assert "python -m camoufox fetch" in workflow
     assert "report_time_web_capture.json" in workflow
+    assert "camoufox_report_time_evidence" in workflow
+    assert "report_time_evidence.json" in workflow
+    assert '--report-slot "$REPORT_SLOT"' in workflow
     assert "needs.parse.outputs.report_mode != 'PRICE'" in workflow
+
+
+def _official_payload_for_evidence():
+    return {
+        "official": {
+            "bootstrap": {
+                "elements": [
+                    {
+                        "id": 1,
+                        "web_name": "Calafiori",
+                        "first_name": "Riccardo",
+                        "second_name": "Calafiori",
+                    },
+                    {
+                        "id": 2,
+                        "web_name": "Haaland",
+                        "first_name": "Erling",
+                        "second_name": "Haaland",
+                    },
+                    {
+                        "id": 3,
+                        "web_name": "Bruno",
+                        "first_name": "Bruno",
+                        "second_name": "Fernandes",
+                    },
+                ]
+            }
+        }
+    }
+
+
+def test_camoufox_explicit_availability_extractors_feed_existing_evidence_contract():
+    capture = {
+        "contract": "report_time_web_capture_v1",
+        "status": "READY",
+        "generated_at": "2026-10-04T00:00:00+00:00",
+        "report_slot": "2026-10-04T07:00:00+07:00",
+        "capture_count": 2,
+        "available_count": 2,
+        "captures": [
+            {
+                "source_id": "ffscout_editorial",
+                "source_class": "PUNDIT_CONSENSUS",
+                "status": "AVAILABLE",
+                "observed_at": "2026-10-04T00:00:00+00:00",
+                "final_url": "https://www.fantasyfootballscout.co.uk/team-news/",
+                "content_sha256": "a" * 64,
+                "visible_text": (
+                    "Out:\nCalafiori\n"
+                    "Doubts:\nHaaland 75%\n"
+                    "Banned:\nBruno Fernandes\n"
+                    "Latest News:\n"
+                ),
+            },
+            {
+                "source_id": "rotowire",
+                "source_class": "SECONDARY_AVAILABILITY",
+                "status": "AVAILABLE",
+                "observed_at": "2026-10-04T00:00:00+00:00",
+                "final_url": "https://www.rotowire.com/soccer/lineups.php",
+                "content_sha256": "b" * 64,
+                "visible_text": "Calafiori QUES\nBruno Fernandes SUS\n",
+            },
+        ],
+    }
+    existing = {
+        "contract": "report_time_evidence_v1",
+        "signals": [
+            {
+                "source_id": "fpl_harry",
+                "source_class": "PUNDIT_CONSENSUS",
+                "topic": "CAPTAINCY",
+                "subject": "Haaland",
+                "stance": "CAPTAIN",
+                "observed_at": "2026-10-04T00:00:00+00:00",
+                "source_url": "https://example.com/harry",
+                "summary": "Existing governed evidence stays intact.",
+            }
+        ],
+    }
+    evidence = build_evidence(
+        capture_payload=capture,
+        official_payload=_official_payload_for_evidence(),
+        existing_payload=existing,
+        report_slot="2026-10-04T07:00:00+07:00",
+    )
+    assert evidence["contract"] == "report_time_evidence_v1"
+    assert evidence["camoufox"]["deterministic_signal_count"] == 5
+    assert len(evidence["signals"]) == 6
+    camoufox_rows = [
+        row for row in evidence["signals"]
+        if row.get("origin_transport") == "CAMOUFOX"
+    ]
+    assert {row["source_id"] for row in camoufox_rows} == {
+        "ffscout_editorial",
+        "rotowire",
+    }
+    assert all(row["surface_material_news"] is True for row in camoufox_rows)
+    assert all(row["element_id"] in {1, 2, 3} for row in camoufox_rows)
+
+
+def test_historical_report_slot_skips_live_camoufox_capture(tmp_path):
+    slot = "2026-10-01T04:30:00+07:00"
+    now = datetime(2026, 10, 4, 0, 0, tzinfo=timezone.utc)
+    output = tmp_path / "capture.json"
+    result = run_web_capture(
+        output_path=output,
+        report_slot=slot,
+        now=now,
+    )
+    assert result["status"] == "SKIPPED_HISTORICAL_OR_FUTURE_SLOT"
+    assert result["capture_count"] == 0
+    assert output.is_file()
+
+
+def test_future_report_time_evidence_is_never_current():
+    now = datetime(2026, 10, 4, 0, 0, tzinfo=timezone.utc)
+    future = now + timedelta(hours=1)
+    payload = {
+        "contract": "report_time_evidence_v1",
+        "signals": [
+            {
+                "source_id": "ffscout_editorial",
+                "source_class": "PUNDIT_CONSENSUS",
+                "topic": "AVAILABILITY",
+                "subject": "Haaland",
+                "stance": "INJURY_RISK",
+                "observed_at": future.isoformat(),
+                "source_url": "https://www.fantasyfootballscout.co.uk/team-news/",
+                "summary": "Future observation must not bind to an older report slot.",
+            }
+        ],
+    }
+    validated = validate_evidence(payload, now=now)
+    assert validated["accepted_count"] == 1
+    assert validated["accepted"][0]["current"] is False
+    assert validated["accepted"][0]["age_hours"] < 0

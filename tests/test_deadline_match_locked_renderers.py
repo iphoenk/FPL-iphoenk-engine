@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.runtime_v6.domains.report_plane.human_presentation_qa import validate_human_presentation_surface
 from src.engines.v12_report_orchestration import (
     materialize_deadline_final_report,
     render_deep_text,
@@ -129,3 +130,28 @@ def test_final_gw_lock_package_renders_18_rows_before_alternatives():
     assert len(table_rows) == 18
     assert "| Bank after | UNKNOWN / UNAVAILABLE |" in package
     assert body.index("## GW LOCK PACKAGE") < body.index("PACKAGE OPTIMIZER / TRANSFER FRONTIER")
+
+
+def test_common_human_presentation_qa_rejects_machine_leaks_and_allows_fpl_acronyms():
+    clean = (
+        "EO 82/58 (141.4%) | xPts 7.2 | xMins 88 | BPS 40 | "
+        "DNP risk low | FT 1 | GW7 | FPL"
+    )
+    assert validate_human_presentation_surface(clean, report_mode="MATCH") == []
+
+    leaked = (
+        "element_id=123\n"
+        "user_summary: {'entry_id': 3462711}\n"
+        "actual_paths=500000\n"
+        "workflow_id=999\n"
+        "fingerprint=abc123\n"
+        "CURRENT_VALID\n"
+    )
+    failures = validate_human_presentation_surface(leaked, report_mode="MATCH")
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=element_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=entry_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=user_summary" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=actual_paths" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=raw_run_or_workflow_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=raw_sha_or_fingerprint" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=CURRENT_VALID" in failures

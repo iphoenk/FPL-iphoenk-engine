@@ -253,7 +253,7 @@ def validate_rendered_deep_presentation(
 
     report_mode = str((report or {}).get("report_mode") or "DEEP").strip().upper()
     if report_mode == "DEEP":
-        first_heading = re.search(r"(?m)^##\\s+1\\.\\s+", str(body or ""))
+        first_heading = re.search(r"(?m)^##\s+1\.\s+", str(body or ""))
         header_text = (
             str(body or "")[:first_heading.start()].strip()
             if first_heading

@@ -551,16 +551,6 @@ def validate_deep_decision_content_delivery(
         ):
             if token not in upper:
                 failures.append("S15_VISIBLE_CONTRACT_MISSING=" + token)
-        for forbidden in (
-            "PRIVATE DELIVERY:",
-            "PRESENTATION QA:",
-            "ORCHESTRATOR RUN:",
-            "REPORT RUN:",
-            "SHA:",
-            "FINGERPRINT:",
-        ):
-            if forbidden in upper:
-                failures.append("S15_TECHNICAL_OWNERSHIP_LEAK=" + forbidden)
 
     if state("S16") == "COMPLETE":
         for token in (

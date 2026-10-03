@@ -14,8 +14,8 @@ def test_deadline_final_presentation_lock_is_exact():
 
 def test_deadline_overlay_exact_tables_and_s15b_protection():
     overlay=load_deadline_final_presentation_lock()["deadline_overlay"]
-    assert overlay["S05"]["tables"][0]["columns"] == ["Player","News","Availability impact","Evidence tier","As of","Decision impact"]
-    assert overlay["S05"]["tables"][1]["columns"] == ["Player","Predicted status","Evidence tier","Confidence","Decision consequence"]
+    assert overlay["S04"]["tables"][0]["columns"] == ["Player","News","Availability impact","Evidence tier","As of","Decision impact"]
+    assert overlay["S04"]["tables"][1]["columns"] == ["Player","Predicted status","Evidence tier","Confidence","Decision consequence"]
     assert overlay["S14"]["tables"][0]["columns"] == ["Route","Legal","Affordable","1GW","3GW","5GW","P>HOLD","Value of waiting","Reversal / Abort","Action"]
     assert overlay["S15B"]["extra_tables_forbidden"] is True
     assert overlay["S18"]["tables"][0]["rows"] == ["NOW","NEXT","TRIGGER TO ACT","LATEST SAFE DECISION POINT","COST OF WAITING","ABORT / REVERSAL","BEST ALTERNATIVE"]
@@ -50,5 +50,5 @@ def test_match_visible_tables_cover_all_structured_sections():
 def test_match_icon_live_keeps_exposure_and_rivals_separate():
     tables=load_match_presentation_lock()["sections"]["MATCH10"]["tables"]
     assert tables[0]["name"] == "Material player exposure"
-    assert tables[1]["name"] == "Direct rival live consequence"
-    assert tables[0]["columns"] == ["Player","Owned","Starter","Captain","Vice","EO","Live consequence"]
+    assert tables[1]["name"] == "Competitive Window live consequence"
+    assert tables[0]["columns"] == ["Player","Owned","Starter","Captain","Vice","EO","Live consequence"]\n    assert load_match_presentation_lock()["rules"]["match10_uses_shared_competitive_window_resolver"] is True\n    assert load_match_presentation_lock()["rules"]["fresh_direct_rival_semantics_forbidden"] is True

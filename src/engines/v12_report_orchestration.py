@@ -5481,6 +5481,7 @@ def _render_deep_visible_contract_lines(
             if isinstance(item, Mapping)
         ]
         lines.append("### CAPTAIN LANDSCAPE")
+        lines.append("EXPOSURE / LEVERAGE CLASS: contextual mini-league evidence; football captain ranking remains primary.")
         if captain_rows:
             lines.extend(
                 _markdown_table(

@@ -28,7 +28,9 @@
     "counts_require_denominator_and_percentage_when_population_known": true,
     "eo_may_exceed_100_percent": true,
     "healthy_submitted_picks_scope_survives_stale_standings": true,
-    "evidence_not_automatic_transfer": true
+    "evidence_not_automatic_transfer": true,
+    "match10_uses_shared_competitive_window_resolver": true,
+    "fresh_direct_rival_semantics_forbidden": true
   },
   "sections": {
     "MATCH1": {
@@ -236,7 +238,7 @@
           ]
         },
         {
-          "name": "Direct rival live consequence",
+          "name": "Competitive Window live consequence",
           "columns": [
             "Manager",
             "Live points",
@@ -248,7 +250,13 @@
         }
       ],
       "denominator_format": "numerator/denominator (percentage%) for every supported population count; EO may exceed 100%",
-      "scope_rule": "Exposure may remain COMPLETE while standings are DEGRADED."
+      "scope_rule": "Exposure may remain COMPLETE while standings are DEGRADED.",
+      "blocks": [
+        "Competitive Window resolved by shared dynamic cohort resolver",
+        "Fresh reports use competitive_window and competitive_rival_live_consequence",
+        "Legacy direct_rival_live_consequence is historical-read only"
+      ],
+      "competitive_window_rule": "RANK_LT_10_TOP10_ELSE_9_ABOVE_5_BELOW"
     },
     "MATCH11": {
       "title": "NEXT-GW LEARNING",

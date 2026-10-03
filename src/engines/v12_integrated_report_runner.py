@@ -8254,6 +8254,7 @@ def run_deep(
             "COMPLETE" if stage3_internal_pass else "DEGRADED",
             {
                 "universe_scan": universe_gap,
+                "selected_route_id": (stage3_decision or {}).get("selected_route_id") or "HOLD",
                 "package_routes": stage3_visible.get("package_routes", []),
                 "frontier": stage3_visible.get("frontier", []),
                 **stage3_visible,

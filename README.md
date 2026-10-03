@@ -573,7 +573,7 @@ A DEEP report is deliverable only when its governed analytics, canonical materia
 
 PRICE reporting uses the same fail-closed principle: factual price evidence, freshness, decision context, and WAIT / PREPARE / ACT interpretation must remain traceable to their governed producers. A price report cannot silently invent unavailable manager state or decision output.
 
-The durable visible contract is versioned at `config/intelligence/v12_price_presentation_lock_v1.json`. It freezes the exact 12-section order, human table columns, OUR15/Watchlist20/RISE20/FALL20 row contracts, the six-row Action Board, source-health presentation, and the separation of FACT / MODEL / INFERENCE. User-facing PRICE tables must not expose `element_id`, raw manager dictionaries, run/workflow/SHA plumbing, or a generic recursive key/value dump. PRICE8 is deliberately split into economics and risk/horizon tables so mobile output remains readable.
+The durable visible contract is versioned at `config/intelligence/v12_price_presentation_lock_v1.json`. It freezes the exact 12-section order, human table columns, OUR15/Watchlist20/RISE20/FALL20 row contracts, the six-row Action Board, source-health presentation, and the separation of FACT / MODEL / INFERENCE. User-facing PRICE tables must not expose `element_id`, raw manager dictionaries, run/workflow/SHA plumbing, or a generic recursive key/value dump. PRICE8 is deliberately split into economics and risk/horizon tables so mobile output remains readable. Renderer enforcement and visible-body QA are separate from the contract file, so a contract-only change cannot be treated as delivered presentation.
 
 ## Public / private boundary
 

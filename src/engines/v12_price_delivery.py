@@ -17,6 +17,10 @@ import json
 from pathlib import Path
 
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_price_presentation_lock import (
+    load_price_presentation_lock,
+    validate_price_presentation_lock,
+)
 from src.engines.v12_report_orchestration import (
     build_actionable_price_radar,
     build_price20,
@@ -517,7 +521,10 @@ def _route_economics(
         output.append(
             {
                 "route": route.get("route")
-                or f"{int(out_id)} -> {int(in_id)}",
+                or (
+                    f"{out_row.get('name') or out_row.get('player') or 'OUT'} -> "
+                    f"{in_row.get('player') or in_row.get('web_name') or route.get('in_name') or 'IN'}"
+                ),
                 "out_element_id": int(out_id),
                 "in_element_id": int(in_id),
                 "out_selling_price": sell,
@@ -628,6 +635,17 @@ def build_price_delivery_report(
         owned_element_ids=owned_ids if team_resolution.get("supportable") else (),
         universe_authority=universe_authority,
     )
+    official_players = _player_map(bootstrap)
+    team_names = {
+        int(row["id"]): row.get("short_name") or row.get("name") or str(row["id"])
+        for row in bootstrap.get("teams") or []
+        if isinstance(row, Mapping) and row.get("id") is not None
+    }
+    owned_meta_by_id = {
+        int(row["element_id"]): row
+        for row in owned_rows
+        if row.get("element_id") is not None
+    }
     watch_price = build_actionable_price_radar(
         owned15=list(watchlist.get("rows") or []),
         predictor_artifact=predictor,
@@ -660,6 +678,16 @@ def build_price_delivery_report(
     for block in (rise, fall):
         for row in block.get("rows") or []:
             row["eta_status"] = _eta_status(row)
+            official = official_players.get(int(row.get("element_id") or row.get("id") or -1)) or {}
+            row["position"] = _position(
+                row.get("position") or row.get("element_type") or official.get("element_type")
+            )
+            team_id = row.get("team_id") or row.get("team") or official.get("team")
+            try:
+                team_id_int = int(team_id) if team_id is not None else None
+            except (TypeError, ValueError):
+                team_id_int = None
+            row["club"] = team_names.get(team_id_int, row.get("club") or "UNAVAILABLE")
             row["our15_flag"] = (
                 "YES"
                 if team_resolution.get("supportable")
@@ -680,6 +708,8 @@ def build_price_delivery_report(
 
     for row in our15.get("rows") or []:
         row["eta_status"] = _eta_status(row)
+        meta = owned_meta_by_id.get(int(row.get("element_id") or -1)) or {}
+        row["position"] = _position(meta.get("position") or meta.get("element_type"))
         row["ownership_scope"] = team_resolution.get("state")
         row["direction"] = row.get("predictor_direction", "UNAVAILABLE")
         row["official_or_provider_progress"] = row.get(
@@ -801,11 +831,12 @@ def build_price_delivery_report(
     by_id["PRICE4"]["content"] = {
         "alerts": [
             {
-                "element_id": row.get("element_id"),
                 "player": row.get("name") or row.get("player"),
-                "reason": "owned price pressure",
-                "horizon": "1GW / 3GW / 5GW football decision remains upstream",
-                "classification": "INFERENCE",
+                "price_pressure": row.get("direction") or "UNAVAILABLE",
+                "squad_need": f"{row.get('position') or 'Squad'} value / affordability watch",
+                "football_horizon": "1GW / 3GW / 5GW",
+                "affordability_impact": row.get("impact_on_our_decision") or "UNAVAILABLE",
+                "action": action,
             }
             for row in price_risk[:10]
         ],
@@ -843,6 +874,7 @@ def build_price_delivery_report(
             ),
         }
     )
+    mini_user = dict(mini.get("user_summary") or {})
     by_id["PRICE9"].update(
         {
             "state": mini_state,
@@ -850,12 +882,20 @@ def build_price_delivery_report(
                 "league_name": mini.get("league_name"),
                 "expected_manager_count": mini.get("expected_manager_count"),
                 "collected_manager_count": mini.get("collected_manager_count"),
-                "user_summary": mini.get("user_summary"),
+                "current_rank": mini_user.get("rank"),
+                "current_points": mini_user.get("total"),
+                "evidence_freshness": mini.get("generated_at", "UNAVAILABLE"),
                 "price_route_impact": (
                     "UNAVAILABLE"
                     if not route_rows
-                    else "evaluate ownership/starter/captain exposure against each supportable route"
+                    else "Evaluate exposure only for supportable routes; price timing never overrides football quality."
                 ),
+                "mini_league_consequence": (
+                    "Current standings/exposure scope is incomplete; do not manufacture player-level exposure."
+                    if mini_state != "COMPLETE"
+                    else "Use current league evidence only where exact player/route exposure is supportable."
+                ),
+                "exposure_rows": [],
             },
             "degradation_reason": (
                 None if mini_state == "COMPLETE"
@@ -872,6 +912,7 @@ def build_price_delivery_report(
         "mini_league_timestamp": mini.get("generated_at", "UNAVAILABLE"),
         "mini_league_status": mini_state,
         "core_logical_slot": source.get("core_logical_slot", "UNAVAILABLE"),
+        "core_binding_state": source.get("core_binding_state", "UNAVAILABLE"),
         "core_run_id": source.get("core_run_id", "UNAVAILABLE"),
         "runtime_snapshot": source.get("runtime_snapshot", "UNAVAILABLE"),
         "predictor_health": predictor_health,
@@ -879,13 +920,18 @@ def build_price_delivery_report(
     by_id["PRICE12"]["content"] = {
         "action": action,
         "key_price_risk": (
-            "supportable route affordability deterioration"
+            "Supportable route affordability deterioration"
             if meaningful_route_risk
-            else "no supportable route affordability deterioration proven"
+            else "No supportable route affordability deterioration proven"
         ),
         "affordability_threatened": meaningful_route_risk,
         "football_edge_justifies_action": action == "ACT",
         "next_checkpoint": action_board["LATEST SAFE DECISION POINT"],
+        "final_judgement": (
+            "Act only if the upstream football decision is ACT and the selected route remains legal and affordable."
+            if action == "ACT"
+            else "Do not force a transfer for price movement alone; preserve the football decision and reassess at the next checkpoint."
+        ),
     }
 
     for row in sections:
@@ -964,136 +1010,302 @@ def _table(headers: Sequence[str], rows: Sequence[Sequence[Any]]) -> list[str]:
     return [head, sep, *body]
 
 
+def _human_scalar(value: Any) -> str:
+    if value is None or value == "":
+        return "UNAVAILABLE"
+    if isinstance(value, Mapping) or isinstance(value, (list, tuple, set)):
+        return "UNAVAILABLE"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    text = str(value)
+    mapping = {
+        "MATERIAL_RISK": "Material risk",
+        "NO_PROVEN_MATERIAL_CHANGE": "No proven material change",
+        "CURRENT_V12_WATCHLIST": "Current V12 watchlist",
+        "EVALUATE_WITH_ROUTE_FINANCE": "Evaluate with route finance",
+        "OWNERSHIP_SCOPE_UNRESOLVED": "Ownership scope unresolved",
+        "STALE_SCOPE": "Stale scope",
+        "KNOWN": "Known",
+        "UNKNOWN": "Unknown",
+        "AVAILABLE": "Available",
+        "CURRENT": "Current",
+        "COMPLETE": "Complete",
+        "DEGRADED": "Degraded",
+        "UNAVAILABLE": "Unavailable",
+    }
+    if text in mapping:
+        return mapping[text]
+    if re.fullmatch(r"[A-Z][A-Z0-9_ /-]{3,}", text) and "_" in text:
+        return text.replace("_", " ").capitalize()
+    return text
+
+
+def _coverage(collected: Any, expected: Any) -> str:
+    if collected is None or expected is None:
+        return "UNAVAILABLE"
+    return f"{collected}/{expected}"
+
+
 def render_price_report(report: Mapping[str, Any]) -> str:
+    contract_failures = validate_price_presentation_lock(load_price_presentation_lock())
+    if contract_failures:
+        raise PriceDeliveryError("PRICE presentation lock invalid: " + ",".join(contract_failures))
+
     sections = list(report.get("sections") or [])
     lines = [
         f"FPL MASTER V12 | PRICE | GW{report.get('planning_gw')}",
-        "FACT: Official FPL factual evidence. MODEL: price/model evidence. INFERENCE: decision-layer synthesis.",
+        "FACT: confirmed Official FPL evidence. MODEL: predictor/model evidence. INFERENCE: decision-layer interpretation.",
         "",
     ]
+    current = dict(report.get("current15") or {})
+    watch = dict(report.get("watchlist20") or {})
+
     for index, section in enumerate(sections, 1):
         lines.append(f"## PRICE {index} - {section.get('label')}")
-        lines.append(f"STATUS: {section.get('state')}")
-        if section.get("degradation_reason"):
-            lines.append(f"DEGRADATION_REASON: {section.get('degradation_reason')}")
+        if str(section.get("state") or "").upper() != "COMPLETE":
+            lines.append("Scope status: " + _human_scalar(section.get("state")))
+            if section.get("degradation_reason"):
+                lines.append("Scope note: " + _human_scalar(section.get("degradation_reason")))
         content = dict(section.get("content") or {})
 
         if index == 1:
-            lines.append(f"ACTION: {content.get('action')}")
-            lines.append(f"Material change: {_cell(content.get('material_change'))}")
-            lines.append(f"Affordability: {_cell(content.get('affordability_changed'))}")
-            lines.append(f"Price pressure: {_cell(content.get('price_pressure'))}")
-            lines.append("Football decision precedence: price alone does not force ACT.")
+            action = _human_scalar(content.get("action"))
+            affordability = _human_scalar(content.get("affordability_changed"))
+            pressure = content.get("price_pressure")
+            lines.extend([
+                "Current action",
+                action,
+                "",
+                "Material change",
+                _human_scalar(content.get("material_change")),
+                "",
+                "Affordability",
+                affordability,
+                "",
+                "Price pressure",
+                f"{pressure} owned-player pressure signal(s)" if pressure is not None else "UNAVAILABLE",
+                "",
+                "Football implication",
+                "Price movement cannot override the upstream football decision.",
+                "",
+                "Conclusion",
+                (
+                    "Prepare/act only when football edge and executable route economics agree."
+                    if str(content.get("action") or "").upper() in {"PREPARE","ACT"}
+                    else "Wait unless new football or affordability evidence changes the route."
+                ),
+            ])
         elif index == 2:
             rows = list(content.get("rows") or [])
+            sell_available = sum(
+                row.get("authenticated_sell_value") not in {None, "", "UNAVAILABLE"}
+                for row in rows
+            )
+            lines.extend([
+                f"Current15 authority: {_human_scalar(content.get('source_class') or content.get('ownership_state'))}",
+                f"Planning GW: {_human_scalar(content.get('gw'))}",
+                f"Observed at: {_human_scalar(content.get('observed_at'))}",
+                f"Squad completeness: {len(rows)}/15",
+                f"Selling-value availability: {sell_available}/{len(rows) if rows else 15}",
+            ])
             lines.extend(_table(
-                ("element_id", "Player", "Position", "Market", "Sell", "Direction", "Progress", "ETA/status", "Implication", "Ownership scope"),
+                ("Player","Pos","Market","Sell","Direction","Progress","ETA / Status","Decision impact"),
                 [(
-                    row.get("element_id"),
                     row.get("name") or row.get("player"),
                     row.get("position"),
                     row.get("current_price"),
-                    row.get("selling_price", row.get("sell_value")),
-                    row.get("direction"),
+                    row.get("authenticated_sell_value", "UNAVAILABLE"),
+                    _human_scalar(row.get("direction")),
                     row.get("official_or_provider_progress"),
-                    row.get("eta_status"),
-                    row.get("impact_on_our_decision"),
-                    row.get("ownership_scope"),
+                    _human_scalar(row.get("eta_status")),
+                    _human_scalar(row.get("impact_on_our_decision")),
                 ) for row in rows],
             ))
             lines.append(
-                "Evidence: source="
-                + _cell(content.get("source_class"))
-                + " gw="
-                + _cell(content.get("gw"))
-                + " timestamp="
-                + _cell(content.get("observed_at"))
+                "Lineage note: source="
+                + _human_scalar(content.get("source_class"))
+                + "; GW="
+                + _human_scalar(content.get("gw"))
+                + "; observed="
+                + _human_scalar(content.get("observed_at"))
             )
         elif index == 3:
             changes = list(content.get("official_changes") or [])
+            lines.append("FACT — confirmed Official change")
             if changes:
                 lines.extend(_table(
-                    ("element_id", "Player", "Official delta", "Current price", "Class"),
+                    ("Player","Official Δ","Current price","Evidence class"),
                     [(
-                        row.get("element_id"), row.get("player"), row.get("official_delta"),
-                        row.get("current_price"), row.get("classification")
+                        row.get("player"), row.get("official_delta"), row.get("current_price"),
+                        _human_scalar(row.get("classification")),
                     ) for row in changes],
                 ))
             else:
-                lines.append("FACT: No current event official price delta rows in the bound snapshot.")
-            lines.append("MODEL: " + _cell(content.get("predictor_delta_state")))
+                lines.append("No confirmed Official price delta in the bound snapshot.")
+            lines.append("")
+            lines.append("MODEL — predictor movement")
+            lines.append(_human_scalar(content.get("predictor_delta_state")))
+            lines.append("")
+            lines.append("INFERENCE — decision consequence")
+            lines.append("A predictor move is material only if it changes a supportable route or affordability window.")
         elif index == 4:
             alerts = list(content.get("alerts") or [])
             if alerts:
                 lines.extend(_table(
-                    ("element_id", "Player", "Reason", "Horizon", "Class"),
+                    ("Player","Price pressure","Squad need","Football horizon","Affordability impact","Action"),
                     [(
-                        row.get("element_id"), row.get("player"), row.get("reason"),
-                        row.get("horizon"), row.get("classification")
+                        row.get("player"), _human_scalar(row.get("price_pressure")), row.get("squad_need"),
+                        row.get("football_horizon"), _human_scalar(row.get("affordability_impact")),
+                        _human_scalar(row.get("action")),
                     ) for row in alerts],
                 ))
             else:
-                lines.append("INFERENCE: No evidence-backed team-needs price alert is currently proven.")
+                lines.append("No evidence-backed owned-player price alert currently changes the decision.")
+            routes = list(content.get("route_rows") or [])
+            if routes:
+                lines.append("")
+                lines.extend(_table(
+                    ("Route","Price risk","Current affordability","Football relevance","Decision impact"),
+                    [(
+                        row.get("route"),
+                        "Material" if (row.get("target_plus_0_1") is False or row.get("outgoing_minus_0_1") is False) else "No material loss proven",
+                        _human_scalar(row.get("nominal_affordability")),
+                        f"1GW={row.get('utility_1gw')}; 3GW={row.get('utility_3gw')}; 5GW={row.get('utility_5gw')}",
+                        _human_scalar(row.get("football_action")),
+                    ) for row in routes],
+                ))
         elif index == 5:
             rows = list(content.get("rows") or [])
+            counts = Counter(_position(row.get("position")) for row in rows)
+            admit_values = [row.get("admit") for row in rows if row.get("admit") is not None]
+            actionable = sum(str(value).upper() in {"ACTIONABLE","ADMIT","YES","TRUE"} for value in admit_values) if admit_values else "UNAVAILABLE"
+            lines.extend([
+                f"Universe scanned: {_human_scalar(watch.get('universe_evaluated') or watch.get('eligible_universe_count') or watch.get('universe_count'))}",
+                f"Scanner20: {len(rows)}/20",
+                f"Composition: {counts.get('GK',0)} GK / {counts.get('DEF',0)} DEF / {counts.get('MID',0)} MID / {counts.get('FWD',0)} FWD",
+                f"Actionable count: {actionable}",
+            ])
             lines.extend(_table(
-                ("element_id", "Player", "Position", "Price", "Direction", "Progress", "ETA/status", "Football relevance", "Squad relevance", "Affordability relevance"),
+                ("Player","Pos","£","Direction","Progress","ETA / Status","Football relevance","Squad relevance","Affordability relevance"),
                 [(
-                    row.get("element_id"), row.get("name") or row.get("player"), row.get("position"),
-                    row.get("current_price"), row.get("predictor_direction"), row.get("predictor_progress"),
-                    row.get("eta_status"), row.get("football_relevance"), row.get("squad_relevance"),
-                    row.get("affordability_relevance")
+                    row.get("name") or row.get("player"), row.get("position"), row.get("current_price"),
+                    _human_scalar(row.get("predictor_direction")), row.get("predictor_progress"),
+                    _human_scalar(row.get("eta_status")), row.get("football_relevance"),
+                    _human_scalar(row.get("squad_relevance")), _human_scalar(row.get("affordability_relevance")),
                 ) for row in rows],
             ))
         elif index in {6, 7}:
             rows = list(content.get("rows") or [])
             lines.extend(_table(
-                ("Rank", "element_id", "Player", "Pos/team", "Price", "Progress", "Direction", "ETA/status", "Urgency/confidence", "OUR15", "WATCHLIST", "Timestamp"),
+                ("#","Player","Pos / Club","£","Progress","Direction","ETA / Status","Confidence","OUR15","Watchlist","As of"),
                 [(
-                    rank, row.get("element_id"), row.get("player"),
-                    f"{POSITION_BY_TYPE.get(int(row.get('element_type') or 0), row.get('element_type'))}/{row.get('team')}",
-                    row.get("current_price"), row.get("projected_percent"), row.get("direction"),
-                    row.get("eta_status"), row.get("prediction_strength"), row.get("our15_flag"),
-                    row.get("watchlist_flag"), row.get("evidence_timestamp")
+                    rank, row.get("player"),
+                    f"{row.get('position') or 'UNAVAILABLE'} / {row.get('club') or 'UNAVAILABLE'}",
+                    row.get("current_price"), row.get("projected_percent"), _human_scalar(row.get("direction")),
+                    _human_scalar(row.get("eta_status")),
+                    _human_scalar(row.get("confidence") or row.get("prediction_strength")),
+                    _human_scalar(row.get("our15_flag")), _human_scalar(row.get("watchlist_flag")),
+                    row.get("evidence_timestamp"),
                 ) for rank, row in enumerate(rows, 1)],
             ))
+            crossing = sum(
+                bool(row.get("estimated_change_date_wib"))
+                or str(row.get("date_state") or "").upper() == "EXPECTED_CHANGE_DATE"
+                for row in rows
+            )
+            lines.append(f"Projected crossing / material timing: {crossing}/{len(rows) if rows else 20}")
         elif index == 8:
             routes = list(content.get("routes") or [])
             if routes:
+                lines.append("Current economics")
                 lines.extend(_table(
-                    ("Route", "OUT sell", "IN price", "Bank before", "Affordable", "Bank after", "FT", "Hit", "FT/HIT economics", "Target +0.1", "OUT -0.1", "Combined", "Route survives", "1GW", "3GW", "5GW", "Reversal risk"),
+                    ("Route","OUT sell","IN price","Bank before","Affordable","Bank after","FT","Hit"),
                     [(
                         row.get("route"), row.get("out_selling_price"), row.get("in_current_price"),
-                        row.get("bank_before"), row.get("nominal_affordability"), row.get("bank_after"),
-                        row.get("free_transfers"), row.get("hit_cost"), row.get("ft_hit_economics"),
-                        row.get("target_plus_0_1"), row.get("outgoing_minus_0_1"),
-                        row.get("combined_deterioration"), row.get("route_remains_affordable"),
-                        row.get("utility_1gw"), row.get("utility_3gw"), row.get("utility_5gw"),
-                        row.get("buyback_reversal_exit_risk")
+                        row.get("bank_before"), _human_scalar(row.get("nominal_affordability")),
+                        row.get("bank_after"), _human_scalar(row.get("free_transfers")),
+                        _human_scalar(row.get("hit_cost")),
+                    ) for row in routes],
+                ))
+                lines.append("")
+                lines.append("Risk & football horizon")
+                lines.extend(_table(
+                    ("Route","Target +0.1","OUT -0.1","Combined","Route survives","1GW","3GW","5GW","Reversal risk"),
+                    [(
+                        row.get("route"), _human_scalar(row.get("target_plus_0_1")),
+                        _human_scalar(row.get("outgoing_minus_0_1")), _human_scalar(row.get("combined_deterioration")),
+                        _human_scalar(row.get("route_remains_affordable")), row.get("utility_1gw"),
+                        row.get("utility_3gw"), row.get("utility_5gw"),
+                        _human_scalar(row.get("buyback_reversal_exit_risk")),
                     ) for row in routes],
                 ))
             else:
-                lines.append("INFERENCE: No supportable serious OUT -> IN route is available for economics materialization.")
-            lines.append("Affordability and FT/HIT economics are separate contracts.")
+                lines.append("No supportable serious OUT -> IN route is available for economics materialization.")
+            lines.append("Affordability and FT/HIT economics are separate authorities. Unknown FT/hit does not invalidate a supportable budget calculation.")
         elif index == 9:
-            lines.append("MINI_LEAGUE_STATE: " + str(section.get("state")))
-            for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+            expected = content.get("expected_manager_count")
+            collected = content.get("collected_manager_count")
+            lines.extend([
+                f"League: {_human_scalar(content.get('league_name'))}",
+                f"Coverage: {_coverage(collected, expected)}",
+                f"Current rank: {_human_scalar(content.get('current_rank'))}",
+                f"Points: {_human_scalar(content.get('current_points'))}",
+                f"Evidence freshness: {_human_scalar(content.get('evidence_freshness'))}",
+            ])
+            exposure = list(content.get("exposure_rows") or [])
+            if exposure:
+                lines.extend(_table(
+                    ("Player / Route","Scope","Owned","Starter","Captain","EO","Price implication"),
+                    [(
+                        row.get("player_or_route"), row.get("scope"), row.get("owned"), row.get("starter"),
+                        row.get("captain"), row.get("eo"), row.get("price_implication"),
+                    ) for row in exposure],
+                ))
+            lines.extend([
+                "",
+                "Price route implication",
+                _human_scalar(content.get("price_route_impact")),
+                "",
+                "Mini-league consequence",
+                _human_scalar(content.get("mini_league_consequence")),
+            ])
         elif index == 10:
-            for field in ACTION_BOARD_FIELDS:
-                lines.append(f"{field}: {_cell(content.get(field))}")
+            lines.extend(_table(
+                ("Field","Current call"),
+                [(field, _human_scalar(content.get(field))) for field in ACTION_BOARD_FIELDS],
+            ))
         elif index == 11:
-            for key, value in content.items():
-                lines.append(f"{key}: {_cell(value)}")
+            rows = [
+                ("Official FPL price", "Available" if content.get("official_timestamp") not in {None,"","UNAVAILABLE"} else "Unavailable", content.get("official_timestamp")),
+                ("Official predictor", _human_scalar(content.get("predictor_health")), content.get("predictor_timestamp")),
+                ("Current team / personal", _human_scalar(content.get("personal_status")), content.get("personal_timestamp")),
+                ("Mini-league", _human_scalar(content.get("mini_league_status")), content.get("mini_league_timestamp")),
+                ("Core/runtime evidence", _human_scalar(content.get("core_binding_state")), content.get("core_logical_slot")),
+            ]
+            lines.extend(_table(("Source","Status","As of"), rows))
+            lines.append("Audit note: workflow/run/SHA lineage remains available in the canonical artifact, not the main report body.")
         elif index == 12:
-            lines.append(f"ACTION: {_cell(content.get('action'))}")
-            lines.append(f"Key price risk: {_cell(content.get('key_price_risk'))}")
-            lines.append(f"Affordability threatened: {_cell(content.get('affordability_threatened'))}")
-            lines.append(f"Football edge justifies action: {_cell(content.get('football_edge_justifies_action'))}")
-            lines.append(f"Next checkpoint: {_cell(content.get('next_checkpoint'))}")
+            lines.extend([
+                "Current action",
+                _human_scalar(content.get("action")),
+                "",
+                "Key price risk",
+                _human_scalar(content.get("key_price_risk")),
+                "",
+                "Affordability threatened?",
+                _human_scalar(content.get("affordability_threatened")),
+                "",
+                "Does football edge justify action?",
+                _human_scalar(content.get("football_edge_justifies_action")),
+                "",
+                "Next checkpoint",
+                _human_scalar(content.get("next_checkpoint")),
+                "",
+                "One-sentence final judgement",
+                _human_scalar(content.get("final_judgement")),
+            ])
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
-
 
 def _parse_sections(body: str) -> tuple[list[str], dict[str, str]]:
     matches = list(re.finditer(
@@ -1130,6 +1342,7 @@ def validate_price_visible_body(
     report: Mapping[str, Any],
 ) -> list[str]:
     failures = validate_price_report_model(report)
+    failures.extend(validate_price_presentation_lock())
     order, sections = _parse_sections(str(body or ""))
     expected = [f"PRICE{i}" for i in range(1, 13)]
     if order != expected:
@@ -1141,15 +1354,29 @@ def validate_price_visible_body(
     if "FACT:" not in body or "MODEL:" not in body or "INFERENCE:" not in body:
         failures.append("VISIBLE_FACT_MODEL_INFERENCE_LABELS_MISSING")
 
+    exact_headers = {
+        "PRICE2": ["Player","Pos","Market","Sell","Direction","Progress","ETA / Status","Decision impact"],
+        "PRICE3": ["Player","Official Δ","Current price","Evidence class"],
+        "PRICE5": ["Player","Pos","£","Direction","Progress","ETA / Status","Football relevance","Squad relevance","Affordability relevance"],
+        "PRICE6": ["#","Player","Pos / Club","£","Progress","Direction","ETA / Status","Confidence","OUR15","Watchlist","As of"],
+        "PRICE7": ["#","Player","Pos / Club","£","Progress","Direction","ETA / Status","Confidence","OUR15","Watchlist","As of"],
+        "PRICE10": ["Field","Current call"],
+        "PRICE11": ["Source","Status","As of"],
+    }
+    for sid, expected_header in exact_headers.items():
+        headers, _ = _table_rows(sections.get(sid, ""))
+        if headers and headers != expected_header:
+            failures.append(f"VISIBLE_{sid}_COLUMNS_MISMATCH")
+
     current = dict(report.get("current15") or {})
     headers, rows = _table_rows(sections.get("PRICE2", ""))
     if current.get("supportable"):
         if len(rows) != 15:
             failures.append(f"VISIBLE_OUR15_COUNT={len(rows)}!=15")
-        ids = [row.get("element_id") for row in rows]
-        if len(set(ids)) != len(ids):
+        names = [row.get("Player") for row in rows]
+        if len(set(names)) != len(names):
             failures.append("VISIBLE_OUR15_DUPLICATE")
-        if "ETA/status" not in headers or any(not row.get("ETA/status") for row in rows):
+        if "ETA / Status" not in headers or any(not row.get("ETA / Status") for row in rows):
             failures.append("VISIBLE_OUR15_ETA_MISSING")
 
     for key, section_id, position_split in (
@@ -1160,36 +1387,55 @@ def validate_price_visible_body(
         block = dict(report.get(key) or {})
         headers, visible_rows = _table_rows(sections.get(section_id, ""))
         if visible_rows and (
-            "ETA/status" not in headers
-            or any(not row.get("ETA/status") for row in visible_rows)
+            "ETA / Status" not in headers
+            or any(not row.get("ETA / Status") for row in visible_rows)
         ):
             failures.append(f"VISIBLE_{key.upper()}_ETA_MISSING")
         if str(block.get("state") or "").upper() == "COMPLETE":
             if len(visible_rows) != 20:
                 failures.append(f"VISIBLE_{key.upper()}_COUNT={len(visible_rows)}!=20")
             if position_split:
-                counts = Counter(_position(row.get("Position")) for row in visible_rows)
+                counts = Counter(_position(row.get("Pos")) for row in visible_rows)
                 if counts != Counter({"GK": 5, "DEF": 5, "MID": 5, "FWD": 5}):
                     failures.append("VISIBLE_WATCHLIST20_POSITION_SPLIT_INVALID")
 
-    action_section = sections.get("PRICE10", "")
+    action_headers, action_rows = _table_rows(sections.get("PRICE10", ""))
+    if action_headers != ["Field","Current call"]:
+        failures.append("VISIBLE_ACTION_BOARD_COLUMNS_MISMATCH")
+    action_map = {row.get("Field"): row.get("Current call") for row in action_rows}
+    if len(action_rows) != 6:
+        failures.append(f"VISIBLE_ACTION_BOARD_COUNT={len(action_rows)}!=6")
     for field in ACTION_BOARD_FIELDS:
-        if not re.search(rf"(?m)^{re.escape(field)}:\s*\S", action_section):
+        if not str(action_map.get(field) or "").strip():
             failures.append(f"VISIBLE_ACTION_BOARD_FIELD_MISSING={field}")
 
     first = sections.get("PRICE1", "")
-    action_match = re.search(r"(?m)^ACTION:\s*(WAIT|PREPARE|ACT)\s*$", first)
-    if not action_match:
+    if not re.search(r"(?m)^Current action\s*\n(?:WAIT|PREPARE|ACT)\s*$", first):
         failures.append("VISIBLE_PRICE_ACTION_MISSING")
-    elif action_match.group(1) != str(report.get("action") or "").upper():
-        failures.append("VISIBLE_PRICE_ACTION_MISMATCH")
 
     final = sections.get("PRICE12", "")
-    if not re.search(r"(?m)^ACTION:\s*(WAIT|PREPARE|ACT)\s*$", final):
-        failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_ACTION_MISSING")
+    if "One-sentence final judgement" not in final:
+        failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_MISSING")
 
+    forbidden = {
+        "element_id": r"\belement_id\b",
+        "entry_id": r"\bentry_id\b",
+        "user_summary": r"\buser_summary\s*[:=]",
+        "raw_dict": r"\{[^\n]{0,200}['\"][^\n]{0,200}\}",
+        "actual_paths": r"\bactual_paths\s*=",
+        "raw_run_id": r"\b(?:run_id|workflow_id)\b",
+        "raw_sha": r"\b(?:sha256|fingerprint)\b",
+        "generic_key_value": r"(?m)^[A-Za-z_][A-Za-z0-9_]{2,}\s*=\s*\S+",
+    }
+    for label, pattern in forbidden.items():
+        if re.search(pattern, body, flags=re.IGNORECASE):
+            failures.append(f"VISIBLE_MACHINE_LANGUAGE_LEAK={label}")
+
+    if "MINI_LEAGUE_STATE:" in body:
+        failures.append("VISIBLE_PRICE9_GENERIC_DUMP")
+    if "Ownership scope" in body:
+        failures.append("VISIBLE_INTERNAL_OWNERSHIP_SCOPE")
     return list(dict.fromkeys(failures))
-
 
 def _read_json(path: Path, default: Any = None) -> Any:
     if not path.exists() or path.stat().st_size <= 0:

@@ -6,6 +6,7 @@ import re
 
 import pytest
 
+from src.engines.v12_price_presentation_lock import validate_price_presentation_lock
 from src.engines.v12_price_delivery import (
     PRICE_SECTION_IDS,
     build_price_delivery_report,
@@ -336,7 +337,7 @@ def test_f_directional_exact20_requires_twenty_actual_direction_rows():
 
 def test_g_eta_omitted_from_relevant_visible_rows_fails_qa():
     report = _healthy_report()
-    body = render_price_report(report).replace("ETA/status", "ETA")
+    body = render_price_report(report).replace("ETA / Status", "ETA")
     failures = validate_price_visible_body(body, report=report)
     assert any("ETA_MISSING" in failure for failure in failures)
 
@@ -344,7 +345,7 @@ def test_g_eta_omitted_from_relevant_visible_rows_fails_qa():
 def test_h_incomplete_action_board_fails_qa():
     report = _healthy_report()
     body = render_price_report(report)
-    body = re.sub(r"(?m)^ABORT / REVERSAL:.*\n", "", body)
+    body = re.sub(r"(?m)^\| ABORT / REVERSAL \|.*\n", "", body)
     failures = validate_price_visible_body(body, report=report)
     assert "VISIBLE_ACTION_BOARD_FIELD_MISSING=ABORT / REVERSAL" in failures
 
@@ -412,3 +413,19 @@ def test_l_no_hardcoded_player_or_fixed_current15_production_rule():
     for transient_name in ("Haaland", "Calafiori", "Sangaré", "Groß"):
         assert transient_name not in source
         assert transient_name not in block
+
+
+def test_m_locked_price_golden_surface_runs_in_required_ci():
+    assert validate_price_presentation_lock() == []
+    report = _healthy_report()
+    body = render_price_report(report)
+    assert body.count("## PRICE ") == 12
+    assert "| Player | Pos | Market | Sell | Direction | Progress | ETA / Status | Decision impact |" in body
+    assert "| Player | Pos | £ | Direction | Progress | ETA / Status | Football relevance | Squad relevance | Affordability relevance |" in body
+    assert "| # | Player | Pos / Club | £ | Progress | Direction | ETA / Status | Confidence | OUR15 | Watchlist | As of |" in body
+    assert "| Field | Current call |" in body
+    assert "| Source | Status | As of |" in body
+    assert "element_id" not in body
+    assert "user_summary" not in body
+    assert "core_run_id" not in body
+    assert "runtime_snapshot" not in body

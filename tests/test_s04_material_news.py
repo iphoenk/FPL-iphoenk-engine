@@ -68,3 +68,40 @@ def test_non_owned_non_watchlist_official_news_is_not_noise_dumped():
         report_timestamp="2026-10-03T12:30:00+07:00",
     )
     assert rows == []
+
+
+def test_official_news_older_than_previous_deep_is_not_repeated():
+    rows = build_official_fpl_material_news(
+        {
+            "elements": [
+                {
+                    "id": 7,
+                    "web_name": "Player Seven",
+                    "team": 3,
+                    "news": "Old availability note",
+                    "news_added": "2026-10-03T03:00:00+00:00",
+                }
+            ]
+        },
+        our_element_ids=[7],
+        watchlist_element_ids=[],
+        report_timestamp="2026-10-03T12:30:00+07:00",
+        previous_report_timestamp="2026-10-03T11:00:00+07:00",
+    )
+    assert rows == []
+
+
+def test_external_rumor_contract_never_self_authorizes_action():
+    row = normalize_material_news_item(
+        {
+            "subject": "Player",
+            "summary": "Circulating possible benching",
+            "source_class": "RUMOR / UNVERIFIED",
+            "source_name": "Unverified circulation",
+            "decision_relevance": "MONITOR",
+        }
+    )
+    assert row["source_class"] == "RUMOR / UNVERIFIED"
+    assert row["evidence_status"] == "UNVERIFIED"
+    assert row["act_authority"] is False
+    assert row["news_observation_is_model_update"] is False

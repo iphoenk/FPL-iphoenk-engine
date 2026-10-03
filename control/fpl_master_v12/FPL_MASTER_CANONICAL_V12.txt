@@ -21,7 +21,7 @@ Fixed visible schedule authority is config/delivery/v12_delivery_schedule.json:
 04:30 DEEP; 12:30 DEEP; 21:30 DEEP; PRICE at 23:30 Europe/London (05:30 WIB during BST, 06:30 WIB during GMT).
 Deadline checkpoints derive from the exact Official deadline: T-24h DEEP; T-12h DEEP; T-6h DEEP; T-3h DEEP; T-2h DELTA; T-1h DELTA + execution card; T-30m FINAL REVIEW; T-15m GO/NO-GO; T-5m FINAL CONFIRMATION. Deadline-active does NOT create hourly visible reports between these checkpoints.
 Quiet window is strictly after 21:30 through before 04:30 Asia/Jakarta. It suppresses extra visible reports except explicit owner ADHOC and the deadline window from T-3h through lock. Fixed 21:30 and 04:30 reports remain visible.
-MATCH and POST_MATCH may compute incrementally while quiet; outside deadline T-3, quiet-hour live work is summarized into the next permitted visible slot instead of emitting hourly Match reports. POST_ALL_MATCH is delivered at the first applicable visible slot after final factual completion.
+MATCH and POST_MATCH may compute incrementally while quiet; outside deadline T-3, quiet-hour live work is summarized into the next permitted visible slot instead of emitting hourly Match reports. POST_ALL_MATCH remains a backend settlement/calibration contract after final factual completion. Its user-facing post-GW review is delivered only through conditional S16B in the first eligible 04:30 Asia/Jakarta DEEP occurrence; POST_ALL_MATCH must not emit a duplicate visible review.
 When obligations overlap, emit exactly one coherent visible report carrying all applicable obligations; never duplicate DEEP+MATCH, PRICE+deadline, or checkpoint reports.
 Scheduled visible reports precompute at approximately T-15 to T-10 minutes, then freeze/validate/publish at the visible slot. GitHub runner queue/setup is not part of the warm-worker <=15s metric.
 Other checkpoints are silent unless routed visible by this contract or explicit owner request.
@@ -559,15 +559,33 @@ Exact visible order:
 15 EVIDENCE QUALITY
 15B ICON+ MINI-LEAGUE
 16 ALL15 TACTICAL / PROBABILITY REVIEW
-16B POST-MATCH REVIEW GW1 → NOW
+16B POST-MATCH REVIEW
 17 SOURCE HEALTH / FRESHNESS / LINEAGE
 18 ACTION BOARD
 19 FINAL JUDGEMENT.
 
-For DEEP, every structural section above MUST be visibly materialized in this exact order. Data unavailability never authorizes structural omission. A section without authoritative data remains visible as PARTIAL / DEGRADED / UNAVAILABLE with reason and counts where meaningful. "NOT RENDERED" is not a Canonical section state.
+S16B IS THE SOLE CONDITIONAL TOP-LEVEL DEEP SECTION.
+- DEEP_BASE contains exactly 22 top-level sections in the visible order above with S16B omitted: S01,S02,S03,S04,S05,S06,S06B,S07,S08,S09,S10,S11,S12,S13,S14,S14B,S15,S15B,S16,S17,S18,S19.
+- DEEP_WITH_S16B contains exactly 23 top-level sections and inserts S16B only between S16 and S17. S17/S18/S19 retain their identities and are never renumbered.
+- For every non-S16B structural DEEP section, visible materialization remains mandatory. Data unavailability never authorizes structural omission; affected fields/sections remain PARTIAL / DEGRADED / UNAVAILABLE with truthful reason and counts where meaningful.
+- When S16B_DUE=false, S16B MUST NOT EXIST in the visible report. Do not render S16B NOT DUE, S16B UNAVAILABLE, or any empty/status-only placeholder.
+- When S16B_DUE=true, S16B MUST EXIST and the report must contain exactly 23 top-level sections.
+
+S16B_DUE is true if and only if ALL of the following hold:
+1. report mode includes DEEP;
+2. the occurrence is exactly 04:30 Asia/Jakarta;
+3. one scoring GW is fully completed under Official FPL fixture identity: the expected fixture set is known and every fixture in that GW has started=true and finished=true, so completed_fixture_count == expected_fixture_count;
+4. post-match evidence is ready: settled match-level factual rows needed for result/minutes/FPL-point review exist for every expected fixture; and
+5. that completed GW has not already received S16B in a prior accepted visible occurrence.
+
+A new calendar date, some finished fixtures, an available trajectory, or a changed previous-GW number is never sufficient by itself. A postponed/rearranged fixture still belonging to the Official scoring GW keeps that GW incomplete until it is finished.
+
+POST_MATCH_EVIDENCE_READY is a settlement/readiness gate over existing evidence, not a new model or factual authority. Missing an advanced metric such as xG for one match does not block the entire review: retain the fixture and render that field UNAVAILABLE. If the final match has finished but the factual feed has not settled enough to support match-level result/minutes/FPL-point evidence, S16B is deferred to the next eligible 04:30 rather than fabricated.
+
+S16B delivery state is persistent non-authoritative delivery evidence carried through the existing V12 serving/LKG path. It records at least completed GW, last delivered GW/occurrence and body fingerprint. Once GW N has been visibly delivered, every later ordinary DEEP occurrence omits GW N S16B even if prices, news, trajectories or other model evidence changes. Historical reports are never rewritten to manufacture a delivery record. If no trustworthy prior S16B ledger exists, initialize prospectively from the currently completed GW and begin once-per-GW delivery with the next newly completed GW.
 
 DEEP HUMAN-FACING DURABILITY CONTRACT:
-- This revision preserves the complete pre-existing DEEP backbone and adds S06B, S14B and S16B. It never replaces DEEP with a shorter memo.
+- This revision preserves the complete pre-existing DEEP backbone and adds S06B and S14B as unconditional suffix sections; S16B is the conditional once-per-completed-GW post-match package defined above.
 - S01: WAIT/PREPARE/ACT, primary decision, concise reason, key driver and planning GW.
 - S02: exact OUR15 with player-specific availability, xMins, P(start), 1GW/3GW/5GW projection, role/tactical note, material injury/rotation warning and material price relevance.
 - S03: material decision delta only. S04: factual material developments capable of changing the decision. S05: fixtures, H/A, strength/swing, rest/congestion and weather only when supportable.
@@ -581,7 +599,12 @@ DEEP HUMAN-FACING DURABILITY CONTRACT:
 - S14B is a three-GW planning roadmap, never a forced-transfer schedule. It must expose supportable CORE/HOLD, WATCH, PREPARE OUT, PREPARE IN and ACT CANDIDATE classifications; Timing | Planned Move | Status | Trigger | Expected Gain | Dependency; FT saving/order, budget/price/player dependencies, contingency, target formation and explicit re-optimization when evidence changes.
 - S15 distinguishes official fact, model-derived inference, market predictor and tactical interpretation. S15B remains the standalone ICON+ factual landscape and exposes rank, manager count, points, leader/top-3/top-5 gaps, nearest rivals and material ownership/starter/captain/vice/EO. When submitted picks are complete, S15B MUST also expose the complete unique-player LEAGUE composition across all managers, position-by-position, with owner count/%, starter count/%, bench count/%, captain, vice and EO where supported; OUR15 membership and direct-rival composition remain separate lenses. It must distinguish LEAGUE-wide template/popular/differential structure from DIRECT-rival threats and OUR leverage. S06B reuses S15B evidence rather than creating a second league truth.
 - S16 explains WHY behind OUR15 projections through xMins, P(start), role, tactical fit, Bayesian state, uncertainty, expected involvement and fixture context; it is not merely an S02 duplicate.
-- S16B is mandatory visible GW1→Now post-match review for OUR15 plus material universe candidates. Compact match-by-match evidence includes opponent, H/A, starter/sub, minutes, FPL points, xG, xA, xGI, shots, SOT, box touches, chances/key passes when factual, big chances when factual, set-piece/penalty evidence, defensive contribution where relevant, team shape/role when factual, recency weighting, Bayesian update, trend/regime classification and link-up dependency. Distinguish sustained role change from one-match noise and expose supportable creator→finisher, overlap/fullback→winger and set-piece-taker→target dependencies, including partner absence/bench/xMins effects.
+- When due, S16B is exactly one post-match review for the newly completed GW and has two visible parts.
+  A. S16B.1 MATCH-BY-MATCH REVIEW covers every Official fixture in that GW exactly once, even when no OUR15 player appeared. Each fixture carries supportable result/home-away/venue, formation/system and tactical evidence, OUR15 player review where applicable, match-specific POST_MATCH_CANDIDATE scouting, and a compact tactical takeaway. Player rows retain starter/sub/unused, minutes, FPL points, role, xG/xA/xGI, shots/SOT, box touches, chances/key passes, big chances, set-piece/penalty evidence, defensive contribution and substitution timing where supportable. Unsupported tactical/advanced fields are UNAVAILABLE, never invented.
+  B. S16B.2 AFTER-GW REASSESSMENT explicitly answers what changed versus pre-GW belief/model state. It reviews all 15 owned players, including stable players, and compares supportable pre-GW evidence to fresh post-GW state for P(start), xMins, DNP, posterior/underlying process, role, set pieces/penalties, 1GW/3GW/5GW outlook and uncertainty. Classification may express UPGRADE/STABLE/DOWNGRADE and role/minutes/regression/breakout evidence, while user-facing consequence remains HOLD/START/BENCH/WATCH/PREPARE OUT. One match never creates ACT by itself.
+- S16B.2 also compares the previous valid Watchlist20 with the fresh full-universe methodology. Inputs are existing Watchlist20 + match-specific POST_MATCH_CANDIDATE rows + full-universe material movers; the canonical full-universe/role/minutes/underlying/Bayesian/fixtures/xMins/P(start)/DNP/price/link-up methodology remains authoritative. Output distinguishes NEW / ↑ / ↓ / OUT / ACTIONABLE / UNCHANGED and exposes the full-universe denominator. Every NEW WATCH candidate retains fixture_id, player_id, evidence reason, role observation, underlying observation and minutes evidence, then shows ADMITTED / REJECTED / DEFERRED after full-universe validation. This trace does not create a second Watchlist authority.
+- MATCH FACT is not MODEL UPDATE. A player recording five shots or playing 90 minutes is factual observation; posterior/P(start)/xMins improvement may be claimed only where the existing canonical machinery actually recomputed it.
+- S16B is learning evidence, not an independent transfer decision. Post-match evidence feeds the existing Bayesian/minutes/tactical update, fresh next-GW full universe, P1.7/optimizer/MC and S14 frontier. Only that canonical decision path may produce ACT.
 - S17 preserves source health/freshness/lineage and must not call a healthy factual source DEGRADED merely because downstream analytics are incomplete.
 - S18 is a compact state-transition board, not a narrative recap. It exposes NOW, NEXT, TRIGGER TO ACT, LATEST SAFE DECISION POINT, COST OF WAITING and ABORT / REVERSAL using only WAIT/PREPARE/ACT as operational states; it MUST NOT re-summarize S04-S17. It also links the current action to the strongest visible optimizer alternative; WAIT never authorizes suppressing the tested frontier. S19 is the plain-language decision summary: transfer/no transfer, XI, formation, captain, bench, mini-league stance, immediate watch and three-GW direction.
 
@@ -593,7 +616,7 @@ DEEP DECISION-CONTENT DELIVERY BARRIER:
 - S14 visibly materializes HOLD plus meaningful direct/funded frontier rows with explicit OUT -> IN identities, selling/purchase values where supportable, bank before/after, affordability, FT/hit economics, 1GW/2GW/3GW/5GW, raw/net gain, P(beat HOLD), MC tails/quantiles, tactical/fixture effect, price optionality, mini-league utility, robustness/regret/reversal risk and WAIT/PREPARE/ACT.
 - S11 exact20 remains 5 GK + 5 DEF + 5 MID + 5 FWD and, when evidence supports it, visibly carries price/predictor, xMins/P(start), ownership membership and transfer relevance. S12/S13 exact20 are materialized from authoritative predictor rows rather than requiring a pre-rendered table.
 - S16 is exactly 15 unique owned players when CURRENT15 is supportable and exposes availability, xMins/P(start), Bayesian/posterior signal, role/set-piece/penalty, tactical/fixture context, defensive contribution where relevant, 1GW/3GW/5GW, price optionality, mini-league relevance and action state.
-- S16B keeps match rows even when individual metrics are unavailable. Missing one field never collapses a player trajectory or the whole section to season totals.
+- A due S16B keeps every fixture even when individual metrics are unavailable. Missing one advanced field never collapses a fixture/player review or the whole section. HUMAN_FACING due acceptance requires fixtures_reviewed == fixtures_expected, unique_fixture_ids == fixtures_expected, duplicate_fixture_ids == 0, exact15 OUR reassessment, full-universe denominator and watchlist/universe reassessment.
 - P1.7 output must visibly reach S06/S07/S08 as formation, XI, reserve GK, bench 1/2/3, captain, vice-captain and relevant XI battles. P1.8 mini-league evidence must affect the downstream decision explanation without blindly rewarding low ownership.
 - HUMAN_FACING semantic acceptance MUST fail when supportable decision evidence is hidden: actionable frontier reduced to HOLD-only, funded route depth omitted, route identities/horizons/MC distribution absent, exact15/exact20 false, complete mini-league rendered as placeholder, detailed post-match collapsed, P1.7 missing, Action Board disconnected from the frontier, technical status replacing football content, or a legacy short narrative used as success.
 - Fail-operational degradation is field/scope-level. Available decision structure and evidence survive. Renderer or wiring defects are internal failures, never factual-source degradation.
@@ -601,7 +624,7 @@ DEEP DECISION-CONTENT DELIVERY BARRIER:
 HUMAN_FACING acceptance is fail-closed:
 - missing any required visible DEEP section => HUMAN_FACING FAIL;
 - structural presence with empty/status-only content => HUMAN_FACING FAIL;
-- S06B, S14B or S16B absent => PRE_RENDER/POST_RENDER acceptance cannot pass;
+- S06B or S14B absent => PRE_RENDER/POST_RENDER acceptance cannot pass. S16B absence fails only when S16B_DUE=true; S16B presence itself fails when S16B_DUE=false;
 - exact15/exact20 completeness and anti-fabrication requirements remain unchanged; QA MUST NOT be relaxed;
 - simplifying presentation means scan-friendly rendering, never reduced analytics;
 - Bayesian/posterior predictive, xMins/P(start), tactical/contextual/link-up models, canonical 500k MC, package utility, price model, sequential decision theory and P1.8 mini-league utility remain backend evidence;
@@ -750,7 +773,7 @@ For every match where supportable include:
 result;formation_system;coach_pattern;player_roles;minutes_substitution_pattern;xg_xa_xgi_shots_chances;set_pieces_penalties;defcon;opponent_channels;sustainable_vs_noisy;implication_for_our15;implication_for_next_opponent;posterior_calibration_implication.
 Never reduce the scout to scorer recap.
 
-NEXT-APPLICABLE-DEEP CARRYOVER IS MANDATORY. When a GW has become fully completed and its POST-ALL-MATCH review has not yet been visibly delivered in the current decision context, the next DEEP/FULL occurrence, including AD_HOC DEEP current-mode, MUST carry the complete match-by-match scout as a nested POST-MATCH MATCH-BY-MATCH SCOUT inside the existing Changes surface. Preserve the 19-section DEEP backbone; do not create a duplicate top-level section. Every completed fixture still appears exactly once and retains the same fixture field contract above. UNIVERSE MOVERS may be nested alongside the scout but never substitutes for the per-fixture analysis.
+POST-ALL-MATCH VISIBLE DELIVERY SEMANTICS. POST-ALL-MATCH may compute/finalize settlement, prediction calibration, decision calibration, frozen-predeadline comparisons, counterfactual regret, captain/XI regret and the completed-GW match foundation as backend learning evidence. It does not independently emit a duplicate user-facing post-GW review. The complete match-by-match scout and after-GW reassessment become visible only as S16B in the first eligible 04:30 Asia/Jakarta DEEP after the GW is fully finished, evidence is ready and that GW has not already been delivered. Ordinary 04:30, every 12:30, every 21:30 and arbitrary HH:30 reports omit S16B. An AD_HOC historical owner request may re-render history without mutating normal once-per-GW delivery state unless explicitly governed otherwise.
 
 14K. ICON+ VISIBLE CONTRACT
 ICON+ is fail-operational by sub-scope. Do not blank healthy current-GW submitted-picks evidence merely because live standings/rank is stale.
@@ -863,9 +886,9 @@ NATURAL ACCEPTANCE
 - Manual/ad-hoc execution may validate code but can never be used to claim NATURAL PRICE ACCEPTANCE.
 
 14M. TIME-SPECIFIC DEEP EMPHASIS
-04:30 = overnight reset / baseline.
-12:30 = delta since 04:30 plus press/news/P(start)/xMins changes.
-21:30 = late news, overnight risk, price risk, deadline proximity.
+04:30 = overnight reset / baseline; when S16B_DUE=true it additionally carries the single POST-GW LEARNING PACKAGE for the newly completed GW.
+12:30 = delta since 04:30 plus press/news/P(start)/xMins changes; S16B is always absent.
+21:30 = late news, overnight risk, price risk, deadline proximity; S16B is always absent.
 21:30 includes OVERNIGHT RISK BOARD:
 player_or_route;current_action;possible_change_event;materiality;next_checkpoint.
 

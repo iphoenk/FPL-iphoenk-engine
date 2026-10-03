@@ -6,7 +6,7 @@ from src.engines.v12_report_production_gate import evaluate_report_production_ga
 SECTION_IDS = [
     "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
     "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-    "S14", "S14B", "S15", "S15B", "S16", "S16B",
+    "S14", "S14B", "S15", "S15B", "S16",
     "S17", "S18", "S19",
 ]
 
@@ -39,6 +39,7 @@ def _bundle():
         "planning_gw": 6,
         "runner_status": "PASS",
         "delivery_status": "READY_FULL",
+        "s16b_due": False,
         "section_manifest": [{"section_id": value} for value in SECTION_IDS],
         "pre_render_qa": {"status": "PASS"},
         "post_render_qa": {"status": "PASS"},
@@ -52,7 +53,9 @@ def _bundle():
 
 def _presentation_qa():
     return {
-        "section_count": 23,
+        "section_count": 22,
+        "expected_section_count": 22,
+        "s16b_due": False,
         "section_order_exact": True,
         "our15_count": 15,
         "our15_complete_when_claimed": True,
@@ -78,6 +81,7 @@ def _serving():
     return {
         "delivery_status": "READY_FULL",
         "decision": "WAIT",
+        "s16b_due": False,
         "sections": {
             section_id: {"state": "COMPLETE", "content": {}}
             for section_id in SECTION_IDS

@@ -17,7 +17,7 @@ from src.engines.v12_private_publisher import publish_private_output, sha256_fil
 SECTION_IDS = [
     "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
     "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-    "S14", "S14B", "S15", "S15B", "S16", "S16B",
+    "S14", "S14B", "S15", "S15B", "S16",
     "S17", "S18", "S19",
 ]
 

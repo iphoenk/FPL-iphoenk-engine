@@ -10,6 +10,7 @@ delivery gate. It must never reconstruct football decisions.
 from typing import Any, Mapping
 
 from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+from src.engines.v12_delivery_reliability import canonical_deep_sections
 from src.runtime_v6.domains.report_plane.report_qa import (
     _validate_v12_rendered_body,
     validate_v12_visible_content_contract,
@@ -17,9 +18,12 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 
 
 DEEP_SECTION_IDS = [
-    "S01", "S02", "S03", "S04", "S05", "S06", "S06B", "S07",
-    "S08", "S09", "S10", "S11", "S12", "S13", "S14", "S14B",
-    "S15", "S15B", "S16", "S16B", "S17", "S18", "S19",
+    section_id
+    for section_id, _ in canonical_deep_sections(s16b_due=False)
+]
+DEEP_SECTION_IDS_WITH_S16B = [
+    section_id
+    for section_id, _ in canonical_deep_sections(s16b_due=True)
 ]
 MATCH_SECTION_IDS = [f"MATCH{i}" for i in range(1, 14)]
 POST_ALL_MATCH_SECTION_IDS = [f"POST_ALL_MATCH{i}" for i in range(1, 14)]
@@ -121,7 +125,11 @@ def validate_final_delivery_barrier(
         failures.extend(
             _exact_catalog_failures(
                 actual=ids,
-                expected=DEEP_SECTION_IDS,
+                expected=(
+                    DEEP_SECTION_IDS_WITH_S16B
+                    if report.get("s16b_due") is True
+                    else DEEP_SECTION_IDS
+                ),
                 prefix="DEEP",
             )
         )

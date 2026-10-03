@@ -2191,9 +2191,14 @@ def _materialize_canonical_report(
     locked_state: Mapping[str, Any] | None = None,
     universe_movers: Mapping[str, Any] | None = None,
     universe_movers_target_label: str | None = None,
+    s16b_due: bool | None = None,
 ) -> dict[str, Any]:
     """One existing V12 structural materializer used by DEEP and post-match."""
-    contract = canonical_mode_contract(canonical_text, structural_mode)
+    contract = canonical_mode_contract(
+        canonical_text,
+        structural_mode,
+        s16b_due=s16b_due,
+    )
     payloads = dict(section_payloads or {})
     sections: list[dict[str, Any]] = []
     locked = dict(locked_state or {})
@@ -2840,8 +2845,14 @@ def materialize_deep_report(
     locked_state: Mapping[str, Any] | None = None,
     post_all_match_scout: Sequence[Mapping[str, Any]] | None = None,
     mathematical_decision_stack: Mapping[str, Any] | None = None,
+    s16b_due: bool | None = None,
 ) -> dict[str, Any]:
-    """Materialize Canonical DEEP plus nested post-match/math evidence when due."""
+    """Materialize the 22-section DEEP base plus conditional S16B when due."""
+    due = (
+        bool(s16b_due)
+        if s16b_due is not None
+        else "S16B" in dict(section_payloads or {})
+    )
     report = _materialize_canonical_report(
         canonical_text=canonical_text,
         structural_mode="DEEP",
@@ -2851,7 +2862,9 @@ def materialize_deep_report(
         signal_delta=signal_delta,
         current_gw_locked=current_gw_locked,
         locked_state=locked_state,
+        s16b_due=due,
     )
+    report["s16b_due"] = due
     scout = [
         dict(row)
         for row in (post_all_match_scout or ())
@@ -3866,7 +3879,14 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "disclosed_picks_label",
     ),
     "S16": ("rows", "position_mechanisms"),
-    "S16B": ("our15", "material_universe_candidates", "recency_weighting", "bayesian_update"),
+    "S16B": (
+        "gw",
+        "fixtures_expected",
+        "fixtures_reviewed",
+        "match_by_match_review",
+        "after_gw_reassessment",
+        "full_universe_denominator",
+    ),
     "S17": ("engine_data_status", "source_health"),
     "S18": (
         "NOW",
@@ -3894,6 +3914,8 @@ def build_deep_human_facing_manifest(
     failures: list[str] = []
     for section_id, required_keys in DEEP_HUMAN_SECTION_REQUIREMENTS.items():
         section = sections.get(section_id)
+        if section_id == "S16B" and section is None:
+            continue
         if section is None:
             failures.append(f"HUMAN_SECTION_MISSING={section_id}")
             entries.append({
@@ -5744,111 +5766,171 @@ def _render_deep_visible_contract_lines(
         excluded.extend(("rows", "position_mechanisms"))
 
     elif section_id == "S16B":
-        match_count = sum(
-            len((dict(item.get("trajectory") or {})).get("matches") or [])
-            for item in payload.get("our15") or []
-            if isinstance(item, Mapping)
-        )
-        if match_count == 0:
-            lines.append("NO NEW MATCH EVIDENCE SINCE PREVIOUS DEEP")
-        lines.append(
-            "RECENCY WEIGHTING: "
-            + str(payload.get("recency_weighting") or "EXPONENTIAL_HALF_LIFE_GW")
-        )
-        lines.append(
-            "BAYESIAN UPDATE: "
-            + str(payload.get("bayesian_update") or "POSTERIOR_RECENT_RATE_WITH_SHRINKAGE")
-        )
-        for item in payload.get("our15") or []:
-            if not isinstance(item, Mapping):
-                continue
-            lines.append(
-                "### "
-                + str(item.get("player") or item.get("element_id"))
-                + " | GW1→NOW"
-            )
-            trajectory = dict(item.get("trajectory") or {})
-            role = dict(trajectory.get("role_minutes_evolution") or {})
-            lines.append(
-                "TREND: "
-                f"{trajectory.get('trajectory_classification')} | "
-                f"sustained_role_change={role.get('sustained_role_change')} | "
-                f"recent_role={role.get('recent_role')} | prior_role={role.get('prior_role')}"
-            )
-            for match in trajectory.get("matches") or []:
-                if not isinstance(match, Mapping):
-                    continue
-                lines.append(
-                    "- GW{gw} vs {opp} {ha} | {start} {mins}m | "
-                    "Result {result} | Pts {pts} | G {goals} A {assists} | "
-                    "xG {xg} npxG {npxg} xA {xa} xGI {xgi} | "
-                    "Sh {shots} SOT {sot} Box {box} KP/CC {kp}/{cc} BC {bc} | "
-                    "SP {sp} PEN {pen} DEF {deff} | "
-                    "team shape {shape} opp shape {opp_shape} role {role} | "
-                    "price {price} | outlook 1/3/5 {outlook}".format(
-                        gw=match.get("gw"),
-                        opp=match.get("opponent_team_id"),
-                        ha="H" if match.get("home") is True else "A" if match.get("home") is False else "?",
-                        start="START" if match.get("starter") else "SUB",
-                        mins=match.get("minutes"),
-                        result=match.get("result", "UNAVAILABLE"),
-                        pts=match.get("fpl_points"),
-                        goals=match.get("goals", "UNAVAILABLE"),
-                        assists=match.get("assists", "UNAVAILABLE"),
-                        xg=match.get("xg"),
-                        npxg=match.get("npxg", "UNAVAILABLE"),
-                        xa=match.get("xa"),
-                        xgi=match.get("xgi"),
-                        shots=match.get("shots"),
-                        sot=match.get("shots_on_target"),
-                        box=match.get("box_touches"),
-                        kp=match.get("key_passes"),
-                        cc=match.get("chances_created"),
-                        bc=match.get("big_chances"),
-                        sp=match.get("set_piece_role", match.get("set_piece_involvement")),
-                        pen=match.get("penalty_role", match.get("penalty_involvement")),
-                        deff=match.get("defensive_contribution"),
-                        shape=match.get("team_formation"),
-                        opp_shape=match.get("opponent_formation", "UNAVAILABLE"),
-                        role=match.get("role"),
-                        price=match.get("price_movement", "UNAVAILABLE"),
-                        outlook=match.get("outlook_1_3_5gw", "UNAVAILABLE"),
-                    )
-                )
-            lines.append(
-                "TRAJECTORY INTERPRETATION: "
-                f"recency={payload.get('recency_weighting')} | "
-                f"Bayesian={item.get('bayesian_state', payload.get('bayesian_update'))} | "
-                f"current P(start)={item.get('p_start')} | current xMins={item.get('xmins')} | "
-                f"1/3/5GW={item.get('projection_1gw')}/{item.get('projection_3gw')}/{item.get('projection_5gw')} | "
-                f"price={item.get('price')} | ML={_human_summary(item.get('mini_league_relevance'))} | "
-                f"action={item.get('action')}"
-            )
-            link = item.get("linkup_dependency")
-            if link:
-                lines.append("LINK-UP DEPENDENCY: " + _human_summary(link))
-        candidates = [
-            dict(item)
-            for item in payload.get("material_universe_candidates") or []
-            if isinstance(item, Mapping)
+        gw = payload.get("gw")
+        lines.append("### S16B.1 — MATCH-BY-MATCH REVIEW")
+        matches = [
+            dict(row)
+            for row in payload.get("match_by_match_review") or []
+            if isinstance(row, Mapping)
         ]
-        if candidates:
-            lines.append("### MATERIAL UNIVERSE CANDIDATES")
-            for item in candidates:
-                trajectory = dict(item.get("trajectory") or {})
+        for index, match in enumerate(matches, start=1):
+            lines.append(
+                f"#### MATCH {index} — "
+                + str(match.get("result") or f"fixture:{match.get('fixture_id')}")
+            )
+            formations = dict(match.get("formation_system") or {})
+            coach = dict(match.get("coach_pattern") or {})
+            lines.append(
+                "Tactical setup: "
+                f"venue={match.get('venue', 'UNAVAILABLE')} | "
+                f"home shape={formations.get('home', 'UNAVAILABLE')} | "
+                f"away shape={formations.get('away', 'UNAVAILABLE')} | "
+                f"approach={coach.get('tactical_approach', 'UNAVAILABLE')} | "
+                f"build-up={coach.get('build_up_pattern', 'UNAVAILABLE')} | "
+                f"press/block={coach.get('press_block', 'UNAVAILABLE')} | "
+                f"channels={coach.get('attacking_channels', 'UNAVAILABLE')} | "
+                f"subs={coach.get('substitution_pattern', 'UNAVAILABLE')} | "
+                f"adjustment={coach.get('major_tactical_adjustment', 'UNAVAILABLE')}"
+            )
+            our_players = [
+                dict(row)
+                for row in match.get("our_players") or []
+                if isinstance(row, Mapping)
+            ]
+            lines.append("OUR15 review:")
+            if not our_players:
+                lines.append("- No OUR15 player in this fixture.")
+            for player in our_players:
+                read = dict(player.get("analytical_read") or {})
                 lines.append(
                     "- "
-                    f"{item.get('name') or item.get('element_id')} | "
-                    f"{item.get('primary_classification')} | "
-                    f"trend={trajectory.get('trajectory_classification')} | "
-                    f"xMins={(item.get('minutes') or {}).get('xmins')} | "
-                    f"P(start)={(item.get('minutes') or {}).get('p_start')} | "
-                    f"1/3/5GW={item.get('horizon_1gw')}/{item.get('horizon_3gw')}/{item.get('horizon_5gw')}"
+                    f"{player.get('player')} | {player.get('starter_sub_unused')} | "
+                    f"{player.get('minutes')}m | FPL {player.get('fpl_points')} | "
+                    f"role {player.get('position_role')} | "
+                    f"xG/xA/xGI {player.get('xg')}/{player.get('xa')}/{player.get('xgi')} | "
+                    f"shots/SOT {player.get('shots')}/{player.get('shots_on_target')} | "
+                    f"box {player.get('box_touches')} | KP/CC "
+                    f"{player.get('key_passes')}/{player.get('chances_created')} | "
+                    f"BC {player.get('big_chances')} | SP {player.get('set_pieces')} | "
+                    f"PEN {player.get('penalties')} | DEF {player.get('defensive_contribution')} | "
+                    f"sub {player.get('substitution_timing')} | "
+                    f"role={read.get('role_change')} | minutes={read.get('minutes_change')} | "
+                    f"underlying={read.get('underlying_change')} | "
+                    f"P(start)={read.get('start_security')} | "
+                    f"sustainability={read.get('sustainability')} | "
+                    f"one-match-noise={read.get('one_match_noise')} | "
+                    f"next={read.get('next_gw_implication')}"
                 )
+            candidates = [
+                dict(row)
+                for row in match.get("watch_candidates") or []
+                if isinstance(row, Mapping)
+            ]
+            lines.append("Watch candidates:")
+            if not candidates:
+                lines.append("- No material post-match candidate from this fixture.")
+            for candidate in candidates:
+                lines.append(
+                    "- "
+                    f"{candidate.get('player')} | POST_MATCH_CANDIDATE | "
+                    f"reason={candidate.get('evidence_reason')} | "
+                    f"role={candidate.get('role_observation')} | "
+                    f"minutes={candidate.get('minutes_evidence')} | "
+                    f"underlying={_human_summary(candidate.get('underlying_observation'))}"
+                )
+            takeaway = dict(match.get("tactical_takeaways") or {})
+            lines.append(
+                "Tactical takeaway: "
+                f"worked={takeaway.get('what_worked', 'UNAVAILABLE')} | "
+                f"changed={takeaway.get('what_changed', 'UNAVAILABLE')} | "
+                f"benefited={takeaway.get('who_benefited', 'UNAVAILABLE')} | "
+                f"lost role/minutes={takeaway.get('who_lost_role_minutes', 'UNAVAILABLE')} | "
+                f"sustainable/noisy={takeaway.get('sustainable_vs_noisy', 'UNAVAILABLE')} | "
+                f"future opponent={takeaway.get('future_opponent_implication', 'UNAVAILABLE')}"
+            )
+
+        reassessment = dict(payload.get("after_gw_reassessment") or {})
+        summary = dict(reassessment.get("summary") or {})
+        lines.append("### S16B.2 — AFTER-GW REASSESSMENT")
+        lines.append(
+            "WHAT CHANGED: "
+            f"OUR15 upgrades={summary.get('our15_upgrades', 0)} | "
+            f"downgrades={summary.get('our15_downgrades', 0)} | "
+            f"stable={summary.get('our15_stable', 0)} | "
+            f"Watchlist NEW={summary.get('watchlist_new', 0)} | "
+            f"↑={summary.get('watchlist_up', 0)} | "
+            f"↓={summary.get('watchlist_down', 0)} | "
+            f"OUT={summary.get('watchlist_out', 0)} | "
+            f"ACTIONABLE={summary.get('actionable', 0)}"
+        )
+        lines.append("#### OUR15")
+        for player in reassessment.get("owned15_review") or []:
+            if not isinstance(player, Mapping):
+                continue
+            pre = dict(player.get("pre_gw") or {})
+            post = dict(player.get("post_gw") or {})
+            lines.append(
+                "- "
+                f"{player.get('player')} | {player.get('classification')} | "
+                f"P(start) {pre.get('p_start')}→{post.get('p_start')} | "
+                f"xMins {pre.get('xmins')}→{post.get('xmins')} | "
+                f"role={player.get('role_change')} | minutes={player.get('minutes_change')} | "
+                f"1GW {pre.get('projection_1gw')}→{post.get('projection_1gw')} | "
+                f"3GW {pre.get('projection_3gw')}→{post.get('projection_3gw')} | "
+                f"5GW {pre.get('projection_5gw')}→{post.get('projection_5gw')} | "
+                f"uncertainty={post.get('uncertainty')} | "
+                f"consequence={player.get('consequence')}"
+            )
+        lines.append("#### WATCHLIST / UNIVERSE")
+        lines.append(
+            "Full-universe denominator: "
+            + str(payload.get("full_universe_denominator") or "UNAVAILABLE")
+        )
+        for row in reassessment.get("watchlist_delta") or []:
+            if not isinstance(row, Mapping):
+                continue
+            lines.append(
+                "- "
+                f"{row.get('player')} | {row.get('state')} | "
+                f"rank {row.get('previous_rank')}→{row.get('current_rank')} | "
+                f"movement={row.get('movement_state')}"
+            )
+        candidates = [
+            row
+            for row in reassessment.get("new_watch_candidates") or []
+            if isinstance(row, Mapping)
+        ]
+        if candidates:
+            lines.append("Match scout → full-universe validation:")
+            for row in candidates:
+                lines.append(
+                    "- "
+                    f"fixture={row.get('fixture_id')} | {row.get('player')} | "
+                    f"{row.get('evidence_reason')} | "
+                    f"{row.get('full_universe_outcome')}"
+                )
+        lines.append("What changed for next-GW decision?")
+        lines.append(
+            "S16B supplies learning evidence only. ACT remains owned by the canonical "
+            "S14/P1.7/Stage3 decision path."
+        )
         excluded.extend((
+            "gw",
+            "fixtures_expected",
+            "fixtures_reviewed",
+            "unique_fixture_count",
+            "duplicate_fixture_count",
+            "match_by_match_review",
+            "after_gw_reassessment",
+            "full_universe_denominator",
             "our15",
             "material_universe_candidates",
             "full_universe_scan",
+            "recency_weighting",
+            "bayesian_update",
+            "candidate_traceability",
+            "fixture_ids_expected",
+            "fixture_ids_reviewed",
             "raw_contextual_dynamics",
             "debug",
         ))
@@ -5906,6 +5988,14 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
         section_id = str(row.get("section_id") or "")
+        content = row.get("content")
+        content_map = (
+            dict(content or {})
+            if isinstance(content, Mapping)
+            else {}
+        )
+        if section_id == "S16B" and content_map.get("gw") is not None:
+            label = f"POST-MATCH REVIEW GW{content_map.get('gw')}"
         lines = [
             _visible_section_heading(section_id, label),
             f"Status: {state}",
@@ -5913,12 +6003,6 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         reason = str(row.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
             lines.append(f"Reason: {reason}")
-        content = row.get("content")
-        content_map = (
-            dict(content or {})
-            if isinstance(content, Mapping)
-            else {}
-        )
         # Renderer consumes the bound payload verbatim. Binding metadata is
         # deliberately not synthesized here: missing binding must fail QA,
         # never be repaired by presentation code.

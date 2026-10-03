@@ -262,20 +262,74 @@ def validate_deep_decision_content_delivery(
         if rows16 and "POSTERIOR" not in upper:
             failures.append("ALL15_POSTERIOR_NOT_VISIBLE")
 
-    s16b = content("S16B")
-    our15_post = [
-        dict(row) for row in s16b.get("our15") or []
-        if isinstance(row, Mapping)
-    ]
-    detailed_match_available = any(
-        list((row.get("trajectory") or {}).get("matches") or [])
-        for row in our15_post
-    )
-    if detailed_match_available:
-        if "GW1→NOW" not in upper or "BAYESIAN UPDATE:" not in upper:
-            failures.append("POST_MATCH_DETAIL_NOT_VISIBLE")
-        if "- GW" not in upper:
-            failures.append("POST_MATCH_ROWS_COLLAPSED")
+    if "S16B" in sections:
+        s16b = content("S16B")
+        try:
+            expected_fixtures = int(s16b.get("fixtures_expected") or 0)
+            reviewed_fixtures = int(s16b.get("fixtures_reviewed") or 0)
+            unique_fixtures = int(s16b.get("unique_fixture_count") or 0)
+            duplicate_fixtures = int(s16b.get("duplicate_fixture_count") or 0)
+        except (TypeError, ValueError):
+            expected_fixtures = reviewed_fixtures = unique_fixtures = -1
+            duplicate_fixtures = -1
+        matches = [
+            dict(row)
+            for row in s16b.get("match_by_match_review") or []
+            if isinstance(row, Mapping)
+        ]
+        fixture_ids = [
+            str(row.get("fixture_id") or "").strip()
+            for row in matches
+            if str(row.get("fixture_id") or "").strip()
+        ]
+        if expected_fixtures <= 0:
+            failures.append("S16B_FIXTURE_DENOMINATOR_MISSING")
+        if reviewed_fixtures != expected_fixtures:
+            failures.append(
+                f"S16B_FIXTURE_REVIEW_COUNT={reviewed_fixtures}/{expected_fixtures}"
+            )
+        if len(matches) != expected_fixtures:
+            failures.append(
+                f"S16B_MATCH_ROWS_COUNT={len(matches)}/{expected_fixtures}"
+            )
+        if unique_fixtures != expected_fixtures or len(set(fixture_ids)) != expected_fixtures:
+            failures.append("S16B_UNIQUE_FIXTURE_COUNT_INVALID")
+        if duplicate_fixtures != 0 or len(fixture_ids) != len(set(fixture_ids)):
+            failures.append("S16B_DUPLICATE_FIXTURE_ID")
+        reassessment = dict(s16b.get("after_gw_reassessment") or {})
+        owned_review = [
+            dict(row)
+            for row in reassessment.get("owned15_review") or []
+            if isinstance(row, Mapping)
+        ]
+        owned_ids = [
+            int(row.get("element_id") or 0)
+            for row in owned_review
+            if int(row.get("element_id") or 0) > 0
+        ]
+        if len(owned_review) != 15 or len(set(owned_ids)) != 15:
+            failures.append(
+                f"S16B_OWNED15_REASSESSMENT_INVALID={len(set(owned_ids))}/15"
+            )
+        if s16b.get("full_universe_denominator") in (None, "", 0):
+            failures.append("S16B_FULL_UNIVERSE_DENOMINATOR_MISSING")
+        if "watchlist_delta" not in reassessment:
+            failures.append("S16B_WATCHLIST_DELTA_MISSING")
+        decision_implications = dict(
+            reassessment.get("decision_implications") or {}
+        )
+        if decision_implications.get("act_authority") is not False:
+            failures.append("S16B_ACT_AUTHORITY_VIOLATION")
+        for token, code in (
+            ("S16B.1", "S16B_PART1_NOT_VISIBLE"),
+            ("MATCH-BY-MATCH REVIEW", "S16B_MATCH_REVIEW_NOT_VISIBLE"),
+            ("S16B.2", "S16B_PART2_NOT_VISIBLE"),
+            ("AFTER-GW REASSESSMENT", "S16B_REASSESSMENT_NOT_VISIBLE"),
+            ("FULL-UNIVERSE DENOMINATOR:", "S16B_DENOMINATOR_NOT_VISIBLE"),
+            ("WHAT CHANGED FOR NEXT-GW DECISION?", "S16B_NEXT_GW_LINK_NOT_VISIBLE"),
+        ):
+            if token not in upper:
+                failures.append(code)
 
     s06 = content("S06")
     if state("S06") == "COMPLETE" and s06.get("starting_xi"):
@@ -467,16 +521,6 @@ def validate_deep_decision_content_delivery(
                 failures.append(f"S16_VISIBLE_FIELD_MISSING={token}")
         if "POSTERIOR_RATES" in upper:
             failures.append("S16_RAW_POSTERIOR_DICT_VISIBLE")
-
-    if detailed_match_available:
-        if "TRAJECTORY INTERPRETATION:" not in upper:
-            failures.append("S16B_TRAJECTORY_INTERPRETATION_MISSING")
-        # Historical rows are observations. Repeating a posterior on every
-        # match line would falsely imply per-row model execution.
-        for line in str(body or "").splitlines():
-            if line.lstrip().startswith("- GW") and "BAYESIAN" in line.upper():
-                failures.append("S16B_POSTERIOR_REPEATED_PER_MATCH")
-                break
 
     if state("S18") == "COMPLETE":
         board = dict(s18.get("action_board") or {})

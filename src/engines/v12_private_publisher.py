@@ -18,6 +18,7 @@ import shutil
 from typing import Any, Mapping
 
 from src.engines.v12_report_production_gate import evaluate_report_production_gate
+from src.engines.v12_delivery_reliability import canonical_deep_sections
 from src.engines.v12_delivery_security import scan_secret_text
 
 
@@ -222,6 +223,10 @@ def build_previous_deep_baseline(
         "post_render_status": (bundle.get("post_render_qa") or {}).get("status"),
         "human_facing_status": (bundle.get("human_facing_qa") or {}).get("status"),
         "decision": serving_snapshot.get("decision"),
+        "s16b_due": serving_snapshot.get("s16b_due") is True,
+        "s16b_delivery_state": deepcopy(
+            serving_snapshot.get("s16b_delivery_state") or {}
+        ),
         "section_ids": section_ids,
         "canonical_section_ids": canonical_section_ids,
         "section_states": deepcopy(serving_snapshot.get("section_states") or {}),
@@ -263,7 +268,12 @@ def validate_previous_deep_baseline(
     for key in ("pre_render_status", "post_render_status", "human_facing_status"):
         if str(baseline.get(key) or "").upper() != "PASS":
             failures.append(f"LKG_{key.upper()}_NOT_PASS")
-    if len(expected_ids) != 23 or len(set(expected_ids)) != 23:
+    s16b_due = baseline.get("s16b_due") is True
+    legal_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(s16b_due=s16b_due)
+    ]
+    if expected_ids != legal_ids or len(set(expected_ids)) != len(expected_ids):
         failures.append("LKG_CANONICAL_SECTION_IDS_INVALID")
     if list(baseline.get("section_ids") or []) != expected_ids:
         failures.append("LKG_SECTION_IDS_INVALID")

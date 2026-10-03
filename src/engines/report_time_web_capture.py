@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -44,10 +45,30 @@ def build_targets(config: dict[str, Any]) -> list[CaptureTarget]:
     return targets
 
 
+def _parse_aware(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _write(output_path: Path, result: dict[str, Any]) -> dict[str, Any]:
+    result["report_slot"] = report_slot
+    return _write(output_path, result)
+
+
 def run(
     *,
     config_path: Path = CONFIG_PATH,
     output_path: Path,
+    report_slot: str | None = None,
+    max_slot_lag_minutes: int = 90,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     config = _load_config(config_path)
     if config.get("contract") != "CAMOUFOX_PUBLIC_INFORMATION_ACQUISITION_V1":
@@ -68,6 +89,50 @@ def run(
     missing = [key for key in required_true if policy.get(key) is not True]
     if missing:
         raise RuntimeError("unsafe_camoufox_policy:" + ",".join(sorted(missing)))
+
+    slot = _parse_aware(report_slot)
+    current = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    if report_slot:
+        if slot is None:
+            return _write(
+                output_path,
+                {
+                    "schema_version": 1,
+                    "contract": "report_time_web_capture_v1",
+                    "generated_at": current.isoformat(),
+                    "status": "SKIPPED_INVALID_REPORT_SLOT",
+                    "transport": "CAMOUFOX",
+                    "report_slot": report_slot,
+                    "capture_count": 0,
+                    "available_count": 0,
+                    "captures": [],
+                    "governance": {
+                        "historical_replay_must_not_use_live_web": True,
+                        "report_delivery_blocking": False,
+                    },
+                },
+            )
+        lag_minutes = (current - slot).total_seconds() / 60.0
+        if lag_minutes > max(1, int(max_slot_lag_minutes)) or lag_minutes < -5:
+            return _write(
+                output_path,
+                {
+                    "schema_version": 1,
+                    "contract": "report_time_web_capture_v1",
+                    "generated_at": current.isoformat(),
+                    "status": "SKIPPED_HISTORICAL_OR_FUTURE_SLOT",
+                    "transport": "CAMOUFOX",
+                    "report_slot": report_slot,
+                    "slot_lag_minutes": round(lag_minutes, 3),
+                    "capture_count": 0,
+                    "available_count": 0,
+                    "captures": [],
+                    "governance": {
+                        "historical_replay_must_not_use_live_web": True,
+                        "report_delivery_blocking": False,
+                    },
+                },
+            )
 
     defaults = dict(config.get("defaults") or {})
     result = capture_targets(
@@ -101,8 +166,15 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--report-slot", default="")
+    parser.add_argument("--max-slot-lag-minutes", type=int, default=90)
     args = parser.parse_args()
-    result = run(config_path=args.config, output_path=args.output)
+    result = run(
+        config_path=args.config,
+        output_path=args.output,
+        report_slot=args.report_slot or None,
+        max_slot_lag_minutes=args.max_slot_lag_minutes,
+    )
     print(
         json.dumps(
             {

@@ -522,31 +522,48 @@ def validate_deep_decision_content_delivery(
 
     s15 = content("S15")
     if state("S15") == "COMPLETE":
-        evidence = dict(s15.get("evidence_quality") or {})
+        evidence = dict(
+            s15.get("evidence_assessment")
+            or s15.get("evidence_quality")
+            or {}
+        )
         required_categories = {
-            "Official public FPL",
-            "CURRENT15 identity",
-            "authenticated personal auth",
-            "authenticated finance",
-            "chips",
-            "fixtures/calendar",
-            "workload/travel",
-            "tactical",
-            "post-match underlying",
-            "price factual",
-            "price predictor freshness",
-            "mini-league submitted picks",
-            "mini-league standings/live",
-            "weather",
-            "model snapshot",
+            "Squad / OUR15",
+            "Availability / minutes",
+            "Football underlying",
+            "Tactical / role",
+            "Fixtures",
+            "Non-PL workload",
+            "Finance",
+            "Price movement",
+            "Mini-league",
+            "Weather",
         }
         missing_categories = sorted(required_categories - set(evidence))
         if missing_categories:
             failures.append(
                 "S15_EVIDENCE_CATEGORY_MISSING=" + ",".join(missing_categories)
             )
-        if "EVIDENCE QUALITY BY SOURCE CATEGORY" not in upper:
-            failures.append("S15_CATEGORY_GRADING_NOT_VISIBLE")
+        if not str(s15.get("overall_evidence_confidence") or "").strip():
+            failures.append("S15_OVERALL_CONFIDENCE_MISSING")
+        if "evidence_limitations" not in s15:
+            failures.append("S15_EVIDENCE_LIMITATIONS_MISSING")
+        if not str(s15.get("decision_implication") or "").strip():
+            failures.append("S15_DECISION_IMPLICATION_MISSING")
+        if "PRIOR != CURRENT" not in upper:
+            failures.append("S15_PRIOR_CURRENT_SEMANTICS_NOT_VISIBLE")
+        for technical_key in (
+            "model_execution",
+            "workflow_health",
+            "private_delivery",
+            "presentation_qa",
+            "privacy_boundary",
+            "run_id",
+            "sha",
+            "fingerprint",
+        ):
+            if technical_key in s15:
+                failures.append("S15_TECHNICAL_OWNERSHIP_LEAK=" + technical_key)
 
     if state("S16") == "COMPLETE":
         for token in (
@@ -1272,6 +1289,41 @@ def validate_deep_decision_content_delivery(
     if state("S17") == "COMPLETE":
         source_health = dict(s17.get("source_health") or {})
         auth_authority = dict(s17.get("auth_authority") or {})
+        technical_planes = [
+            dict(row)
+            for row in s17.get("technical_planes") or []
+            if isinstance(row, Mapping)
+        ]
+        plane_names = {str(row.get("plane") or "") for row in technical_planes}
+        required_planes = {
+            "Official factual plane",
+            "Canonical V12 computation",
+            "Optimizer / Monte Carlo",
+            "Price data pipeline",
+            "Mini-league pipeline",
+            "Weather pipeline",
+            "Exact-occurrence binding",
+            "Private serving / delivery",
+            "Presentation QA",
+            "Privacy boundary",
+        }
+        if not required_planes.issubset(plane_names):
+            failures.append(
+                "S17_TECHNICAL_PLANE_MISSING="
+                + ",".join(sorted(required_planes - plane_names))
+            )
+        if not str(s17.get("freshness_summary") or "").strip():
+            failures.append("S17_FRESHNESS_SUMMARY_MISSING")
+        if not str(s17.get("lineage_summary") or "").strip():
+            failures.append("S17_LINEAGE_SUMMARY_MISSING")
+        for analyst_key in (
+            "current_squad_identity",
+            "finance",
+            "fixture_data",
+            "tactical_statistical_data",
+        ):
+            if analyst_key in source_health:
+                failures.append("S17_ANALYST_EVIDENCE_OWNERSHIP_LEAK=" + analyst_key)
         if not auth_authority.get("field") or "value" not in auth_authority:
             failures.append("S17_AUTH_AUTHORITY_MISSING")
         private_auth = str(source_health.get("private_auth_state") or "").upper()

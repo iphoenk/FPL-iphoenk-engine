@@ -4225,22 +4225,58 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Verdict: {payload.get('staging_verdict') or 'Reoptimize from fresh evidence; roadmap is non-binding.'}")
 
     elif section_id == "S15":
-        evidence = dict(payload.get("evidence_quality") or {})
+        evidence = dict(
+            payload.get("evidence_assessment")
+            or payload.get("evidence_quality")
+            or {}
+        )
+        overall = str(
+            payload.get("overall_evidence_confidence")
+            or "MEDIUM"
+        ).upper()
+        lines.append(f"Overall evidence confidence: {overall}")
+        rows = []
+        for key, raw in evidence.items():
+            value = dict(raw) if isinstance(raw, Mapping) else {"state": raw}
+            quality = (
+                value.get("quality")
+                or value.get("state")
+                or "UNAVAILABLE"
+            )
+            impact = (
+                value.get("decision_impact")
+                or value.get("impact")
+                or "Context only; no independent decision authority."
+            )
+            rows.append((str(key), quality, impact))
         lines.extend(_markdown_table(
-            ("Evidence domain", "Status"),
-            [(
-                str(key).replace("_", " ").title(),
-                (value or {}).get("state") if isinstance(value, Mapping) else value,
-            ) for key, value in evidence.items()],
+            ("Evidence domain", "Quality", "Decision impact"),
+            rows,
         ))
-        details = [
-            f"{str(key).replace('_', ' ').title()}: "
-            + _compact({k: v for k, v in dict(value).items() if k != "state"})
-            for key, value in evidence.items()
-            if isinstance(value, Mapping) and any(k != "state" and v not in (None, "", [], {}) for k, v in value.items())
+        limitations = [
+            str(value)
+            for value in payload.get("evidence_limitations") or []
+            if str(value).strip()
         ]
-        if details:
-            lines.append("Source detail: " + " | ".join(details[:6]))
+        lines.append("Evidence limitations:")
+        if limitations:
+            lines.extend(f"- {value}" for value in limitations)
+        else:
+            lines.append("- No material evidence limitation for the current decision.")
+        lines.append(
+            "Decision implication: "
+            + str(
+                payload.get("decision_implication")
+                or "Evidence is decision-usable only within the current canonical action state."
+            )
+        )
+        lines.append(
+            "PRIOR != CURRENT: "
+            + str(
+                payload.get("prior_current_semantics")
+                or "PRIOR evidence is never represented as CURRENT."
+            )
+        )
 
     elif section_id == "S15B":
         coverage = str(payload.get("coverage_state") or "").upper()
@@ -4596,23 +4632,80 @@ def _render_deep_visible_contract_lines(
 
 
     elif section_id == "S17":
-        status = dict(payload.get("engine_data_status") or {})
-        source_health = dict(payload.get("source_health") or {})
-        fact_state = status.get("V6 data") or status.get("v6_data") or source_health.get("official_fpl") or "UNAVAILABLE"
-        model_state = status.get("Model refresh") or status.get("model_refresh") or payload.get("model_state") or "UNAVAILABLE"
-        inference_state = status.get("Publication") or status.get("publication") or "AVAILABLE"
+        technical_planes = [
+            dict(row)
+            for row in payload.get("technical_planes") or []
+            if isinstance(row, Mapping)
+        ]
+        if not technical_planes:
+            status = dict(payload.get("engine_data_status") or {})
+            source_health = dict(payload.get("source_health") or {})
+            technical_planes = [
+                {
+                    "plane": "Official factual plane",
+                    "status": (
+                        status.get("V6 data")
+                        or status.get("v6_data")
+                        or source_health.get("official_fpl")
+                        or "UNAVAILABLE"
+                    ),
+                },
+                {
+                    "plane": "Canonical V12 computation",
+                    "status": (
+                        status.get("Model refresh")
+                        or status.get("model_refresh")
+                        or payload.get("model_state")
+                        or "UNAVAILABLE"
+                    ),
+                },
+                {
+                    "plane": "Optimizer / Monte Carlo",
+                    "status": status.get("MC") or status.get("mc") or "UNAVAILABLE",
+                },
+                {
+                    "plane": "Price data pipeline",
+                    "status": (
+                        source_health.get("price_predictor")
+                        or "UNAVAILABLE"
+                    ),
+                },
+                {
+                    "plane": "Mini-league pipeline",
+                    "status": source_health.get("mini_league") or "UNAVAILABLE",
+                },
+                {
+                    "plane": "Weather pipeline",
+                    "status": source_health.get("weather") or "UNAVAILABLE",
+                },
+            ]
         lines.extend(_markdown_table(
             ("Plane", "Status"),
-            (("FACT", fact_state), ("MODEL", model_state), ("INFERENCE", inference_state)),
+            [
+                (
+                    row.get("plane") or "UNAVAILABLE",
+                    row.get("status") or "UNAVAILABLE",
+                )
+                for row in technical_planes
+            ],
         ))
         lines.append(
-            "Source health: "
-            + " | ".join(
-                f"{str(k).replace('_', ' ')}={v}"
-                for k, v in source_health.items()
-                if isinstance(v, (str, int, float, bool)) and v not in ("", None)
-            )[:900]
+            "Freshness: "
+            + str(
+                payload.get("freshness_summary")
+                or "Technical freshness unavailable."
+            )
         )
+        lines.append(
+            "Lineage: "
+            + str(
+                payload.get("lineage_summary")
+                or "Exact serving lineage unavailable."
+            )
+        )
+        audit_note = str(payload.get("audit_note") or "").strip()
+        if audit_note:
+            lines.append("Audit note: " + audit_note)
 
     elif section_id == "S18":
         board = dict(payload.get("action_board") or {})
@@ -4670,6 +4763,83 @@ def _render_deep_visible_contract_lines(
 
     return lines, tuple(excluded)
 
+def _deep_identity_header_lines(report: Mapping[str, Any]) -> list[str]:
+    """Render reader-facing DEEP identity only; no decision or audit plumbing."""
+    sections = [
+        dict(row)
+        for row in report.get("sections") or []
+        if isinstance(row, Mapping)
+    ]
+    planning_gw = report.get("planning_gw")
+    if planning_gw is None:
+        s01 = next(
+            (
+                dict(row.get("content") or {})
+                for row in sections
+                if str(row.get("section_id") or "").upper() == "S01"
+            ),
+            {},
+        )
+        dashboard = dict(s01.get("decision_dashboard") or {})
+        planning_gw = (
+            dashboard.get("PLANNING_GW")
+            or s01.get("planning_gw")
+            or "UNAVAILABLE"
+        )
+
+    report_slot = str(report.get("report_slot") or "").strip()
+    if not report_slot:
+        for row in sections:
+            content = row.get("content")
+            if not isinstance(content, Mapping):
+                continue
+            binding = content.get("authoritative_binding")
+            if isinstance(binding, Mapping) and binding.get("report_slot"):
+                report_slot = str(binding.get("report_slot"))
+                break
+    if report_slot:
+        try:
+            parsed = datetime.fromisoformat(report_slot.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=ZoneInfo("Asia/Jakarta"))
+            parsed = parsed.astimezone(ZoneInfo("Asia/Jakarta"))
+            slot_display = parsed.strftime("%d %b %Y, %H:%M WIB")
+        except ValueError:
+            slot_display = report_slot
+    else:
+        slot_display = "UNAVAILABLE"
+
+    expected = 23 if report.get("s16b_due") is True else 22
+    visible = len(sections)
+    lifecycle = "S16B due" if report.get("s16b_due") is True else "S16B not due"
+
+    report_status = str(
+        report.get("delivery_status")
+        or report.get("report_status")
+        or ""
+    ).strip().upper()
+    if not report_status:
+        report_status = (
+            "READY_FULL"
+            if visible == expected
+            and all(str(row.get("state") or "").upper() == "COMPLETE" for row in sections)
+            else "READY_DEGRADED"
+        )
+    exact_occurrence = report.get("exact_occurrence_bound")
+    if exact_occurrence is None:
+        exact_occurrence = bool(report_slot)
+    occurrence_label = "Exact occurrence" if exact_occurrence else "Occurrence binding degraded"
+    badge = "🟢" if report_status == "READY_FULL" and exact_occurrence else "🟡"
+
+    return [
+        "FPL MASTER V12 — DEEP REPORT",
+        f"Planning GW: GW{planning_gw}" if str(planning_gw).isdigit() else f"Planning GW: {planning_gw}",
+        f"Logical report slot: {slot_display}",
+        f"Report: {badge} {report_status} · {occurrence_label}",
+        f"Sections: {visible}/{expected} lifecycle-visible · {lifecycle}",
+    ]
+
+
 def render_deep_text(report: Mapping[str, Any]) -> str:
     """Human-facing DEEP renderer with bounded Deadline/Final presentation overlay."""
     mode = str(report.get("report_mode") or "DEEP").strip().upper()
@@ -4718,6 +4888,8 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
     blocks: list[str] = []
     if deadline_mode:
         blocks.append("\n".join(deadline_header_lines(report)))
+    else:
+        blocks.append("\n".join(_deep_identity_header_lines(report)))
     for row in sections:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")

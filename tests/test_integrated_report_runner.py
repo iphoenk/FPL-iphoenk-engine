@@ -1172,7 +1172,7 @@ def _ml_deep_fixture(monkeypatch):
     return mini, detail, owned
 
 
-def test_mini_league_deep_materializes_raw_counts_direct_rivals_and_threats(monkeypatch):
+def test_mini_league_deep_materializes_competitive_window_and_threats(monkeypatch):
     mini, detail, _ = _ml_deep_fixture(monkeypatch)
 
     p1 = next(
@@ -1193,22 +1193,23 @@ def test_mini_league_deep_materializes_raw_counts_direct_rivals_and_threats(monk
         "includes_us": True,
     }
     assert detail["denominator_scopes"]["RIVALS"]["denominator"] == 2
-    assert detail["denominator_scopes"]["DIRECT"]["label"] == "DIRECT6_ABOVE_US"
+    assert detail["denominator_scopes"]["COMPETITIVE"]["label"] == "COMPETITIVE_WINDOW"
+    assert detail["denominator_scopes"]["COMPETITIVE"]["expected"] == 2
     league_p1 = next(
         row for row in detail["league_our15_exposure"]
         if row["element_id"] == 1
     )
     assert league_p1["denominator"] == 3
     assert league_p1["eo_supported"] is True
-    assert detail["direct_rival_scope"]["denominator"] == 2
-    assert detail["direct_rival_scope"]["complete"] is True
-    assert [row["rank"] for row in detail["direct_rivals"]] == [1, 2]
-    assert detail["direct_rivals"][0]["overlap_count"] == 14
-    assert detail["direct_rivals"][0]["xi_overlap_count"] >= 1
-    assert detail["direct_rivals"][0]["bench_overlap_count"] >= 1
-    assert detail["direct_rivals"][0]["active_chip"] == "bboost"
-    assert detail["direct_rivals"][0]["shields"]
-    assert detail["rival_threats"]
+    assert detail["competitive_window"]["denominator"] == 2
+    assert detail["competitive_window"]["complete"] is True
+    assert [row["rank"] for row in detail["competitive_rivals"]] == [1, 2]
+    assert detail["competitive_rivals"][0]["overlap_count"] == 14
+    assert detail["competitive_rivals"][0]["xi_overlap_count"] >= 1
+    assert detail["competitive_rivals"][0]["bench_overlap_count"] >= 1
+    assert detail["competitive_rivals"][0]["active_chip"] == "bboost"
+    assert detail["competitive_rivals"][0]["shields"]
+    assert detail["competitive_window_threats"]
     assert detail["captain_leverage"]
     assert all(
         row["element_id"] in set(range(1, 12))
@@ -1245,17 +1246,17 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "DENOMINATOR SCOPES" in body
     assert "LEAGUE3_INCL_US" in body
     assert "RIVALS2_EXCL_US" in body
-    assert "DIRECT6_ABOVE_US" in body
-    assert "OUR15 EXPOSURE — LEAGUE3_INCL_US" in body
-    assert "OUR15 EXPOSURE — RIVALS2_EXCL_US" in body
+    assert "COMPETITIVE_WINDOW" in body
+    assert "OUR15 EXPOSURE, LEAGUE" in body
+    assert "OUR15 EXPOSURE, RIVALS" in body
     assert "OUR15 EXPOSURE — DIRECT6_ABOVE_US" in body
-    assert "RIVAL THREATS NOT IN OUR15" in body
+    assert "COMPETITIVE-WINDOW RIVAL-ONLY THREATS" in body
     assert "CAPTAIN LANDSCAPE" in body
     assert "EXPOSURE / LEVERAGE CLASS" in body
     assert "BEHAVIOURAL BASELINE" in body
-    assert "DIRECT RIVAL DIFFERENCE DETAIL" in body
-    assert "SHIELDS" in body
-    for token in ("STARTER_COUNT", "CAPTAIN_COUNT", "VICE_COUNT", "EO_PCT"):
+    assert "COMPETITIVE RIVALS" in body
+    assert "Position vs us" in body
+    for token in ("Owned", "Starter", "Captain", "EO"):
         assert token in body
 
 
@@ -1343,10 +1344,10 @@ def test_mini_league_s15b_manifest_cannot_regress_to_compact_summary():
         "denominator_scopes",
         "league_our15_exposure",
         "rivals_our15_exposure",
-        "direct_rival_scope",
-        "direct_rivals",
-        "direct_rival_our15_exposure",
-        "rival_threats",
+        "competitive_window",
+        "competitive_rivals",
+        "competitive_our15_exposure",
+        "competitive_window_threats",
         "captain_leverage",
         "strategy_implication",
         "report_contract",

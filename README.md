@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-04T05:35:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-04T06:42:18+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -13,6 +13,7 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **V6 factual plane:** governed facts, freshness, fixtures, prices, and source evidence.
 - **Canonical V12:** xMins, probability, tactics, full-universe scanning, optimisation, Monte Carlo, and decision semantics.
 - **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
+- **Report-time web evidence:** Camoufox reads governed public browser sources as advisory evidence; Official FPL/API stays direct, and auth/paywall/CAPTCHA bypass is forbidden.
 
 ## Reports
 

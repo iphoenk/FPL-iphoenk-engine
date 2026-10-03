@@ -1054,7 +1054,7 @@ def test_stage_a_required_ci_comparison_36108029034_is_not_semantic_pass():
     assert not any("TERMINAL_DATE_STATE_MISSING" in row for row in failures)
 
 
-def test_stage_a_required_ci_price_freshness_is_human_visible():
+def test_stage_a_required_ci_price_freshness_is_authoritative_without_schema_drift():
     s10 = _section(
         "S10",
         "ACTIONABLE PRICE RADAR",
@@ -1082,9 +1082,9 @@ def test_stage_a_required_ci_price_freshness_is_human_visible():
     )
     report = _deep_report([_route()], extra_sections=[s10])
     body = render_deep_text(report)
-    assert "source age minutes" in body.lower()
-    assert "freshness" in body
-    assert "STALE" in body
+    assert "| Player | Price | Direction | Progress |" in body
+    assert "source_age_minutes" not in body
+    assert "SOURCE AGE MINUTES" not in body
     failures = validate_deep_decision_content_delivery(report, body)
     assert not [failure for failure in failures if failure.startswith("S10_PRICE_")]
 

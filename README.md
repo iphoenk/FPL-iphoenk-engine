@@ -1,58 +1,42 @@
-# FPL-iphoenk-engine
+# FPL iphoenk Engine v3.39.0
 
-A governed Fantasy Premier League decision-support engine.
+> **Last runtime/documentation sync:** `2026-10-03T21:08:00+07:00`
 
-It combines public football facts, probabilistic player modelling, full-universe discovery, squad optimisation, Monte Carlo analysis, mini-league context, and private report delivery.
+A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
 
-## Architecture
+## Core architecture
 
 `Official/Public Data → V6 Facts → Canonical V12 → Optimisation → WAIT / PREPARE / ACT → Reports`
 
-- **V6 factual plane** owns governed facts, freshness, fixtures, prices, and source evidence.
-- **Canonical V12** owns xMins, probability, tactical analysis, full-universe scanning, squad/transfer optimisation, Monte Carlo, and decision semantics.
-- **Private delivery** owns manager-specific squad state, scenarios, mini-league context, final decisions, and full reports.
+- **V6 factual plane:** governed facts, freshness, fixtures, prices, and source evidence.
+- **Canonical V12:** xMins, probability, tactics, full-universe scanning, optimisation, Monte Carlo, and decision semantics.
+- **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
 
 ## Reports
 
-| Mode | Purpose |
-|---|---|
-| **DEEP** | Full planning and decision report |
-| **PRICE** | Price and transfer-timing monitoring |
-| **DEADLINE / FINAL** | Final pre-deadline decision |
-| **MATCH** | Post-deadline and matchday monitoring |
+**DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
-Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta**, **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
+Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
 
-Reports are occurrence-bound, provenance-aware, privacy-safe, and degrade explicitly when evidence is unavailable rather than inventing data.
+## DEEP decision-content delivery barrier
 
-## Principles
+DEEP is occurrence-bound, provenance-aware, privacy-safe, and may degrade explicitly when evidence is unavailable rather than inventing data.
 
-- scan the **full eligible FPL universe** before shortlisting;
-- model minutes, starting probability, and position-specific outcomes;
-- separate factual evidence from model inference;
-- optimise XI, bench, captaincy, and transfer packages;
-- preserve uncertainty and provenance;
-- keep manager-specific state private;
-- separate report delivery from unrelated engineering/performance closure.
+## PRICE human-facing delivery barrier
 
-## Documentation
+PRICE follows the same factual/provenance boundary and never invents unavailable manager state or decision output.
 
-README intentionally stays short. Detailed methodology, formulas, evidence weighting, privacy, scheduler, delivery architecture, presentation contracts, P4/P6, cache behaviour, performance validation, and engineering governance live under `docs/v12/`.
+## Governance
 
-Delivery authority: `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`
+The engine scans the **full eligible FPL universe**, separates facts from inference, preserves uncertainty, and keeps manager-specific state private.
 
+**Current-state authority** comes from governed CI/runtime evidence and `runtime-data/data/runtime_manifest.json`; this README and `MASTER_TASK_LIST_V3.md` are only a **human-readable projection**.
+
+Detailed methodology, formulas, evidence weighting, privacy, scheduler, delivery architecture, presentation contracts, P4/P6, cache behaviour, and performance governance live under `docs/v12/`.
+
+Delivery authority: `docs/v12/FPL_V12_DELIVERY_ARCHITECTURE_PLAN_REV6.md`  
 Schedule authority: `config/delivery/v12_delivery_schedule.json`
 
-## Development
-
-```bash
-python -m pytest -q
-```
-
-Production truth comes from governed CI/runtime evidence, not from a hard-coded README status or branch claim.
-
 > **Caveat:** this is a decision-support system, not an oracle. FPL outcomes remain stochastic and source evidence can change quickly.
-
-> **Last runtime/documentation sync:** `2026-10-03T20:58:00+07:00`

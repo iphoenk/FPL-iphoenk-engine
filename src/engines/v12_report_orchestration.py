@@ -2651,187 +2651,98 @@ def _render_package_frontier_lines(
     *,
     section_state: str,
 ) -> list[str]:
-    """Render the full-universe team-impact surface without recomputing models."""
+    """Render one bounded S14 decision surface from canonical route evidence."""
     payload = dict(content or {})
-    proof = dict(
-        payload.get("package_search_proof")
-        or payload.get("search_proof")
-        or {}
-    )
-    challengers = [
-        dict(row)
-        for row in (
-            payload.get("package_universe_challengers")
-            or payload.get("universe_challengers")
-            or ()
-        )
-        if isinstance(row, Mapping)
-    ]
+    proof = dict(payload.get("package_search_proof") or payload.get("search_proof") or {})
     routes = [
-        dict(row)
-        for row in (
+        dict(row) for row in (
             payload.get("package_routes")
             or payload.get("routes")
             or payload.get("frontier")
             or ()
-        )
-        if isinstance(row, Mapping)
+        ) if isinstance(row, Mapping)
     ]
-    lines = ["### UNIVERSE SCAN / OPTIMAL TEAM IMPACT"]
-    if proof:
-        lines.append(
-            "SEARCH PROOF: "
-            f"OUR15 {proof.get('owned_evaluated', 'UNAVAILABLE')}/"
-            f"{proof.get('owned_expected', 'UNAVAILABLE')} | "
-            f"UNIVERSE {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/"
-            f"{proof.get('eligible_universe_expected', 'UNAVAILABLE')} | "
-            f"OUTGOING {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15 | "
-            f"LEGAL ROUTES {proof.get('legal_route_count', 'UNAVAILABLE')} | "
-            f"HOLD {proof.get('hold_included', 'UNAVAILABLE')} | "
-            f"LOSSY PRUNING {proof.get('lossy_pruning', 'UNAVAILABLE')} | "
-            f"AUTHORITY {proof.get('search_authority', 'UNAVAILABLE')}"
-        )
-    else:
-        lines.append(
-            f"SEARCH PROOF: {section_state} — current full-universe proof unavailable"
-        )
-
-    lines.append("#### SCAN-DERIVED CHALLENGERS")
-    if not challengers:
-        lines.append("UNAVAILABLE — no supportable scan-derived challenger rows")
-    for row in challengers:
-        components = row.get("football_score_components", "UNAVAILABLE")
-        distribution = row.get("expected_points_distribution", "UNAVAILABLE")
-        lines.append(
-            "- "
-            f"#{row.get('rank', 'NA')} {row.get('player') or row.get('element_id')} "
-            f"({row.get('position', 'NA')}, {row.get('club', 'NA')}) | "
-            f"BEST OUT {row.get('best_outgoing', 'UNAVAILABLE')} | "
-            f"ROUTE {row.get('package_route', 'UNAVAILABLE')} | "
-            f"FOOTBALL {row.get('football_score', 'UNAVAILABLE')} "
-            f"[20/25/30/25={components}] | "
-            f"P(avail/start/cameo/DNP)="
-            f"{row.get('p_available', 'UNAVAILABLE')}/"
-            f"{row.get('p_start', 'UNAVAILABLE')}/"
-            f"{row.get('p_cameo', 'UNAVAILABLE')}/"
-            f"{row.get('p_dnp', 'UNAVAILABLE')} | "
-            f"xMins {row.get('xmins', 'UNAVAILABLE')} | "
-            f"P(return/blank/haul)="
-            f"{row.get('p_return', 'UNAVAILABLE')}/"
-            f"{row.get('p_blank', 'UNAVAILABLE')}/"
-            f"{row.get('p_haul', 'UNAVAILABLE')} | "
-            f"xPtsDist {distribution} | "
-            f"TACTICAL {row.get('tactical_role', 'UNAVAILABLE')} | "
-            f"SP/PEN {row.get('set_piece_penalty_role', 'UNAVAILABLE')} | "
-            f"1GW {row.get('gw_plus_1', 'UNAVAILABLE')} | "
-            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
-            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
-            f"UTILITY ΔHOLD {row.get('package_utility_delta_vs_hold', 'UNAVAILABLE')} | "
-            f"PRICE {row.get('price_economics', 'UNAVAILABLE')} | "
-            f"STRUCTURE {row.get('structure_effect', 'UNAVAILABLE')} | "
-            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
-            f"IVW {row.get('information_value_of_waiting', 'UNAVAILABLE')} | "
-            f"ICON+ {row.get('mini_league_leverage', 'UNAVAILABLE')} | "
-            f"UPSIDE {row.get('main_upside', 'UNAVAILABLE')} | "
-            f"RISK {row.get('main_risk', 'UNAVAILABLE')} | "
-            f"ACTION {row.get('action', 'UNAVAILABLE')}"
-        )
-
-    lines.append("#### PACKAGE FRONTIER")
     mc = dict(payload.get("monte_carlo") or {})
-    lines.append(
-        "MC PATHS: "
-        f"{mc.get('actual_paths', 'UNAVAILABLE')} | "
-        f"canonical_pass={mc.get('canonical_pass', 'UNAVAILABLE')} | "
-        f"convergence={(mc.get('convergence_evidence') or {}).get('status', 'UNAVAILABLE')}"
+    selected_id = str(payload.get("selected_route_id") or "HOLD")
+    hold = next((row for row in routes if str(row.get("route") or "").upper() == "HOLD"), {})
+    selected = next((row for row in routes if str(row.get("route") or "") == selected_id), {})
+    best = selected if selected_id.upper() != "HOLD" and selected else next(
+        (row for row in routes if str(row.get("route") or "").upper() != "HOLD"),
+        {},
     )
-    if not routes:
-        lines.append("UNAVAILABLE — package routes not materialized")
 
-    def move_label(move: Mapping[str, Any]) -> str:
-        return str(
-            move.get("name")
-            or move.get("player")
-            or move.get("element")
-            or "UNAVAILABLE"
-        )
+    lines = ["### SEARCH INTEGRITY"]
+    if proof:
+        lines.extend([
+            f"OUR15 denominator: {proof.get('owned_evaluated', 'UNAVAILABLE')}/{proof.get('owned_expected', 'UNAVAILABLE')}",
+            f"Universe denominator: {proof.get('eligible_universe_evaluated', 'UNAVAILABLE')}/{proof.get('eligible_universe_expected', 'UNAVAILABLE')}",
+            f"Outgoing denominator: {proof.get('outgoing_candidate_count', 'UNAVAILABLE')}/15",
+            f"Legal routes: {proof.get('legal_route_count', 'UNAVAILABLE')}",
+            f"HOLD included: {proof.get('hold_included', 'UNAVAILABLE')}",
+            f"Lossy pruning: {proof.get('lossy_pruning', 'UNAVAILABLE')}",
+            f"Search authority: {proof.get('search_authority', 'UNAVAILABLE')}",
+        ])
+    else:
+        lines.append(f"Search proof: {section_state}; current full-universe proof unavailable.")
 
-    for row in routes:
-        moves_raw = row.get("moves")
-        if isinstance(moves_raw, Mapping):
-            moves = dict(moves_raw)
-            outs = [
-                dict(item) for item in moves.get("out") or []
-                if isinstance(item, Mapping)
-            ]
-            ins = [
-                dict(item) for item in moves.get("in") or []
-                if isinstance(item, Mapping)
-            ]
-            structured_move_text = (
-                ", ".join(move_label(item) for item in outs)
-                + " → "
-                + ", ".join(move_label(item) for item in ins)
-            )
-        else:
-            moves = {}
-            outs = []
-            ins = []
-            structured_move_text = (
-                " | ".join(str(item) for item in (moves_raw or []))
-                if isinstance(moves_raw, (list, tuple))
-                else str(moves_raw or "UNAVAILABLE")
-            )
-        if str(row.get("route") or "").upper() == "HOLD":
-            move_text = "HOLD → HOLD"
-        else:
-            move_text = structured_move_text
-        outgoing_value = sum(
-            float(item.get("sell_value"))
-            for item in outs
-            if item.get("sell_value") is not None
-        ) if any(item.get("sell_value") is not None for item in outs) else None
-        incoming_cost = sum(
-            float(item.get("buy_price", item.get("price")))
-            for item in ins
-            if item.get("buy_price", item.get("price")) is not None
-        ) if any(item.get("buy_price", item.get("price")) is not None for item in ins) else None
-        transfer_cost_raw = row.get("transfer_cost")
-        transfer_cost = (
-            dict(transfer_cost_raw)
-            if isinstance(transfer_cost_raw, Mapping)
-            else {"legacy_value": transfer_cost_raw}
+    lines.append("### CANONICAL MONTE CARLO")
+    convergence = dict(mc.get("convergence_evidence") or {})
+    lines.extend([
+        f"Actual paths: {mc.get('actual_paths', 'UNAVAILABLE')}",
+        f"Correlated/common-random status: {mc.get('common_random_numbers', mc.get('correlated_common_random_status', 'UNAVAILABLE'))}",
+        f"Convergence: {convergence.get('status', mc.get('convergence', 'UNAVAILABLE'))}",
+        f"Mean delta: {mc.get('mean_delta', mc.get('mean', 'UNAVAILABLE'))}",
+        f"P>HOLD: {mc.get('p_beats_hold', mc.get('p_gt_hold', 'UNAVAILABLE'))}",
+        f"Q10: {mc.get('Q10', 'UNAVAILABLE')} | median: {mc.get('median', 'UNAVAILABLE')} | Q90: {mc.get('Q90', 'UNAVAILABLE')}",
+        f"Expected regret: {mc.get('expected_regret', 'UNAVAILABLE')}",
+    ])
+
+    verdict = selected_id if selected_id else "HOLD"
+    lines.append("### VERDICT")
+    lines.append(verdict)
+
+    lines.append("### BEST CHALLENGER")
+    if best:
+        moves = dict(best.get("moves") or {}) if isinstance(best.get("moves"), Mapping) else {}
+        outs = [
+            str(x.get("name") or x.get("player") or x.get("element") or "UNAVAILABLE")
+            for x in moves.get("out") or [] if isinstance(x, Mapping)
+        ]
+        ins = [
+            str(x.get("name") or x.get("player") or x.get("element") or "UNAVAILABLE")
+            for x in moves.get("in") or [] if isinstance(x, Mapping)
+        ]
+        route_text = (
+            f"{', '.join(outs) or 'HOLD'} → {', '.join(ins) or 'HOLD'}"
+            if moves else str(best.get("route") or "UNAVAILABLE")
         )
-        lines.append(
-            "- "
-            f"{row.get('route_kind', 'ROUTE')} | "
-            f"{row.get('route', 'UNAVAILABLE')} | OUT → IN {move_text} | "
-            f"SELL {outgoing_value if outgoing_value is not None else 'UNAVAILABLE'} | "
-            f"BUY {incoming_cost if incoming_cost is not None else 'UNAVAILABLE'} | "
-            f"BANK BEFORE {row.get('bank_before', 'UNAVAILABLE')} | "
-            f"BANK AFTER {transfer_cost.get('bank_after', 'UNAVAILABLE')} | "
-            f"AFFORDABILITY {row.get('affordability', 'UNAVAILABLE')} | "
-            f"HIT/FT {transfer_cost} | "
-            f"1GW {row.get('gw1_net', 'UNAVAILABLE')} | "
-            f"2GW {row.get('two_gw_if_relevant', 'UNAVAILABLE')} | "
-            f"3GW {row.get('three_gw', 'UNAVAILABLE')} | "
-            f"5GW {row.get('five_gw', 'UNAVAILABLE')} | "
-            f"RAW GAIN {row.get('raw_gain', 'UNAVAILABLE')} | "
-            f"NET GAIN {row.get('net_gain', 'UNAVAILABLE')} | "
-            f"P>HOLD {row.get('p_beats_hold', 'UNAVAILABLE')} | "
-            f"Q10 {row.get('Q10', 'UNAVAILABLE')} | "
-            f"Q25 {row.get('Q25', 'UNAVAILABLE')} | "
-            f"MEDIAN {row.get('median', 'UNAVAILABLE')} | "
-            f"Q75 {row.get('Q75', 'UNAVAILABLE')} | "
-            f"Q90 {row.get('Q90', 'UNAVAILABLE')} | "
-            f"TACTICAL/FIXTURE {row.get('tactical_fixture_effect', 'UNAVAILABLE')} | "
-            f"PRICE/OPTIONALITY {row.get('price_risk', 'UNAVAILABLE')} | "
-            f"ICON+ UTILITY {row.get('mini_league_utility', 'UNAVAILABLE')} | "
-            f"REGRET {row.get('expected_regret', 'UNAVAILABLE')} | "
-            f"ROBUSTNESS {row.get('robustness', 'UNAVAILABLE')} | "
-            f"REVERSAL RISK {row.get('sensitivity', 'UNAVAILABLE')} | "
-            f"VERDICT {row.get('action_verdict', 'UNAVAILABLE')}"
-        )
+        lines.extend([
+            f"Route: {route_text}",
+            f"1GW: {best.get('gw1_net', best.get('one_gw', 'UNAVAILABLE'))}",
+            f"3GW: {best.get('three_gw', 'UNAVAILABLE')}",
+            f"5GW: {best.get('five_gw', 'UNAVAILABLE')}",
+            f"P>HOLD: {best.get('p_beats_hold', 'UNAVAILABLE')}",
+            f"Median: {best.get('median', 'UNAVAILABLE')} | Q90: {best.get('Q90', 'UNAVAILABLE')}",
+            f"Regret: {best.get('expected_regret', 'UNAVAILABLE')}",
+            f"Robustness: {best.get('robustness', 'UNAVAILABLE')}",
+        ])
+    else:
+        lines.append("No non-HOLD challenger is supportable.")
+
+    economics = dict(payload.get("execution_economics_authority") or {})
+    route_econ = best if best else hold
+    transfer_cost = dict(route_econ.get("transfer_cost") or {}) if isinstance(route_econ.get("transfer_cost"), Mapping) else {}
+    lines.append("### EXECUTION ECONOMICS")
+    lines.extend([
+        f"FT: {transfer_cost.get('free_transfers', payload.get('free_transfers', 'UNAVAILABLE'))}",
+        f"Hit: {transfer_cost.get('hit_cost', transfer_cost.get('points_cost', 'UNAVAILABLE'))}",
+        f"Bank: {route_econ.get('bank_before', economics.get('bank', 'UNAVAILABLE'))}",
+        f"Sell-value availability: {economics.get('sell_value_status', payload.get('sell_value_status', 'UNAVAILABLE'))}",
+        f"Affordability: {route_econ.get('affordability', 'UNAVAILABLE')}",
+        f"Executability: {route_econ.get('executable', 'UNAVAILABLE')}",
+    ])
+    lines.append("### ACTIONABILITY CONCLUSION")
+    lines.append(str(route_econ.get("action_verdict") or payload.get("operational_action") or verdict))
     return lines
 
 
@@ -4779,10 +4690,9 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         binding = content_map.get("authoritative_binding")
         if isinstance(binding, Mapping):
             lines.append(
-                "AUTHORITY: "
-                + str(binding.get("producer") or "UNAVAILABLE")
-                + " | BINDING="
-                + str(binding.get("status") or "UNAVAILABLE")
+                "Authority: canonical bound evidence"
+                if str(binding.get("status") or "").upper() == "BOUND"
+                else "Authority: unavailable"
             )
 
         if deadline_mode and section_id == "GW_LOCK_PACKAGE":

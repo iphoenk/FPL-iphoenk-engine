@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-03T07:55:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T08:10:00+07:00`
 > **Production main at sync:** `4e58b4555c279569b874eae34d635ed6519c5d40`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -574,6 +574,12 @@ A DEEP report is deliverable only when its governed analytics, canonical materia
 PRICE reporting uses the same fail-closed principle: factual price evidence, freshness, decision context, and WAIT / PREPARE / ACT interpretation must remain traceable to their governed producers. A price report cannot silently invent unavailable manager state or decision output.
 
 The durable visible contract is versioned at `config/intelligence/v12_price_presentation_lock_v1.json`. It freezes the exact 12-section order, human table columns, OUR15/Watchlist20/RISE20/FALL20 row contracts, the six-row Action Board, source-health presentation, and the separation of FACT / MODEL / INFERENCE. User-facing PRICE tables must not expose `element_id`, raw manager dictionaries, run/workflow/SHA plumbing, or a generic recursive key/value dump. PRICE8 is deliberately split into economics and risk/horizon tables so mobile output remains readable. Renderer enforcement and visible-body QA are separate from the contract file, so a contract-only change cannot be treated as delivered presentation.
+
+## Deadline / Final and MATCH presentation locks
+
+Deadline/Final is a presentation overlay on canonical DEEP truth, not a replacement decision path. The versioned Deadline contract locks the four-field deadline header, late-news and predicted-XI tables, captain lock state, route legality/affordability/value-of-waiting table, exact S15B inheritance, the seven-row Deadline Action Board, and the FINAL 18-row GW LOCK PACKAGE before alternatives. The overlay is rendered only when report mode is DEADLINE or FINAL, so ordinary DEEP output is not modified by this workstream.
+
+MATCH uses a dedicated locked renderer for MATCH1 through MATCH13. It presents submitted picks, autosub state, captain/vice consequence, owned live/final points, bonus/BPS, material events, league-wide signals, ICON+ exposure, next-GW learning, and source freshness in fixed human tables. Internal element IDs, raw machine enums, generic recursive dictionaries, and workflow/run/SHA plumbing are not user-facing presentation. Healthy submitted-picks exposure remains visible when live standings degrade, and supported population values retain numerator, denominator, and percentage semantics.
 
 ## Public / private boundary
 

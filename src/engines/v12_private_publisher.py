@@ -79,6 +79,7 @@ _OPTIONAL_SERVING_FILES = (
     "delivery_status.json",
     "delivery_state.json",
     "presentation_qa.json",
+    "report_time_web_capture.json",
 )
 _REPORT_FIRST_SERVING_FILES = (
     "serving_report.json",

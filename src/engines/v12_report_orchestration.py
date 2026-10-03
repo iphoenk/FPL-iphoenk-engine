@@ -4772,15 +4772,21 @@ def _deep_identity_header_lines(report: Mapping[str, Any]) -> list[str]:
     ]
     planning_gw = report.get("planning_gw")
     if planning_gw is None:
-        s01 = next(
+        s01_raw = next(
             (
-                dict(row.get("content") or {})
+                row.get("content")
                 for row in sections
                 if str(row.get("section_id") or "").upper() == "S01"
             ),
-            {},
+            None,
         )
-        dashboard = dict(s01.get("decision_dashboard") or {})
+        s01 = dict(s01_raw) if isinstance(s01_raw, Mapping) else {}
+        dashboard_raw = s01.get("decision_dashboard")
+        dashboard = (
+            dict(dashboard_raw)
+            if isinstance(dashboard_raw, Mapping)
+            else {}
+        )
         planning_gw = (
             dashboard.get("PLANNING_GW")
             or s01.get("planning_gw")

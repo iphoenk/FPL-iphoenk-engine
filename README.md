@@ -80,7 +80,7 @@ P4 canonical scenario packages precompute a bounded private BASE_CURRENT15 plus 
 4. What do underlying numbers, tactical role, opponent matchup, set pieces, penalties, workload, and recent match evidence imply?
 5. Which players are breaking out, regressing, or becoming materially more relevant across the full FPL universe?
 6. How do price movement, affordability, free transfers, hits, regret, and reversal risk affect a decision?
-7. How should mini-league exposure, captaincy, overlap, differentials, and direct rivals alter decision utility without overriding stronger football evidence?
+7. How should mini-league exposure, captaincy, overlap, differentials, and competitive-window rivals alter decision utility without overriding stronger football evidence?
 8. What changed after each match, and should the action remain **WAIT**, move to **PREPARE**, or become **ACT**?
 
 ## Architecture
@@ -512,7 +512,7 @@ The repositories and models we reviewed are useful, but many are intentionally n
 | **Uncertainty** | mean xPts | event probabilities, point PMFs, blank/haul risk, tails and quantiles, plus correlated Monte Carlo when required |
 | **Transfers** | best single transfer or solver from supplied projections | legal **1/2/3+ transfer packages**, funded routes, exact affordability, hits/FT economics, 1/2/3/5-GW horizons, robustness, regret and reversal |
 | **Decision search** | optimizer starts from a reduced candidate list | serious transfer decisions carry explicit full-universe search proof and owned-squad outgoing scan |
-| **Mini-league** | global ownership or EO only | league/rival/direct-rival exposure, captaincy and rank utility applied **after** the football-optimal baseline |
+| **Mini-league** | global ownership or EO only | league/rival/competitive-window exposure, captaincy and rank utility applied **after** the football-optimal baseline |
 | **Post-match learning** | latest form snapshot | **once-per-completed-GW** match-by-match review plus after-GW reassessment, delivered only through eligible S16B |
 | **External opinions** | analyst/model output directly blended into score | external analyst/model evidence is a **challenger**, not factual authority; disagreement is preserved instead of averaged away |
 | **Personal data** | squad and recommendations stored beside public compute | **public factual/compute plane separated from private personal/decision plane** |
@@ -556,14 +556,14 @@ Canonical DEEP reporting covers:
 - RISE / FALL movers;
 - transfer-package frontier and three-GW staging;
 - evidence quality and source health;
-- mini-league exposure and direct-rival context;
+- mini-league exposure and competitive-window context;
 - ALL15 tactical/probability review;
 - conditional once-per-completed-GW S16B post-match review;
 - action board and final judgement.
 
 The detailed section contract is intentionally maintained outside this README so the front page stays readable.
 
-The user-visible DEEP presentation itself is version-locked by `config/intelligence/v12_deep_presentation_lock_v1.json`. That contract freezes the visible section order, per-section block structure, exact table column order, governed row counts for OUR15/Scanner20/RISE20/FALL20, and separate S15B mini-league tables. S15B population statistics must show numerator, denominator, and percentage where the population is known; unrelated scopes such as LEAGUE58, RIVALS57, DIRECT6, direct rivals, rival-only threats, and captain landscape must not be merged into one generic table. This presentation lock does not change canonical V12 decisions, model maths, MC500k, universe/routes, factual authority, or S16B lifecycle semantics.
+The user-visible DEEP presentation itself is version-locked by `config/intelligence/v12_deep_presentation_lock_v1.json`. That contract freezes the visible section order, per-section block structure, exact table column order, governed row counts for OUR15/Scanner20/RISE20/FALL20, and separate S15B mini-league tables. S15B population statistics must show numerator, denominator, and percentage where the population is known; unrelated scopes such as LEAGUE, RIVALS, COMPETITIVE, competitive-window rivals, rival-only threats, and captain landscape must not be merged into one generic table. This presentation lock does not change canonical V12 decisions, model maths, MC500k, universe/routes, factual authority, or S16B lifecycle semantics.
 
 ## DEEP decision-content delivery barrier
 

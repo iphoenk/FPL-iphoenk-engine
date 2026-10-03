@@ -576,7 +576,7 @@ def test_j_current15_supportable_requires_exactly_15_rich_individual_analyses():
     body = render_deep_text(report)
     failures = validate_deep_decision_content_delivery(report, body)
     assert not [failure for failure in failures if failure.startswith("ALL15_")]
-    assert "posterior" in body.lower()
+    assert "bayesian" in body.lower()
 
 
 def test_k_due_s16b_requires_match_review_exact15_and_universe_denominator():

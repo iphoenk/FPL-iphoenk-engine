@@ -15,6 +15,7 @@ transfers, or own decision mathematics. Its responsibilities are limited to:
 
 from copy import deepcopy
 from datetime import datetime
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -1951,13 +1952,20 @@ def write_serving_artifacts(
             # decision payload is recomputed.
             binding = dict(content.get("authoritative_binding") or {})
             if str(binding.get("status") or "").upper() == "BOUND":
-                binding["payload_fingerprint"] = _fingerprint(
-                    {
-                        key: value
-                        for key, value in content.items()
-                        if key != "authoritative_binding"
-                    }
-                )
+                binding_payload = {
+                    key: value
+                    for key, value in content.items()
+                    if key != "authoritative_binding"
+                }
+                binding["payload_fingerprint"] = hashlib.sha256(
+                    json.dumps(
+                        binding_payload,
+                        sort_keys=True,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                        default=str,
+                    ).encode("utf-8")
+                ).hexdigest()
                 content["authoritative_binding"] = binding
             row["content"] = content
         report["sections"] = sections

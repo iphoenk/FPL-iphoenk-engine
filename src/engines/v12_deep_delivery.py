@@ -209,6 +209,19 @@ def validate_deep_decision_content_delivery(
                 failures.append(code)
         if not any(str(row.get("route") or "").upper() == "HOLD" for row in routes):
             failures.append("HOLD_COMPARATOR_MISSING")
+    if state("S14") == "COMPLETE":
+        forbidden_news_keys = {
+            "material_news",
+            "news_groups",
+            "news_summary",
+            "source_policy",
+        }
+        leaked = sorted(key for key in forbidden_news_keys if key in s14)
+        if leaked:
+            failures.append(
+                "S14_NEWS_DUMP_FORBIDDEN=" + ",".join(leaked)
+            )
+
     if funded and "FUNDED / 2-TRANSFER" not in upper:
         failures.append("FUNDING_ROUTE_NOT_VISIBLE")
     if int(mc.get("actual_paths") or 0) >= 500_000:
@@ -232,7 +245,13 @@ def validate_deep_decision_content_delivery(
         exposures = list(s15b.get("exposures") or [])
         if context.get("manager_count") and not exposures:
             failures.append("MINI_LEAGUE_PLACEHOLDER_ONLY")
-        for token in ("LEAGUE LANDSCAPE:", "STARTER_COUNT", "CAPTAIN_COUNT", "VICE_COUNT", "EO_PCT"):
+        for token in (
+            "LEAGUE LANDSCAPE:",
+            "DENOMINATOR SCOPES",
+            "COMPETITIVE WINDOW",
+            "OUR15 EXPOSURE, LEAGUE",
+            "CAPTAIN LANDSCAPE",
+        ):
             if token not in upper:
                 failures.append(f"MINI_LEAGUE_VISIBLE_FIELD_MISSING={token}")
 

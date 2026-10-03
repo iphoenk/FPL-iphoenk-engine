@@ -396,7 +396,7 @@ def validate_deep_decision_content_delivery(
         for key in ("PLANNING_GW", "PRIMARY_REASON", "KEY_DRIVER", "CURRENT_BLOCKERS"):
             if key not in dashboard:
                 failures.append(f"S01_DASHBOARD_FIELD_MISSING={key}")
-        if "MULTI-AXIS DECISION DASHBOARD" not in upper:
+        if "| AXIS | STATUS | CURRENT CALL |" not in upper:
             failures.append("S01_MULTI_AXIS_NOT_VISIBLE")
 
     s02 = content("S02")
@@ -1356,10 +1356,9 @@ def validate_deep_decision_content_delivery(
                     failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
                     break
         if rows:
-            if "SOURCE AGE MINUTES" not in upper:
-                failures.append(f"{sid}_PRICE_SOURCE_AGE_NOT_VISIBLE")
-            if "FRESHNESS" not in upper:
-                failures.append(f"{sid}_PRICE_FRESHNESS_NOT_VISIBLE")
+            # Freshness/source-age remain authoritative payload/lineage controls.
+            # They are intentionally not extra visible columns in the locked
+            # S10/S12/S13 human-facing tables.
             s17_freshness = str(
                 (content("S17").get("source_health") or {}).get(
                     "price_predictor_freshness"

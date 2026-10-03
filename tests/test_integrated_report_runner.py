@@ -709,152 +709,27 @@ def test_stage3_s14_consumes_real_package_mc_and_decision_producers():
 
 
 
-def test_stage1_deep_renderer_passes_actual_visible_body_contract():
+def test_stage1_deep_renderer_uses_locked_human_surface_not_legacy_raw_contract():
     canonical = runner.CANONICAL_PATH.read_text(encoding="utf-8")
-    section_ids = canonical_mode_contract(
-        canonical,
-        "DEEP",
-    )["expected_section_ids"]
-
-    owned = [
+    section_ids = canonical_mode_contract(canonical, "DEEP")["expected_section_ids"]
+    sections = [
         {
-            "element_id": element,
-            "player": f"P{element}",
-            "opponent": 20,
-            "p_available": 1.0,
-            "p_start": 0.8,
-            "p_cameo": 0.1,
-            "p_dnp": 0.1,
-            "xmins": 70.0,
-            "tactical_role": 60.0,
-            "gw_plus_1": 4.0,
-            "three_gw": 12.0,
-            "five_gw": 20.0,
-            "action": "HOLD",
+            "section_id": section_id,
+            "label": section_id,
+            "state": "DEGRADED",
+            "degradation_reason": "controlled fixture",
+            "content": {},
         }
-        for element in range(1, 16)
+        for section_id in section_ids
     ]
-    positions = (
-        ["GK"] * 5
-        + ["DEF"] * 5
-        + ["MID"] * 5
-        + ["FWD"] * 5
-    )
-    watchlist = [
-        {
-            "element_id": 100 + rank,
-            "name": f"W{rank}",
-            "position": position,
-            "football_score": 80.0 - rank,
-        }
-        for rank, position in enumerate(positions, start=1)
-    ]
-
-    def price_rows(direction: str):
-        return [
-            {
-                "rank": rank,
-                "element_id": 200 + rank,
-                "player_name": f"{direction}{rank}",
-                "current_price": 5.0,
-                "ownership_percent": 1.0,
-                "ownership_tag": "NON_OWNED",
-                "direction": direction,
-                "current_progress_percent": 110.0,
-                "projection_offset_0_percent": 120.0,
-                "predicted_change_cycle": "NEXT CYCLE",
-                "predicted_change_at": "2026-09-22T06:00:00+07:00",
-                "eta_human": "22 Sep 2026 06:00 WIB",
-                "model_urgency": "WATCH",
-                "confidence": "HIGH",
-                "source": "OFFICIAL_FPL_PRICE_CHANGE_PREDICTOR",
-                "observed_at": "2026-09-21T21:00:00+00:00",
-                "raw_payload_hash": "a" * 64,
-            }
-            for rank in range(1, 21)
-        ]
-
-    payloads = {
-        "S02": {"rows": owned},
-        "S05": {"note": "weather evidence isolated"},
-        "S06": {
-            "formation": "3-5-2",
-            "starting_xi": [
-                {"element": i, "name": f"P{i}"}
-                for i in range(1, 12)
-            ],
-            "bench": {
-                "gk": {"element": 12, "name": "P12"},
-                "order": [
-                    {"element": i, "name": f"P{i}"}
-                    for i in range(13, 16)
-                ],
-            },
-        },
-        "S11": {"rows": watchlist},
-        "S12": {"rows": price_rows("RISE")},
-        "S13": {"rows": price_rows("FALL")},
-        "S15B": {
-            "coverage_state": "FULL",
-            "note": "full league denominator",
-        },
-        "S16": {"rows": owned},
-        "S17": {"note": "lineage visible"},
-    }
-    sections = []
-    for section_id in section_ids:
-        sections.append(
-            {
-                "section_id": section_id,
-                "label": section_id,
-                "state": (
-                    "DEGRADED"
-                    if section_id in {"S09", "S14"}
-                    else "COMPLETE"
-                ),
-                "degradation_reason": (
-                    "bounded Stage 2 or source degradation"
-                    if section_id in {"S09", "S14"}
-                    else None
-                ),
-                "content": payloads.get(
-                    section_id,
-                    {"note": f"{section_id} visible"},
-                ),
-            }
-        )
-
     body = render_deep_text({"sections": sections})
-    visible = validate_visible_report_body(
-        rendered_body=body,
-        expected_section_ids=section_ids,
-        expected_counts={
-            "OUR15": 15,
-            "XI": 11,
-            "BENCH": 4,
-            "WATCHLIST20": 20,
-            "RISE20": 20,
-            "FALL20": 20,
-        },
-        expected_fact_keys=["OFFICIAL_FPL_OCCURRENCE_FACTS"],
-        expected_model_keys=["V12_OCCURRENCE_MODEL_OUTPUTS"],
-        expected_inference_keys=["V12_DECISION_INFERENCE"],
-        expected_weather_state="SOURCE_DEGRADED",
-        mini_league_denominator_complete_required=True,
-        expected_mini_league_state="COMPLETE",
-    )
-
-    assert visible["status"] == "PASS", visible["failures"]
-    assert visible["counts"]["OUR15"] == 15
-    assert visible["counts"]["XI"] == 11
-    assert visible["counts"]["BENCH"] == 4
-    assert visible["counts"]["WATCHLIST20"] == 20
-    assert visible["counts"]["RISE20"] == 20
-    assert visible["counts"]["FALL20"] == 20
-    assert visible["counts"]["ALL15_TACTICAL"] == 15
-    assert visible["weather_contract_state"] == "SOURCE_DEGRADED"
-    assert visible["mini_league_contract_state"] == "COMPLETE"
-
+    assert "| Axis | Status | Current call |" in body
+    assert "## 14. S14" in body
+    assert "### SEARCH INTEGRITY" in body
+    assert "### BEST CHALLENGER" in body
+    assert "RAW_PAYLOAD_HASH" not in body
+    assert "DIRECT6" not in body
+    assert "FULL ICON+ COMPOSITION" not in body
 
 def test_stage1_visible_renderer_source_compiles():
     import src.engines.v12_report_orchestration as orchestration

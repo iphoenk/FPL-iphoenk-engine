@@ -187,6 +187,13 @@ def render_match_locked_text(report: Mapping[str, Any]) -> str:
             bench_rows.extend((str(i), value) for i,value in enumerate(priority[:3],1))
             while len(bench_rows)<4:
                 bench_rows.append((str(len(bench_rows)), "UNAVAILABLE"))
+            lines.extend([
+                "Bench GK: " + _scalar(bench_gk),
+                "Outfield autosub priority: " + (
+                    ", ".join(f"{i} {_scalar(value)}" for i, value in enumerate(priority[:3], 1))
+                    if priority else "UNAVAILABLE"
+                ),
+            ])
             lines.extend(_table(("Slot","Player"),bench_rows[:4]))
             outs=list(content.get("potential_out") or [])
             ins=list(content.get("bench_candidates") or [])

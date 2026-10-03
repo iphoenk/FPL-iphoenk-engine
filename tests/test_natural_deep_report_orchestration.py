@@ -1864,6 +1864,7 @@ def test_locked_deadline_overlay_runs_in_required_deep_ci():
         },
         "sections": [
             {"section_id": "S01", "label": "DECISION / CURRENT STATUS", "state": "COMPLETE", "content": {}},
+            {"section_id": "S04", "label": "MATERIAL DEVELOPMENTS / CHANGES", "state": "COMPLETE", "content": {}},
             {"section_id": "S05", "label": "FIXTURES / REST / CONDITIONS", "state": "COMPLETE", "content": {}},
             {"section_id": "S08", "label": "CAPTAIN / VICE-CAPTAIN FRONTIER", "state": "COMPLETE", "content": {}},
             {"section_id": "S14", "label": "PACKAGE OPTIMIZER / TRANSFER FRONTIER", "state": "DEGRADED", "degradation_reason": "controlled fixture", "content": {}},

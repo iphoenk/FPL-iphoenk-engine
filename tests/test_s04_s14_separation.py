@@ -128,3 +128,55 @@ def test_s14_clean_hold_does_not_trigger_news_dump_guard():
         failure.startswith("S14_NEWS_DUMP_FORBIDDEN")
         for failure in failures
     )
+
+
+def test_s04_rumor_cannot_be_presented_as_fact_in_delivery_barrier():
+    payload = _s04_payload()
+    rumor = dict(payload["material_news"][0])
+    rumor["source_class"] = "RUMOR / UNVERIFIED"
+    rumor["evidence_status"] = "CONFIRMED"
+    payload["material_news"] = [rumor]
+    payload["news_groups"]["OUR15"] = [rumor]
+    lines, _ = _render_deep_visible_contract_lines(
+        section_id="S04",
+        content=payload,
+        owned_ids={1},
+        owned_names={1: "Joao Pedro"},
+    )
+    failures = validate_deep_decision_content_delivery(
+        {
+            "sections": [
+                {
+                    "section_id": "S04",
+                    "state": "COMPLETE",
+                    "content": payload,
+                }
+            ]
+        },
+        "\n".join(lines),
+    )
+    assert "S04_RUMOR_PRESENTED_AS_FACT=1" in failures
+
+
+def test_s04_news_cannot_claim_direct_model_mutation():
+    payload = _s04_payload()
+    payload["decision_consequence"]["model_numbers_mutated_here"] = True
+    lines, _ = _render_deep_visible_contract_lines(
+        section_id="S04",
+        content=payload,
+        owned_ids={1},
+        owned_names={1: "Joao Pedro"},
+    )
+    failures = validate_deep_decision_content_delivery(
+        {
+            "sections": [
+                {
+                    "section_id": "S04",
+                    "state": "COMPLETE",
+                    "content": payload,
+                }
+            ]
+        },
+        "\n".join(lines),
+    )
+    assert "S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION" in failures

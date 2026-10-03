@@ -8412,6 +8412,11 @@ def run_deep(
                     "identity_resolution_is_not_auth_authority": True,
                 },
                 "lineage": {
+                    "report_mode": "DEEP",
+                    "logical_slot": report_slot,
+                    "exact_occurrence_binding": prefetch.get("same_occurrence_bound") is True,
+                    "serving_source": "canonical occurrence-bound report bundle",
+                    "substituted_slot": False,
                     "v6_factual_plane_mutated": False,
                     "post_match_source": "V12 contextual dynamics over read-only V6 normalized match rows",
                 },

@@ -4550,6 +4550,120 @@ def _xi_battles(
     return out
 
 
+def _display_player(value: Any) -> str:
+    if isinstance(value, Mapping):
+        return str(
+            value.get("name")
+            or value.get("player")
+            or value.get("element")
+            or value.get("element_id")
+            or "UNAVAILABLE"
+        )
+    return str(value if value not in (None, "") else "UNAVAILABLE")
+
+
+def _xi_battle_presentation(
+    *,
+    battles: Sequence[Mapping[str, Any]],
+    battle_summary: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Presentation-only projection of the governed P1.7 XI battle."""
+    rows = [dict(row) for row in battles if isinstance(row, Mapping)]
+    primary = rows[0] if rows else {}
+    table_rows: list[dict[str, Any]] = []
+    if primary:
+        table_rows = [
+            {
+                "player": primary.get("player_a"),
+                "p_start": primary.get("p_start_a"),
+                "xmins": primary.get("xmins_a"),
+                "projection_1gw": primary.get("projection_1gw_a"),
+            },
+            {
+                "player": primary.get("player_b"),
+                "p_start": primary.get("p_start_b"),
+                "xmins": primary.get("xmins_b"),
+                "projection_1gw": primary.get("projection_1gw_b"),
+            },
+        ]
+    summary = dict(battle_summary or {})
+    return {
+        "battle_rows": table_rows,
+        "battles": rows,
+        "empty_is_truthful": not bool(rows),
+        "current_winner": primary.get("final_starter") or summary.get("winner"),
+        "battle_classification": summary.get("status") or ("NO_MATERIAL_BATTLE" if not rows else "MATERIAL"),
+        "primary_alternative": primary.get("player_b"),
+        "reason": primary.get("tactical_reason") or summary.get("reason") or summary.get("status"),
+        "battle_summary": summary,
+    }
+
+
+def _lineup_risk_presentation(
+    *,
+    lineup: Mapping[str, Any] | None,
+    battles: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Presentation-only lineup risk/autosub surface; no new lineup decision math."""
+    lineup_map = dict(lineup or {})
+    bench = lineup_map.get("bench")
+    bench_map = dict(bench) if isinstance(bench, Mapping) else {}
+    bench_gk = (
+        bench_map.get("bench_gk")
+        or bench_map.get("gk")
+        or bench_map.get("goalkeeper")
+    )
+    outfield = (
+        bench_map.get("outfield_autosub_priority")
+        or bench_map.get("order")
+        or bench_map.get("outfield")
+        or []
+    )
+    if not isinstance(outfield, Sequence) or isinstance(outfield, (str, bytes)):
+        outfield = []
+    risk_rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw in battles:
+        battle = dict(raw)
+        for suffix in ("a", "b"):
+            player = str(battle.get(f"player_{suffix}") or "").strip()
+            if not player or player in seen:
+                continue
+            seen.add(player)
+            workload = dict(battle.get(f"workload_{suffix}") or {})
+            flags = [
+                str(value)
+                for value in (
+                    workload.get("load_state"),
+                    "LONG HAUL" if workload.get("long_haul") is True else None,
+                    battle.get(f"role_{suffix}"),
+                )
+                if value not in (None, "", "NORMAL", "AVAILABLE")
+            ]
+            risk_rows.append({
+                "player": player,
+                "p_start": battle.get(f"p_start_{suffix}"),
+                "xmins": battle.get(f"xmins_{suffix}"),
+                "flags": flags,
+                "implication": (
+                    "Current starter"
+                    if player == str(battle.get("final_starter") or "")
+                    else "Primary alternative"
+                ),
+            })
+    return {
+        "risk_rows": risk_rows,
+        "lineup_implication": (
+            "Keep the governed P1.7 XI; autosub order protects material start/minutes uncertainty."
+            if risk_rows
+            else "No material XI battle risk is currently identified."
+        ),
+        "bench_gk": _display_player(bench_gk),
+        "autosub_order": [_display_player(value) for value in list(outfield)[:3]],
+        "empty_is_truthful": not bool(risk_rows),
+    }
+
+
 def _three_gw_staging(
     *,
     planning_gw: int,
@@ -6241,15 +6355,20 @@ def refresh_mini_league_only_state(
 
     section_payloads["S06B"] = _section(
         "COMPLETE",
-        formation_strategy,
+        bound(
+            "S06B",
+            _xi_battle_presentation(
+                battles=xi_battles,
+                battle_summary=lineup.get("main_starting_xi_battle"),
+            ),
+        ),
     )
     section_payloads["S07"]["content"] = bound(
         "S07",
-        {
-            "battles": xi_battles,
-            "empty_is_truthful": not bool(xi_battles),
-            "battle_summary": lineup.get("main_starting_xi_battle"),
-        },
+        _lineup_risk_presentation(
+            lineup=lineup,
+            battles=xi_battles,
+        ),
     )
     section_payloads["S08"]["content"] = bound("S08", captain_surface)
 
@@ -7873,13 +7992,16 @@ def run_deep(
         material_news_seen.add(key)
         material_news.append(news_item)
     news_groups = {
-        "OUR15": [row for row in material_news if row.get("audience") == "OUR15"],
-        "WATCHLIST / TARGETS": [
+        group_name: [
             row for row in material_news
-            if row.get("audience") == "WATCHLIST / TARGETS"
-        ],
-        "TEAM / TACTICAL": [],
-        "OTHER MATERIAL": [],
+            if str(row.get("audience") or "OTHER MATERIAL").upper() == group_name
+        ]
+        for group_name in (
+            "OUR15",
+            "WATCHLIST / TARGETS",
+            "TEAM / TACTICAL",
+            "OTHER MATERIAL",
+        )
     }
     model_developments = (
         [
@@ -8056,17 +8178,19 @@ def run_deep(
             lineup_reason,
         ),
         "S06B": _section(
-            "COMPLETE" if lineup and mini_overlay else "DEGRADED",
-            formation_strategy,
-            None if lineup and mini_overlay else "formation or mini-league downstream evidence incomplete",
+            lineup_state,
+            _xi_battle_presentation(
+                battles=xi_battles,
+                battle_summary=(lineup or {}).get("main_starting_xi_battle"),
+            ),
+            lineup_reason,
         ),
         "S07": _section(
             lineup_state,
-            {
-                "battles": xi_battles,
-                "empty_is_truthful": not bool(xi_battles),
-                "battle_summary": (lineup or {}).get("main_starting_xi_battle"),
-            },
+            _lineup_risk_presentation(
+                lineup=lineup,
+                battles=xi_battles,
+            ),
             lineup_reason,
         ),
         "S08": _section(

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-03T08:20:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T09:20:11+07:00`
 > **Production main at sync:** `ecc6ac16cc6e0887f29c0c967b92becf0999f14c`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -580,6 +580,8 @@ The durable visible contract is versioned at `config/intelligence/v12_price_pres
 Deadline/Final is a presentation overlay on canonical DEEP truth, not a replacement decision path. The versioned Deadline contract locks the four-field deadline header, late-news and predicted-XI tables, captain lock state, route legality/affordability/value-of-waiting table, exact S15B inheritance, the seven-row Deadline Action Board, and the FINAL 18-row GW LOCK PACKAGE before alternatives. The overlay is rendered only when report mode is DEADLINE or FINAL, so ordinary DEEP output is not modified by this workstream.
 
 MATCH uses a dedicated locked renderer for MATCH1 through MATCH13. It presents submitted picks, autosub state, captain/vice consequence, owned live/final points, bonus/BPS, material events, league-wide signals, ICON+ exposure, next-GW learning, and source freshness in fixed human tables. Internal element IDs, raw machine enums, generic recursive dictionaries, and workflow/run/SHA plumbing are not user-facing presentation. Healthy submitted-picks exposure remains visible when live standings degrade, and supported population values retain numerator, denominator, and percentage semantics.
+
+A shared human-language post-render gate is reused by PRICE and the Deadline/Final/MATCH post-render QA. It rejects internal IDs, raw dictionaries/JSON, generic key=value dumps, workflow/run/fingerprint plumbing, and long UPPER_SNAKE_CASE machine enums while leaving football acronyms such as EO, xPts, xMins, BPS, DNP, FT, GW, and FPL valid. The gate is presentation-only and does not alter DEEP analytics or decision authority.
 
 ## Public / private boundary
 

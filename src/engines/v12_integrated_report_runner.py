@@ -5875,27 +5875,46 @@ def refresh_price_only_state(
     )
 
     s15 = dict(section_payloads["S15"].get("content") or {})
-    evidence_quality = dict(s15.get("evidence_quality") or {})
+    evidence_quality = dict(
+        s15.get("evidence_assessment")
+        or s15.get("evidence_quality")
+        or {}
+    )
     price_rows = [
         dict(row)
         for row in rise.get("rows") or []
         if isinstance(row, Mapping)
     ]
-    evidence_quality["price predictor freshness"] = {
-        "state": next(
-            (
-                str(row.get("freshness") or "").upper()
-                for row in price_rows
-            ),
-            "UNAVAILABLE",
+    price_freshness = next(
+        (
+            str(row.get("freshness") or "").upper()
+            for row in price_rows
         ),
-        "health": rise.get("predictor_health"),
-        "observed_at": (
-            price_rows[0].get("evidence_timestamp")
-            if price_rows else None
+        "UNAVAILABLE",
+    )
+    evidence_quality["Price movement"] = {
+        "quality": (
+            "🟡 Stale"
+            if price_freshness == "STALE"
+            else "🟢 Strong"
+            if price_freshness in {"FRESH", "CURRENT", "AVAILABLE"}
+            else "🟡 Partial"
+        ),
+        "state": price_freshness,
+        "decision_impact": (
+            "Monitor only; stale price evidence cannot independently trigger ACT."
+            if price_freshness == "STALE"
+            else "Price evidence may inform timing but cannot override football quality."
         ),
     }
+    s15["evidence_assessment"] = evidence_quality
     s15["evidence_quality"] = evidence_quality
+    s15.update(
+        _evidence_assessment_meta(
+            evidence_quality,
+            operational_action=operational_action,
+        )
+    )
     section_payloads["S15"]["content"] = bound("S15", s15)
 
     s16 = dict(section_payloads["S16"].get("content") or {})
@@ -5907,13 +5926,7 @@ def refresh_price_only_state(
     source_health.update(
         {
             "price_predictor": rise.get("predictor_health") or "UNAVAILABLE",
-            "price_predictor_freshness": next(
-                (
-                    str(row.get("freshness") or "UNKNOWN").upper()
-                    for row in price_rows
-                ),
-                "UNAVAILABLE",
-            ),
+            "price_predictor_freshness": price_freshness,
             "price_predictor_source_age_minutes": next(
                 (
                     row.get("source_age_minutes")
@@ -5924,6 +5937,29 @@ def refresh_price_only_state(
         }
     )
     s17["source_health"] = source_health
+    technical_planes = [
+        dict(row)
+        for row in s17.get("technical_planes") or []
+        if isinstance(row, Mapping)
+    ]
+    for row in technical_planes:
+        if str(row.get("plane") or "") == "Price data pipeline":
+            row["status"] = (
+                "🟡 Healthy pipeline; snapshot stale"
+                if price_freshness == "STALE"
+                else "🟢 Healthy"
+                if rise.get("predictor_health")
+                else "🟡 Degraded"
+            )
+    s17["technical_planes"] = technical_planes
+    s17["freshness_summary"] = (
+        "All decision-critical technical inputs are within their bound contract"
+        + (
+            " except the price predictor snapshot."
+            if price_freshness == "STALE"
+            else "."
+        )
+    )
     section_payloads["S17"]["content"] = s17
 
     s18 = dict(section_payloads["S18"].get("content") or {})

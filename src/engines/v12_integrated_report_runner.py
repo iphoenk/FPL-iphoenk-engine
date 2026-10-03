@@ -4082,7 +4082,14 @@ def _evidence_quality_surface(
     mini: Mapping[str, Any] | None,
     private_auth_state: str,
     report_slot: str,
+    owned_count: int,
 ) -> dict[str, Any]:
+    """Decision-facing evidence assessment only.
+
+    Technical pipeline/run/serving provenance belongs to S17. This surface
+    grades whether available evidence is usable for the current football
+    decision without relabelling PRIOR evidence as CURRENT.
+    """
     price_rows = [
         dict(row)
         for row in (rise or {}).get("rows") or []
@@ -4108,96 +4115,218 @@ def _evidence_quality_surface(
         (personal_resolution or {}).get("resolution_status")
         or "UNAVAILABLE"
     ).upper()
-    auth = str(private_auth_state or "UNAVAILABLE").upper()
-    finance_state = (
-        "AVAILABLE" if _execution_finance_available(finance) else "DEGRADED"
+    finance_available = _execution_finance_available(finance)
+    sell_value_status = str((finance or {}).get("sell_value_status") or "UNAVAILABLE").upper()
+    non_pl_bound = coverage.get("verified_non_pl_schedule_bound") is True
+    player_workload_validated = (
+        str(coverage.get("player_observation_status") or "").upper()
+        == "VALIDATED"
     )
-    return {
-        "Official public FPL": {
-            "state": "CURRENT" if official else "UNAVAILABLE",
-            "source": "OFFICIAL_FPL_PUBLIC",
-        },
-        "CURRENT15 identity": {
+    mini_state = str((mini or {}).get("coverage_state") or "UNAVAILABLE").upper()
+
+    def quality(state: str, *, adequate: bool = False) -> str:
+        token = str(state or "").upper()
+        if token in {"CURRENT", "AVAILABLE", "COMPLETE", "FULL", "CURRENT_MODEL_OUTPUT", "RESOLVED"}:
+            return "🟢 Strong"
+        if adequate or token in {"REPORT_TIME_BOUND", "ADEQUATE"}:
+            return "🟢 Adequate"
+        if token in {"STALE"}:
+            return "🟡 Stale"
+        if token in {"PARTIAL", "DEGRADED", "PL_ONLY_DEGRADED", "UNAVAILABLE"}:
+            return "🟡 Partial"
+        return "🟡 Partial"
+
+    assessment: dict[str, Any] = {
+        "Squad / OUR15": {
+            "quality": quality("COMPLETE" if owned_count == 15 and identity_status != "UNAVAILABLE" else "PARTIAL"),
             "state": identity_status,
-            "source": (personal_resolution or {}).get("source"),
-            "observed_at": (personal_resolution or {}).get("observed_at"),
-        },
-        "authenticated personal auth": {
-            "state": auth,
-            "source": "data/v6/personal/current_team.json:auth_state",
-        },
-        "authenticated finance": {
-            "state": finance_state,
-            "bank_status": (finance or {}).get("bank_status"),
-            "sell_value_status": (finance or {}).get("sell_value_status"),
-            "free_transfers_status": (finance or {}).get("free_transfers_status"),
-        },
-        "chips": {
-            "state": "AVAILABLE" if chip_available else "UNAVAILABLE",
-            "source": (finance or {}).get("personal_evidence_source"),
-        },
-        "fixtures/calendar": {
-            "state": str(calendar.get("state") or "UNAVAILABLE"),
-            "non_pl_schedule_bound": coverage.get(
-                "verified_non_pl_schedule_bound"
+            "decision_impact": (
+                f"{owned_count}/15 identified; sufficient for XI/captain/optimizer."
+                if owned_count == 15 and identity_status != "UNAVAILABLE"
+                else "Squad identity incomplete; lineup and optimizer confidence is limited."
             ),
         },
-        "workload/travel": {
+        "Availability / minutes": {
+            "quality": quality("COMPLETE" if projections else "UNAVAILABLE"),
+            "state": "CURRENT_MODEL_OUTPUT" if projections else "UNAVAILABLE",
+            "decision_impact": (
+                "Pstart/xMins evidence is available for lineup modelling."
+                if projections
+                else "Missing current Pstart/xMins limits lineup and transfer confidence."
+            ),
+        },
+        "Football underlying": {
+            "quality": quality("COMPLETE" if projections else "UNAVAILABLE"),
+            "state": "CURRENT_MODEL_OUTPUT" if projections else "UNAVAILABLE",
+            "decision_impact": (
+                "Current underlying evidence is available for player comparison."
+                if projections
+                else "Current underlying evidence is unavailable."
+            ),
+        },
+        "Tactical / role": {
+            "quality": quality("COMPLETE" if projections else "UNAVAILABLE"),
+            "state": "CURRENT_MODEL_OUTPUT" if projections else "UNAVAILABLE",
+            "decision_impact": (
+                "Role/minutes evidence is available for tactical comparison."
+                if projections
+                else "Role evidence is incomplete and cannot support escalation."
+            ),
+        },
+        "Fixtures": {
+            "quality": quality(str(calendar.get("state") or "UNAVAILABLE")),
+            "state": str(calendar.get("state") or "UNAVAILABLE"),
+            "decision_impact": (
+                "PL topology is available for relevant decision horizons."
+                if calendar
+                else "Fixture context is incomplete."
+            ),
+        },
+        "Non-PL workload": {
+            "quality": (
+                "🟢 Strong"
+                if non_pl_bound and player_workload_validated
+                else "🟡 Partial"
+            ),
             "state": (
                 "COMPLETE"
-                if coverage.get("verified_non_pl_schedule_bound") is True
-                and str(coverage.get("player_observation_status") or "").upper()
-                == "VALIDATED"
-                else "CLUB_SCHEDULE_COMPLETE_PLAYER_OBSERVATIONS_UNAVAILABLE"
-                if coverage.get("verified_non_pl_schedule_bound") is True
-                else "PL_ONLY_DEGRADED"
+                if non_pl_bound and player_workload_validated
+                else "PARTIAL"
             ),
-            "club_schedule_status": coverage.get("club_schedule_status"),
-            "player_observation_status": coverage.get("player_observation_status"),
-            "static_fatigue_penalty": False,
-        },
-        "tactical": {
-            "state": "CURRENT_MODEL_OUTPUT" if projections else "UNAVAILABLE",
-        },
-        "post-match underlying": {
-            "state": (
-                "AVAILABLE"
-                if (post_match_review or {}).get("our15")
-                else "UNAVAILABLE"
+            "decision_impact": (
+                "Verified non-PL schedule and player observations support rest/fatigue context."
+                if non_pl_bound and player_workload_validated
+                else "Incomplete non-PL workload limits fatigue/rest confidence."
             ),
         },
-        "price factual": {
-            "state": "CURRENT" if official else "UNAVAILABLE",
-            "source": "OFFICIAL_FPL_PUBLIC",
+        "Finance": {
+            "quality": (
+                "🟢 Strong"
+                if finance_available and sell_value_status in {"AVAILABLE", "AUTHORITATIVE", "CURRENT"}
+                else "🟡 Partial"
+            ),
+            "state": "AVAILABLE" if finance_available else "DEGRADED",
+            "decision_impact": (
+                "Bank/FT and sell values are decision-usable."
+                if finance_available and sell_value_status in {"AVAILABLE", "AUTHORITATIVE", "CURRENT"}
+                else "Bank/FT may be known, but non-authoritative or missing sell values constrain execution."
+            ),
         },
-        "price predictor freshness": {
+        "Price movement": {
+            "quality": (
+                "🟡 Stale"
+                if price_freshness == "STALE"
+                else quality(price_freshness)
+            ),
             "state": price_freshness,
-            "health": (rise or {}).get("predictor_health"),
-            "observed_at": (
-                price_rows[0].get("evidence_timestamp")
-                if price_rows else None
+            "decision_impact": (
+                "Monitor only; stale price evidence cannot independently trigger ACT."
+                if price_freshness == "STALE"
+                else "Price evidence may inform timing but cannot override football quality."
             ),
         },
-        "mini-league submitted picks": {
-            "state": (mini or {}).get("coverage_state") or "UNAVAILABLE",
-            "semantic": "BEHAVIOURAL BASELINE",
+        "Mini-league": {
+            "quality": quality(mini_state),
+            "state": mini_state,
+            "decision_impact": (
+                "Current league context is sufficient for downstream contextual decision support."
+                if mini_state == "FULL"
+                else "Mini-league context is partial and cannot override football baseline."
+            ),
         },
-        "mini-league standings/live": {
-            "state": (mini or {}).get("coverage_state") or "UNAVAILABLE",
-        },
-        "weather": {
-            "state": (
-                "REPORT_TIME_BOUND"
+        "Weather": {
+            "quality": quality("ADEQUATE" if weather_bound else "PARTIAL", adequate=weather_bound),
+            "state": "REPORT_TIME_BOUND" if weather_bound else "PARTIAL",
+            "decision_impact": (
+                "Weather is sufficient as contextual evidence."
                 if weather_bound
-                else "DEGRADED_OR_OUTSIDE_FORECAST_HORIZON"
+                else "Weather remains contextual and incomplete."
             ),
-            "mutates_football_model": False,
         },
-        "model snapshot": {
-            "state": "CURRENT" if projections else "UNAVAILABLE",
-            "timestamp": report_slot,
-        },
-        "data_timestamp": report_slot,
+    }
+    if (post_match_review or {}).get("our15"):
+        assessment["Post-match evidence"] = {
+            "quality": "🟢 Strong",
+            "state": "AVAILABLE",
+            "decision_impact": "Post-match evidence is lifecycle-relevant and available for reassessment.",
+        }
+    return assessment
+
+
+def _evidence_assessment_meta(
+    evidence: Mapping[str, Any],
+    *,
+    operational_action: str,
+) -> dict[str, Any]:
+    qualities = [
+        str((value or {}).get("quality") or "")
+        for value in evidence.values()
+        if isinstance(value, Mapping)
+    ]
+    stale_or_partial = [
+        name
+        for name, value in evidence.items()
+        if isinstance(value, Mapping)
+        and (
+            "STALE" in str(value.get("quality") or "").upper()
+            or "PARTIAL" in str(value.get("quality") or "").upper()
+        )
+    ]
+    strong_count = sum(
+        1
+        for value in qualities
+        if "STRONG" in value.upper() or "ADEQUATE" in value.upper()
+    )
+    total = max(1, len(qualities))
+    if strong_count == total and not stale_or_partial:
+        overall = "HIGH"
+    elif strong_count >= max(1, total - 2):
+        overall = "MEDIUM-HIGH"
+    elif strong_count >= max(1, total // 2):
+        overall = "MEDIUM"
+    else:
+        overall = "LOW"
+
+    limitations: list[str] = []
+    finance = dict(evidence.get("Finance") or {})
+    if "PARTIAL" in str(finance.get("quality") or "").upper():
+        limitations.append("Sell values are not fully authoritative/decision-usable.")
+    workload = dict(evidence.get("Non-PL workload") or {})
+    if "PARTIAL" in str(workload.get("quality") or "").upper():
+        limitations.append("Non-PL workload evidence is incomplete.")
+    price = dict(evidence.get("Price movement") or {})
+    if "STALE" in str(price.get("quality") or "").upper():
+        limitations.append("Price predictor snapshot is stale; monitor only.")
+    elif "PARTIAL" in str(price.get("quality") or "").upper():
+        limitations.append("Price movement evidence is incomplete.")
+    mini = dict(evidence.get("Mini-league") or {})
+    if "PARTIAL" in str(mini.get("quality") or "").upper():
+        limitations.append("Mini-league evidence is partial and remains contextual.")
+    weather = dict(evidence.get("Weather") or {})
+    if "PARTIAL" in str(weather.get("quality") or "").upper():
+        limitations.append("Weather evidence is incomplete or outside the reliable horizon.")
+
+    action = str(operational_action or "WAIT").upper()
+    if action == "ACT":
+        implication = (
+            "Evidence is sufficiently decision-usable for the current canonical ACT call; "
+            "partial contextual domains do not independently authorize a different action."
+        )
+    elif action == "PREPARE":
+        implication = (
+            "Evidence supports PREPARE and provisional lineup/captaincy, but remaining "
+            "limitations prevent automatic escalation to ACT."
+        )
+    else:
+        implication = (
+            "Evidence is sufficient for the current WAIT/HOLD posture, provisional XI and "
+            "provisional captaincy; degraded domains cannot independently trigger ACT."
+        )
+    return {
+        "overall_evidence_confidence": overall,
+        "evidence_limitations": limitations,
+        "decision_implication": implication,
+        "prior_current_semantics": "PRIOR evidence is never represented as CURRENT.",
     }
 
 
@@ -5652,8 +5781,9 @@ def refresh_price_only_state(
         "S11": "WATCHLIST20",
         "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
         "S13": "OFFICIAL_FPL_PREDICTOR_FALL20",
-        "S15": "BOUND_SOURCE_HEALTH+MODEL_EXECUTION",
+        "S15": "DECISION_EVIDENCE_ASSESSMENT",
         "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
+        "S17": "TECHNICAL_PROVENANCE+OCCURRENCE_BINDING",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
         "S18": "S01+S08+S10+S14+TEAM_NEWS",
     }
@@ -8036,6 +8166,11 @@ def run_deep(
             private_current_team.get("auth_state") or "UNAVAILABLE"
         ),
         report_slot=report_slot,
+        owned_count=len(owned),
+    )
+    evidence_meta = _evidence_assessment_meta(
+        evidence_quality,
+        operational_action=operational_action,
     )
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
@@ -8274,19 +8409,9 @@ def run_deep(
         "S15": _section(
             "COMPLETE",
             {
+                "evidence_assessment": evidence_quality,
                 "evidence_quality": evidence_quality,
-                "model_execution": {
-                    "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
-                    "p1_6": "EXECUTED" if projections else "NOT_RUN",
-                    "p1_7": "EXECUTED" if lineup else "PARTIAL",
-                    "p1_2_package": "EXECUTED" if package_utility else "FAILED",
-                    "p1_4_monte_carlo": (
-                        "EXECUTED_CANONICAL"
-                        if monte_carlo and monte_carlo.get("canonical_pass") is True
-                        else "FAILED"
-                    ),
-                    "p1_8_downstream_overlay": "EXECUTED" if mini_overlay else "FAILED",
-                },
+                **evidence_meta,
             },
         ),
         "S15B": _section(
@@ -8347,9 +8472,6 @@ def run_deep(
                 "engine_data_status": {
                     "runner": "V12_INTEGRATED_REPORT_RUNNER",
                     "planning_gw": planning_gw,
-                    "projection_players": len((projections or {}).get("players") or []),
-                    "our15": len(owned),
-                    "mini_league_coverage": (mini or {}).get("coverage_state"),
                     "stage3_internal_pass": stage3_internal_pass,
                     "mc_actual_paths": (monte_carlo or {}).get("actual_paths"),
                 },
@@ -8361,15 +8483,6 @@ def run_deep(
                     "private_auth_state": (
                         str(private_current_team.get("auth_state") or "UNAVAILABLE").upper()
                     ),
-                    "current_squad_identity": (
-                        (personal_resolution or {}).get("resolution_status") or "UNAVAILABLE"
-                    ),
-                    "finance": (
-                        "AVAILABLE"
-                        if _execution_finance_available(finance)
-                        else "DEGRADED"
-                    ),
-                    "fixture_data": "HEALTHY" if fixtures is not None else "UNAVAILABLE",
                     "price_predictor": (rise or {}).get("predictor_health") or "UNAVAILABLE",
                     "price_predictor_freshness": next(
                         (
@@ -8387,7 +8500,6 @@ def run_deep(
                         ),
                         None,
                     ),
-                    "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
                     "weather": (
                         "REPORT_TIME_BOUND"
@@ -8406,6 +8518,107 @@ def run_deep(
                         )
                     ),
                 },
+                "technical_planes": [
+                    {
+                        "plane": "Official factual plane",
+                        "status": "🟢 Healthy" if official else "🔴 Unavailable",
+                    },
+                    {
+                        "plane": "Canonical V12 computation",
+                        "status": (
+                            "🟢 Complete"
+                            if stage3_internal_pass
+                            else "🟡 Degraded"
+                        ),
+                    },
+                    {
+                        "plane": "Optimizer / Monte Carlo",
+                        "status": (
+                            f"🟢 MC{int((monte_carlo or {}).get('actual_paths') or 0):,} PASS"
+                            if monte_carlo and monte_carlo.get("canonical_pass") is True
+                            else "🟡 Incomplete"
+                        ),
+                    },
+                    {
+                        "plane": "Price data pipeline",
+                        "status": (
+                            "🟡 Healthy pipeline; snapshot stale"
+                            if next(
+                        (
+                            str(row.get("freshness") or "UNKNOWN").upper()
+                            for row in (rise or {}).get("rows") or []
+                            if isinstance(row, Mapping)
+                        ),
+                        "UNAVAILABLE",
+                    ) == "STALE"
+                            else "🟢 Healthy"
+                            if (rise or {}).get("predictor_health")
+                            else "🟡 Degraded"
+                        ),
+                    },
+                    {
+                        "plane": "Mini-league pipeline",
+                        "status": (
+                            "🟢 Complete"
+                            if str((mini or {}).get("coverage_state") or "").upper() == "FULL"
+                            else "🟡 Partial"
+                        ),
+                    },
+                    {
+                        "plane": "Weather pipeline",
+                        "status": (
+                            "🟢 Bound"
+                            if _weather_contract_state_from_calendar(calendar_context)
+                            == "REPORT_TIME_BOUND"
+                            else "🟡 Context limited"
+                        ),
+                    },
+                    {
+                        "plane": "Exact-occurrence binding",
+                        "status": (
+                            "🟢 Verified"
+                            if prefetch.get("same_occurrence_bound") is True
+                            else "🔴 Not verified"
+                        ),
+                    },
+                    {
+                        "plane": "Private serving / delivery",
+                        "status": "🟡 Finalized by downstream serving gate",
+                    },
+                    {
+                        "plane": "Presentation QA",
+                        "status": "🟡 Finalized after rendered-body QA",
+                    },
+                    {
+                        "plane": "Privacy boundary",
+                        "status": "🟢 Private-only serving contract",
+                    },
+                ],
+                "freshness_summary": (
+                    "All decision-critical technical inputs are within their bound contract"
+                    + (
+                        " except the price predictor snapshot."
+                        if next(
+                        (
+                            str(row.get("freshness") or "UNKNOWN").upper()
+                            for row in (rise or {}).get("rows") or []
+                            if isinstance(row, Mapping)
+                        ),
+                        "UNAVAILABLE",
+                    ) == "STALE"
+                        else "."
+                    )
+                ),
+                "lineage_summary": (
+                    f"Visible report is bound to exact DEEP occurrence {report_slot} "
+                    "and does not use a substituted logical slot."
+                    if prefetch.get("same_occurrence_bound") is True
+                    else f"DEEP occurrence {report_slot} exact binding is not verified."
+                ),
+                "audit_note": (
+                    "Run identifiers and hashes remain available in canonical audit artifacts; "
+                    "they are intentionally not expanded in the main report."
+                ),
                 "auth_authority": {
                     "field": "data/v6/personal/current_team.json:auth_state",
                     "value": str(private_current_team.get("auth_state") or "UNAVAILABLE").upper(),
@@ -8413,7 +8626,8 @@ def run_deep(
                 },
                 "lineage": {
                     "v6_factual_plane_mutated": False,
-                    "post_match_source": "V12 contextual dynamics over read-only V6 normalized match rows",
+                    "exact_occurrence_bound": prefetch.get("same_occurrence_bound") is True,
+                    "report_slot": report_slot,
                 },
             },
         ),
@@ -8504,6 +8718,18 @@ def run_deep(
         s16b_due=s16b_context.get("s16b_due") is True,
         checkpoint_time=checkpoint_time,
         mathematical_decision_stack=math_stack,
+    )
+    report.update(
+        {
+            "report_slot": report_slot,
+            "planning_gw": planning_gw,
+            "exact_occurrence_bound": prefetch.get("same_occurrence_bound") is True,
+            "report_status": (
+                "READY_FULL"
+                if stage3_internal_pass
+                else "READY_DEGRADED"
+            ),
+        }
     )
     section_manifest = [
         {

@@ -294,7 +294,12 @@ def valid_visible_body(
         elif section_id == "S03":
             lines.append("NO MATERIAL DECISION CHANGE")
         elif section_id == "S04":
-            lines.append("Role, injury, price and tactical changes are reconciled here.")
+            lines.append("### MATERIAL NEWS SINCE PREVIOUS DEEP")
+            lines.append("NO MATERIAL NEW EXTERNAL NEWS")
+            lines.append("### MODEL / FOOTBALL DEVELOPMENTS")
+            lines.append("- No new model-detected material change.")
+            lines.append("### DECISION CONSEQUENCE")
+            lines.append("NEWS SELF-AUTHORIZES ACT: FALSE")
         elif section_id == "S05":
             lines.append("Fixtures, rest and congestion are mapped for the decision horizon.")
             lines.extend(_visible_weather_lines(weather_state))
@@ -401,7 +406,8 @@ def valid_visible_body(
                 lines.append("Current rank/gap unavailable; healthy submitted-picks scope remains visible.")
             else:
                 lines.append("MANAGER COVERAGE: COMPLETE")
-                lines.append("Current rank, gap, EO, rival equation and leverage are shown.")
+                lines.append("Current rank, gap, EO and Competitive Window leverage are shown.")
+                lines.append("COMPETITIVE WINDOW: dynamic rank-relative cohort excluding us.")
         elif section_id == "S16":
             lines.extend(
                 _table(

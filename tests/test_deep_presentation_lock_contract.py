@@ -14,17 +14,26 @@ def test_s15b_tables_are_separate_and_columns_are_locked():
     s15b = contract["sections"]["S15B"]
     assert s15b["forbid_table_merge"] is True
     tables = s15b["tables"]
-    assert tables[2]["name"] == "OUR15 exposure, LEAGUE58"
+    assert tables[2]["name"] == "OUR15 exposure, LEAGUE"
     assert tables[2]["columns"] == [
         "Player","Owned","Starter","Bench","Captain","Vice","EO"
     ]
-    assert tables[3]["name"] == "OUR15 exposure, RIVALS57"
+    assert tables[3]["name"] == "OUR15 exposure, RIVALS"
     assert tables[3]["columns"] == [
         "Player","Owned","Starter","Captain","EO"
     ]
-    assert tables[4]["name"] == "OUR15 exposure, DIRECT6"
+    assert tables[4]["name"] == "OUR15 exposure, COMPETITIVE WINDOW"
     assert tables[4]["columns"] == [
         "Player","Owned","Starter","Bench","Captain","Vice","EO"
+    ]
+    assert tables[5]["name"] == "COMPETITIVE RIVALS"
+    assert tables[5]["columns"] == [
+        "Rank","Manager","Pts","Gap","Position vs us",
+        "Squad overlap","XI overlap","Captain","Vice"
+    ]
+    assert tables[7]["columns"] == [
+        "Player","Football rank","xPts","League C","League EO",
+        "Competitive C","Competitive EO","Class"
     ]
 
 

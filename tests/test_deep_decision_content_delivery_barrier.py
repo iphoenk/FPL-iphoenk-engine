@@ -742,7 +742,7 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
                     "expected_points": 7.0,
                     "league_scope": scope,
                     "rivals_scope": scope,
-                    "direct_scope": scope,
+                    "competitive_scope": scope,
                     "exposure_leverage_class": "BALANCED",
                 },
                 {
@@ -753,7 +753,7 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
                     "expected_points": 6.5,
                     "league_scope": scope,
                     "rivals_scope": scope,
-                    "direct_scope": scope,
+                    "competitive_scope": scope,
                     "exposure_leverage_class": "PROTECTION",
                 },
             ],
@@ -1520,11 +1520,11 @@ def test_stage_c_legacy_single_rival_denominator_cannot_masquerade_as_all_scopes
     failures = validate_deep_decision_content_delivery(report, render_deep_text(report))
     assert "S15B_LEAGUE_SCOPE_MUST_INCLUDE_US" in failures
     assert "S15B_RIVALS_SCOPE_MUST_EXCLUDE_US" in failures
-    assert "S15B_DIRECT_SCOPE_MUST_EXCLUDE_US" in failures
+    assert "S15B_COMPETITIVE_SCOPE_MUST_EXCLUDE_US" in failures
     assert "S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING" in failures
 
 
-def test_stage_c_direct_scope_cannot_masquerade_as_league_denominator():
+def test_stage_c_competitive_scope_cannot_masquerade_as_league_denominator():
     scopes = {
         "LEAGUE": {
             "label": "LEAGUE58_INCL_US",
@@ -1540,9 +1540,9 @@ def test_stage_c_direct_scope_cannot_masquerade_as_league_denominator():
             "denominator": 57,
             "includes_us": False,
         },
-        "DIRECT": {
-            # Deliberately false-pass shaped: DIRECT carries league-sized
-            # label/denominator even though the requested cohort is six.
+        "COMPETITIVE": {
+            # Deliberately false-pass shaped: a rank-7 competitive window is
+            # nine rivals, but this scope illegally carries league-sized data.
             "label": "LEAGUE58_INCL_US",
             "expected": 58,
             "collected": 58,
@@ -1563,14 +1563,20 @@ def test_stage_c_direct_scope_cannot_masquerade_as_league_denominator():
                     "denominator_scopes": scopes,
                     "league_our15_exposure": _stage_c_scope_rows(58),
                     "rivals_our15_exposure": _stage_c_scope_rows(57),
-                    "direct_rival_our15_exposure": _stage_c_scope_rows(58),
-                    "direct_rival_scope": {
-                        "requested_above_count": 6,
-                        "standings_rival_count": 6,
-                        "picks_available_count": 6,
+                    "competitive_our15_exposure": _stage_c_scope_rows(58),
+                    "competitive_window": {
+                        "our_rank": 7,
+                        "league_size": 58,
+                        "window_mode": "TOP10",
+                        "above_count": 6,
+                        "below_count": 3,
+                        "rival_count": 9,
+                        "ranks": [1,2,3,4,5,6,8,9,10],
+                        "standings_rival_count": 9,
+                        "picks_available_count": 9,
                         "denominator": 58,
                     },
-                    "direct_rivals": [],
+                    "competitive_rivals": [],
                     "strategy_implication": {"human_posture": "BALANCED"},
                     "authoritative_binding": {
                         "status": "BOUND",
@@ -1585,8 +1591,8 @@ def test_stage_c_direct_scope_cannot_masquerade_as_league_denominator():
         report,
         render_deep_text(report),
     )
-    assert "S15B_DIRECT_SCOPE_LABEL_INVALID" in failures
-    assert "S15B_DIRECT_SCOPE_COHORT_RELATION_INVALID" in failures
+    assert "S15B_COMPETITIVE_SCOPE_LABEL_INVALID" in failures
+    assert "S15B_COMPETITIVE_SCOPE_COHORT_RELATION_INVALID" in failures
 
 
 def test_stage_c_categorical_expected_rank_utility_name_is_forbidden():
@@ -1605,8 +1611,8 @@ def test_stage_c_categorical_expected_rank_utility_name_is_forbidden():
             "denominator": 2,
             "includes_us": False,
         },
-        "DIRECT": {
-            "label": "DIRECT6_ABOVE_US",
+        "COMPETITIVE": {
+            "label": "COMPETITIVE_WINDOW",
             "expected": 2,
             "collected": 2,
             "denominator": 2,
@@ -1626,8 +1632,8 @@ def test_stage_c_categorical_expected_rank_utility_name_is_forbidden():
                     "denominator_scopes": scopes,
                     "league_our15_exposure": _stage_c_scope_rows(3),
                     "rivals_our15_exposure": _stage_c_scope_rows(2),
-                    "direct_rival_our15_exposure": _stage_c_scope_rows(2),
-                    "direct_rival_scope": {"denominator": 2},
+                    "competitive_our15_exposure": _stage_c_scope_rows(2),
+                    "competitive_window": {"our_rank": 3, "league_size": 3, "window_mode": "TOP10", "above_count": 2, "below_count": 0, "rival_count": 2, "ranks": [1,2], "standings_rival_count": 2, "picks_available_count": 2, "denominator": 2},
                     "captain_leverage": [
                         {
                             "element_id": 1,
@@ -1980,3 +1986,45 @@ def test_stage_b_bgw_requires_cross_section_decision_propagation():
     assert "S05_BGW_S14_FRONTIER_REVIEW_MISSING" not in repaired
     assert "S05_BGW_S14B_REOPTIMIZE_MISSING" not in repaired
     assert "S05_BGW_S19_RECONCILIATION_MISSING" not in repaired
+
+
+def test_s04_delivery_barrier_rejects_rumor_as_fact_and_model_mutation():
+    content = {
+        "material_news": [
+            {
+                "subject": "P7",
+                "summary": "Possible benching",
+                "source_class": "RUMOR / UNVERIFIED",
+                "source_name": "community",
+                "evidence_status": "CONFIRMED",
+                "decision_relevance": "MONITOR",
+                "audience": "OUR15",
+                "news_observation_is_model_update": False,
+                "act_authority": False,
+            }
+        ],
+        "decision_consequence": {
+            "news_self_authorizes_act": False,
+            "news_observation_is_model_update": False,
+            "model_numbers_mutated_here": True,
+            "optimizer_authority_remains_s14": True,
+        },
+    }
+    failures = validate_deep_decision_content_delivery(
+        {
+            "sections": [
+                {
+                    "section_id": "S04",
+                    "state": "COMPLETE",
+                    "content": content,
+                }
+            ]
+        },
+        (
+            "S04 MATERIAL DEVELOPMENTS / CHANGES\n"
+            "### MATERIAL NEWS SINCE PREVIOUS DEEP\n"
+            "P7 — RUMOR / UNVERIFIED\n"
+        ),
+    )
+    assert "S04_RUMOR_PRESENTED_AS_FACT=1" in failures
+    assert "S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION" in failures

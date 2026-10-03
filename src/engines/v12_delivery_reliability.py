@@ -599,6 +599,42 @@ def assemble_degraded_deep_report(
             "presentation_status": "CURRENT" if facts_status == "FRESH" else "UNAVAILABLE",
             "fact_layer": facts_status,
             "facts_generated_at": facts_generated_at,
+            "news_summary": (
+                "CURRENT FACT PLANE AVAILABLE; MATERIAL NEWS EXTRACTION NOT RUN"
+                if facts_status == "FRESH"
+                else "NO MATERIAL NEW EXTERNAL NEWS SUPPORTABLE"
+            ),
+            "material_news": [],
+            "news_groups": {
+                "OUR15": [],
+                "WATCHLIST / TARGETS": [],
+                "TEAM / TACTICAL": [],
+                "OTHER MATERIAL": [],
+            },
+            "model_developments": [],
+            "decision_consequence": {
+                "transfer_state": "UNAVAILABLE",
+                "xi_state": "DEGRADED",
+                "captain_state": "DEGRADED",
+                "price_state": "UNAVAILABLE",
+                "news_self_authorizes_act": False,
+                "news_observation_is_model_update": False,
+                "model_numbers_mutated_here": False,
+                "optimizer_authority_remains_s14": True,
+            },
+            "source_policy": {
+                "allowed_source_classes": [
+                    "OFFICIAL",
+                    "RELIABLE_REPORT",
+                    "MULTIPLE_CREDIBLE_REPORTS",
+                    "RUMOR / UNVERIFIED",
+                    "MODEL_SIGNAL",
+                    "INFERENCE",
+                ],
+                "rumor_is_fact": False,
+                "rumor_may_authorize_act": False,
+                "news_observation_equals_model_update": False,
+            },
             "model_update": "NOT_RUN",
             "empty_is_truthful": True,
         },
@@ -1225,7 +1261,11 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
     ),
     "S02": ("rows", "current15_authority"),
     "S03": ("decision_delta",),
-    "S04": ("changes", "stagec_universe_intelligence"),
+    "S04": (
+        "news_summary", "material_news", "news_groups",
+        "model_developments", "decision_consequence", "source_policy",
+        "changes", "stagec_universe_intelligence",
+    ),
     "S05": (
         "state", "planning_gw", "gw_topology", "period_flags",
         "competition_coverage", "player_workload", "weather",
@@ -1327,8 +1367,8 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
         "league_full_composition", "league_full_composition_complete",
         "league_unique_player_count", "league_our15_exposure",
         "rivals_our15_exposure", "our15_rival_exposure",
-        "direct_rival_scope", "direct_rivals",
-        "direct_rival_our15_exposure", "rival_threats",
+        "competitive_window", "competitive_rivals",
+        "competitive_our15_exposure", "competitive_window_threats",
         "captain_leverage", "strategy_implication", "report_contract",
     ),
     "S16": ("rows", "why_not_duplicate_of_our15"),

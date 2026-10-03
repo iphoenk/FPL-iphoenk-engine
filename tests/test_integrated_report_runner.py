@@ -1172,7 +1172,7 @@ def _ml_deep_fixture(monkeypatch):
     return mini, detail, owned
 
 
-def test_mini_league_deep_materializes_raw_counts_direct_rivals_and_threats(monkeypatch):
+def test_mini_league_deep_materializes_competitive_window_and_threats(monkeypatch):
     mini, detail, _ = _ml_deep_fixture(monkeypatch)
 
     p1 = next(
@@ -1193,22 +1193,23 @@ def test_mini_league_deep_materializes_raw_counts_direct_rivals_and_threats(monk
         "includes_us": True,
     }
     assert detail["denominator_scopes"]["RIVALS"]["denominator"] == 2
-    assert detail["denominator_scopes"]["DIRECT"]["label"] == "DIRECT6_ABOVE_US"
+    assert detail["denominator_scopes"]["COMPETITIVE"]["label"] == "COMPETITIVE_WINDOW"
+    assert detail["denominator_scopes"]["COMPETITIVE"]["expected"] == 2
     league_p1 = next(
         row for row in detail["league_our15_exposure"]
         if row["element_id"] == 1
     )
     assert league_p1["denominator"] == 3
     assert league_p1["eo_supported"] is True
-    assert detail["direct_rival_scope"]["denominator"] == 2
-    assert detail["direct_rival_scope"]["complete"] is True
-    assert [row["rank"] for row in detail["direct_rivals"]] == [1, 2]
-    assert detail["direct_rivals"][0]["overlap_count"] == 14
-    assert detail["direct_rivals"][0]["xi_overlap_count"] >= 1
-    assert detail["direct_rivals"][0]["bench_overlap_count"] >= 1
-    assert detail["direct_rivals"][0]["active_chip"] == "bboost"
-    assert detail["direct_rivals"][0]["shields"]
-    assert detail["rival_threats"]
+    assert detail["competitive_window"]["denominator"] == 2
+    assert detail["competitive_window"]["complete"] is True
+    assert [row["rank"] for row in detail["competitive_rivals"]] == [1, 2]
+    assert detail["competitive_rivals"][0]["overlap_count"] == 14
+    assert detail["competitive_rivals"][0]["xi_overlap_count"] >= 1
+    assert detail["competitive_rivals"][0]["bench_overlap_count"] >= 1
+    assert detail["competitive_rivals"][0]["active_chip"] == "bboost"
+    assert detail["competitive_rivals"][0]["shields"]
+    assert detail["competitive_window_threats"]
     assert detail["captain_leverage"]
     assert all(
         row["element_id"] in set(range(1, 12))
@@ -1243,19 +1244,21 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     )
     body = "\n".join(lines)
     assert "DENOMINATOR SCOPES" in body
-    assert "LEAGUE3_INCL_US" in body
-    assert "RIVALS2_EXCL_US" in body
-    assert "DIRECT6_ABOVE_US" in body
-    assert "OUR15 EXPOSURE — LEAGUE3_INCL_US" in body
-    assert "OUR15 EXPOSURE — RIVALS2_EXCL_US" in body
-    assert "OUR15 EXPOSURE — DIRECT6_ABOVE_US" in body
-    assert "RIVAL THREATS NOT IN OUR15" in body
+    assert "All managers including us" in body
+    assert "All managers excluding us" in body
+    assert "COMPETITIVE WINDOW" in body
+    assert "OUR15 EXPOSURE, LEAGUE" in body
+    assert "OUR15 EXPOSURE, RIVALS" in body
+    assert "OUR15 EXPOSURE, COMPETITIVE WINDOW" in body
+    assert "COMPETITIVE-WINDOW RIVAL-ONLY THREATS" in body
     assert "CAPTAIN LANDSCAPE" in body
-    assert "EXPOSURE / LEVERAGE CLASS" in body
+    assert "Competitive C" in body
+    assert "Competitive EO" in body
+    assert "| Class |" in body
     assert "BEHAVIOURAL BASELINE" in body
-    assert "DIRECT RIVAL DIFFERENCE DETAIL" in body
-    assert "SHIELDS" in body
-    for token in ("STARTER_COUNT", "CAPTAIN_COUNT", "VICE_COUNT", "EO_PCT"):
+    assert "COMPETITIVE RIVALS" in body
+    assert "Position vs us" in body
+    for token in ("Owned", "Starter", "Captain", "EO"):
         assert token in body
 
 
@@ -1343,10 +1346,10 @@ def test_mini_league_s15b_manifest_cannot_regress_to_compact_summary():
         "denominator_scopes",
         "league_our15_exposure",
         "rivals_our15_exposure",
-        "direct_rival_scope",
-        "direct_rivals",
-        "direct_rival_our15_exposure",
-        "rival_threats",
+        "competitive_window",
+        "competitive_rivals",
+        "competitive_our15_exposure",
+        "competitive_window_threats",
         "captain_leverage",
         "strategy_implication",
         "report_contract",
@@ -1741,3 +1744,64 @@ def test_core_slot_binding_fails_closed_on_nearby_but_wrong_slot():
     )
     assert result["status"] == "PARTIAL"
     assert result["reason"] == "CORE_SLOT_MISMATCH"
+
+
+def test_s04_report_time_evidence_binding_is_live_in_core_regression():
+    from src.engines.v12_material_news import build_report_time_material_news
+
+    rows = build_report_time_material_news(
+        {
+            "contract": "report_time_evidence_v1",
+            "signals": [
+                {
+                    "source_id": "premier_league_official_news",
+                    "source_class": "VERIFIED_NEWS",
+                    "topic": "AVAILABILITY",
+                    "subject": "P7",
+                    "stance": "HOLD",
+                    "observed_at": "2026-10-03T04:00:00Z",
+                    "source_url": "https://www.premierleague.com/example",
+                    "summary": "Manager confirms P7 trained.",
+                },
+                {
+                    "source_id": "rotowire",
+                    "source_class": "SECONDARY_AVAILABILITY",
+                    "topic": "PREDICTED_LINEUP",
+                    "subject": "P8",
+                    "stance": "START",
+                    "observed_at": "2026-10-03T04:10:00Z",
+                    "source_url": "https://www.rotowire.com/example",
+                    "summary": "P8 projected to start.",
+                },
+                {
+                    "source_id": "reddit_fantasypl",
+                    "source_class": "COMMUNITY_SIGNAL",
+                    "topic": "ROTATION_OBSERVATION",
+                    "subject": "P7",
+                    "stance": "BENCH",
+                    "observed_at": "2026-10-03T04:20:00Z",
+                    "source_url": "https://www.reddit.com/r/FantasyPL/example",
+                    "summary": "Possible P7 benching is circulating.",
+                },
+            ],
+        },
+        {
+            "teams": [{"id": 1, "name": "Test FC"}],
+            "elements": [
+                {"id": 7, "web_name": "P7", "team": 1},
+                {"id": 8, "web_name": "P8", "team": 1},
+            ],
+        },
+        our_element_ids=[7],
+        watchlist_element_ids=[8],
+        report_timestamp="2026-10-03T12:30:00+07:00",
+    )
+    assert [row["source_class"] for row in rows] == [
+        "OFFICIAL",
+        "RELIABLE_REPORT",
+        "RUMOR / UNVERIFIED",
+    ]
+    assert rows[0]["audience"] == "OUR15"
+    assert rows[1]["audience"] == "WATCHLIST / TARGETS"
+    assert rows[2]["evidence_status"] == "UNVERIFIED"
+    assert all(row["act_authority"] is False for row in rows)

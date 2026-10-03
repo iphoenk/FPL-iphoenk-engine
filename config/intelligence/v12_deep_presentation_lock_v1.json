@@ -126,11 +126,14 @@
     "S04": {
       "title": "MATERIAL DEVELOPMENTS / CHANGES",
       "blocks": [
-        "Post-match factual scan",
-        "Positive / breakout signals",
-        "Negative / regression signals",
-        "DefCon-related opportunity signals",
-        "Decision-authority note"
+        "Material news since previous DEEP",
+        "OUR15 news",
+        "Watchlist / relevant-player news",
+        "Team / tactical news",
+        "Availability / injury / suspension news",
+        "Role / minutes / set-piece developments",
+        "Model-detected football changes",
+        "Decision consequence"
       ],
       "tables": []
     },
@@ -334,10 +337,13 @@
       "title": "PACKAGE OPTIMIZER / TRANSFER FRONTIER",
       "blocks": [
         "Search integrity",
+        "HOLD benchmark",
         "Canonical Monte Carlo",
-        "Verdict",
-        "Plain-language vector conclusion",
+        "Best challenger",
+        "1/3/5GW comparison",
         "Execution economics",
+        "Robustness / regret",
+        "Verdict",
         "Actionability conclusion"
       ],
       "tables": [],
@@ -382,18 +388,19 @@
         "Leader gap",
         "Top-3 gap",
         "Top-5 gap",
-        "Gap to nearest above",
-        "Cushion over nearest below"
+        "Top-10 cutoff gap",
+        "Nearest above",
+        "Nearest below"
       ],
       "blocks": [
         "Evidence semantics",
         "Denominator scopes",
-        "Rank battle",
-        "OUR15 exposure, LEAGUE58",
-        "OUR15 exposure, RIVALS57",
-        "OUR15 exposure, DIRECT6",
-        "Direct rivals above us",
-        "Direct6 rival-only threats",
+        "League position context",
+        "OUR15 exposure, LEAGUE",
+        "OUR15 exposure, RIVALS",
+        "OUR15 exposure, COMPETITIVE WINDOW",
+        "Competitive rivals",
+        "Competitive-window rival-only threats",
         "Captain landscape",
         "Mini-league posture",
         "Key consequence",
@@ -411,7 +418,7 @@
           "rows_exact": 3
         },
         {
-          "name": "Rank battle",
+          "name": "League position context",
           "columns": [
             "Rank",
             "Manager",
@@ -422,7 +429,7 @@
           "rows_exact": 10
         },
         {
-          "name": "OUR15 exposure, LEAGUE58",
+          "name": "OUR15 exposure, LEAGUE",
           "columns": [
             "Player",
             "Owned",
@@ -435,7 +442,7 @@
           "rows_exact": 15
         },
         {
-          "name": "OUR15 exposure, RIVALS57",
+          "name": "OUR15 exposure, RIVALS",
           "columns": [
             "Player",
             "Owned",
@@ -446,7 +453,7 @@
           "rows_exact": 15
         },
         {
-          "name": "OUR15 exposure, DIRECT6",
+          "name": "OUR15 exposure, COMPETITIVE WINDOW",
           "columns": [
             "Player",
             "Owned",
@@ -459,21 +466,21 @@
           "rows_exact": 15
         },
         {
-          "name": "Direct rivals above us",
+          "name": "COMPETITIVE RIVALS",
           "columns": [
             "Rank",
             "Manager",
             "Pts",
             "Gap",
+            "Position vs us",
             "Squad overlap",
             "XI overlap",
             "Captain",
             "Vice"
-          ],
-          "rows_exact": 6
+          ]
         },
         {
-          "name": "Direct6 rival-only threats",
+          "name": "COMPETITIVE-WINDOW RIVAL-ONLY THREATS",
           "columns": [
             "Player",
             "Owned",
@@ -490,8 +497,8 @@
             "xPts",
             "League C",
             "League EO",
-            "Direct6 C",
-            "Direct6 EO",
+            "Competitive C",
+            "Competitive EO",
             "Class"
           ],
           "rows_exact": 5

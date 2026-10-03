@@ -46,9 +46,9 @@ def validate_deep_presentation_lock_contract(
             ("Player","Owned","Starter","Bench","Captain","Vice","EO"),
             ("Player","Owned","Starter","Captain","EO"),
             ("Player","Owned","Starter","Bench","Captain","Vice","EO"),
-            ("Rank","Manager","Pts","Gap","Squad overlap","XI overlap","Captain","Vice"),
+            ("Rank","Manager","Pts","Gap","Position vs us","Squad overlap","XI overlap","Captain","Vice"),
             ("Player","Owned","Starter","Captain","EO"),
-            ("Player","Football rank","xPts","League C","League EO","Direct6 C","Direct6 EO","Class"),
+            ("Player","Football rank","xPts","League C","League EO","Competitive C","Competitive EO","Class"),
         ],
         "S17": [("Plane","Status")],
     }
@@ -75,6 +75,35 @@ def validate_deep_presentation_lock_contract(
         failures.append("S12_ROWS_NOT_20_WHEN_COMPLETE")
     if s13.get("rows_exact_when_complete") != 20:
         failures.append("S13_ROWS_NOT_20_WHEN_COMPLETE")
+
+    s04 = sections.get("S04") or {}
+    expected_s04_blocks = [
+        "Material news since previous DEEP",
+        "OUR15 news",
+        "Watchlist / relevant-player news",
+        "Team / tactical news",
+        "Availability / injury / suspension news",
+        "Role / minutes / set-piece developments",
+        "Model-detected football changes",
+        "Decision consequence",
+    ]
+    if list(s04.get("blocks") or []) != expected_s04_blocks:
+        failures.append("S04_BLOCK_CONTRACT_MISMATCH")
+
+    s14 = sections.get("S14") or {}
+    expected_s14_blocks = [
+        "Search integrity",
+        "HOLD benchmark",
+        "Canonical Monte Carlo",
+        "Best challenger",
+        "1/3/5GW comparison",
+        "Execution economics",
+        "Robustness / regret",
+        "Verdict",
+        "Actionability conclusion",
+    ]
+    if list(s14.get("blocks") or []) != expected_s14_blocks:
+        failures.append("S14_SEMANTIC_BLOCK_CONTRACT_MISMATCH")
 
     s15b = sections.get("S15B") or {}
     if s15b.get("forbid_table_merge") is not True:

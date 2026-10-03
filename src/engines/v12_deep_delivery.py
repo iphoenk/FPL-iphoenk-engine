@@ -11,6 +11,8 @@ analytics are materially visible in the DEEP report.
 from datetime import datetime
 from typing import Any, Mapping, Sequence
 
+from src.engines.v12_competitive_window import resolve_competitive_window
+
 
 def _aware_timestamp(value: Any) -> datetime | None:
     try:
@@ -207,6 +209,19 @@ def validate_deep_decision_content_delivery(
                 failures.append(code)
         if not any(str(row.get("route") or "").upper() == "HOLD" for row in routes):
             failures.append("HOLD_COMPARATOR_MISSING")
+    if state("S14") == "COMPLETE":
+        forbidden_news_keys = {
+            "material_news",
+            "news_groups",
+            "news_summary",
+            "source_policy",
+        }
+        leaked = sorted(key for key in forbidden_news_keys if key in s14)
+        if leaked:
+            failures.append(
+                "S14_NEWS_DUMP_FORBIDDEN=" + ",".join(leaked)
+            )
+
     if funded and "FUNDED / 2-TRANSFER" not in upper:
         failures.append("FUNDING_ROUTE_NOT_VISIBLE")
     if int(mc.get("actual_paths") or 0) >= 500_000:
@@ -230,7 +245,13 @@ def validate_deep_decision_content_delivery(
         exposures = list(s15b.get("exposures") or [])
         if context.get("manager_count") and not exposures:
             failures.append("MINI_LEAGUE_PLACEHOLDER_ONLY")
-        for token in ("LEAGUE LANDSCAPE:", "STARTER_COUNT", "CAPTAIN_COUNT", "VICE_COUNT", "EO_PCT"):
+        for token in (
+            "LEAGUE LANDSCAPE:",
+            "DENOMINATOR SCOPES",
+            "COMPETITIVE WINDOW",
+            "OUR15 EXPOSURE, LEAGUE",
+            "CAPTAIN LANDSCAPE",
+        ):
             if token not in upper:
                 failures.append(f"MINI_LEAGUE_VISIBLE_FIELD_MISSING={token}")
 
@@ -434,29 +455,48 @@ def validate_deep_decision_content_delivery(
 
     s04 = content("S04")
     if state("S04") == "COMPLETE":
-        changes = [
-            dict(row) for row in s04.get("changes") or []
+        news_rows = [
+            dict(row)
+            for row in s04.get("material_news") or []
             if isinstance(row, Mapping)
         ]
-        allowed_classes = {"NEW", "IMPROVED", "WORSENED", "UNCHANGED"}
-        seen = set()
-        for index, row in enumerate(changes, start=1):
-            classification = str(row.get("classification") or "").upper()
-            if classification not in allowed_classes:
-                failures.append(f"S04_CLASSIFICATION_INVALID={index}")
-            if not row.get("scope") or not row.get("event_kind"):
-                failures.append(f"S04_SCOPE_KIND_MISSING={index}")
-            fingerprint = (
-                classification,
-                str(row.get("scope") or ""),
-                str(row.get("subject") or ""),
-                str(row.get("summary") or ""),
-            )
-            if fingerprint in seen:
-                failures.append(f"S04_DUPLICATE_CHANGE={index}")
-            seen.add(fingerprint)
-        if "MATERIAL DEVELOPMENTS" not in upper:
-            failures.append("S04_CLASSIFIED_DEVELOPMENTS_NOT_VISIBLE")
+        allowed_news_classes = {
+            "OFFICIAL",
+            "RELIABLE_REPORT",
+            "MULTIPLE_CREDIBLE_REPORTS",
+            "RUMOR / UNVERIFIED",
+            "MODEL_SIGNAL",
+            "INFERENCE",
+        }
+        for index, row in enumerate(news_rows, start=1):
+            source_class = str(row.get("source_class") or "").upper()
+            evidence_status = str(row.get("evidence_status") or "").upper()
+            if source_class not in allowed_news_classes:
+                failures.append(f"S04_SOURCE_CLASS_INVALID={index}")
+            if (
+                source_class == "RUMOR / UNVERIFIED"
+                and evidence_status != "UNVERIFIED"
+            ):
+                failures.append(f"S04_RUMOR_PRESENTED_AS_FACT={index}")
+            if row.get("act_authority") is not False:
+                failures.append(f"S04_NEWS_ACT_AUTHORITY_VIOLATION={index}")
+            if row.get("news_observation_is_model_update") is not False:
+                failures.append(f"S04_NEWS_MODEL_UPDATE_VIOLATION={index}")
+
+        consequence = dict(s04.get("decision_consequence") or {})
+        if consequence.get("news_self_authorizes_act") is not False:
+            failures.append("S04_NEWS_SELF_AUTHORIZES_ACT")
+        if consequence.get("news_observation_is_model_update") is not False:
+            failures.append("S04_NEWS_OBSERVATION_EQUALS_MODEL_UPDATE")
+        if consequence.get("model_numbers_mutated_here") is not False:
+            failures.append("S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION")
+        if consequence.get("optimizer_authority_remains_s14") is not True:
+            failures.append("S04_OPTIMIZER_AUTHORITY_NOT_S14")
+        if news_rows:
+            if "MATERIAL NEWS SINCE PREVIOUS DEEP" not in upper:
+                failures.append("S04_MATERIAL_NEWS_NOT_VISIBLE")
+        elif "NO MATERIAL NEW EXTERNAL NEWS" not in upper:
+            failures.append("S04_NO_NEWS_SENTINEL_MISSING")
 
     s07 = content("S07")
     if state("S07") == "COMPLETE":
@@ -470,14 +510,14 @@ def validate_deep_decision_content_delivery(
                 "projection_1gw_a", "projection_1gw_b",
                 "fixture_a", "fixture_b", "workload_a", "workload_b",
                 "role_a", "role_b", "eo_a", "eo_b",
-                "direct_eo_a", "direct_eo_b", "final_starter",
+                "competitive_eo_a", "competitive_eo_b", "final_starter",
                 "utility_margin", "tactical_reason",
             ):
                 if key not in row:
                     failures.append(f"S07_BATTLE_FIELD_MISSING={index}:{key}")
                     break
-        if battles and "DIRECT EO A" not in upper:
-            failures.append("S07_DIRECT_EO_NOT_VISIBLE")
+        if battles and "COMPETITIVE EO A" not in upper:
+            failures.append("S07_COMPETITIVE_EO_NOT_VISIBLE")
 
     if state("S10") == "COMPLETE":
         if "PREDICTION_STRENGTH" not in upper:
@@ -942,7 +982,7 @@ def validate_deep_decision_content_delivery(
                 element = 0
             if element <= 0 or element not in final_xi_ids:
                 failures.append(f"S08_FRONTIER_OUTSIDE_FINAL_XI={index}")
-            for scope_key in ("league_scope", "rivals_scope", "direct_scope"):
+            for scope_key in ("league_scope", "rivals_scope", "competitive_scope"):
                 if not isinstance(row.get(scope_key), Mapping):
                     failures.append(f"S08_CAPTAIN_SCOPE_MISSING={index}:{scope_key}")
             if not str(row.get("exposure_leverage_class") or ""):
@@ -963,13 +1003,13 @@ def validate_deep_decision_content_delivery(
         scopes = dict(s15b.get("denominator_scopes") or {})
         league_scope = dict(scopes.get("LEAGUE") or {})
         rivals_scope = dict(scopes.get("RIVALS") or {})
-        direct_scope = dict(scopes.get("DIRECT") or {})
+        competitive_scope = dict(scopes.get("COMPETITIVE") or {})
         if league_scope.get("includes_us") is not True:
             failures.append("S15B_LEAGUE_SCOPE_MUST_INCLUDE_US")
         if rivals_scope.get("includes_us") is not False:
             failures.append("S15B_RIVALS_SCOPE_MUST_EXCLUDE_US")
-        if direct_scope.get("includes_us") is not False:
-            failures.append("S15B_DIRECT_SCOPE_MUST_EXCLUDE_US")
+        if competitive_scope.get("includes_us") is not False:
+            failures.append("S15B_COMPETITIVE_SCOPE_MUST_EXCLUDE_US")
         try:
             league_expected = int(league_scope.get("expected"))
             rivals_expected = int(rivals_scope.get("expected"))
@@ -989,6 +1029,8 @@ def validate_deep_decision_content_delivery(
             != f"RIVALS{rivals_expected}_EXCL_US"
         ):
             failures.append("S15B_RIVALS_SCOPE_LABEL_INVALID")
+        if str(competitive_scope.get("label") or "") != "COMPETITIVE_WINDOW":
+            failures.append("S15B_COMPETITIVE_SCOPE_LABEL_INVALID")
         if str(s15b.get("disclosed_picks_label") or "") != "BEHAVIOURAL BASELINE":
             failures.append("S15B_BEHAVIOURAL_BASELINE_LABEL_MISSING")
 
@@ -1008,7 +1050,10 @@ def validate_deep_decision_content_delivery(
                 if isinstance(denominator, int) and denominator > 0
                 else None
             )
-            owned_slots = sum(int(row.get("ownership_count") or 0) for row in full_composition)
+            owned_slots = sum(
+                int(row.get("ownership_count") or 0)
+                for row in full_composition
+            )
             if expected_slots is not None and owned_slots != expected_slots:
                 failures.append(
                     f"S15B_FULL_LEAGUE_SLOT_COUNT={owned_slots}/{expected_slots}"
@@ -1030,7 +1075,7 @@ def validate_deep_decision_content_delivery(
         for scope_key, payload_key in (
             ("LEAGUE", "league_our15_exposure"),
             ("RIVALS", "rivals_our15_exposure"),
-            ("DIRECT", "direct_rival_our15_exposure"),
+            ("COMPETITIVE", "competitive_our15_exposure"),
         ):
             scope = dict(scopes.get(scope_key) or {})
             rows = [
@@ -1039,7 +1084,9 @@ def validate_deep_decision_content_delivery(
                 if isinstance(row, Mapping)
             ]
             if len(rows) != 15:
-                failures.append(f"S15B_OUR15_SCOPE_COUNT={scope_key}:{len(rows)}/15")
+                failures.append(
+                    f"S15B_OUR15_SCOPE_COUNT={scope_key}:{len(rows)}/15"
+                )
             denominator = scope.get("denominator")
             for index, row in enumerate(rows, start=1):
                 if row.get("denominator") != denominator:
@@ -1059,49 +1106,97 @@ def validate_deep_decision_content_delivery(
                         )
                         break
 
-        direct_meta = dict(s15b.get("direct_rival_scope") or {})
-        if direct_meta.get("denominator") != direct_scope.get("denominator"):
-            failures.append("S15B_DIRECT_DENOMINATOR_MISLABEL")
-        try:
-            direct_requested = int(direct_meta.get("requested_above_count"))
-            direct_standings = int(direct_meta.get("standings_rival_count"))
-            direct_picks = int(direct_meta.get("picks_available_count"))
-            direct_expected = int(direct_scope.get("expected"))
-            direct_collected = int(direct_scope.get("collected"))
-            direct_denominator = int(direct_scope.get("denominator"))
-        except (TypeError, ValueError):
-            direct_requested = direct_standings = direct_picks = -1
-            direct_expected = direct_collected = direct_denominator = -1
-        if direct_requested <= 0:
-            failures.append("S15B_DIRECT_REQUESTED_COHORT_MISSING")
-        else:
-            expected_direct_label = f"DIRECT{direct_requested}_ABOVE_US"
-            if str(direct_scope.get("label") or "") != expected_direct_label:
-                failures.append("S15B_DIRECT_SCOPE_LABEL_INVALID")
-        if (
-            direct_standings < 0
-            or direct_picks < 0
-            or direct_expected != direct_standings
-            or direct_collected != direct_picks
-            or direct_denominator != direct_picks
-            or (
-                direct_requested > 0
-                and direct_standings > direct_requested
-            )
+        competitive = dict(s15b.get("competitive_window") or {})
+        expected_window = resolve_competitive_window(
+            competitive.get("our_rank"),
+            competitive.get("league_size"),
+        )
+        for key in (
+            "window_mode", "above_count", "below_count", "rival_count", "ranks"
         ):
-            failures.append("S15B_DIRECT_SCOPE_COHORT_RELATION_INVALID")
-        for index, rival in enumerate(s15b.get("direct_rivals") or [], start=1):
-            if not isinstance(rival, Mapping):
-                continue
+            if competitive.get(key) != expected_window.get(key):
+                failures.append(f"S15B_COMPETITIVE_WINDOW_INVALID={key}")
+        try:
+            window_expected = int(competitive.get("rival_count"))
+            standings_count = int(competitive.get("standings_rival_count"))
+            picks_count = int(competitive.get("picks_available_count"))
+            scope_expected = int(competitive_scope.get("expected"))
+            scope_collected = int(competitive_scope.get("collected"))
+            scope_denominator = int(competitive_scope.get("denominator"))
+        except (TypeError, ValueError):
+            window_expected = standings_count = picks_count = -1
+            scope_expected = scope_collected = scope_denominator = -1
+        if (
+            window_expected < 0
+            or standings_count != window_expected
+            or scope_expected != window_expected
+            or scope_collected != picks_count
+            or scope_denominator != picks_count
+        ):
+            failures.append("S15B_COMPETITIVE_SCOPE_COHORT_RELATION_INVALID")
+
+        expected_ranks = set(expected_window.get("ranks") or [])
+        competitive_rivals = [
+            dict(row)
+            for row in s15b.get("competitive_rivals") or []
+            if isinstance(row, Mapping)
+        ]
+        for index, rival in enumerate(competitive_rivals, start=1):
+            rank = int(rival.get("rank") or 0)
+            if rank not in expected_ranks:
+                failures.append(
+                    f"S15B_COMPETITIVE_RIVAL_OUTSIDE_WINDOW={index}:{rank}"
+                )
+            expected_position = (
+                "ABOVE"
+                if rank < int(expected_window.get("our_rank") or 0)
+                else "BELOW"
+            )
+            if rival.get("position_vs_us") != expected_position:
+                failures.append(
+                    f"S15B_COMPETITIVE_POSITION_INVALID={index}"
+                )
             for key in (
                 "xi_overlap_count",
-                "bench_overlap_count",
                 "shields",
                 "rival_only_threats",
                 "differential_against_us",
             ):
                 if key not in rival:
-                    failures.append(f"S15B_DIRECT_RIVAL_DETAIL_MISSING={index}:{key}")
+                    failures.append(
+                        f"S15B_COMPETITIVE_RIVAL_DETAIL_MISSING={index}:{key}"
+                    )
+
+        top10 = [
+            int(row.get("rank") or 0)
+            for row in s15b.get("rank_battle") or []
+            if isinstance(row, Mapping)
+        ]
+        expected_top10 = list(range(1, min(10, league_expected) + 1))
+        if top10 != expected_top10:
+            failures.append("S15B_TOP10_MILESTONE_INVALID")
+
+        for index, row in enumerate(
+            s15b.get("competitive_window_threats") or [],
+            start=1,
+        ):
+            if not isinstance(row, Mapping):
+                continue
+            if row.get("denominator") != competitive_scope.get("denominator"):
+                failures.append(
+                    f"S15B_COMPETITIVE_THREAT_DENOMINATOR_MISMATCH={index}"
+                )
+                break
+
+        for index, row in enumerate(s15b.get("captain_leverage") or [], start=1):
+            if not isinstance(row, Mapping):
+                continue
+            if not isinstance(row.get("competitive_scope"), Mapping):
+                failures.append(
+                    f"S15B_CAPTAIN_COMPETITIVE_SCOPE_MISSING={index}"
+                )
+                break
+
         if "expected_rank_utility" in str(s15b):
             failures.append("S15B_CATEGORICAL_RANK_UTILITY_FORBIDDEN")
         posture = str(
@@ -1118,7 +1213,8 @@ def validate_deep_decision_content_delivery(
         for token in (
             "DENOMINATOR SCOPES",
             "BEHAVIOURAL BASELINE",
-            "EXPOSURE / LEVERAGE CLASS",
+            "COMPETITIVE WINDOW",
+            "POSITION VS US",
         ):
             if token not in upper:
                 failures.append(f"S15B_VISIBLE_CONTRACT_MISSING={token}")

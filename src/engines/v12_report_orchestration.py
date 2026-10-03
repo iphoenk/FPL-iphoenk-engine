@@ -3694,7 +3694,7 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S01": ("operational_state", "planning_gw", "primary_decision", "key_decision_driver"),
     "S02": ("rows",),
     "S03": ("decision_delta",),
-    "S04": ("changes",),
+    "S04": ("material_news", "model_developments", "decision_consequence", "source_policy"),
     "S05": ("fixtures",),
     "S06": ("formation", "starting_xi", "bench", "lineup_score", "formation_comparison"),
     "S06B": (
@@ -3729,10 +3729,10 @@ DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "denominator_scopes",
         "league_our15_exposure",
         "rivals_our15_exposure",
-        "direct_rival_scope",
-        "direct_rivals",
-        "direct_rival_our15_exposure",
-        "rival_threats",
+        "competitive_window",
+        "competitive_rivals",
+        "competitive_our15_exposure",
+        "competitive_window_threats",
         "captain_leverage",
         "strategy_implication",
         "report_contract",
@@ -4009,29 +4009,91 @@ def _render_deep_visible_contract_lines(
         excluded.append("decision_delta")
 
     elif section_id == "S04":
-        changes = [
+        material_news = [
             dict(row)
-            for row in payload.get("changes") or []
+            for row in payload.get("material_news") or []
             if isinstance(row, Mapping)
         ]
-        lines.append("### MATERIAL DEVELOPMENTS")
-        lines.extend(
-            _markdown_table(
-                ("classification", "scope", "event kind", "subject", "summary", "evidence time"),
-                [
-                    (
-                        row.get("classification"),
-                        row.get("scope"),
-                        row.get("event_kind"),
-                        row.get("subject"),
-                        row.get("summary"),
-                        row.get("evidence_time"),
-                    )
-                    for row in changes
-                ],
+        groups = dict(payload.get("news_groups") or {})
+        lines.append("### MATERIAL NEWS SINCE PREVIOUS DEEP")
+        lines.append(str(payload.get("news_summary") or "NO MATERIAL NEW EXTERNAL NEWS"))
+        for group_name in (
+            "OUR15",
+            "WATCHLIST / TARGETS",
+            "TEAM / TACTICAL",
+            "OTHER MATERIAL",
+        ):
+            rows = [
+                dict(row)
+                for row in groups.get(group_name) or []
+                if isinstance(row, Mapping)
+            ]
+            lines.append(f"#### {group_name}")
+            if not rows:
+                lines.append("- None material / supportable in this occurrence.")
+                continue
+            for row in rows:
+                lines.append(
+                    f"- **{row.get('subject') or 'UNAVAILABLE'}** — "
+                    f"{row.get('source_class') or 'UNAVAILABLE'}"
+                )
+                lines.append(
+                    "  "
+                    f"{row.get('summary') or row.get('headline') or 'UNAVAILABLE'} | "
+                    f"Source: {row.get('source_name') or 'UNAVAILABLE'} | "
+                    f"As of: {row.get('published_or_observed_timestamp') or 'UNAVAILABLE'} | "
+                    f"Evidence: {row.get('evidence_status') or 'UNAVAILABLE'} | "
+                    f"Impact: {row.get('decision_relevance') or 'MONITOR'}"
+                )
+
+        developments = [
+            dict(row)
+            for row in payload.get("model_developments") or []
+            if isinstance(row, Mapping)
+        ]
+        lines.append("### MODEL / FOOTBALL DEVELOPMENTS")
+        if developments:
+            for row in developments:
+                lines.append(
+                    f"- {row.get('classification') or 'OBSERVED'} | "
+                    f"{row.get('scope') or 'UNAVAILABLE'} | "
+                    f"{row.get('summary') or 'UNAVAILABLE'}"
+                )
+        else:
+            lines.append("- No new model-detected material change in this occurrence.")
+
+        consequence = dict(payload.get("decision_consequence") or {})
+        lines.append("### DECISION CONSEQUENCE")
+        lines.append(
+            " | ".join(
+                (
+                    f"TRANSFER={consequence.get('transfer_state')}",
+                    f"XI={consequence.get('xi_state')}",
+                    f"C/VC={consequence.get('captain_state')}",
+                    f"PRICE={consequence.get('price_state')}",
+                )
             )
         )
-        excluded.extend(("changes", "decision_change_sources"))
+        lines.append(
+            "NEWS SELF-AUTHORIZES ACT: "
+            f"{consequence.get('news_self_authorizes_act')} | "
+            "NEWS OBSERVATION IS MODEL UPDATE: "
+            f"{consequence.get('news_observation_is_model_update')} | "
+            "MODEL NUMBERS MUTATED IN S04: "
+            f"{consequence.get('model_numbers_mutated_here')} | "
+            "OPTIMIZER AUTHORITY REMAINS S14: "
+            f"{consequence.get('optimizer_authority_remains_s14')}"
+        )
+        excluded.extend((
+            "material_news",
+            "news_groups",
+            "news_summary",
+            "model_developments",
+            "decision_consequence",
+            "source_policy",
+            "changes",
+            "decision_change_sources",
+        ))
 
     elif section_id == "S05":
         lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
@@ -4357,7 +4419,7 @@ def _render_deep_visible_contract_lines(
                     "player_a", "player_b", "P(start) A", "P(start) B", "xMins A", "xMins B",
                     "1GW A", "1GW B", "Phaul A", "Phaul B", "fixture A", "fixture B",
                     "workload A", "workload B", "role A", "role B",
-                    "Rivals EO A", "Rivals EO B", "Direct EO A", "Direct EO B",
+                    "Rivals EO A", "Rivals EO B", "Competitive EO A", "Competitive EO B",
                     "starter", "utility delta", "reason"
                 ),
                 [
@@ -4380,8 +4442,8 @@ def _render_deep_visible_contract_lines(
                         item.get("role_b"),
                         item.get("eo_a"),
                         item.get("eo_b"),
-                        item.get("direct_eo_a"),
-                        item.get("direct_eo_b"),
+                        item.get("competitive_eo_a"),
+                        item.get("competitive_eo_b"),
                         item.get("final_starter"),
                         item.get("utility_margin"),
                         item.get("tactical_reason"),
@@ -4439,7 +4501,7 @@ def _render_deep_visible_contract_lines(
                 workload = dict(item.get("workload_context") or {})
                 league = dict(item.get("league_scope") or {})
                 rivals = dict(item.get("rivals_scope") or {})
-                direct = dict(item.get("direct_scope") or {})
+                competitive = dict(item.get("competitive_scope") or {})
                 rows.append(
                     (
                         item.get("football_rank"),
@@ -4468,8 +4530,8 @@ def _render_deep_visible_contract_lines(
                         _cap_eo(league),
                         _cap_ratio(rivals, "captain_count", "captain_pct"),
                         _cap_eo(rivals),
-                        _cap_ratio(direct, "captain_count", "captain_pct"),
-                        _cap_eo(direct),
+                        _cap_ratio(competitive, "captain_count", "captain_pct"),
+                        _cap_eo(competitive),
                         item.get("exposure_leverage_class"),
                     )
                 )
@@ -4499,8 +4561,8 @@ def _render_deep_visible_contract_lines(
                         "LEAGUE EO",
                         "RIVALS C",
                         "RIVALS EO",
-                        "DIRECT C",
-                        "DIRECT EO",
+                        "COMPETITIVE C",
+                        "COMPETITIVE EO",
                         "EXPOSURE / LEVERAGE CLASS",
                     ),
                     rows,
@@ -5082,15 +5144,34 @@ def _render_deep_visible_contract_lines(
         )
         lines.append(
             "MINI_LEAGUE_COVERAGE: "
-            f"collected={available}/{expected} ({coverage_pct if coverage_pct is not None else 'UNAVAILABLE'}%) | "
+            f"collected={available}/{expected} "
+            f"({coverage_pct if coverage_pct is not None else 'UNAVAILABLE'}%) | "
             f"disclosed_picks=GW{disclosed_gw} | "
             f"label={payload.get('disclosed_picks_label') or 'BEHAVIOURAL BASELINE'}"
         )
         lines.append(
-            "RIVAL PICKS NOTE: BEHAVIOURAL BASELINE from latest disclosed submitted picks; "
-            "never a forecast of still-private planning-GW selections."
+            "EVIDENCE SEMANTICS: submitted picks are the latest disclosed behavioural "
+            "baseline, never a forecast of still-private planning-GW selections."
         )
+
         context = dict(payload.get("current_league_context") or {})
+        rank_battle = [
+            dict(item)
+            for item in payload.get("rank_battle") or []
+            if isinstance(item, Mapping)
+        ]
+        top10_row = next(
+            (row for row in rank_battle if int(row.get("rank") or 0) == 10),
+            {},
+        )
+        top10_gap = context.get("points_to_top_10")
+        if top10_gap is None and top10_row and context.get("our_total_points") is not None:
+            try:
+                top10_gap = int(top10_row.get("total_points") or 0) - int(
+                    context.get("our_total_points") or 0
+                )
+            except (TypeError, ValueError):
+                top10_gap = None
         lines.append(
             "LEAGUE LANDSCAPE: "
             f"rank={context.get('our_rank')} / {context.get('manager_count')} | "
@@ -5098,8 +5179,9 @@ def _render_deep_visible_contract_lines(
             f"leader_gap={context.get('points_to_leader')} | "
             f"top3_gap={context.get('points_to_top_3')} | "
             f"top5_gap={context.get('points_to_top_5')} | "
-            f"above_gap={context.get('points_to_nearest_above')} | "
-            f"below_cushion={context.get('points_ahead_nearest_below')} | "
+            f"top10_cutoff_gap={top10_gap if top10_gap is not None else 'UNAVAILABLE'} | "
+            f"nearest_above={context.get('points_to_nearest_above')} | "
+            f"nearest_below={context.get('points_ahead_nearest_below')} | "
             f"rank_delta={context.get('rank_delta', 'UNAVAILABLE')} | "
             f"points_delta={context.get('points_delta', 'UNAVAILABLE')}"
         )
@@ -5134,6 +5216,17 @@ def _render_deep_visible_contract_lines(
             pct_text = "UNAVAILABLE" if pct is None else f"{float(pct):.1f}%"
             return f"{_mini_num(numerator)}/{_mini_num(denominator)} ({pct_text})"
 
+        def _coverage(scope: Mapping[str, Any]) -> str:
+            expected_scope = scope.get("expected")
+            collected = scope.get("collected")
+            if expected_scope in (None, 0) or collected is None:
+                return "UNAVAILABLE"
+            try:
+                pct = 100.0 * float(collected) / float(expected_scope)
+            except (TypeError, ValueError, ZeroDivisionError):
+                return "UNAVAILABLE"
+            return f"{_mini_num(collected)}/{_mini_num(expected_scope)} ({pct:.1f}%)"
+
         def _mini_player(row: Mapping[str, Any], *, owned: bool) -> str:
             name = str(
                 row.get("player")
@@ -5144,35 +5237,32 @@ def _render_deep_visible_contract_lines(
             return f"**{name}**" if owned else name
 
         scopes = dict(payload.get("denominator_scopes") or {})
+        definitions = {
+            "LEAGUE": "All managers including us",
+            "RIVALS": "All managers excluding us",
+            "COMPETITIVE": "Dynamic rank-relative Competitive Window excluding us",
+        }
         lines.append("### DENOMINATOR SCOPES")
         lines.extend(
             _markdown_table(
-                ("scope", "label", "expected", "collected", "denominator", "includes us"),
+                ("Scope", "Definition", "Coverage"),
                 [
                     (
                         key,
-                        value.get("label"),
-                        value.get("expected"),
-                        value.get("collected"),
-                        value.get("denominator"),
-                        value.get("includes_us"),
+                        value.get("definition") or definitions.get(key) or value.get("label"),
+                        _coverage(value),
                     )
-                    for key, value in scopes.items()
-                    if isinstance(value, Mapping)
+                    for key in ("LEAGUE", "RIVALS", "COMPETITIVE")
+                    for value in [dict(scopes.get(key) or {})]
                 ],
             )
         )
 
-        rank_battle = [
-            dict(item)
-            for item in payload.get("rank_battle") or []
-            if isinstance(item, Mapping)
-        ]
-        lines.append("### RANK BATTLE")
+        lines.append("### LEAGUE POSITION CONTEXT")
         if rank_battle:
             lines.extend(
                 _markdown_table(
-                    ("Rank", "Manager", "Team", "Total", "Gap vs us", "GW"),
+                    ("Rank", "Manager", "Team", "Points", "Gap"),
                     [
                         (
                             item.get("rank"),
@@ -5180,21 +5270,20 @@ def _render_deep_visible_contract_lines(
                             item.get("team"),
                             item.get("total_points"),
                             item.get("gap_vs_us"),
-                            item.get("gw_score"),
                         )
                         for item in rank_battle
                     ],
                 )
             )
         else:
-            lines.append("UNAVAILABLE — no supportable rank battle rows")
+            lines.append("UNAVAILABLE — Top-10 standings not supportable")
 
         full_comp = [
             dict(item)
             for item in payload.get("league_full_composition") or []
             if isinstance(item, Mapping)
         ]
-        lines.append("### FULL ICON+ COMPOSITION")
+        lines.append("### FULL ICON+ COMPOSITION — SUPPORTING LEAGUE LENS")
         lines.append(
             f"UNIQUE PLAYERS: {payload.get('league_unique_player_count')} | "
             f"COMPLETE={payload.get('league_full_composition_complete')}"
@@ -5203,9 +5292,8 @@ def _render_deep_visible_contract_lines(
             lines.extend(
                 _markdown_table(
                     (
-                        "Pos", "Player", "OWNERSHIP_COUNT", "STARTER_COUNT",
-                        "BENCH_COUNT", "CAPTAIN_COUNT", "VICE_COUNT",
-                        "EO_PCT / units / denominator", "OUR15"
+                        "Pos", "Player", "Owned", "Starter", "Bench",
+                        "Captain", "Vice", "EO", "OUR15"
                     ),
                     [
                         (
@@ -5217,8 +5305,10 @@ def _render_deep_visible_contract_lines(
                             _mini_ratio(item, "captain_count", "captain_pct"),
                             _mini_ratio(item, "vice_count", "vice_pct"),
                             _mini_ratio(
-                                item, "effective_multiplier_sum", "eo_pct",
-                                numerator_key="effective_multiplier_sum"
+                                item,
+                                "effective_multiplier_sum",
+                                "eo_pct",
+                                numerator_key="effective_multiplier_sum",
                             ),
                             item.get("our15"),
                         )
@@ -5229,85 +5319,103 @@ def _render_deep_visible_contract_lines(
         else:
             lines.append("UNAVAILABLE — complete unique-player composition not materialized")
 
-        for scope_key, payload_key in (
-            ("LEAGUE", "league_our15_exposure"),
-            ("RIVALS", "rivals_our15_exposure"),
-            ("DIRECT", "direct_rival_our15_exposure"),
-        ):
+        exposure_specs = (
+            (
+                "LEAGUE",
+                "league_our15_exposure",
+                ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"),
+                True,
+            ),
+            (
+                "RIVALS",
+                "rivals_our15_exposure",
+                ("Player", "Owned", "Starter", "Captain", "EO"),
+                False,
+            ),
+            (
+                "COMPETITIVE WINDOW",
+                "competitive_our15_exposure",
+                ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"),
+                True,
+            ),
+        )
+        for display_scope, payload_key, headers, include_bench_vice in exposure_specs:
             exposure_rows = [
                 dict(item)
                 for item in payload.get(payload_key) or []
                 if isinstance(item, Mapping)
             ]
-            label = (
-                (scopes.get(scope_key) or {}).get("label")
-                if isinstance(scopes.get(scope_key), Mapping)
-                else scope_key
-            )
-            lines.append(f"### OUR15 EXPOSURE — {label or scope_key}")
-            if exposure_rows:
-                lines.extend(
-                    _markdown_table(
-                        (
-                            "Player",
-                            "OWNERSHIP_COUNT",
-                            "STARTER_COUNT",
-                            "BENCH_COUNT",
-                            "CAPTAIN_COUNT",
-                            "VICE_COUNT",
-                            "EO_PCT / units / denominator",
-                        ),
+            lines.append(f"### OUR15 EXPOSURE, {display_scope}")
+            if not exposure_rows:
+                lines.append("UNAVAILABLE — exposure rows not materialized")
+                continue
+            table_rows = []
+            for item in exposure_rows:
+                base = [
+                    _mini_player(item, owned=True),
+                    _mini_ratio(item, "ownership_count", "ownership_pct"),
+                    _mini_ratio(item, "starter_count", "starter_pct"),
+                ]
+                if include_bench_vice:
+                    base.extend(
                         [
-                            (
-                                _mini_player(item, owned=True),
-                                _mini_ratio(item, "ownership_count", "ownership_pct"),
-                                _mini_ratio(item, "starter_count", "starter_pct"),
-                                _mini_ratio(item, "bench_count", "bench_pct"),
-                                _mini_ratio(item, "captain_count", "captain_pct"),
-                                _mini_ratio(item, "vice_count", "vice_pct"),
-                                _mini_ratio(
-                                    item,
-                                    "effective_multiplier_sum",
-                                    "eo_pct",
-                                    numerator_key="effective_multiplier_sum",
-                                ),
-                            )
-                            for item in exposure_rows
-                        ],
+                            _mini_ratio(item, "bench_count", "bench_pct"),
+                            _mini_ratio(item, "captain_count", "captain_pct"),
+                            _mini_ratio(item, "vice_count", "vice_pct"),
+                        ]
+                    )
+                else:
+                    base.append(_mini_ratio(item, "captain_count", "captain_pct"))
+                base.append(
+                    _mini_ratio(
+                        item,
+                        "effective_multiplier_sum",
+                        "eo_pct",
+                        numerator_key="effective_multiplier_sum",
                     )
                 )
-            else:
-                lines.append("UNAVAILABLE — exposure rows not materialized")
+                table_rows.append(tuple(base))
+            lines.extend(_markdown_table(headers, table_rows))
 
-        direct_scope = dict(payload.get("direct_rival_scope") or {})
-        lines.append("### DIRECT RIVALS ABOVE US")
-        lines.append(
-            "DIRECT RIVAL SCOPE: "
-            f"requested={direct_scope.get('requested_above_count')} | "
-            f"standings={direct_scope.get('standings_rival_count')} | "
-            f"picks={direct_scope.get('picks_available_count')} | "
-            f"denominator={direct_scope.get('denominator')} | "
-            f"complete={direct_scope.get('complete')}"
-        )
-        direct = [
+        competitive = dict(payload.get("competitive_window") or {})
+        legacy_fixed = False
+        if not competitive and payload.get("direct_rival_scope"):
+            legacy_fixed = True
+            competitive = dict(payload.get("direct_rival_scope") or {})
+            lines.append(
+                "HISTORICAL LEGACY FIXED-RIVAL SNAPSHOT — retained exactly as historical "
+                "evidence; not synthesized into a Competitive Window."
+            )
+        if not legacy_fixed:
+            coverage_meta = dict(competitive.get("coverage") or {})
+            lines.append(
+                "COMPETITIVE WINDOW: "
+                f"mode={competitive.get('window_mode')} | "
+                f"rank={competitive.get('our_rank')}/{competitive.get('league_size')} | "
+                f"above={competitive.get('above_count')} | "
+                f"below={competitive.get('below_count')} | "
+                f"rivals={competitive.get('rival_count')} | "
+                f"coverage={coverage_meta.get('collected')}/{coverage_meta.get('expected')} "
+                f"({coverage_meta.get('percentage')}%)"
+            )
+
+        competitive_rivals = [
             dict(item)
-            for item in payload.get("direct_rivals") or []
+            for item in (
+                payload.get("competitive_rivals")
+                if not legacy_fixed
+                else payload.get("direct_rivals")
+            )
+            or []
             if isinstance(item, Mapping)
         ]
-        if direct:
+        lines.append("### COMPETITIVE RIVALS" if not legacy_fixed else "### HISTORICAL FIXED-RIVAL COHORT")
+        if competitive_rivals:
             lines.extend(
                 _markdown_table(
                     (
-                        "Rank",
-                        "Manager",
-                        "Points",
-                        "Gap",
-                        "Squad overlap",
-                        "XI overlap",
-                        "Bench overlap",
-                        "Captain",
-                        "Vice",
-                        "Chip",
+                        "Rank", "Manager", "Pts", "Gap", "Position vs us",
+                        "Squad overlap", "XI overlap", "Captain", "Vice"
                     ),
                     [
                         (
@@ -5315,60 +5423,44 @@ def _render_deep_visible_contract_lines(
                             item.get("manager"),
                             item.get("total_points"),
                             item.get("gap_vs_us"),
+                            item.get("position_vs_us") if not legacy_fixed else "HISTORICAL",
                             f"{item.get('overlap_count')}/{item.get('overlap_denominator')}",
                             f"{item.get('xi_overlap_count')}/{item.get('xi_overlap_denominator')}",
-                            f"{item.get('bench_overlap_count')}/{item.get('bench_overlap_denominator')}",
                             item.get("captain"),
                             item.get("vice"),
-                            item.get("active_chip") or "UNAVAILABLE",
                         )
-                        for item in direct
+                        for item in competitive_rivals
                     ],
                 )
             )
-            lines.append("#### DIRECT RIVAL DIFFERENCE DETAIL")
-            for item in direct:
-                def names(key: str) -> str:
-                    return ", ".join(
-                        str(row.get("player"))
-                        for row in item.get(key) or []
-                        if isinstance(row, Mapping)
-                    ) or "NONE"
-                lines.append(
-                    f"- #{item.get('rank')} {item.get('manager')} | "
-                    f"SHIELDS [{names('shields')}] | "
-                    f"RIVAL-ONLY THREATS [{names('rival_only_threats')}] | "
-                    f"DIFFERENTIAL AGAINST US [{names('differential_against_us')}]"
-                )
         else:
-            lines.append("UNAVAILABLE — no direct-rival picks available")
+            lines.append("UNAVAILABLE — no supportable competitive-rival picks")
 
         threats = [
             dict(item)
-            for item in payload.get("rival_threats") or []
+            for item in (
+                payload.get("competitive_window_threats")
+                if not legacy_fixed
+                else payload.get("rival_threats")
+            )
+            or []
             if isinstance(item, Mapping)
         ]
-        lines.append("### RIVAL THREATS NOT IN OUR15")
+        lines.append(
+            "### COMPETITIVE-WINDOW RIVAL-ONLY THREATS"
+            if not legacy_fixed
+            else "### HISTORICAL FIXED-RIVAL THREATS"
+        )
         if threats:
             lines.extend(
                 _markdown_table(
-                    (
-                        "Player",
-                        "OWNERSHIP_COUNT",
-                        "STARTER_COUNT",
-                        "BENCH_COUNT",
-                        "CAPTAIN_COUNT",
-                        "VICE_COUNT",
-                        "EO_PCT / units / denominator",
-                    ),
+                    ("Player", "Owned", "Starter", "Captain", "EO"),
                     [
                         (
                             _mini_player(item, owned=False),
                             _mini_ratio(item, "ownership_count", "ownership_pct"),
                             _mini_ratio(item, "starter_count", "starter_pct"),
-                            _mini_ratio(item, "bench_count", "bench_pct"),
                             _mini_ratio(item, "captain_count", "captain_pct"),
-                            _mini_ratio(item, "vice_count", "vice_pct"),
                             _mini_ratio(
                                 item,
                                 "effective_multiplier_sum",
@@ -5389,35 +5481,42 @@ def _render_deep_visible_contract_lines(
             if isinstance(item, Mapping)
         ]
         lines.append("### CAPTAIN LANDSCAPE")
+        lines.append("EXPOSURE / LEVERAGE CLASS: contextual mini-league evidence; football captain ranking remains primary.")
         if captain_rows:
             lines.extend(
                 _markdown_table(
                     (
-                        "Player",
-                        "Football rank",
-                        "xPts",
-                        "P(haul)",
-                        "LEAGUE C",
-                        "LEAGUE EO",
-                        "RIVALS C",
-                        "RIVALS EO",
-                        "DIRECT C",
-                        "DIRECT EO",
-                        "EXPOSURE / LEVERAGE CLASS",
+                        "Player", "Football rank", "xPts", "League C", "League EO",
+                        "Competitive C", "Competitive EO", "Class"
                     ),
                     [
                         (
                             item.get("player"),
                             item.get("football_rank"),
                             item.get("expected_points"),
-                            item.get("haul_probability"),
-                            _mini_ratio(dict(item.get("league_scope") or {}), "captain_count", "captain_pct"),
-                            _mini_ratio(dict(item.get("league_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
-                            _mini_ratio(dict(item.get("rivals_scope") or {}), "captain_count", "captain_pct"),
-                            _mini_ratio(dict(item.get("rivals_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
-                            _mini_ratio(dict(item.get("direct_scope") or {}), "captain_count", "captain_pct"),
-                            _mini_ratio(dict(item.get("direct_scope") or {}), "effective_multiplier_sum", "eo_pct", numerator_key="effective_multiplier_sum"),
-                            item.get("exposure_leverage_class"),
+                            _mini_ratio(
+                                dict(item.get("league_scope") or {}),
+                                "captain_count",
+                                "captain_pct",
+                            ),
+                            _mini_ratio(
+                                dict(item.get("league_scope") or {}),
+                                "effective_multiplier_sum",
+                                "eo_pct",
+                                numerator_key="effective_multiplier_sum",
+                            ),
+                            _mini_ratio(
+                                dict(item.get("competitive_scope") or {}),
+                                "captain_count",
+                                "captain_pct",
+                            ),
+                            _mini_ratio(
+                                dict(item.get("competitive_scope") or {}),
+                                "effective_multiplier_sum",
+                                "eo_pct",
+                                numerator_key="effective_multiplier_sum",
+                            ),
+                            str(item.get("exposure_leverage_class") or "UNAVAILABLE").replace("_", " ").title(),
                         )
                         for item in captain_rows
                     ],
@@ -5438,19 +5537,26 @@ def _render_deep_visible_contract_lines(
         )
         lines.append(f"XI: {implication.get('xi_rule')}")
         lines.append(f"CAPTAIN: {implication.get('captain_rule')}")
+        lines.append(
+            "FOOTBALL BASELINE REMAINS PRIMARY; Competitive Window is contextual "
+            "and may break near-ties only through existing P1.8 governance."
+        )
 
         excluded.extend(
             (
                 "current_league_context",
                 "exposures",
                 "rank_battle",
+                "league_full_composition",
+                "league_full_composition_complete",
+                "league_unique_player_count",
                 "league_our15_exposure",
                 "rivals_our15_exposure",
                 "our15_rival_exposure",
-                "direct_rival_scope",
-                "direct_rivals",
-                "direct_rival_our15_exposure",
-                "rival_threats",
+                "competitive_window",
+                "competitive_rivals",
+                "competitive_our15_exposure",
+                "competitive_window_threats",
                 "captain_leverage",
                 "strategy_implication",
                 "report_contract",
@@ -5458,6 +5564,10 @@ def _render_deep_visible_contract_lines(
                 "disclosed_picks_gw",
                 "disclosed_picks_are_baseline_not_gw_forecast",
                 "disclosed_picks_label",
+                "direct_rival_scope",
+                "direct_rivals",
+                "direct_rival_our15_exposure",
+                "rival_threats",
             )
         )
 

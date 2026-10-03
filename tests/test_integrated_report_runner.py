@@ -1247,9 +1247,9 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "All managers including us" in body
     assert "All managers excluding us" in body
     assert "COMPETITIVE WINDOW" in body
-    assert "OUR15 EXPOSURE, LEAGUE" in body
-    assert "OUR15 EXPOSURE, RIVALS" in body
-    assert "OUR15 EXPOSURE, COMPETITIVE WINDOW" in body
+    assert "OUR15 LEAGUE" in body
+    assert "OUR15 RIVALS" in body
+    assert "OUR15 COMPETITIVE WINDOW" in body
     assert "COMPETITIVE-WINDOW RIVAL-ONLY THREATS" in body
     assert "CAPTAIN LANDSCAPE" in body
     assert "Competitive C" in body

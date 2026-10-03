@@ -4357,7 +4357,7 @@ def _render_deep_visible_contract_lines(
                 f"3GW {r.get('projection_3gw', 'UNAVAILABLE')}; 5GW {r.get('projection_5gw', 'UNAVAILABLE')}."
             )
             lines.append(
-                "Role/current evidence: "
+                "Posterior/current evidence: "
                 + _compact(r.get("role_detail") or r.get("tactical_role_label") or r.get("posterior_signal"))
             )
             lines.append(

@@ -4821,23 +4821,25 @@ def _render_deep_visible_contract_lines(
                 "🟢 Verified" if exact_binding is True else "🔴 Unverified",
             ),
         ]
-        if delivery_provenance:
-            rows.extend(
-                [
-                    (
-                        "Private serving / delivery",
-                        str(delivery_provenance.get("private_delivery") or "🟡 Pending"),
-                    ),
-                    (
-                        "Presentation QA",
-                        str(delivery_provenance.get("presentation_qa") or "🟡 Pending"),
-                    ),
-                    (
-                        "Privacy boundary",
-                        str(delivery_provenance.get("privacy_boundary") or "🟡 Unverified"),
-                    ),
-                ]
-            )
+        # These planes belong to S17 even before the downstream publisher
+        # has completed. Pending/enforced states are truthful provenance; the
+        # renderer must never omit the planes or pre-claim publication PASS.
+        rows.extend(
+            [
+                (
+                    "Private serving / delivery",
+                    str(delivery_provenance.get("private_delivery") or "🟡 Pending downstream publication"),
+                ),
+                (
+                    "Presentation QA",
+                    str(delivery_provenance.get("presentation_qa") or "🟡 Enforced by serving gate"),
+                ),
+                (
+                    "Privacy boundary",
+                    str(delivery_provenance.get("privacy_boundary") or "🟢 Private-only serving contract"),
+                ),
+            ]
+        )
         lines.extend(_markdown_table(("Plane", "Status"), rows))
 
         stale_items = []

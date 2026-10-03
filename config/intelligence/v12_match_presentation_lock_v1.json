@@ -1,0 +1,313 @@
+{
+  "schema": "fpl_master_v12_match_presentation_lock.v1",
+  "purpose": "Lock MATCH1..MATCH13 visible presentation to stable human FPL language and fixed table layouts. No factual/model/decision changes.",
+  "section_order": [
+    "MATCH1",
+    "MATCH2",
+    "MATCH3",
+    "MATCH4",
+    "MATCH5",
+    "MATCH6",
+    "MATCH7",
+    "MATCH8",
+    "MATCH9",
+    "MATCH10",
+    "MATCH11",
+    "MATCH12",
+    "MATCH13"
+  ],
+  "rules": {
+    "human_analyst_style": true,
+    "generic_recursive_key_value_dump_forbidden": true,
+    "raw_python_or_json_repr_forbidden": true,
+    "element_id_forbidden_in_visible_tables": true,
+    "raw_internal_ids_forbidden": true,
+    "raw_internal_field_names_forbidden": true,
+    "machine_enum_as_primary_wording_forbidden": true,
+    "raw_workflow_run_sha_fingerprint_forbidden_in_main_body": true,
+    "counts_require_denominator_and_percentage_when_population_known": true,
+    "eo_may_exceed_100_percent": true,
+    "healthy_submitted_picks_scope_survives_stale_standings": true,
+    "evidence_not_automatic_transfer": true
+  },
+  "sections": {
+    "MATCH1": {
+      "title": "MATCH CHECKPOINT / GW STATUS",
+      "fields": [
+        "Scoring GW",
+        "Fixtures live",
+        "Fixtures FT",
+        "Fixtures not started",
+        "As of",
+        "Lifecycle / current phase"
+      ],
+      "tables": []
+    },
+    "MATCH2": {
+      "title": "LOCKED PERSONAL TEAM",
+      "tables": [
+        {
+          "name": "Locked personal team",
+          "columns": [
+            "Player",
+            "Pos",
+            "Club",
+            "Match status"
+          ],
+          "rows_exact": 15
+        }
+      ],
+      "blocks": [
+        "Starting XI",
+        "Bench",
+        "Scoring authority"
+      ]
+    },
+    "MATCH3": {
+      "title": "PERSONAL IMPACT FIRST",
+      "tables": [
+        {
+          "name": "Material personal impact",
+          "columns": [
+            "Player",
+            "Event",
+            "Match status",
+            "Minutes",
+            "Raw pts",
+            "Multiplier",
+            "Effective pts"
+          ]
+        }
+      ],
+      "empty_state": "Belum ada event pemain kita yang mengubah scoring consequence."
+    },
+    "MATCH4": {
+      "title": "GLOBAL AUTOSUB STATE",
+      "fields": [
+        "Bench GK",
+        "Outfield autosub priority",
+        "Current autosub state",
+        "Potential player out",
+        "Potential replacement",
+        "Official finalization pending"
+      ],
+      "tables": [
+        {
+          "name": "Bench order",
+          "columns": [
+            "Slot",
+            "Player"
+          ],
+          "rows_exact": 4,
+          "row_labels": [
+            "GK",
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        {
+          "name": "Potential autosub pairing",
+          "columns": [
+            "Out",
+            "Potential in",
+            "Status"
+          ],
+          "conditional": true
+        }
+      ]
+    },
+    "MATCH5": {
+      "title": "CAPTAIN / VICE CONSEQUENCE",
+      "tables": [
+        {
+          "name": "Captain / Vice",
+          "columns": [
+            "Role",
+            "Player",
+            "Raw pts",
+            "Multiplier",
+            "Effective pts",
+            "Appearance"
+          ],
+          "rows_exact": 2,
+          "row_labels": [
+            "Captain",
+            "Vice"
+          ]
+        }
+      ],
+      "fields": [
+        "Vice takeover",
+        "Final consequence"
+      ]
+    },
+    "MATCH6": {
+      "title": "OWNED LIVE / FINAL POINTS",
+      "tables": [
+        {
+          "name": "Owned live / final points",
+          "columns": [
+            "Player",
+            "Match status",
+            "Minutes",
+            "Raw pts",
+            "Multiplier",
+            "Effective pts"
+          ],
+          "rows_exact": 15
+        }
+      ]
+    },
+    "MATCH7": {
+      "title": "BONUS / BPS",
+      "fields": [
+        "Status",
+        "Provisional/final note"
+      ],
+      "tables": [
+        {
+          "name": "Bonus / BPS",
+          "columns": [
+            "Player",
+            "Bonus",
+            "BPS"
+          ]
+        }
+      ]
+    },
+    "MATCH8": {
+      "title": "CARDS / INJURY / DEFCON / ROLE EVENTS",
+      "tables": [
+        {
+          "name": "Material events",
+          "columns": [
+            "Player",
+            "Event",
+            "Detail",
+            "Match status",
+            "Decision implication"
+          ]
+        }
+      ],
+      "blocks": [
+        "Observation does not automatically change the model until governed recomputation occurs."
+      ]
+    },
+    "MATCH9": {
+      "title": "RELEVANT LEAGUE-WIDE SIGNALS",
+      "tables": [
+        {
+          "name": "Material league-wide signals",
+          "columns": [
+            "Player",
+            "Club",
+            "Signal",
+            "Evidence",
+            "Sustainable / noisy",
+            "OUR15 / next-opponent implication"
+          ]
+        }
+      ],
+      "rules": [
+        "Do not turn this into scorer recap."
+      ]
+    },
+    "MATCH10": {
+      "title": "ICON+ LIVE",
+      "prelude": [
+        "League",
+        "Coverage M/N",
+        "Evidence state",
+        "Current live rank",
+        "Current live points"
+      ],
+      "tables": [
+        {
+          "name": "Material player exposure",
+          "columns": [
+            "Player",
+            "Owned",
+            "Starter",
+            "Captain",
+            "Vice",
+            "EO",
+            "Live consequence"
+          ]
+        },
+        {
+          "name": "Direct rival live consequence",
+          "columns": [
+            "Manager",
+            "Live points",
+            "Gap",
+            "Captain",
+            "Key threat",
+            "Key shield"
+          ]
+        }
+      ],
+      "denominator_format": "numerator/denominator (percentage%) for every supported population count; EO may exceed 100%",
+      "scope_rule": "Exposure may remain COMPLETE while standings are DEGRADED."
+    },
+    "MATCH11": {
+      "title": "NEXT-GW LEARNING",
+      "tables": [
+        {
+          "name": "Next-GW learning",
+          "columns": [
+            "Player / Team",
+            "Learning",
+            "Evidence",
+            "Next-GW implication",
+            "Action state"
+          ]
+        }
+      ],
+      "allowed_action_states": [
+        "Watch",
+        "Reassess",
+        "No change",
+        "Prepare for model refresh"
+      ],
+      "blocks": [
+        "Evidence is not an automatic transfer."
+      ]
+    },
+    "MATCH12": {
+      "title": "NEXT CRITICAL OBSERVATION",
+      "fields": [
+        "Next critical observation",
+        "Why it matters",
+        "When to reassess"
+      ],
+      "tables": []
+    },
+    "MATCH13": {
+      "title": "SOURCE / FRESHNESS STATUS",
+      "tables": [
+        {
+          "name": "Source health",
+          "columns": [
+            "Source",
+            "Status",
+            "As of"
+          ],
+          "supported_rows": [
+            "Official FPL event-live",
+            "Submitted picks",
+            "Prediction snapshot",
+            "Mini-league submitted picks",
+            "Live standings",
+            "Match evidence feed"
+          ]
+        }
+      ],
+      "blocks": [
+        "FACT",
+        "MODEL",
+        "INFERENCE"
+      ]
+    }
+  }
+}

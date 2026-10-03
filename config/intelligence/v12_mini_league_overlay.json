@@ -81,7 +81,6 @@
     "show_numerator_denominator": true,
     "show_decision_delta": true,
     "show_reversal_triggers": true,
-    "max_rival_threats": 12,
     "captain_candidates": 5,
     "deep_requires_raw_count_denominator_percentage": true,
     "deep_requires_ownership_starter_bench_captain_vice": true,
@@ -89,7 +88,8 @@
     "deep_requires_strategy_implication": true,
     "competitive_window_rule": "RANK_LT_10_TOP10_ELSE_9_ABOVE_5_BELOW",
     "deep_requires_competitive_rival_overlap": true,
-    "deep_requires_competitive_window_threats": true
+    "deep_requires_competitive_window_threats": true,
+    "max_competitive_window_threats": 12
   },
   "governance": {
     "downstream_overlay_only": true,

@@ -1,0 +1,3 @@
+# Optional, isolated dependency for report-time public-web acquisition.
+# Stable release pinned on 2026-10-04; do not add this to the factual V6 runtime.
+camoufox==0.5.6

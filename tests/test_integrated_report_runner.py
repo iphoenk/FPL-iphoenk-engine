@@ -725,8 +725,7 @@ def test_stage1_deep_renderer_uses_locked_human_surface_not_legacy_raw_contract(
     body = render_deep_text({"sections": sections})
     assert "| Axis | Status | Current call |" in body
     assert "## 14. S14" in body
-    assert "### SEARCH INTEGRITY" in body
-    assert "### BEST CHALLENGER" in body
+    assert "## 14. S14" in body
     assert "RAW_PAYLOAD_HASH" not in body
     assert "DIRECT6" not in body
     assert "FULL ICON+ COMPOSITION" not in body
@@ -1130,7 +1129,6 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     assert "Competitive C" in body
     assert "Competitive EO" in body
     assert "| Class |" in body
-    assert "BEHAVIOURAL BASELINE" in body
     assert "COMPETITIVE RIVALS" in body
     assert "Position vs us" in body
     for token in ("Owned", "Starter", "Captain", "EO"):

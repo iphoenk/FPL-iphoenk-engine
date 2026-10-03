@@ -1,6 +1,6 @@
 # FPL iphoenk Engine
 
-> **Last runtime/documentation sync:** `2026-10-03T09:20:11+07:00`
+> **Last runtime/documentation sync:** `2026-10-03T14:48:00+07:00`
 > **Production main at sync:** `ecc6ac16cc6e0887f29c0c967b92becf0999f14c`  
 > This timestamp records when this human-readable README was reconciled with the repository. Live runtime health and current production evidence come from the active workflows and runtime artifacts, not from this timestamp.
 
@@ -563,7 +563,7 @@ Canonical DEEP reporting covers:
 
 The detailed section contract is intentionally maintained outside this README so the front page stays readable.
 
-The user-visible DEEP presentation itself is version-locked by `config/intelligence/v12_deep_presentation_lock_v1.json`. That contract freezes the visible section order, per-section block structure, exact table column order, governed row counts for OUR15/Scanner20/RISE20/FALL20, and separate S15B mini-league tables. S15B population statistics must show numerator, denominator, and percentage where the population is known; unrelated scopes such as LEAGUE, RIVALS, COMPETITIVE, competitive-window rivals, rival-only threats, and captain landscape must not be merged into one generic table. This presentation lock does not change canonical V12 decisions, model maths, MC500k, universe/routes, factual authority, or S16B lifecycle semantics.
+The user-visible DEEP presentation itself is version-locked by `config/intelligence/v12_deep_presentation_lock_v1.json`. That contract freezes the visible section order, per-section block structure, exact table column order, governed row counts for OUR15/Scanner20/RISE20/FALL20, and separate S15B mini-league tables. S15B population statistics must show numerator, denominator, and percentage where the population is known; unrelated scopes such as LEAGUE, RIVALS, COMPETITIVE, competitive-window rivals, rival-only threats, and captain landscape must not be merged into one generic table. This presentation lock does not change canonical V12 decisions, model maths, MC500k, universe/routes, factual authority, or S16B lifecycle semantics. S04 is the material news/developments evidence radar: it can consume current bound report-time news evidence, keeps rumor explicitly unverified, never mutates xMins/P(start)/xPts in presentation, and leaves transfer verdict authority in S14. S15B uses the dynamic Competitive Window rather than a fixed above-us rival count.
 
 ## DEEP decision-content delivery barrier
 

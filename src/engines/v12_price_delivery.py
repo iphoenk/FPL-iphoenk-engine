@@ -833,7 +833,7 @@ def build_price_delivery_report(
             {
                 "player": row.get("name") or row.get("player"),
                 "price_pressure": row.get("direction") or "UNAVAILABLE",
-                "squad_need": "Owned-player value / affordability watch",
+                "squad_need": f"{row.get('position') or 'Squad'} value / affordability watch",
                 "football_horizon": "1GW / 3GW / 5GW",
                 "affordability_impact": row.get("impact_on_our_decision") or "UNAVAILABLE",
                 "action": action,
@@ -912,6 +912,7 @@ def build_price_delivery_report(
         "mini_league_timestamp": mini.get("generated_at", "UNAVAILABLE"),
         "mini_league_status": mini_state,
         "core_logical_slot": source.get("core_logical_slot", "UNAVAILABLE"),
+        "core_binding_state": source.get("core_binding_state", "UNAVAILABLE"),
         "core_run_id": source.get("core_run_id", "UNAVAILABLE"),
         "runtime_snapshot": source.get("runtime_snapshot", "UNAVAILABLE"),
         "predictor_health": predictor_health,
@@ -1277,7 +1278,7 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 ("Official predictor", _human_scalar(content.get("predictor_health")), content.get("predictor_timestamp")),
                 ("Current team / personal", _human_scalar(content.get("personal_status")), content.get("personal_timestamp")),
                 ("Mini-league", _human_scalar(content.get("mini_league_status")), content.get("mini_league_timestamp")),
-                ("Core/runtime evidence", "Available" if content.get("core_logical_slot") not in {None,"","UNAVAILABLE"} else "Unavailable", content.get("core_logical_slot")),
+                ("Core/runtime evidence", _human_scalar(content.get("core_binding_state")), content.get("core_logical_slot")),
             ]
             lines.extend(_table(("Source","Status","As of"), rows))
             lines.append("Audit note: workflow/run/SHA lineage remains available in the canonical artifact, not the main report body.")

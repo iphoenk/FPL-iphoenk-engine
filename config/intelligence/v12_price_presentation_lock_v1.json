@@ -1,0 +1,313 @@
+{
+  "schema": "fpl_master_v12_price_presentation_lock.v1",
+  "purpose": "Lock PRICE visible presentation to the canonical 12-section human analyst surface without changing factual, model, optimizer, scheduler, or decision authority.",
+  "section_order": [
+    "PRICE1",
+    "PRICE2",
+    "PRICE3",
+    "PRICE4",
+    "PRICE5",
+    "PRICE6",
+    "PRICE7",
+    "PRICE8",
+    "PRICE9",
+    "PRICE10",
+    "PRICE11",
+    "PRICE12"
+  ],
+  "rules": {
+    "canonical_truth_only": true,
+    "no_recalculation_in_presentation": true,
+    "generic_recursive_key_value_dump_forbidden": true,
+    "raw_python_or_json_repr_forbidden": true,
+    "element_id_forbidden_in_visible_tables": true,
+    "raw_internal_field_names_forbidden": true,
+    "machine_enum_as_primary_wording_forbidden": true,
+    "raw_run_workflow_sha_fingerprint_forbidden_in_main_body": true,
+    "fact_model_inference_must_remain_distinct": true,
+    "price_alone_cannot_force_act": true,
+    "tables_must_use_exact_columns_and_order": true
+  },
+  "sections": {
+    "PRICE1": {
+      "title": "PRICE DECISION / CURRENT STATUS",
+      "blocks": [
+        "Current action",
+        "Material change",
+        "Affordability",
+        "Price pressure",
+        "Football implication",
+        "Conclusion"
+      ]
+    },
+    "PRICE2": {
+      "title": "OUR15 PRICE & VALUE",
+      "prelude": [
+        "Current15 authority",
+        "Planning GW",
+        "Observed at",
+        "Squad completeness",
+        "Selling-value availability"
+      ],
+      "tables": [
+        {
+          "name": "OUR15 price and value",
+          "columns": [
+            "Player",
+            "Pos",
+            "Market",
+            "Sell",
+            "Direction",
+            "Progress",
+            "ETA / Status",
+            "Decision impact"
+          ],
+          "rows_exact_when_complete": 15
+        }
+      ]
+    },
+    "PRICE3": {
+      "title": "PRICE DELTA / MATERIAL CHANGES",
+      "tables": [
+        {
+          "name": "Confirmed Official changes",
+          "columns": [
+            "Player",
+            "Official Δ",
+            "Current price",
+            "Evidence class"
+          ]
+        }
+      ],
+      "blocks": [
+        "FACT",
+        "MODEL",
+        "INFERENCE"
+      ]
+    },
+    "PRICE4": {
+      "title": "TEAM-NEEDS PRICE ALERT",
+      "tables": [
+        {
+          "name": "Team alerts",
+          "columns": [
+            "Player",
+            "Price pressure",
+            "Squad need",
+            "Football horizon",
+            "Affordability impact",
+            "Action"
+          ]
+        },
+        {
+          "name": "Route impact",
+          "columns": [
+            "Route",
+            "Price risk",
+            "Current affordability",
+            "Football relevance",
+            "Decision impact"
+          ],
+          "conditional": true
+        }
+      ]
+    },
+    "PRICE5": {
+      "title": "WATCHLIST20",
+      "prelude": [
+        "Universe scanned",
+        "Scanner20",
+        "Composition",
+        "Actionable count"
+      ],
+      "tables": [
+        {
+          "name": "Watchlist20",
+          "columns": [
+            "Player",
+            "Pos",
+            "£",
+            "Direction",
+            "Progress",
+            "ETA / Status",
+            "Football relevance",
+            "Squad relevance",
+            "Affordability relevance"
+          ],
+          "rows_exact_when_complete": 20,
+          "position_split_when_complete": "5 GK / 5 DEF / 5 MID / 5 FWD"
+        }
+      ]
+    },
+    "PRICE6": {
+      "title": "RISE20",
+      "tables": [
+        {
+          "name": "Rise20",
+          "columns": [
+            "#",
+            "Player",
+            "Pos / Club",
+            "£",
+            "Progress",
+            "Direction",
+            "ETA / Status",
+            "Confidence",
+            "OUR15",
+            "Watchlist",
+            "As of"
+          ],
+          "rows_exact_when_complete": 20
+        }
+      ],
+      "blocks": [
+        "Projected crossing / material timing"
+      ]
+    },
+    "PRICE7": {
+      "title": "FALL20",
+      "tables": [
+        {
+          "name": "Fall20",
+          "columns": [
+            "#",
+            "Player",
+            "Pos / Club",
+            "£",
+            "Progress",
+            "Direction",
+            "ETA / Status",
+            "Confidence",
+            "OUR15",
+            "Watchlist",
+            "As of"
+          ],
+          "rows_exact_when_complete": 20
+        }
+      ],
+      "blocks": [
+        "Projected crossing / material timing"
+      ]
+    },
+    "PRICE8": {
+      "title": "PACKAGE / AFFORDABILITY / TRANSFER ECONOMICS",
+      "tables": [
+        {
+          "name": "Current economics",
+          "columns": [
+            "Route",
+            "OUT sell",
+            "IN price",
+            "Bank before",
+            "Affordable",
+            "Bank after",
+            "FT",
+            "Hit"
+          ]
+        },
+        {
+          "name": "Risk & football horizon",
+          "columns": [
+            "Route",
+            "Target +0.1",
+            "OUT -0.1",
+            "Combined",
+            "Route survives",
+            "1GW",
+            "3GW",
+            "5GW",
+            "Reversal risk"
+          ]
+        }
+      ],
+      "blocks": [
+        "Affordability and FT/HIT economics are separate authorities"
+      ]
+    },
+    "PRICE9": {
+      "title": "MINI-LEAGUE PRICE IMPACT",
+      "prelude": [
+        "League",
+        "Coverage M/N",
+        "Current rank",
+        "Points",
+        "Evidence freshness"
+      ],
+      "tables": [
+        {
+          "name": "Relevant exposure",
+          "columns": [
+            "Player / Route",
+            "Scope",
+            "Owned",
+            "Starter",
+            "Captain",
+            "EO",
+            "Price implication"
+          ],
+          "conditional": true
+        }
+      ],
+      "blocks": [
+        "Price route implication",
+        "Mini-league consequence"
+      ]
+    },
+    "PRICE10": {
+      "title": "ACTION BOARD",
+      "tables": [
+        {
+          "name": "Action board",
+          "columns": [
+            "Field",
+            "Current call"
+          ],
+          "rows_exact": 6,
+          "rows": [
+            "NOW",
+            "NEXT",
+            "TRIGGER TO ACT",
+            "LATEST SAFE DECISION POINT",
+            "COST OF WAITING",
+            "ABORT / REVERSAL"
+          ]
+        }
+      ]
+    },
+    "PRICE11": {
+      "title": "SOURCE HEALTH / PRICE-CYCLE / LINEAGE",
+      "tables": [
+        {
+          "name": "Source health",
+          "columns": [
+            "Source",
+            "Status",
+            "As of"
+          ],
+          "rows_exact": 5,
+          "rows": [
+            "Official FPL price",
+            "Official predictor",
+            "Current team / personal",
+            "Mini-league",
+            "Core/runtime evidence"
+          ]
+        }
+      ],
+      "blocks": [
+        "Audit note"
+      ]
+    },
+    "PRICE12": {
+      "title": "FINAL PRICE JUDGEMENT",
+      "blocks": [
+        "Current action",
+        "Key price risk",
+        "Affordability threatened?",
+        "Does football edge justify action?",
+        "Next checkpoint",
+        "One-sentence final judgement"
+      ]
+    }
+  }
+}

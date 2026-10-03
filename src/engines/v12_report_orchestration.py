@@ -4226,21 +4226,176 @@ def _render_deep_visible_contract_lines(
 
     elif section_id == "S15":
         evidence = dict(payload.get("evidence_quality") or {})
-        lines.extend(_markdown_table(
-            ("Evidence domain", "Status"),
-            [(
-                str(key).replace("_", " ").title(),
-                (value or {}).get("state") if isinstance(value, Mapping) else value,
-            ) for key, value in evidence.items()],
-        ))
-        details = [
-            f"{str(key).replace('_', ' ').title()}: "
-            + _compact({k: v for k, v in dict(value).items() if k != "state"})
-            for key, value in evidence.items()
-            if isinstance(value, Mapping) and any(k != "state" and v not in (None, "", [], {}) for k, v in value.items())
+
+        def _evidence_entry(key: str) -> dict[str, Any]:
+            value = evidence.get(key)
+            return dict(value) if isinstance(value, Mapping) else {"state": value}
+
+        def _state(key: str) -> str:
+            return str(_evidence_entry(key).get("state") or "UNAVAILABLE").upper()
+
+        def _quality_from_state(state: str, *, adequate: bool = False) -> str:
+            token = str(state or "UNAVAILABLE").upper()
+            if "STALE" in token:
+                return "🟡 Stale"
+            if "UNAVAILABLE" in token or "MISSING" in token:
+                return "🔴 Low"
+            if (
+                "DEGRADED" in token
+                or "PARTIAL" in token
+                or "PL_ONLY" in token
+                or "OBSERVATIONS_UNAVAILABLE" in token
+            ):
+                return "🟡 Partial"
+            if adequate:
+                return "🟢 Adequate"
+            return "🟢 Strong"
+
+        identity = _state("CURRENT15 identity")
+        model = _state("model snapshot")
+        tactical = _state("tactical")
+        underlying = _state("post-match underlying")
+        fixtures = _state("fixtures/calendar")
+        workload = _state("workload/travel")
+        finance_entry = _evidence_entry("authenticated finance")
+        finance_state = str(finance_entry.get("state") or "UNAVAILABLE").upper()
+        sell_value_state = str(finance_entry.get("sell_value_status") or "").upper()
+        price_state = _state("price predictor freshness")
+        mini_state = _state("mini-league standings/live")
+        weather_state = _state("weather")
+
+        finance_quality = _quality_from_state(finance_state)
+        if finance_quality == "🟢 Strong" and sell_value_state not in {
+            "", "AVAILABLE", "AUTHORITATIVE", "CURRENT"
+        }:
+            finance_quality = "🟡 Partial"
+
+        price_quality = _quality_from_state(price_state)
+        rows: list[tuple[str, str, str]] = [
+            (
+                "Squad / OUR15",
+                _quality_from_state(identity),
+                "Current 15-player identity is usable for XI, captaincy and package evaluation."
+                if "UNAVAILABLE" not in identity
+                else "Squad identity is not sufficiently bound for a full decision.",
+            ),
+            (
+                "Availability / minutes",
+                _quality_from_state(model),
+                "Current model snapshot supports P(start)/xMins decision use."
+                if "UNAVAILABLE" not in model
+                else "P(start)/xMins confidence is materially limited.",
+            ),
+            (
+                "Football underlying",
+                _quality_from_state(
+                    underlying if underlying != "UNAVAILABLE" else model
+                ),
+                "Current underlying/model evidence is available for football comparison."
+                if underlying != "UNAVAILABLE" or model != "UNAVAILABLE"
+                else "Underlying evidence is insufficient for confident comparison.",
+            ),
+            (
+                "Tactical / role",
+                _quality_from_state(tactical),
+                "Role and tactical evidence is available for lineup/transfer interpretation."
+                if "UNAVAILABLE" not in tactical
+                else "Role uncertainty limits transfer and lineup confidence.",
+            ),
+            (
+                "Fixtures",
+                _quality_from_state(fixtures),
+                "Fixture topology is sufficient for the governed decision horizons."
+                if "UNAVAILABLE" not in fixtures
+                else "Fixture evidence is incomplete for horizon comparison.",
+            ),
+            (
+                "Non-PL workload",
+                _quality_from_state(workload),
+                "Verified non-PL workload is sufficiently represented."
+                if workload == "COMPLETE"
+                else "Fatigue/rest confidence is limited where non-PL workload is incomplete.",
+            ),
+            (
+                "Finance",
+                finance_quality,
+                "Bank/FT context is usable; unresolved sell-value authority limits executable transfer precision."
+                if finance_quality != "🟢 Strong"
+                else "Finance context is sufficient for current route evaluation.",
+            ),
+            (
+                "Price movement",
+                price_quality,
+                "Price evidence is contextual only and cannot independently trigger ACT."
+                if price_quality != "🟢 Strong"
+                else "Fresh price evidence can support timing but cannot override football quality.",
+            ),
+            (
+                "Mini-league",
+                _quality_from_state(mini_state),
+                "League evidence is usable for contextual decision support."
+                if "UNAVAILABLE" not in mini_state
+                else "Mini-league context is not reliable enough to influence the current decision.",
+            ),
+            (
+                "Weather",
+                _quality_from_state(weather_state, adequate=True),
+                "Weather is sufficient as contextual evidence; it does not mutate football projections."
+                if "UNAVAILABLE" not in weather_state
+                else "Weather is unavailable and should not be treated as a decision driver.",
+            ),
         ]
-        if details:
-            lines.append("Source detail: " + " | ".join(details[:6]))
+        if underlying != "UNAVAILABLE":
+            rows.append(
+                (
+                    "Post-match evidence",
+                    _quality_from_state(underlying),
+                    "Post-match evidence is available for reassessment without self-authorizing ACT.",
+                )
+            )
+
+        critical_quality = [row[1] for row in rows[:5]]
+        limited_count = sum(
+            quality in {"🟡 Partial", "🟡 Stale", "🔴 Low"}
+            for _, quality, _ in rows
+        )
+        if any(quality == "🔴 Low" for quality in critical_quality):
+            confidence = "LOW"
+        elif all(quality.startswith("🟢") for quality in critical_quality):
+            confidence = "HIGH" if limited_count <= 2 else "MEDIUM-HIGH"
+        else:
+            confidence = "MEDIUM"
+
+        lines.append(f"Overall evidence confidence: {confidence}")
+        lines.extend(
+            _markdown_table(
+                ("Evidence domain", "Quality", "Decision impact"),
+                rows,
+            )
+        )
+
+        limitations = [
+            f"{domain}: {impact}"
+            for domain, quality, impact in rows
+            if quality in {"🟡 Partial", "🟡 Stale", "🔴 Low"}
+        ]
+        lines.append("Evidence limitations")
+        if limitations:
+            lines.extend(f"- {item}" for item in limitations)
+        else:
+            lines.append("- No material evidence limitation is visible for the current decision.")
+        lines.append(
+            "PRIOR != CURRENT: prior evidence is never represented as CURRENT."
+        )
+        lines.append("Decision implication")
+        if any(quality == "🔴 Low" for quality in critical_quality):
+            lines.append(
+                "Decision-critical evidence is not strong enough to escalate action without fresh support."
+            )
+        else:
+            lines.append(
+                "Evidence is decision-usable at the confidence level above; partial or stale domains cannot independently trigger ACT."
+            )
 
     elif section_id == "S15B":
         coverage = str(payload.get("coverage_state") or "").upper()
@@ -4598,21 +4753,112 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S17":
         status = dict(payload.get("engine_data_status") or {})
         source_health = dict(payload.get("source_health") or {})
-        fact_state = status.get("V6 data") or status.get("v6_data") or source_health.get("official_fpl") or "UNAVAILABLE"
-        model_state = status.get("Model refresh") or status.get("model_refresh") or payload.get("model_state") or "UNAVAILABLE"
-        inference_state = status.get("Publication") or status.get("publication") or "AVAILABLE"
-        lines.extend(_markdown_table(
-            ("Plane", "Status"),
-            (("FACT", fact_state), ("MODEL", model_state), ("INFERENCE", inference_state)),
-        ))
-        lines.append(
-            "Source health: "
-            + " | ".join(
-                f"{str(k).replace('_', ' ')}={v}"
-                for k, v in source_health.items()
-                if isinstance(v, (str, int, float, bool)) and v not in ("", None)
-            )[:900]
+        lineage = dict(payload.get("lineage") or {})
+        binding = dict(payload.get("authoritative_binding") or {})
+
+        official_state = str(source_health.get("official_fpl") or "UNAVAILABLE").upper()
+        canonical_ok = (
+            status.get("stage3_internal_pass") is True
+            and int(status.get("projection_players") or 0) > 0
+            and int(status.get("our15") or 0) == 15
         )
+        mc_paths = int(status.get("mc_actual_paths") or 0)
+        price_health = str(source_health.get("price_predictor") or "UNAVAILABLE").upper()
+        price_freshness = str(
+            source_health.get("price_predictor_freshness") or "UNAVAILABLE"
+        ).upper()
+        mini_health = str(source_health.get("mini_league") or "UNAVAILABLE").upper()
+        weather_health = str(source_health.get("weather") or "UNAVAILABLE").upper()
+        logical_slot = str(
+            lineage.get("logical_slot")
+            or binding.get("report_slot")
+            or "UNAVAILABLE"
+        )
+        exact_binding = lineage.get("exact_occurrence_binding")
+        if exact_binding is None:
+            exact_binding = logical_slot != "UNAVAILABLE"
+
+        price_status = (
+            "🟢 Healthy; fresh snapshot"
+            if price_health not in {"UNAVAILABLE", "FAILED", "ERROR"}
+            and price_freshness == "FRESH"
+            else "🟡 Healthy pipeline; snapshot stale"
+            if price_health not in {"UNAVAILABLE", "FAILED", "ERROR"}
+            and "STALE" in price_freshness
+            else f"🟡 {price_health}; freshness {price_freshness}"
+        )
+        weather_status = (
+            "🟢 Bound"
+            if weather_health == "REPORT_TIME_BOUND"
+            else "🟡 Pipeline available; outside reliable forecast horizon"
+            if "OUTSIDE_RELIABLE_FORECAST_HORIZON" in weather_health
+            else f"🟡 {weather_health}"
+        )
+        rows = [
+            (
+                "Official factual plane",
+                "🟢 Healthy" if official_state == "HEALTHY" else f"🟡 {official_state}",
+            ),
+            (
+                "Canonical V12 computation",
+                "🟢 Complete" if canonical_ok else "🟡 Degraded / incomplete",
+            ),
+            (
+                "Optimizer / Monte Carlo",
+                "🟢 MC500k PASS"
+                if mc_paths >= 500000
+                else f"🟡 MC {mc_paths} paths" if mc_paths > 0 else "🟡 Unavailable",
+            ),
+            ("Price data pipeline", price_status),
+            (
+                "Mini-league pipeline",
+                "🟢 Complete" if mini_health == "FULL" else f"🟡 {mini_health}",
+            ),
+            ("Weather pipeline", weather_status),
+            (
+                "Exact-occurrence binding",
+                "🟢 Verified" if exact_binding is True else "🔴 Unverified",
+            ),
+        ]
+        lines.extend(_markdown_table(("Plane", "Status"), rows))
+
+        stale_items = []
+        if price_freshness != "FRESH":
+            stale_items.append("price predictor snapshot")
+        if "UNAVAILABLE" in weather_health:
+            stale_items.append("weather pipeline")
+        lines.append("Freshness")
+        if stale_items:
+            lines.append(
+                "Decision-critical technical sources are within contract except: "
+                + ", ".join(stale_items)
+                + "."
+            )
+        else:
+            lines.append(
+                "Decision-critical technical sources represented here are within their current freshness contract."
+            )
+
+        serving_source = str(
+            lineage.get("serving_source") or "canonical occurrence-bound report bundle"
+        )
+        substituted = lineage.get("substituted_slot")
+        substituted_text = (
+            "no" if substituted is False or substituted is None else "yes"
+        )
+        lines.append("Lineage")
+        lines.append(
+            f"Report mode DEEP; logical slot {logical_slot}; "
+            f"exact occurrence binding {'verified' if exact_binding is True else 'unverified'}; "
+            f"serving source {serving_source}; substituted slot: {substituted_text}."
+        )
+        runner = status.get("runner")
+        if runner:
+            lines.append(
+                "Audit note: "
+                f"runner={runner}; planning GW={status.get('planning_gw', 'UNAVAILABLE')}; "
+                f"MC paths={mc_paths or 'UNAVAILABLE'}."
+            )
 
     elif section_id == "S18":
         board = dict(payload.get("action_board") or {})
@@ -4670,6 +4916,107 @@ def _render_deep_visible_contract_lines(
 
     return lines, tuple(excluded)
 
+def _deep_identity_header_lines(
+    report: Mapping[str, Any],
+    sections: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    """Render reader-facing DEEP identity only, never decision or plumbing detail."""
+    planning_gw = report.get("planning_gw")
+    if planning_gw is None:
+        for row in sections:
+            if str(row.get("section_id") or "").upper() != "S01":
+                continue
+            content = row.get("content")
+            payload = dict(content or {}) if isinstance(content, Mapping) else {}
+            dashboard = dict(payload.get("decision_dashboard") or {})
+            planning_gw = dashboard.get("PLANNING_GW", payload.get("planning_gw"))
+            if planning_gw is not None:
+                break
+    if planning_gw is None:
+        for row in sections:
+            if str(row.get("section_id") or "").upper() != "S17":
+                continue
+            content = row.get("content")
+            payload = dict(content or {}) if isinstance(content, Mapping) else {}
+            planning_gw = dict(payload.get("engine_data_status") or {}).get("planning_gw")
+            if planning_gw is not None:
+                break
+
+    logical_slot = str(report.get("report_slot") or "").strip()
+    bound_slots: list[str] = []
+    for row in sections:
+        content = row.get("content")
+        payload = dict(content or {}) if isinstance(content, Mapping) else {}
+        binding = payload.get("authoritative_binding")
+        if not isinstance(binding, Mapping):
+            continue
+        slot = str(binding.get("report_slot") or "").strip()
+        if slot:
+            bound_slots.append(slot)
+    if not logical_slot and bound_slots:
+        logical_slot = bound_slots[0]
+
+    exact_occurrence = report.get("exact_occurrence")
+    if exact_occurrence is None:
+        s17_lineage: dict[str, Any] = {}
+        for row in sections:
+            if str(row.get("section_id") or "").upper() == "S17":
+                content = row.get("content")
+                payload = dict(content or {}) if isinstance(content, Mapping) else {}
+                s17_lineage = dict(payload.get("lineage") or {})
+                break
+        if "exact_occurrence_binding" in s17_lineage:
+            exact_occurrence = s17_lineage.get("exact_occurrence_binding") is True
+        else:
+            exact_occurrence = bool(
+                logical_slot
+                and bound_slots
+                and all(slot == logical_slot for slot in bound_slots)
+            )
+
+    slot_display = logical_slot or "UNAVAILABLE"
+    if logical_slot:
+        try:
+            dt = datetime.fromisoformat(logical_slot.replace("Z", "+00:00"))
+            dt = dt.astimezone(ZoneInfo("Asia/Jakarta"))
+            slot_display = dt.strftime("%d %b %Y, %H:%M WIB")
+        except ValueError:
+            slot_display = logical_slot
+
+    visible_count = len(sections)
+    s16b_due = report.get("s16b_due") is True or any(
+        str(row.get("section_id") or "").upper() == "S16B"
+        for row in sections
+    )
+    expected_count = 23 if s16b_due else 22
+    all_complete = bool(sections) and all(
+        str(row.get("state") or "").upper() == "COMPLETE"
+        for row in sections
+    )
+    report_status = str(report.get("reader_report_status") or "").strip().upper()
+    if report_status not in {"READY_FULL", "READY_DEGRADED"}:
+        report_status = "READY_FULL" if all_complete else "READY_DEGRADED"
+    badge = "🟢" if report_status == "READY_FULL" else "🟡"
+    occurrence_text = "Exact occurrence" if exact_occurrence is True else "Occurrence binding unverified"
+
+    planning_text = (
+        f"GW{planning_gw}"
+        if planning_gw not in (None, "", "UNAVAILABLE")
+        and not str(planning_gw).upper().startswith("GW")
+        else str(planning_gw or "UNAVAILABLE")
+    )
+    return [
+        "FPL MASTER V12 — DEEP REPORT",
+        f"Planning GW: {planning_text}",
+        f"Logical report slot: {slot_display}",
+        f"Report: {badge} {report_status} · {occurrence_text}",
+        (
+            f"Sections: {visible_count}/{expected_count} lifecycle-visible · "
+            + ("S16B due" if s16b_due else "S16B not due")
+        ),
+    ]
+
+
 def render_deep_text(report: Mapping[str, Any]) -> str:
     """Human-facing DEEP renderer with bounded Deadline/Final presentation overlay."""
     mode = str(report.get("report_mode") or "DEEP").strip().upper()
@@ -4718,6 +5065,8 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
     blocks: list[str] = []
     if deadline_mode:
         blocks.append("\n".join(deadline_header_lines(report)))
+    elif mode == "DEEP":
+        blocks.append("\n".join(_deep_identity_header_lines(report, sections)))
     for row in sections:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")

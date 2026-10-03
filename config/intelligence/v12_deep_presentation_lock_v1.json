@@ -6,17 +6,8 @@
     "FPL MASTER V12 — DEEP REPORT",
     "Planning GW",
     "Logical report slot",
-    "Canonical run",
-    "Report status",
-    "Delivery",
-    "Private delivery",
-    "Presentation QA",
-    "Sections",
-    "MC",
-    "Routes",
-    "Universe",
-    "Selected action",
-    "Serving note"
+    "Report",
+    "Sections"
   ],
   "global_rules": {
     "human_analyst_style": true,
@@ -31,7 +22,15 @@
     "merged_unrelated_tables_forbidden": true,
     "missing_supported_population_denominator_forbidden": true,
     "percentage_without_count_denominator_forbidden_when_population_known": true,
-    "eo_can_exceed_100_percent": true
+    "eo_can_exceed_100_percent": true,
+    "header_identity_only": true,
+    "header_decision_forbidden": true,
+    "header_optimizer_detail_forbidden": true,
+    "header_technical_plumbing_forbidden": true,
+    "s15_decision_evidence_only": true,
+    "s17_technical_provenance_only": true,
+    "pipeline_health_not_equivalent_to_evidence_quality": true,
+    "prior_must_not_be_presented_as_current": true
   },
   "section_order": [
     "S01",
@@ -366,16 +365,34 @@
     "S15": {
       "title": "EVIDENCE QUALITY",
       "blocks": [
-        "No PRIOR represented as CURRENT note"
+        "Overall evidence confidence",
+        "Evidence limitations",
+        "Decision implication",
+        "PRIOR != CURRENT"
       ],
       "tables": [
         {
           "name": "Evidence quality",
           "columns": [
             "Evidence domain",
-            "Status"
+            "Quality",
+            "Decision impact"
           ]
         }
+      ],
+      "primary_content_forbidden": [
+        "V6 workflow health",
+        "V12 workflow health",
+        "Orchestrator status",
+        "Run IDs",
+        "Occurrence binding",
+        "Serving status",
+        "Private delivery",
+        "Presentation QA",
+        "Privacy boundary",
+        "Cache health",
+        "SHA/fingerprint",
+        "Workflow plumbing"
       ]
     },
     "S15B": {
@@ -525,12 +542,26 @@
       "title": "SOURCE HEALTH / FRESHNESS / LINEAGE",
       "tables": [
         {
-          "name": "Source health",
+          "name": "Technical source health",
           "columns": [
             "Plane",
             "Status"
           ]
         }
+      ],
+      "blocks": [
+        "Freshness",
+        "Lineage",
+        "Audit note (optional compact)"
+      ],
+      "analyst_evidence_assessment_forbidden": [
+        "Current squad identity assessment",
+        "Finance decision completeness",
+        "PL fixture evidence quality",
+        "Non-PL workload evidence completeness",
+        "Weather decision usefulness",
+        "Player availability evidence quality",
+        "Tactical evidence quality"
       ]
     },
     "S18": {
@@ -563,5 +594,54 @@
       ],
       "tables": []
     }
+  },
+  "header_forbidden_content": [
+    "Canonical run",
+    "Orchestrator run ID",
+    "Report run ID",
+    "Long occurrence plumbing",
+    "Delivery detail",
+    "Private delivery detail",
+    "SHA/fingerprint",
+    "Presentation QA detail",
+    "MC",
+    "Routes",
+    "Universe",
+    "Optimizer count",
+    "Selected action",
+    "Serving note"
+  ],
+  "information_architecture": {
+    "HEADER": "What report am I reading?",
+    "S01": "What should I do now?",
+    "S14": "What did the optimizer/search establish?",
+    "S15": "Can I trust the available evidence enough for this decision?",
+    "S17": "Did the technical system deliver that evidence correctly, freshly and from the correct occurrence?",
+    "S19": "What is the final consolidated judgement?"
+  },
+  "ownership_matrix": {
+    "Squad evidence completeness": "S15",
+    "Availability evidence quality": "S15",
+    "Underlying evidence quality": "S15",
+    "Tactical/role evidence quality": "S15",
+    "Fixture evidence completeness": "S15",
+    "Non-PL workload completeness": "S15",
+    "Finance completeness": "S15",
+    "Price evidence decision usability": "S15",
+    "Mini-league evidence usefulness": "S15",
+    "Weather evidence usefulness": "S15",
+    "PRIOR vs CURRENT semantics": "S15",
+    "V6 factual pipeline health": "S17",
+    "Canonical V12 computation health": "S17",
+    "Optimizer/MC execution health": "S17",
+    "Price pipeline health": "S17",
+    "Mini-league pipeline health": "S17",
+    "Weather pipeline health": "S17",
+    "Exact occurrence binding": "S17",
+    "Serving/private delivery": "S17",
+    "Presentation QA": "S17",
+    "Privacy boundary": "S17",
+    "Workflow/run IDs": "S17_AUDIT_ONLY",
+    "SHA/fingerprint": "S17_AUDIT_ONLY"
   }
 }

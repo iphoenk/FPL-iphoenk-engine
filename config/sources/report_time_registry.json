@@ -19,13 +19,17 @@
     "tactical_external_sweep_required": true,
     "tactical_external_sweep_may_enrich_but_never_overwrite_observed_machine_evidence": true,
     "recent_competitive_load_policy_ref": "config/intelligence/competitive_load.json",
-    "tactical_matchup_policy_ref": "config/intelligence/tactical_matchup.json"
+    "tactical_matchup_policy_ref": "config/intelligence/tactical_matchup.json",
+    "preferred_public_browser_transport": "CAMOUFOX",
+    "camoufox_capture_policy_ref": "config/sources/camoufox_public_sources.json",
+    "camoufox_is_acquisition_only": true,
+    "camoufox_never_replaces_official_api": true
   },
   "consensus": {
     "minimum_current_pundits": 2,
     "strong_consensus_ratio": 0.75,
     "simple_consensus_ratio": 0.5,
-    "maximum_single_source_weight": 1.0,
+    "maximum_single_source_weight": 1,
     "freshness_hours": {
       "MODEL_CHALLENGER": 12,
       "FIXTURE_STRATEGY_EXPERT": 72,
@@ -42,9 +46,20 @@
       "class": "MODEL_CHALLENGER",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["onefpl.com"],
-      "queries": ["OneFPL FPL prices", "OneFPL transfer trends", "OneFPL captaincy"],
-      "capabilities": ["price_prediction", "transfer_trends", "captaincy_context", "planner_context"],
+      "domains": [
+        "onefpl.com"
+      ],
+      "queries": [
+        "OneFPL FPL prices",
+        "OneFPL transfer trends",
+        "OneFPL captaincy"
+      ],
+      "capabilities": [
+        "price_prediction",
+        "transfer_trends",
+        "captaincy_context",
+        "planner_context"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "ADVISORY"
     },
@@ -54,9 +69,21 @@
       "class": "FIXTURE_STRATEGY_EXPERT",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["x.com", "fantasyfootballhub.co.uk"],
-      "queries": ["Ben Crellin FPL blank double fixtures", "Ben Crellin FPL calendar"],
-      "capabilities": ["blank_gameweek", "double_gameweek", "fixture_rearrangement", "schedule_probability", "chip_window"],
+      "domains": [
+        "x.com",
+        "fantasyfootballhub.co.uk"
+      ],
+      "queries": [
+        "Ben Crellin FPL blank double fixtures",
+        "Ben Crellin FPL calendar"
+      ],
+      "capabilities": [
+        "blank_gameweek",
+        "double_gameweek",
+        "fixture_rearrangement",
+        "schedule_probability",
+        "chip_window"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "STRATEGY_CONTEXT"
     },
@@ -66,9 +93,21 @@
       "class": "PUNDIT_CONSENSUS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["youtube.com", "x.com"],
-      "queries": ["FPL Harry Gameweek", "FPL Harry captain transfers"],
-      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "domains": [
+        "youtube.com",
+        "x.com"
+      ],
+      "queries": [
+        "FPL Harry Gameweek",
+        "FPL Harry captain transfers"
+      ],
+      "capabilities": [
+        "buy_sell",
+        "captaincy",
+        "chip_opinion",
+        "role_opinion",
+        "team_reveal"
+      ],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -78,9 +117,21 @@
       "class": "PUNDIT_CONSENSUS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["youtube.com", "x.com"],
-      "queries": ["FPL Focal Gameweek", "FPL Focal captain transfers"],
-      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "domains": [
+        "youtube.com",
+        "x.com"
+      ],
+      "queries": [
+        "FPL Focal Gameweek",
+        "FPL Focal captain transfers"
+      ],
+      "capabilities": [
+        "buy_sell",
+        "captaincy",
+        "chip_opinion",
+        "role_opinion",
+        "team_reveal"
+      ],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -90,9 +141,21 @@
       "class": "PUNDIT_CONSENSUS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["youtube.com", "x.com"],
-      "queries": ["Let's Talk FPL Gameweek", "Let's Talk FPL captain transfers"],
-      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "role_opinion", "team_reveal"],
+      "domains": [
+        "youtube.com",
+        "x.com"
+      ],
+      "queries": [
+        "Let's Talk FPL Gameweek",
+        "Let's Talk FPL captain transfers"
+      ],
+      "capabilities": [
+        "buy_sell",
+        "captaincy",
+        "chip_opinion",
+        "role_opinion",
+        "team_reveal"
+      ],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -102,9 +165,21 @@
       "class": "PUNDIT_CONSENSUS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["x.com", "fantasyfootballhub.co.uk"],
-      "queries": ["BigManBakar FPL Gameweek", "BigManBakar FPL captain transfers"],
-      "capabilities": ["buy_sell", "captaincy", "chip_opinion", "statistics_opinion", "team_reveal"],
+      "domains": [
+        "x.com",
+        "fantasyfootballhub.co.uk"
+      ],
+      "queries": [
+        "BigManBakar FPL Gameweek",
+        "BigManBakar FPL captain transfers"
+      ],
+      "capabilities": [
+        "buy_sell",
+        "captaincy",
+        "chip_opinion",
+        "statistics_opinion",
+        "team_reveal"
+      ],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -114,9 +189,25 @@
       "class": "PUNDIT_CONSENSUS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["fantasyfootballscout.co.uk"],
-      "queries": ["Fantasy Football Scout Gameweek team news", "Fantasy Football Scout captaincy", "Fantasy Football Scout tactical formation role Gameweek", "Fantasy Football Scout set pieces predicted lineups"],
-      "capabilities": ["team_news_context", "predicted_lineups", "buy_sell", "captaincy", "role_opinion", "set_piece_context", "tactical_style_opinion", "formation_opinion"],
+      "domains": [
+        "fantasyfootballscout.co.uk"
+      ],
+      "queries": [
+        "Fantasy Football Scout Gameweek team news",
+        "Fantasy Football Scout captaincy",
+        "Fantasy Football Scout tactical formation role Gameweek",
+        "Fantasy Football Scout set pieces predicted lineups"
+      ],
+      "capabilities": [
+        "team_news_context",
+        "predicted_lineups",
+        "buy_sell",
+        "captaincy",
+        "role_opinion",
+        "set_piece_context",
+        "tactical_style_opinion",
+        "formation_opinion"
+      ],
       "consensus_vote": true,
       "authority_ceiling": "ADVISORY"
     },
@@ -126,9 +217,22 @@
       "class": "COMMUNITY_SIGNAL",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["reddit.com"],
-      "queries": ["site:reddit.com/r/FantasyPL How did play FPL", "site:reddit.com/r/FantasyPL captain poll FPL", "site:reddit.com/r/FantasyPL Gameweek discussion"],
-      "capabilities": ["eye_test", "captain_poll", "rotation_observation", "role_change_signal", "injury_observation", "sentiment"],
+      "domains": [
+        "reddit.com"
+      ],
+      "queries": [
+        "site:reddit.com/r/FantasyPL How did play FPL",
+        "site:reddit.com/r/FantasyPL captain poll FPL",
+        "site:reddit.com/r/FantasyPL Gameweek discussion"
+      ],
+      "capabilities": [
+        "eye_test",
+        "captain_poll",
+        "rotation_observation",
+        "role_change_signal",
+        "injury_observation",
+        "sentiment"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "LEAD_REQUIRES_CROSSCHECK"
     },
@@ -138,9 +242,21 @@
       "class": "SECONDARY_AVAILABILITY",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["rotowire.com"],
-      "queries": ["RotoWire Premier League predicted lineups", "RotoWire Premier League injuries", "RotoWire soccer lineup injury news"],
-      "capabilities": ["predicted_lineups", "availability_signal", "injury_signal", "formation_signal", "starting_xi_signal"],
+      "domains": [
+        "rotowire.com"
+      ],
+      "queries": [
+        "RotoWire Premier League predicted lineups",
+        "RotoWire Premier League injuries",
+        "RotoWire soccer lineup injury news"
+      ],
+      "capabilities": [
+        "predicted_lineups",
+        "availability_signal",
+        "injury_signal",
+        "formation_signal",
+        "starting_xi_signal"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "ADVISORY"
     },
@@ -150,9 +266,27 @@
       "class": "VERIFIED_NEWS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["premierleague.com"],
-      "queries": ["Premier League team news injuries Gameweek", "official club injury team news Premier League", "Premier League press conference manager quotes Gameweek", "official manager tactical system formation latest Premier League", "official club manager role formation press conference"],
-      "capabilities": ["availability", "suspension", "fixture_confirmation", "manager_quote", "press_conference", "official_team_news", "coach_system_context", "manager_role_hint", "manager_tactical_quote"],
+      "domains": [
+        "premierleague.com"
+      ],
+      "queries": [
+        "Premier League team news injuries Gameweek",
+        "official club injury team news Premier League",
+        "Premier League press conference manager quotes Gameweek",
+        "official manager tactical system formation latest Premier League",
+        "official club manager role formation press conference"
+      ],
+      "capabilities": [
+        "availability",
+        "suspension",
+        "fixture_confirmation",
+        "manager_quote",
+        "press_conference",
+        "official_team_news",
+        "coach_system_context",
+        "manager_role_hint",
+        "manager_tactical_quote"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
     },
@@ -162,9 +296,32 @@
       "class": "VERIFIED_NEWS",
       "enabled": true,
       "retrieval": "REPORT_TIME_WEB",
-      "domains": ["premierleague.com", "uefa.com", "efl.com", "thefa.com"],
-      "queries": ["official club latest match report lineup Carabao Cup", "official club latest match report UEFA", "official club latest competitive match lineup minutes", "official club latest match formation tactical report", "official competition match report role position shape"],
-      "capabilities": ["recent_competitive_match", "starting_lineup", "minutes_load", "substitution_timing", "role_observation", "knock_or_injury", "extra_time", "travel_rest_context", "recent_shape_observation", "role_change_observation", "tactical_pattern_observation"],
+      "domains": [
+        "premierleague.com",
+        "uefa.com",
+        "efl.com",
+        "thefa.com"
+      ],
+      "queries": [
+        "official club latest match report lineup Carabao Cup",
+        "official club latest match report UEFA",
+        "official club latest competitive match lineup minutes",
+        "official club latest match formation tactical report",
+        "official competition match report role position shape"
+      ],
+      "capabilities": [
+        "recent_competitive_match",
+        "starting_lineup",
+        "minutes_load",
+        "substitution_timing",
+        "role_observation",
+        "knock_or_injury",
+        "extra_time",
+        "travel_rest_context",
+        "recent_shape_observation",
+        "role_change_observation",
+        "tactical_pattern_observation"
+      ],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
     }

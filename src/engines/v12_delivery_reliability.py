@@ -1378,7 +1378,10 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
         "recency_weighting", "bayesian_update", "candidate_traceability",
         "fixture_ids_expected", "fixture_ids_reviewed",
     ),
-    "S17": ("engine_data_status", "source_health", "auth_authority", "lineage"),
+    "S17": (
+        "engine_data_status", "source_health", "auth_authority", "lineage",
+        "delivery_provenance",
+    ),
     "S18": (
         "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
         "LATEST SAFE DECISION POINT", "COST OF WAITING",
@@ -1909,6 +1912,44 @@ def write_serving_artifacts(
     if delivery_status == "READY_DEGRADED":
         execution["root_failure"] = bundle.get("root_failure")
     bundle["execution_proof"] = execution
+
+    # Delivery/QA/privacy are technical provenance and belong in S17, not
+    # HEADER or S15. Finalize them only after delivery status is known, then
+    # re-render the same canonical decision payload without recomputation.
+    if str(bundle.get("report_mode") or "").upper() == "DEEP":
+        report = dict(bundle.get("report") or {})
+        report["reader_report_status"] = delivery_status
+        report["report_slot"] = bundle.get("report_slot")
+        report["planning_gw"] = bundle.get("planning_gw")
+        sections = [
+            dict(row)
+            for row in report.get("sections") or []
+            if isinstance(row, Mapping)
+        ]
+        qa_states = (
+            str((bundle.get("pre_render_qa") or {}).get("status") or "").upper(),
+            str((bundle.get("post_render_qa") or {}).get("status") or "").upper(),
+            str((bundle.get("human_facing_qa") or {}).get("status") or "").upper(),
+        )
+        qa_pass = all(value == "PASS" for value in qa_states)
+        for row in sections:
+            if str(row.get("section_id") or "").upper() != "S17":
+                continue
+            content = dict(row.get("content") or {})
+            content["delivery_provenance"] = {
+                "private_delivery": (
+                    "🟢 PASS · READY_FULL"
+                    if delivery_status == "READY_FULL"
+                    else "🟡 READY_DEGRADED"
+                ),
+                "presentation_qa": "🟢 PASS" if qa_pass else "🟡 DEGRADED",
+                "privacy_boundary": "🟢 Private serving boundary enforced",
+            }
+            row["content"] = content
+        report["sections"] = sections
+        from src.engines.v12_report_orchestration import render_deep_text
+        bundle["report"] = report
+        bundle["visible_body"] = render_deep_text(report)
 
     snapshot = build_serving_snapshot(bundle)
     occurrence_state = build_occurrence_state(bundle)

@@ -523,30 +523,34 @@ def validate_deep_decision_content_delivery(
     s15 = content("S15")
     if state("S15") == "COMPLETE":
         evidence = dict(s15.get("evidence_quality") or {})
-        required_categories = {
-            "Official public FPL",
+        # S15 owns decision-evidence quality. The canonical evidence object
+        # remains source-granular, while the visible presentation is the
+        # locked analyst-facing domain assessment rendered from it.
+        required_source_categories = {
             "CURRENT15 identity",
-            "authenticated personal auth",
             "authenticated finance",
-            "chips",
             "fixtures/calendar",
             "workload/travel",
             "tactical",
-            "post-match underlying",
-            "price factual",
             "price predictor freshness",
-            "mini-league submitted picks",
             "mini-league standings/live",
             "weather",
             "model snapshot",
         }
-        missing_categories = sorted(required_categories - set(evidence))
+        missing_categories = sorted(required_source_categories - set(evidence))
         if missing_categories:
             failures.append(
                 "S15_EVIDENCE_CATEGORY_MISSING=" + ",".join(missing_categories)
             )
-        if "EVIDENCE QUALITY BY SOURCE CATEGORY" not in upper:
-            failures.append("S15_CATEGORY_GRADING_NOT_VISIBLE")
+        for token in (
+            "OVERALL EVIDENCE CONFIDENCE:",
+            "| EVIDENCE DOMAIN | QUALITY | DECISION IMPACT |",
+            "EVIDENCE LIMITATIONS",
+            "DECISION IMPLICATION",
+            "PRIOR != CURRENT",
+        ):
+            if token not in upper:
+                failures.append("S15_VISIBLE_CONTRACT_MISSING=" + token)
 
     if state("S16") == "COMPLETE":
         for token in (

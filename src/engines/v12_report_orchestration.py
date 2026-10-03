@@ -4794,6 +4794,7 @@ def _render_deep_visible_contract_lines(
             if "OUTSIDE_RELIABLE_FORECAST_HORIZON" in weather_health
             else f"🟡 {weather_health}"
         )
+        delivery_provenance = dict(payload.get("delivery_provenance") or {})
         rows = [
             (
                 "Official factual plane",
@@ -4820,6 +4821,23 @@ def _render_deep_visible_contract_lines(
                 "🟢 Verified" if exact_binding is True else "🔴 Unverified",
             ),
         ]
+        if delivery_provenance:
+            rows.extend(
+                [
+                    (
+                        "Private serving / delivery",
+                        str(delivery_provenance.get("private_delivery") or "🟡 Pending"),
+                    ),
+                    (
+                        "Presentation QA",
+                        str(delivery_provenance.get("presentation_qa") or "🟡 Pending"),
+                    ),
+                    (
+                        "Privacy boundary",
+                        str(delivery_provenance.get("privacy_boundary") or "🟡 Unverified"),
+                    ),
+                ]
+            )
         lines.extend(_markdown_table(("Plane", "Status"), rows))
 
         stale_items = []
@@ -4888,7 +4906,19 @@ def _render_deep_visible_contract_lines(
         lines.append("Best alternative: " + _compact(board.get("best_alternative") or payload.get("BEST ALTERNATIVE")))
 
     elif section_id == "S19":
-        judgement = dict(payload.get("final_judgement") or {})
+        raw_judgement = payload.get("final_judgement")
+        if isinstance(raw_judgement, Mapping):
+            judgement = dict(raw_judgement)
+        else:
+            judgement = {
+                "transfer_action": payload.get("decision") or "WAIT",
+                "reconciliation_reason": (
+                    str(raw_judgement)
+                    if raw_judgement not in (None, "")
+                    else payload.get("reversal_trigger")
+                ),
+                "next_trigger": payload.get("reversal_trigger"),
+            }
         xi = judgement.get("xi") or []
         bench_order = judgement.get("bench_order") or []
         final_cap = dict(judgement.get("final_captain") or {})

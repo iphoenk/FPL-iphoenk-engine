@@ -613,10 +613,10 @@ def assemble_degraded_deep_report(
             },
             "model_developments": [],
             "decision_consequence": {
-                "transfer_state": "WAIT",
+                "transfer_state": "UNAVAILABLE",
                 "xi_state": "DEGRADED",
                 "captain_state": "DEGRADED",
-                "price_state": "MONITOR",
+                "price_state": "UNAVAILABLE",
                 "news_self_authorizes_act": False,
                 "news_observation_is_model_update": False,
                 "model_numbers_mutated_here": False,

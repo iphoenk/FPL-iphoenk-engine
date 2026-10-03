@@ -104,6 +104,7 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_deep_details,
     build_post_match_universe_scan,
 )
+from src.engines.v12_competitive_window import resolve_competitive_window
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -2473,7 +2474,7 @@ def _enrich_all15_rows(
 
     league_scope = scope_map("league_our15_exposure")
     rivals_scope = scope_map("rivals_our15_exposure")
-    direct_scope = scope_map("direct_rival_our15_exposure")
+    competitive_scope = scope_map("competitive_our15_exposure")
     workload_map = {
         int(item.get("element_id") or 0): dict(item)
         for item in (calendar_context or {}).get("player_workload") or []
@@ -2573,7 +2574,7 @@ def _enrich_all15_rows(
         workload = workload_map.get(element) or {}
         league = league_scope.get(element) or {}
         rivals = rivals_scope.get(element) or {}
-        direct = direct_scope.get(element) or {}
+        competitive = competitive_scope.get(element) or {}
         row.update({
             "position": owned_row.get("position") or player.get("position"),
             "club": team.get("name") or player.get("team") or f"team:{team_id}",
@@ -2700,7 +2701,7 @@ def _enrich_all15_rows(
             "mini_league_relevance": {
                 "league": league,
                 "rivals": rivals,
-                "direct": direct,
+                "competitive": competitive,
                 "legacy_rivals": {
                     "ownership_pct": exposure.get("ownership_pct"),
                     "starter_pct": exposure.get("starter_pct"),
@@ -2922,8 +2923,7 @@ def _mini_league_deep_detail(
     snapshot = dict(mini or {})
     context = _mini_context(snapshot)
     report_cfg = dict(load_mini_league_config().get("report") or {})
-    direct_n = max(1, int(report_cfg.get("direct_rivals_above", 6) or 6))
-    threat_n = max(1, int(report_cfg.get("max_rival_threats", 12) or 12))
+    threat_n = max(1, int(report_cfg.get("max_competitive_window_threats", 12) or 12))
     captain_n = max(1, int(report_cfg.get("captain_candidates", 5) or 5))
 
     pmap = _projection_map(projections)
@@ -3266,29 +3266,22 @@ def _mini_league_deep_detail(
                 }
             )
 
-    above = []
-    if our_rank_i is not None:
-        above = [
-            row
-            for row in ordered
-            if int(row.get("league_rank") or 10**9) < our_rank_i
-        ]
-    direct_rows = sorted(
-        sorted(
-            above,
-            key=lambda row: int(row.get("league_rank") or 0),
-            reverse=True,
-        )[:direct_n],
-        key=lambda row: int(row.get("league_rank") or 0),
-    )
-    direct_entries: list[dict[str, Any]] = []
-    direct_rivals: list[dict[str, Any]] = []
-    for row in direct_rows:
+    league_size = int(context.get("manager_count") or len(standing_ids))
+    competitive_window = resolve_competitive_window(our_rank_i, league_size)
+    competitive_rank_set = set(competitive_window.get("ranks") or [])
+    competitive_rows = [
+        row
+        for row in ordered
+        if int(row.get("league_rank") or 0) in competitive_rank_set
+    ]
+    competitive_entries: list[dict[str, Any]] = []
+    competitive_rivals: list[dict[str, Any]] = []
+    for row in competitive_rows:
         entry_id = int(row.get("entry_id") or 0)
         entry = entries.get(entry_id)
         picks = list((entry or {}).get("picks") or [])
         if entry is not None and str(entry.get("status") or "").upper() == "AVAILABLE":
-            direct_entries.append(entry)
+            competitive_entries.append(entry)
         else:
             entry = None
             picks = []
@@ -3345,7 +3338,7 @@ def _mini_league_deep_detail(
             pick_element(vice_pick) if vice_pick is not None else None
         )
         total = int(row.get("league_total") or 0)
-        direct_rivals.append(
+        competitive_rivals.append(
             {
                 "entry_id": entry_id,
                 "rank": int(row.get("league_rank") or 0),
@@ -3363,6 +3356,11 @@ def _mini_league_deep_detail(
                 "gap_vs_us": (
                     total - our_total_i
                     if our_total_i is not None else None
+                ),
+                "position_vs_us": (
+                    "ABOVE"
+                    if our_rank_i is not None and int(row.get("league_rank") or 0) < our_rank_i
+                    else "BELOW"
                 ),
                 "gw_score": row.get("gw_score"),
                 "overlap_count": len(overlap),
@@ -3418,30 +3416,30 @@ def _mini_league_deep_detail(
             }
         )
 
-    direct_our15_exposure = exposure_for_entries(
-        direct_entries,
+    competitive_our15_exposure = exposure_for_entries(
+        competitive_entries,
         owned_ids,
         require_complete_eo=True,
     )
-    direct_exposure_map = {
+    competitive_exposure_map = {
         int(row["element_id"]): row
-        for row in direct_our15_exposure
+        for row in competitive_our15_exposure
     }
 
     threat_totals: dict[int, dict[str, Any]] = {}
-    direct_denominator = len(direct_entries)
+    competitive_denominator = len(competitive_entries)
     scope_multiplier_complete = (
-        direct_denominator > 0
+        competitive_denominator > 0
         and all(
             len(entry.get("picks") or []) == 15
             and all(
                 pick_multiplier(pick) is not None
                 for pick in entry.get("picks") or []
             )
-            for entry in direct_entries
+            for entry in competitive_entries
         )
     )
-    for entry in direct_entries:
+    for entry in competitive_entries:
         for pick in entry.get("picks") or []:
             element = pick_element(pick)
             if element is None or element in owned_set:
@@ -3484,7 +3482,7 @@ def _mini_league_deep_detail(
             ):
                 row["vice_count"] += 1
 
-    rival_threats: list[dict[str, Any]] = []
+    competitive_window_threats: list[dict[str, Any]] = []
     sorted_threats = sorted(
         threat_totals.values(),
         key=lambda row: (
@@ -3494,12 +3492,12 @@ def _mini_league_deep_detail(
         ),
     )[:threat_n]
     for raw in sorted_threats:
-        denominator = direct_denominator
+        denominator = competitive_denominator
         effective = raw.get("effective_multiplier_sum")
         complete = bool(
             scope_multiplier_complete and raw.get("multiplier_complete")
         )
-        rival_threats.append(
+        competitive_window_threats.append(
             {
                 **raw,
                 "player": player_name(int(raw["element_id"])),
@@ -3567,17 +3565,17 @@ def _mini_league_deep_detail(
         )
         league_row = league_exposure_map.get(element) or {}
         rivals_row = rivals_exposure_map.get(element) or {}
-        direct_row = direct_exposure_map.get(element) or {}
-        direct_eo = direct_row.get("eo_pct")
-        if direct_eo is None:
+        competitive_row = competitive_exposure_map.get(element) or {}
+        competitive_eo = competitive_row.get("eo_pct")
+        if competitive_eo is None:
             leverage_class = "UNAVAILABLE"
-        elif float(direct_eo) >= 120.0:
+        elif float(competitive_eo) >= 120.0:
             leverage_class = "PROTECTION_HEAVY"
-        elif float(direct_eo) >= 75.0:
+        elif float(competitive_eo) >= 75.0:
             leverage_class = "PROTECTION"
-        elif float(direct_eo) <= 20.0:
+        elif float(competitive_eo) <= 20.0:
             leverage_class = "HIGH_LEVERAGE"
-        elif float(direct_eo) <= 50.0:
+        elif float(competitive_eo) <= 50.0:
             leverage_class = "LEVERAGE"
         else:
             leverage_class = "BALANCED"
@@ -3586,7 +3584,7 @@ def _mini_league_deep_detail(
                 **review,
                 "league_scope": league_row,
                 "rivals_scope": rivals_row,
-                "direct_scope": direct_row,
+                "competitive_scope": competitive_row,
                 "football_score": (canonical_map.get(element) or {}).get("football_score"),
                 "exposure_leverage_class": leverage_class,
             }
@@ -3652,12 +3650,22 @@ def _mini_league_deep_detail(
                 "denominator": len(rival_entries),
                 "includes_us": False,
             },
-            "DIRECT": {
-                "label": f"DIRECT{direct_n}_ABOVE_US",
-                "expected": len(direct_rows),
-                "collected": len(direct_entries),
-                "denominator": len(direct_entries),
+            "COMPETITIVE": {
+                "label": "COMPETITIVE_WINDOW",
+                "definition": str(competitive_window.get("window_mode") or "UNAVAILABLE"),
+                "expected": int(competitive_window.get("rival_count") or 0),
+                "collected": len(competitive_entries),
+                "denominator": len(competitive_entries),
                 "includes_us": False,
+                "coverage_pct": (
+                    round(
+                        100.0 * len(competitive_entries)
+                        / int(competitive_window.get("rival_count") or 0),
+                        1,
+                    )
+                    if int(competitive_window.get("rival_count") or 0) > 0
+                    else None
+                ),
             },
         },
         "league_full_composition": league_full_composition,
@@ -3669,20 +3677,32 @@ def _mini_league_deep_detail(
         "league_our15_exposure": league_our15_exposure,
         "rivals_our15_exposure": rivals_our15_exposure,
         "our15_rival_exposure": rivals_our15_exposure,
-        "direct_rival_scope": {
-            "requested_above_count": direct_n,
-            "standings_rival_count": len(direct_rows),
-            "picks_available_count": len(direct_entries),
-            "denominator": len(direct_entries),
-            "scope": "IMMEDIATELY_ABOVE_CURRENT_RANK",
+        "competitive_window": {
+            **competitive_window,
+            "standings_rival_count": len(competitive_rows),
+            "picks_available_count": len(competitive_entries),
+            "denominator": len(competitive_entries),
+            "coverage": {
+                "collected": len(competitive_entries),
+                "expected": int(competitive_window.get("rival_count") or 0),
+                "percentage": (
+                    round(
+                        100.0 * len(competitive_entries)
+                        / int(competitive_window.get("rival_count") or 0),
+                        1,
+                    )
+                    if int(competitive_window.get("rival_count") or 0) > 0
+                    else None
+                ),
+            },
             "complete": (
-                len(direct_rows) > 0
-                and len(direct_entries) == len(direct_rows)
+                len(competitive_rows) == int(competitive_window.get("rival_count") or 0)
+                and len(competitive_entries) == int(competitive_window.get("rival_count") or 0)
             ),
         },
-        "direct_rivals": direct_rivals,
-        "direct_rival_our15_exposure": direct_our15_exposure,
-        "rival_threats": rival_threats,
+        "competitive_rivals": competitive_rivals,
+        "competitive_our15_exposure": competitive_our15_exposure,
+        "competitive_window_threats": competitive_window_threats,
         "captain_leverage": captain_leverage,
         "strategy_implication": {
             "human_posture": human_posture,
@@ -3690,7 +3710,7 @@ def _mini_league_deep_detail(
             "transfer_action": operational_action,
             "xi_rule": "FOOTBALL_BASELINE_FIRST_MINI_LEAGUE_ONLY_BREAKS_NEAR_TIES",
             "captain_rule": (
-                "FOOTBALL_BASELINE_FIRST; COMPARE_XPTS_P_HAUL_LEAGUE_RIVALS_DIRECT_EO_AND_EXPOSURE_LEVERAGE_CLASS"
+                "FOOTBALL_BASELINE_FIRST; COMPARE_XPTS_P_HAUL_LEAGUE_RIVALS_COMPETITIVE_EO_AND_EXPOSURE_LEVERAGE_CLASS"
             ),
             "transfer_rule": (
                 "DO_NOT_BUY_OR_SELL_FOR_OWNERSHIP_ALONE; REQUIRE_FOOTBALL_GATE"
@@ -3700,9 +3720,9 @@ def _mini_league_deep_detail(
             "raw_count_denominator_percentage_required": True,
             "ownership_starter_bench_captain_vice_required": True,
             "eo_requires_multiplier_evidence": True,
-            "direct_rivals_required": True,
+            "competitive_rivals_required": True,
             "overlap_required": True,
-            "rival_threats_required": True,
+            "competitive_window_threats_required": True,
             "captain_leverage_required": True,
             "three_denominator_scopes_required": True,
             "behavioural_baseline_label_required": True,
@@ -3821,7 +3841,7 @@ def _captain_decision_surface(
         },
         "reconciliation_reason": reconciliation,
         "authority": (
-            "P1.7 final-XI football captain baseline + P1.8 LEAGUE/RIVALS/DIRECT "
+            "P1.7 final-XI football captain baseline + P1.8 LEAGUE/RIVALS/COMPETITIVE "
             "exposure overlay; no second captain optimizer"
         ),
         "raw_mean_is_not_sole_authority": True,
@@ -3854,7 +3874,7 @@ def _final_judgement_surface(
     bench = dict((lineup or {}).get("bench") or {})
     captain = dict(captain_surface.get("captain") or {})
     vice = dict(captain_surface.get("vice_captain") or {})
-    direct_context = dict(mini_detail.get("direct_rival_scope") or {})
+    competitive_context = dict(mini_detail.get("competitive_window") or {})
     return {
         "consumed_sections": ["S08", "S15B"],
         "decision": str(operational_action or "WAIT").upper(),
@@ -3888,11 +3908,11 @@ def _final_judgement_surface(
         "mini_league_captain_context": {
             "league_scope": captain.get("league_scope"),
             "rivals_scope": captain.get("rivals_scope"),
-            "direct_scope": captain.get("direct_scope"),
+            "competitive_scope": captain.get("competitive_scope"),
             "exposure_leverage_class": captain.get(
                 "exposure_leverage_class"
             ),
-            "direct_rival_scope": direct_context,
+            "competitive_window": competitive_context,
             "behavioural_baseline_gw": mini_detail.get(
                 "disclosed_picks_gw"
             ),
@@ -4458,7 +4478,7 @@ def _xi_battles(
     }
     direct = {
         int(row.get("element_id") or 0): dict(row)
-        for row in (mini_detail or {}).get("direct_rival_our15_exposure") or []
+        for row in (mini_detail or {}).get("competitive_our15_exposure") or []
         if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
     }
     workload = {
@@ -4516,8 +4536,8 @@ def _xi_battles(
             "role_b": pb.get("tactical_role") or pb.get("system_context"),
             "eo_a": ea.get("eo_pct"),
             "eo_b": eb.get("eo_pct"),
-            "direct_eo_a": da.get("eo_pct"),
-            "direct_eo_b": db.get("eo_pct"),
+            "competitive_eo_a": da.get("eo_pct"),
+            "competitive_eo_b": db.get("eo_pct"),
             "tactical_reason": proof.get("status"),
             "final_starter": pa.get("name") or a.get("name") or aid,
             "utility_margin": proof.get("margin"),

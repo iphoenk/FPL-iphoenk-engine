@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.runtime_v6.domains.report_plane.human_presentation_qa import validate_human_presentation_surface
 from src.engines.v12_price_presentation_lock import (
     load_price_presentation_lock,
     validate_price_presentation_lock,
@@ -1417,19 +1418,7 @@ def validate_price_visible_body(
     if "One-sentence final judgement" not in final:
         failures.append("VISIBLE_FINAL_PRICE_JUDGEMENT_MISSING")
 
-    forbidden = {
-        "element_id": r"\belement_id\b",
-        "entry_id": r"\bentry_id\b",
-        "user_summary": r"\buser_summary\s*[:=]",
-        "raw_dict": r"\{[^\n]{0,200}['\"][^\n]{0,200}\}",
-        "actual_paths": r"\bactual_paths\s*=",
-        "raw_run_id": r"\b(?:run_id|workflow_id)\b",
-        "raw_sha": r"\b(?:sha256|fingerprint)\b",
-        "generic_key_value": r"(?m)^[A-Za-z_][A-Za-z0-9_]{2,}\s*=\s*\S+",
-    }
-    for label, pattern in forbidden.items():
-        if re.search(pattern, body, flags=re.IGNORECASE):
-            failures.append(f"VISIBLE_MACHINE_LANGUAGE_LEAK={label}")
+    failures.extend(validate_human_presentation_surface(body, report_mode="PRICE"))
 
     if "MINI_LEAGUE_STATE:" in body:
         failures.append("VISIBLE_PRICE9_GENERIC_DUMP")

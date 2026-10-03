@@ -171,6 +171,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Cache Camoufox browser
+        id: camoufox-cache
         if: needs.parse.outputs.report_mode != 'PRICE'
         uses: actions/cache@v4
         with:
@@ -185,7 +186,11 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           pip install -r requirements-report-web.txt
-          python -m camoufox fetch
+          if [ "${{ steps.camoufox-cache.outputs.cache-hit }}" != "true" ]; then
+            timeout 300 python -m camoufox fetch
+          else
+            python -m camoufox version
+          fi
 
       - name: Prepare branch-only real DEEP acceptance snapshot
         if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main' && needs.parse.outputs.report_mode == 'DEEP'

@@ -581,7 +581,7 @@ Deadline/Final is a presentation overlay on canonical DEEP truth, not a replacem
 
 MATCH uses a dedicated locked renderer for MATCH1 through MATCH13. It presents submitted picks, autosub state, captain/vice consequence, owned live/final points, bonus/BPS, material events, league-wide signals, ICON+ exposure, next-GW learning, and source freshness in fixed human tables. Internal element IDs, raw machine enums, generic recursive dictionaries, and workflow/run/SHA plumbing are not user-facing presentation. Healthy submitted-picks exposure remains visible when live standings degrade, and supported population values retain numerator, denominator, and percentage semantics.
 
-A shared human-language post-render gate is reused by PRICE and the Deadline/Final/MATCH post-render QA. It rejects internal IDs, raw dictionaries/JSON, generic key=value dumps, workflow/run/fingerprint plumbing, and long UPPER_SNAKE_CASE machine enums while leaving football acronyms such as EO, xPts, xMins, BPS, DNP, FT, GW, and FPL valid. The gate is presentation-only and does not alter DEEP analytics or decision authority.
+A shared human-language post-render gate is reused by PRICE and the Deadline/Final/MATCH post-render QA. It rejects internal IDs, raw dictionaries/JSON, generic key=value dumps, workflow/run/fingerprint plumbing, and long UPPER_SNAKE_CASE machine enums while leaving football acronyms such as EO, xPts, xMins, BPS, DNP, FT, GW, and FPL valid. The gate is presentation-only and does not alter DEEP analytics or decision authority. It is mode-scoped to PRICE, DEADLINE, FINAL, and MATCH so the production DEEP presentation lock remains unchanged.
 
 ## Public / private boundary
 

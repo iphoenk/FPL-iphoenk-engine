@@ -35,7 +35,9 @@
     "legal_not_equal_affordable": true,
     "affordable_not_equal_executable": true,
     "value_of_waiting_explicit": true,
-    "unknown_finance_must_not_be_fabricated": true
+    "unknown_finance_must_not_be_fabricated": true,
+    "s04_owns_deadline_news_and_leaks": true,
+    "s05_remains_fixtures_rest_workload_weather_only": true
   },
   "deadline_overlay": {
     "S01": {
@@ -53,38 +55,6 @@
         "What changed",
         "What did not change",
         "Does this change WAIT / PREPARE / ACT"
-      ]
-    },
-    "S05": {
-      "tables": [
-        {
-          "name": "Latest actionable team news",
-          "columns": [
-            "Player",
-            "News",
-            "Availability impact",
-            "Evidence tier",
-            "As of",
-            "Decision impact"
-          ]
-        },
-        {
-          "name": "Predicted XI / leak tier",
-          "columns": [
-            "Player",
-            "Predicted status",
-            "Evidence tier",
-            "Confidence",
-            "Decision consequence"
-          ]
-        }
-      ],
-      "evidence_tiers": [
-        "Official",
-        "Reliable reporter",
-        "Strong leak",
-        "Unconfirmed",
-        "Rumor"
       ]
     },
     "S08": {
@@ -152,6 +122,38 @@
             "BEST ALTERNATIVE"
           ]
         }
+      ]
+    },
+    "S04": {
+      "tables": [
+        {
+          "name": "Latest actionable team news",
+          "columns": [
+            "Player",
+            "News",
+            "Availability impact",
+            "Evidence tier",
+            "As of",
+            "Decision impact"
+          ]
+        },
+        {
+          "name": "Predicted XI / leak tier",
+          "columns": [
+            "Player",
+            "Predicted status",
+            "Evidence tier",
+            "Confidence",
+            "Decision consequence"
+          ]
+        }
+      ],
+      "evidence_tiers": [
+        "Official",
+        "Reliable reporter",
+        "Strong leak",
+        "Unconfirmed",
+        "Rumor"
       ]
     }
   },

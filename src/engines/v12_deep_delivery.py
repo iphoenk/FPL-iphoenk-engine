@@ -282,8 +282,8 @@ def validate_deep_decision_content_delivery(
                     + ",".join(missing)
                 )
                 break
-        if rows16 and "POSTERIOR" not in upper:
-            failures.append("ALL15_POSTERIOR_NOT_VISIBLE")
+        if rows16 and "BAYESIAN" not in upper:
+            failures.append("ALL15_BAYESIAN_NOT_VISIBLE")
 
     if "S16B" in sections:
         s16b = content("S16B")

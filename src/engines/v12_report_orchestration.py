@@ -4794,6 +4794,7 @@ def _render_deep_visible_contract_lines(
             if "OUTSIDE_RELIABLE_FORECAST_HORIZON" in weather_health
             else f"🟡 {weather_health}"
         )
+        delivery_provenance = dict(payload.get("delivery_provenance") or {})
         rows = [
             (
                 "Official factual plane",
@@ -4820,6 +4821,23 @@ def _render_deep_visible_contract_lines(
                 "🟢 Verified" if exact_binding is True else "🔴 Unverified",
             ),
         ]
+        if delivery_provenance:
+            rows.extend(
+                [
+                    (
+                        "Private serving / delivery",
+                        str(delivery_provenance.get("private_delivery") or "🟡 Pending"),
+                    ),
+                    (
+                        "Presentation QA",
+                        str(delivery_provenance.get("presentation_qa") or "🟡 Pending"),
+                    ),
+                    (
+                        "Privacy boundary",
+                        str(delivery_provenance.get("privacy_boundary") or "🟡 Unverified"),
+                    ),
+                ]
+            )
         lines.extend(_markdown_table(("Plane", "Status"), rows))
 
         stale_items = []

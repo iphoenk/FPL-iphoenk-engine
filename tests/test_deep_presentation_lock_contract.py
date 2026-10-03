@@ -55,3 +55,49 @@ def test_s16b_keeps_current_post_gw_lifecycle():
     assert contract["sections"]["S16B"]["visibility"] == "lifecycle_controlled"
     assert "MATCH-BY-MATCH REVIEW" in contract["sections"]["S16B"]["lifecycle_rule"]
     assert "AFTER-GW REASSESSMENT" in contract["sections"]["S16B"]["lifecycle_rule"]
+
+
+def test_header_s15_s17_information_architecture_is_locked():
+    contract = load_deep_presentation_lock()
+    assert contract["header_order"] == [
+        "FPL MASTER V12 — DEEP REPORT",
+        "Planning GW",
+        "Logical report slot",
+        "Report",
+        "Sections",
+    ]
+    assert contract["information_ownership"] == {
+        "HEADER": "Report identity only",
+        "S01": "Current decision / current action",
+        "S14": "Optimizer, Monte Carlo, route and search evidence",
+        "S15": "Decision evidence quality, completeness, CURRENT/PRIOR semantics and usability",
+        "S17": "Technical source health, freshness, exact-occurrence binding, serving lineage and QA provenance",
+        "S19": "Final consolidated judgement",
+    }
+
+    s15 = contract["sections"]["S15"]
+    assert s15["tables"][0]["columns"] == [
+        "Evidence domain", "Quality", "Decision impact"
+    ]
+    assert s15["blocks"] == [
+        "Overall evidence confidence",
+        "Evidence limitations",
+        "Decision implication",
+        "PRIOR != CURRENT",
+    ]
+
+    s17 = contract["sections"]["S17"]
+    assert s17["tables"][0]["columns"] == ["Plane", "Status"]
+    assert s17["blocks"] == ["Freshness", "Lineage", "Audit note"]
+    assert s17["audit_note_optional"] is True
+
+
+def test_s15_s17_ownership_matrix_keeps_pipeline_health_out_of_s15():
+    contract = load_deep_presentation_lock()
+    matrix = contract["s15_s17_ownership_matrix"]
+    assert matrix["Finance completeness"] == "S15"
+    assert matrix["Price evidence decision usability"] == "S15"
+    assert matrix["Exact occurrence binding"] == "S17"
+    assert matrix["Presentation QA"] == "S17"
+    assert matrix["Workflow/run IDs"] == "S17_AUDIT_ONLY"
+    assert matrix["SHA/fingerprint"] == "S17_AUDIT_ONLY"

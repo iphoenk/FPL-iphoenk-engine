@@ -64,6 +64,7 @@ from src.engines.v12_deep_delivery import (
 from src.engines.v12_delivery_reliability import (
     CANONICAL_DEEP_SECTIONS,
     assemble_degraded_deep_report,
+    canonical_deep_sections,
     wait_for_prefetch_terminal,
     write_serving_artifacts,
 )
@@ -94,6 +95,10 @@ from src.engines.v12_stage2_derived_cache import (
     load_or_build_stage2_projections,
 )
 from src.engines.v12_s05_binding import build_report_time_s05_inputs
+from src.engines.v12_s16b_lifecycle import (
+    resolve_s16b_context,
+    state_after_occurrence,
+)
 from src.engines.v12_contextual_dynamics import (
     build_player_trajectory,
     build_post_match_deep_details,
@@ -558,7 +563,12 @@ def _validate_compact_previous_deep(
     *,
     current_report_slot: str,
 ) -> tuple[list[str], dict[str, Any] | None]:
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=payload.get("s16b_due") is True
+        )
+    ]
     failures: list[str] = []
     if str(payload.get("artifact_kind") or "") != "V12_PREVIOUS_DEEP_BASELINE":
         failures.append("ARTIFACT_KIND_INVALID")
@@ -609,7 +619,12 @@ def _validate_latest_serving_compat(
     current_report_slot: str,
 ) -> tuple[list[str], dict[str, Any] | None]:
     """One-generation bridge until the first governed compact LKG is published."""
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(
+            s16b_due=serving.get("s16b_due") is True
+        )
+    ]
     failures: list[str] = []
     if str(serving.get("report_mode") or "").upper() != "DEEP":
         failures.append("SERVING_REPORT_MODE_NOT_DEEP")
@@ -686,6 +701,9 @@ def _load_previous_visible_deep_baseline(
                 ),
                 "validation_failures": [],
                 "math_recomputed": False,
+                "s16b_delivery_state": deepcopy(
+                    payload.get("s16b_delivery_state") or {}
+                ),
             }
         return {
             "state": "UNAVAILABLE",
@@ -721,6 +739,9 @@ def _load_previous_visible_deep_baseline(
                 ),
                 "validation_failures": [],
                 "math_recomputed": False,
+                "s16b_delivery_state": deepcopy(
+                    serving.get("s16b_delivery_state") or {}
+                ),
             }
         return {
             "state": "UNAVAILABLE",
@@ -4658,51 +4679,106 @@ def _post_match_review(
     *,
     projections: Mapping[str, Any] | None,
     foundation: Mapping[str, Any] | None,
+    fixtures: Sequence[Mapping[str, Any]],
+    bootstrap: Mapping[str, Any],
     owned_ids: set[int],
-    current_gw: int,
+    completed_gw: int,
+    watchlist: Mapping[str, Any] | None,
+    previous_report: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    """Build the due S16B package from existing factual/model authorities only."""
     if not projections or not foundation:
-        return {
-            "our15": [],
-            "material_universe_candidates": [],
-            "full_universe_scan": {},
-            "recency_weighting": "UNAVAILABLE",
-            "bayesian_update": "UNAVAILABLE",
-            "linkup_dependency": "UNAVAILABLE",
-        }
-    match_rows = list(foundation.get("player_match_rows") or [])
+        raise IntegratedRunnerError("S16B due but post-match analytical foundation unavailable")
+
+    match_rows = [
+        dict(row)
+        for row in foundation.get("player_match_rows") or []
+        if isinstance(row, Mapping)
+    ]
     pmap = _projection_map(projections)
     scan = build_post_match_universe_scan(
         current_projection_players=list(pmap.values()),
         previous_projection_players=None,
         player_match_rows=match_rows,
-        current_gw=current_gw,
+        current_gw=completed_gw,
         owned_element_ids=sorted(owned_ids),
     )
-    our15 = []
-    for element in sorted(owned_ids):
-        player = pmap.get(element) or {}
-        trajectory = build_player_trajectory(
-            match_rows,
-            player_id=element,
-            current_gw=current_gw,
+
+    def row_player_id(row: Mapping[str, Any]) -> int:
+        try:
+            return int(row.get("player_id") or row.get("element") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    def row_fixture_id(row: Mapping[str, Any]) -> str:
+        return str(
+            row.get("fixture_id")
+            or row.get("fixture")
+            or row.get("match_id")
+            or row.get("id")
+            or ""
         )
-        fixture_contexts = list(
-            ((player.get("contextual_dynamics") or {}).get("fixture_contexts"))
-            or []
+
+    def row_gw(row: Mapping[str, Any]) -> int:
+        try:
+            return int(
+                row.get("gw")
+                or row.get("event")
+                or row.get("gameweek")
+                or row.get("round")
+                or 0
+            )
+        except (TypeError, ValueError):
+            return 0
+
+    def first_supported(rows: Sequence[Mapping[str, Any]], *keys: str) -> Any:
+        for row in rows:
+            for key in keys:
+                value = row.get(key)
+                if value not in (None, ""):
+                    return value
+        return "UNAVAILABLE"
+
+    def metric(row: Mapping[str, Any], *keys: str) -> Any:
+        for key in keys:
+            if row.get(key) is not None:
+                return row.get(key)
+        return "UNAVAILABLE"
+
+    team_names = {
+        int(row.get("id") or 0): str(row.get("name") or row.get("short_name") or row.get("id"))
+        for row in bootstrap.get("teams") or []
+        if isinstance(row, Mapping) and int(row.get("id") or 0) > 0
+    }
+    element_names = {
+        int(row.get("id") or 0): str(
+            row.get("web_name") or row.get("first_name") or row.get("id")
         )
-        linkup = (
-            (fixture_contexts[0].get("linkup_network") or {})
-            if fixture_contexts and isinstance(fixture_contexts[0], Mapping)
-            else {}
-        )
-        our15.append({
-            "element_id": element,
-            "player": player.get("name") or f"element:{element}",
-            "trajectory": trajectory,
-            "bayesian_state": player.get("posterior_rates"),
-            "linkup_dependency": linkup,
-        })
+        for row in bootstrap.get("elements") or []
+        if isinstance(row, Mapping) and int(row.get("id") or 0) > 0
+    }
+
+    gw_fixtures = [
+        dict(row)
+        for row in fixtures or []
+        if isinstance(row, Mapping)
+        and int(row.get("event") or row.get("gw") or 0) == int(completed_gw)
+    ]
+    gw_fixtures.sort(key=lambda row: int(row.get("id") or 0))
+    fixture_ids = [str(row.get("id") or row.get("fixture_id") or "") for row in gw_fixtures]
+
+    rows_by_fixture: dict[str, list[dict[str, Any]]] = {}
+    rows_by_player: dict[int, list[dict[str, Any]]] = {}
+    for row in match_rows:
+        if row_gw(row) != int(completed_gw):
+            continue
+        fixture_id = row_fixture_id(row)
+        if fixture_id:
+            rows_by_fixture.setdefault(fixture_id, []).append(row)
+        player_id = row_player_id(row)
+        if player_id > 0:
+            rows_by_player.setdefault(player_id, []).append(row)
+
     material_non_owned = [
         int(value)
         for value in scan.get("deep_analysis_element_ids") or []
@@ -4713,12 +4789,389 @@ def _post_match_review(
         current_projection_players=list(pmap.values()),
         player_match_rows=match_rows,
         post_match_universe_scan=scan,
-        current_gw=current_gw,
+        current_gw=completed_gw,
         maximum_material_deep_players=20,
     )
+    material_details = [
+        dict(row)
+        for row in deep.get("details") or []
+        if isinstance(row, Mapping)
+    ]
+    detail_by_id = {
+        int(row.get("element_id") or row.get("player_id") or 0): row
+        for row in material_details
+        if int(row.get("element_id") or row.get("player_id") or 0) > 0
+    }
+
+    owned_reassessment: list[dict[str, Any]] = []
+    previous_s16 = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in _section_content_from_report(previous_report, "S16").get("rows") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    owned_match_detail: dict[int, dict[str, Any]] = {}
+    upgrade_count = 0
+    downgrade_count = 0
+    stable_count = 0
+
+    for element in sorted(owned_ids):
+        player = pmap.get(element) or {}
+        trajectory = build_player_trajectory(
+            match_rows,
+            player_id=element,
+            current_gw=completed_gw,
+        )
+        latest = next(
+            (
+                dict(row)
+                for row in reversed(trajectory.get("matches") or [])
+                if isinstance(row, Mapping)
+                and int(row.get("gw") or 0) == int(completed_gw)
+            ),
+            {},
+        )
+        mechanism = _visible_position_mechanism(player, action="HOLD") if player else {}
+        classification = str(
+            trajectory.get("trajectory_classification") or "STABLE_OR_NOISY"
+        ).upper()
+        if classification in {"IMPROVING", "MINUTES_ROLE_IMPROVING", "ROLE_TRANSITION"}:
+            change = "UPGRADE"
+            upgrade_count += 1
+        elif classification in {"DECLINING", "MINUTES_ROLE_DECLINING"}:
+            change = "DOWNGRADE"
+            downgrade_count += 1
+        else:
+            change = "STABLE"
+            stable_count += 1
+        if classification == "MINUTES_ROLE_DECLINING":
+            consequence = "PREPARE OUT"
+        elif change == "DOWNGRADE":
+            consequence = "WATCH"
+        elif str(mechanism.get("recommended_or_locked_role") or "").upper() == "BENCH":
+            consequence = "BENCH"
+        else:
+            consequence = "HOLD"
+
+        prior = previous_s16.get(element) or {}
+        row = {
+            "element_id": element,
+            "player": player.get("name") or element_names.get(element) or f"element:{element}",
+            "pre_gw": {
+                "p_start": prior.get("p_start", "UNAVAILABLE"),
+                "xmins": prior.get("xmins", "UNAVAILABLE"),
+                "bayesian_underlying": prior.get(
+                    "bayesian_state",
+                    prior.get("posterior_signal", "UNAVAILABLE"),
+                ),
+                "projection_1gw": prior.get("gw_plus_1", "UNAVAILABLE"),
+                "projection_3gw": prior.get("three_gw", "UNAVAILABLE"),
+                "projection_5gw": prior.get("five_gw", "UNAVAILABLE"),
+            },
+            "gw_evidence": latest or {"state": "NO_APPEARANCE_OR_ROW_UNAVAILABLE"},
+            "post_gw": {
+                "p_start": mechanism.get("p_start", "UNAVAILABLE"),
+                "xmins": mechanism.get("xmins", "UNAVAILABLE"),
+                "bayesian_underlying": player.get("posterior_rates", "UNAVAILABLE"),
+                "projection_1gw": mechanism.get("gw_plus_1", "UNAVAILABLE"),
+                "projection_3gw": mechanism.get("three_gw", "UNAVAILABLE"),
+                "projection_5gw": mechanism.get("five_gw", "UNAVAILABLE"),
+                "uncertainty": mechanism.get("uncertainty", "UNAVAILABLE"),
+            },
+            "classification": change,
+            "evidence_classification": classification,
+            "role_change": (
+                "ROLE_GAIN"
+                if classification == "ROLE_TRANSITION"
+                else "ROLE_STABLE"
+                if classification == "STABLE_OR_NOISY"
+                else "UNAVAILABLE"
+            ),
+            "minutes_change": (
+                "MINUTES_GAIN"
+                if classification == "MINUTES_ROLE_IMPROVING"
+                else "MINUTES_RISK"
+                if classification == "MINUTES_ROLE_DECLINING"
+                else "UNAVAILABLE"
+            ),
+            "consequence": consequence,
+            "act_authority": False,
+        }
+        owned_reassessment.append(row)
+        owned_match_detail[element] = row
+
+    previous_watch_rows = [
+        dict(row)
+        for row in _section_content_from_report(previous_report, "S11").get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    current_watch_rows = [
+        dict(row)
+        for row in (watchlist or {}).get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    prev_rank = {
+        int(row.get("element_id") or 0): index
+        for index, row in enumerate(previous_watch_rows, start=1)
+        if int(row.get("element_id") or 0) > 0
+    }
+    current_rank = {
+        int(row.get("element_id") or 0): index
+        for index, row in enumerate(current_watch_rows, start=1)
+        if int(row.get("element_id") or 0) > 0
+    }
+    actionable_ids = {
+        int(row.get("element_id") or 0)
+        for row in (watchlist or {}).get("actionable_watchlist") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    watch_delta: list[dict[str, Any]] = []
+    for element, rank in current_rank.items():
+        old = prev_rank.get(element)
+        movement = (
+            "NEW"
+            if old is None
+            else "↑"
+            if rank < old
+            else "↓"
+            if rank > old
+            else "UNCHANGED"
+        )
+        watch_delta.append({
+            "element_id": element,
+            "player": element_names.get(element)
+            or (pmap.get(element) or {}).get("name")
+            or f"element:{element}",
+            "previous_rank": old,
+            "current_rank": rank,
+            "movement_state": movement,
+            "state": "ACTIONABLE" if element in actionable_ids else movement,
+        })
+    for element, old in prev_rank.items():
+        if element not in current_rank:
+            watch_delta.append({
+                "element_id": element,
+                "player": element_names.get(element) or f"element:{element}",
+                "previous_rank": old,
+                "current_rank": None,
+                "movement_state": "OUT",
+                "state": "OUT",
+            })
+
+    matches: list[dict[str, Any]] = []
+    candidate_trace: list[dict[str, Any]] = []
+    for fixture in gw_fixtures:
+        fixture_id = str(fixture.get("id") or fixture.get("fixture_id") or "")
+        frows = rows_by_fixture.get(fixture_id, [])
+        home_id = int(fixture.get("team_h") or fixture.get("home_team") or 0)
+        away_id = int(fixture.get("team_a") or fixture.get("away_team") or 0)
+        home_score = fixture.get("team_h_score")
+        away_score = fixture.get("team_a_score")
+        result = (
+            f"{team_names.get(home_id, home_id)} {home_score}–{away_score} "
+            f"{team_names.get(away_id, away_id)}"
+            if home_score is not None and away_score is not None
+            else "UNAVAILABLE"
+        )
+
+        owned_players: list[dict[str, Any]] = []
+        for element in sorted(owned_ids):
+            rows = [row for row in frows if row_player_id(row) == element]
+            if not rows:
+                continue
+            raw = rows[0]
+            evidence = dict(owned_match_detail.get(element) or {})
+            gw_ev = dict(evidence.get("gw_evidence") or {})
+            owned_players.append({
+                "element_id": element,
+                "player": evidence.get("player"),
+                "starter_sub_unused": (
+                    "STARTER"
+                    if raw.get("starter") is True or raw.get("started") is True
+                    else "SUB"
+                    if float(raw.get("minutes") or 0) > 0
+                    else "UNUSED"
+                ),
+                "minutes": metric(raw, "minutes"),
+                "fpl_points": metric(raw, "fpl_points", "total_points", "points"),
+                "position_role": first_supported(rows, "role", "role_label", "position"),
+                "xg": metric(raw, "xg", "expected_goals"),
+                "xa": metric(raw, "xa", "expected_assists"),
+                "xgi": metric(raw, "xgi", "expected_goal_involvements"),
+                "shots": metric(raw, "shots", "total_shots"),
+                "shots_on_target": metric(raw, "shots_on_target", "sot"),
+                "box_touches": metric(raw, "box_touches", "touches_opposition_box"),
+                "key_passes": metric(raw, "key_passes"),
+                "chances_created": metric(raw, "chances_created"),
+                "big_chances": metric(raw, "big_chances"),
+                "set_pieces": first_supported(rows, "set_piece_role", "set_piece_duty"),
+                "penalties": first_supported(rows, "penalty_role", "penalty_duty"),
+                "defensive_contribution": metric(
+                    raw, "defensive_contribution", "defensive_contributions"
+                ),
+                "substitution_timing": first_supported(
+                    rows, "substitution_timing", "subbed_at", "substitution_minute"
+                ),
+                "analytical_read": {
+                    "role_change": evidence.get("role_change"),
+                    "minutes_change": evidence.get("minutes_change"),
+                    "underlying_change": evidence.get("classification"),
+                    "start_security": (
+                        (evidence.get("post_gw") or {}).get("p_start")
+                    ),
+                    "sustainability": evidence.get("evidence_classification"),
+                    "one_match_noise": (
+                        evidence.get("evidence_classification") == "STABLE_OR_NOISY"
+                    ),
+                    "next_gw_implication": evidence.get("consequence"),
+                },
+                "trajectory_match": gw_ev,
+            })
+
+        watch_candidates: list[dict[str, Any]] = []
+        material_ids = set(material_non_owned)
+        for element in sorted(material_ids):
+            rows = [row for row in frows if row_player_id(row) == element]
+            if not rows:
+                continue
+            detail = detail_by_id.get(element) or {}
+            reason = str(
+                detail.get("primary_classification")
+                or detail.get("classification")
+                or "MATERIAL_POST_MATCH_SIGNAL"
+            )
+            trace = {
+                "fixture_id": fixture_id,
+                "player_id": element,
+                "player": element_names.get(element)
+                or (pmap.get(element) or {}).get("name")
+                or f"element:{element}",
+                "evidence_reason": reason,
+                "role_observation": first_supported(
+                    rows, "role", "role_label", "position"
+                ),
+                "underlying_observation": {
+                    "xg": metric(rows[0], "xg", "expected_goals"),
+                    "xa": metric(rows[0], "xa", "expected_assists"),
+                    "shots": metric(rows[0], "shots", "total_shots"),
+                },
+                "minutes_evidence": metric(rows[0], "minutes"),
+                "classification": "POST_MATCH_CANDIDATE",
+            }
+            candidate_trace.append(trace)
+            watch_candidates.append(trace)
+
+        matches.append({
+            "fixture_id": fixture_id,
+            "result": result,
+            "venue": first_supported(frows, "venue"),
+            "home_team": team_names.get(home_id, home_id),
+            "away_team": team_names.get(away_id, away_id),
+            "formation_system": {
+                "home": first_supported(
+                    [row for row in frows if int(row.get("team_id") or 0) == home_id],
+                    "team_formation", "formation",
+                ),
+                "away": first_supported(
+                    [row for row in frows if int(row.get("team_id") or 0) == away_id],
+                    "team_formation", "formation",
+                ),
+            },
+            "coach_pattern": {
+                "tactical_approach": first_supported(frows, "tactical_approach"),
+                "build_up_pattern": first_supported(frows, "build_up_pattern"),
+                "press_block": first_supported(frows, "press_block"),
+                "attacking_channels": first_supported(frows, "attacking_channels"),
+                "substitution_pattern": first_supported(frows, "substitution_pattern"),
+                "major_tactical_adjustment": first_supported(
+                    frows, "major_tactical_adjustment"
+                ),
+            },
+            "our_players": owned_players,
+            "watch_candidates": watch_candidates,
+            "tactical_takeaways": {
+                "what_worked": first_supported(frows, "what_worked"),
+                "what_changed": first_supported(frows, "what_changed"),
+                "who_benefited": first_supported(frows, "who_benefited"),
+                "who_lost_role_minutes": first_supported(
+                    frows, "who_lost_role_minutes"
+                ),
+                "sustainable_vs_noisy": first_supported(
+                    frows, "sustainable_vs_noisy"
+                ),
+                "our15_implication": [
+                    row.get("analytical_read") for row in owned_players
+                ],
+                "future_opponent_implication": first_supported(
+                    frows, "opponent_channels", "future_opponent_implication"
+                ),
+            },
+        })
+
+    current_watch_ids = set(current_rank)
+    candidate_outcomes = []
+    for candidate in candidate_trace:
+        element = int(candidate.get("player_id") or 0)
+        candidate_outcomes.append({
+            **candidate,
+            "full_universe_outcome": (
+                "ADMITTED"
+                if element in current_watch_ids
+                else "DEFERRED"
+                if element in set(material_non_owned)
+                else "REJECTED"
+            ),
+        })
+
+    movement_counts = {
+        "NEW": sum(1 for row in watch_delta if row.get("movement_state") == "NEW"),
+        "UP": sum(1 for row in watch_delta if row.get("movement_state") == "↑"),
+        "DOWN": sum(1 for row in watch_delta if row.get("movement_state") == "↓"),
+        "OUT": sum(1 for row in watch_delta if row.get("movement_state") == "OUT"),
+        "ACTIONABLE": sum(1 for row in watch_delta if row.get("state") == "ACTIONABLE"),
+    }
+    unique_fixture_ids = {str(row.get("fixture_id") or "") for row in matches}
     return {
-        "our15": our15,
-        "material_universe_candidates": list(deep.get("details") or []),
+        "gw": int(completed_gw),
+        "fixtures_expected": len(gw_fixtures),
+        "fixtures_reviewed": len(matches),
+        "unique_fixture_count": len(unique_fixture_ids),
+        "duplicate_fixture_count": len(matches) - len(unique_fixture_ids),
+        "match_by_match_review": matches,
+        "after_gw_reassessment": {
+            "summary": {
+                "our15_upgrades": upgrade_count,
+                "our15_downgrades": downgrade_count,
+                "our15_stable": stable_count,
+                "watchlist_new": movement_counts["NEW"],
+                "watchlist_up": movement_counts["UP"],
+                "watchlist_down": movement_counts["DOWN"],
+                "watchlist_out": movement_counts["OUT"],
+                "actionable": movement_counts["ACTIONABLE"],
+            },
+            "owned15_review": owned_reassessment,
+            "watchlist_delta": watch_delta,
+            "new_watch_candidates": candidate_outcomes,
+            "material_universe_movers": material_details,
+            "full_universe_scan": {
+                "eligible_count": scan.get("eligible_count"),
+                "scanned_count": scan.get("scanned_count"),
+                "material_count": scan.get("material_count"),
+                "scope": scan.get("scope"),
+            },
+            "decision_implications": {
+                "act_authority": False,
+                "allowed_states": ["HOLD", "START", "BENCH", "WATCH", "PREPARE OUT"],
+                "canonical_transfer_decision_owner": "S14/P1.7/STAGE3",
+            },
+        },
+        "full_universe_denominator": (
+            scan.get("eligible_count")
+            if scan.get("eligible_count") is not None
+            else scan.get("scanned_count")
+        ),
+        # Compatibility aliases for existing evidence-quality consumers only.
+        "our15": owned_reassessment,
+        "material_universe_candidates": material_details,
         "full_universe_scan": {
             "eligible_count": scan.get("eligible_count"),
             "scanned_count": scan.get("scanned_count"),
@@ -4726,14 +5179,11 @@ def _post_match_review(
             "scope": scan.get("scope"),
         },
         "recency_weighting": "EXPONENTIAL_HALF_LIFE_GW",
-        "bayesian_update": "POSTERIOR_RECENT_RATE_WITH_REGIME_SHRINKAGE",
-        "linkup_dependency": (
-            "creator→finisher / overlap→winger / set-piece-taker→target; "
-            "partner availability is marginalized where supportable"
-        ),
+        "bayesian_update": "ONLY_WHERE_EXISTING_POSTERIOR_RECOMPUTED",
+        "candidate_traceability": candidate_outcomes,
+        "fixture_ids_expected": fixture_ids,
+        "fixture_ids_reviewed": [row.get("fixture_id") for row in matches],
     }
-
-
 
 
 def _core_slot_binding(
@@ -6391,26 +6841,8 @@ def run_deep(
         lineup = None
 
 
-    post_match_review = _stage(
-        ledger,
-        "S16B_POST_MATCH_GW1_NOW",
-        lambda: _post_match_review(
-            projections=projections,
-            foundation=foundation,
-            owned_ids=owned_ids,
-            current_gw=max(1, planning_gw - 1),
-        ),
-        required=True,
-    ) if projections and foundation else None
-    if post_match_review is None:
-        post_match_review = {
-            "our15": [],
-            "material_universe_candidates": [],
-            "full_universe_scan": {},
-            "recency_weighting": "UNAVAILABLE",
-            "bayesian_update": "UNAVAILABLE",
-            "linkup_dependency": "UNAVAILABLE",
-        }
+    post_match_review: dict[str, Any] = {}
+    s16b_context: dict[str, Any] = {}
 
     predictor = _read_json(
         runtime_data_root / "data/v6/current/official_price_predictor.json",
@@ -6495,6 +6927,101 @@ def run_deep(
         projections=projections,
         predictor=predictor,
     )
+
+    s16b_context = resolve_s16b_context(
+        report_slot=report_slot,
+        report_mode="DEEP",
+        fixtures=fixtures or [],
+        player_match_rows=(foundation or {}).get("player_match_rows") or [],
+        prior_delivery_state=previous_deep.get("s16b_delivery_state"),
+    )
+    # Same-occurrence scratch only. This is not an authority and is deleted
+    # before serving publication; it lets fail-operational assembly preserve a
+    # lifecycle decision already proven by this run.
+    s16b_context["delivery_state_after"] = state_after_occurrence(
+        s16b_context,
+        occurrence_id=f"DEEP|{report_slot}",
+        generated_at=datetime.now().astimezone().isoformat(),
+        body_fingerprint=None,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / ".s16b_context.json").write_text(
+        json.dumps(s16b_context, ensure_ascii=False, default=str),
+        encoding="utf-8",
+    )
+    ledger.append(
+        {
+            "stage": "S16B_LIFECYCLE",
+            "status": "PASS",
+            "required": True,
+            "reason": s16b_context.get("due_reason"),
+            "evidence": {
+                "completed_gw": s16b_context.get("completed_gw"),
+                "s16b_due": s16b_context.get("s16b_due"),
+                "expected_section_count": s16b_context.get(
+                    "expected_section_count"
+                ),
+                "gw_completion": s16b_context.get("gw_completion"),
+                "post_match_evidence": s16b_context.get(
+                    "post_match_evidence"
+                ),
+            },
+        }
+    )
+    if s16b_context.get("s16b_due") is True:
+        post_match_review = _stage(
+            ledger,
+            "S16B_POST_MATCH_COMPLETED_GW",
+            lambda: _post_match_review(
+                projections=projections,
+                foundation=foundation,
+                fixtures=fixtures or [],
+                bootstrap=bootstrap,
+                owned_ids=owned_ids,
+                completed_gw=int(s16b_context.get("completed_gw") or 0),
+                watchlist=watchlist,
+                previous_report=previous_deep.get("report"),
+            ),
+            required=True,
+        ) or {}
+        expected_fixtures = int(
+            (s16b_context.get("gw_completion") or {}).get(
+                "expected_fixture_count"
+            )
+            or 0
+        )
+        if (
+            int(post_match_review.get("fixtures_expected") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("fixtures_reviewed") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("unique_fixture_count") or -1)
+            != expected_fixtures
+            or int(post_match_review.get("duplicate_fixture_count") or -1)
+            != 0
+            or len(
+                (
+                    post_match_review.get("after_gw_reassessment") or {}
+                ).get("owned15_review")
+                or []
+            )
+            != 15
+        ):
+            raise IntegratedRunnerError(
+                "S16B_DUE_CONTENT_INCOMPLETE: fixture/exact15 contract failed"
+            )
+        s16b_context["post_match_review"] = post_match_review
+        (output_dir / ".s16b_context.json").write_text(
+            json.dumps(s16b_context, ensure_ascii=False, default=str),
+            encoding="utf-8",
+        )
+    else:
+        _skip_stage(
+            ledger,
+            "S16B_POST_MATCH_COMPLETED_GW",
+            str(s16b_context.get("due_reason") or "S16B_NOT_DUE"),
+            required=False,
+        )
 
     calendar_elements = set(owned_ids)
     calendar_elements.update(
@@ -7576,10 +8103,18 @@ def run_deep(
             available_count=len(all15_rows),
             expected_count=15,
         ),
-        "S16B": _section(
-            "COMPLETE" if post_match_review.get("our15") else "DEGRADED",
-            post_match_review,
-            None if post_match_review.get("our15") else "GW1→Now match-level evidence unavailable for this occurrence",
+        **(
+            {
+                "S16B": _section(
+                    "COMPLETE",
+                    post_match_review,
+                    None,
+                    available_count=post_match_review.get("fixtures_reviewed"),
+                    expected_count=post_match_review.get("fixtures_expected"),
+                )
+            }
+            if s16b_context.get("s16b_due") is True
+            else {}
         ),
         "S17": _section(
             "COMPLETE",
@@ -7741,6 +8276,7 @@ def run_deep(
     report = materialize_deep_report(
         canonical_text=canonical,
         section_payloads=sections,
+        s16b_due=s16b_context.get("s16b_due") is True,
         checkpoint_time=checkpoint_time,
         mathematical_decision_stack=math_stack,
     )
@@ -7805,7 +8341,11 @@ def run_deep(
         rendered_weather_contract_state=weather_contract_state,
         truncated=False,
     )
-    contract = canonical_mode_contract(canonical, "DEEP")
+    contract = canonical_mode_contract(
+        canonical,
+        "DEEP",
+        s16b_due=s16b_context.get("s16b_due") is True,
+    )
     catalog_complete = (
         list(parsed_ids) == list(contract.get("expected_section_ids") or [])
     )
@@ -7859,6 +8399,17 @@ def run_deep(
         ]
     )
 
+    s16b_delivery_state = state_after_occurrence(
+        s16b_context,
+        occurrence_id=f"DEEP|{report_slot}",
+        generated_at=datetime.now().astimezone().isoformat(),
+        body_fingerprint=(
+            hashlib.sha256(body.encode("utf-8")).hexdigest()
+            if s16b_context.get("s16b_due") is True
+            else None
+        ),
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     execution_proof = {
         "schema_version": 2,
@@ -7867,6 +8418,9 @@ def run_deep(
         "report_slot": report_slot,
         "report_mode": "DEEP",
         "planning_gw": planning_gw,
+        "s16b_due": s16b_context.get("s16b_due") is True,
+        "s16b_completed_gw": s16b_context.get("completed_gw"),
+        "s16b_due_reason": s16b_context.get("due_reason"),
         "runner_status": runner_status,
         "canonical_expected_section_ids": contract.get("expected_section_ids"),
         "rendered_section_ids": parsed_ids,
@@ -7944,6 +8498,9 @@ def run_deep(
         "report_mode": "DEEP",
         "report_slot": report_slot,
         "planning_gw": planning_gw,
+        "s16b_due": s16b_context.get("s16b_due") is True,
+        "s16b_context": s16b_context,
+        "s16b_delivery_state": s16b_delivery_state,
         "runner_status": runner_status,
         "stage_ledger": ledger,
         "section_manifest": section_manifest,
@@ -8141,13 +8698,19 @@ def main() -> int:
                 f"root_failure={root_failure} error_class={type(exc).__name__}",
                 flush=True,
             )
+            scratch_path = output_dir / ".s16b_context.json"
+            degraded_s16b_context = _read_json(scratch_path, {}) or {}
             bundle = assemble_degraded_deep_report(
                 runtime_root=runtime_root,
                 report_slot=args.report_slot,
                 output_dir=output_dir,
                 root_failure=root_failure,
                 previous_visible_deep_dir=previous_dir,
+                s16b_context=degraded_s16b_context,
             )
+        scratch_path = output_dir / ".s16b_context.json"
+        if scratch_path.exists():
+            scratch_path.unlink()
         write_serving_artifacts(bundle=bundle, output_dir=output_dir)
     print(
         json.dumps(

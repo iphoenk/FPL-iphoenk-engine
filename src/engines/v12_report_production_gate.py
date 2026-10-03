@@ -16,8 +16,8 @@ never be used as a hidden publication prerequisite.
 from typing import Any, Mapping, Sequence
 
 from src.engines.v12_delivery_reliability import (
-    CANONICAL_DEEP_SECTIONS,
     DELIVERY_STATES,
+    canonical_deep_sections,
     validate_presentation_qa_manifest,
     validate_serving_snapshot,
 )
@@ -26,7 +26,7 @@ from src.engines.v12_delivery_reliability import (
 REPORT_PRODUCTION_GATE_VERSION = "V12_REPORT_PRODUCTION_GATE_V1"
 
 REPORT_PRODUCTION_REQUIREMENTS: tuple[str, ...] = (
-    "CANONICAL_23_SECTION_ORDER",
+    "CANONICAL_CONDITIONAL_DEEP_SECTION_ORDER",
     "VISIBLE_CONTENT_QA",
     "OUR15_IDENTITY",
     "CURRENT_FACTUAL_BINDING",
@@ -197,12 +197,16 @@ def evaluate_report_production_gate(
             "engineering_requirements": list(ENGINEERING_CLOSURE_REQUIREMENTS),
         }
 
-    expected_ids = [section_id for section_id, _ in CANONICAL_DEEP_SECTIONS]
+    s16b_due = bundle.get("s16b_due") is True
+    expected_ids = [
+        section_id
+        for section_id, _ in canonical_deep_sections(s16b_due=s16b_due)
+    ]
     ids = _section_ids(bundle)
     if ids != expected_ids:
         failures.append("SECTION_ORDER_OR_COUNT")
-    if len(ids) != 23:
-        failures.append("SECTION_COUNT_NOT_23")
+    if len(ids) != len(expected_ids):
+        failures.append(f"SECTION_COUNT_NOT_EXPECTED:{len(ids)}/{len(expected_ids)}")
 
     if delivery_status and delivery_status not in DELIVERY_STATES:
         failures.append("INVALID_DELIVERY_STATUS")

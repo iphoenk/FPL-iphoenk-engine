@@ -20,7 +20,7 @@ def _write_fixture(root: Path) -> dict:
     section_ids = [
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
         "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S14", "S14B", "S15", "S15B", "S16",
         "S17", "S18", "S19",
     ]
     bundle = {
@@ -28,6 +28,7 @@ def _write_fixture(root: Path) -> dict:
         "report_slot": "2026-09-26T12:30:00+07:00",
         "planning_gw": 6,
         "runner_status": "PASS",
+        "s16b_due": False,
         "section_manifest": [{"id": value} for value in section_ids],
         "pre_render_qa": {"status": "PASS"},
         "post_render_qa": {"status": "PASS"},
@@ -284,7 +285,7 @@ def test_synthetic_private_public_acceptance_surface_split(tmp_path):
     expected_ids = [
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
         "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S14", "S14B", "S15", "S15B", "S16",
         "S17", "S18", "S19",
     ]
     copied_bundle = json.loads(

@@ -8,6 +8,7 @@ import pytest
 from src.engines.v12_delivery_reliability import (
     CANONICAL_DEEP_SECTIONS,
     SERVING_MAX_SERIALIZED_BYTES,
+    canonical_deep_sections,
     PrefetchNotTerminal,
     assemble_degraded_deep_report,
     build_occurrence_state,
@@ -126,7 +127,7 @@ def test_prefetch_gate_requires_terminal_publication(tmp_path: Path):
         ("PRIVATE_PUBLISHER_FAILURE", "PRIVATE_PUBLISHER"),
     ],
 )
-def test_failure_injection_always_materializes_23_section_report(
+def test_failure_injection_materializes_normal_22_section_report(
     tmp_path: Path,
     root_failure: str,
     root_stage: str,
@@ -140,7 +141,7 @@ def test_failure_injection_always_materializes_23_section_report(
         root_stage=root_stage,
     )
     assert bundle["delivery_status"] == "READY_DEGRADED"
-    assert len(bundle["report"]["sections"]) == 23
+    assert len(bundle["report"]["sections"]) == 22
     assert bundle["report"]["sections"][0]["section_id"] == "S01"
     assert bundle["report"]["sections"][-1]["section_id"] == "S19"
     assert bundle["report"]["sections"][0]["content"]["decision"] == "WAIT"
@@ -173,7 +174,7 @@ def test_degraded_status_taxonomy_never_marks_blocked_downstream_red(tmp_path: P
     assert statuses["P1_4_MONTE_CARLO"] == "NOT_RUN"
 
 
-def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
+def test_serving_snapshot_is_decision_first_and_exact_base22(tmp_path: Path):
     bundle = assemble_degraded_deep_report(
         runtime_root=tmp_path / "runtime",
         report_slot=SLOT,
@@ -211,7 +212,7 @@ def test_serving_snapshot_is_decision_first_and_exact_23(tmp_path: Path):
     assert occurrence["current_state"] == "PUBLISHED_DEGRADED"
     assert occurrence["occurrence_id"] == f"DEEP|{SLOT}"
     qa = build_presentation_qa_manifest(bundle)
-    assert qa["section_count"] == 23
+    assert qa["section_count"] == 22
     assert qa["decision_first"] is True
     assert qa["root_failure_count"] == 1
     assert validate_presentation_qa_manifest(qa) == []
@@ -224,6 +225,16 @@ def test_serving_projection_is_compact_explicit_and_keeps_visible_contract(tmp_p
         report_slot=SLOT,
         output_dir=tmp_path / "out",
         root_failure="PREFETCH_NOT_TERMINAL",
+        s16b_context={
+            "s16b_due": True,
+            "completed_gw": 6,
+            "gw_completion": {"expected_fixture_count": 1},
+            "delivery_state_before": {
+                "schema": "V12_S16B_DELIVERY_STATE_V1",
+                "baseline_completed_gw": 5,
+                "last_delivered_gw": 5,
+            },
+        },
     )
     by_id = {
         row["section_id"]: row
@@ -316,42 +327,86 @@ def test_serving_projection_is_compact_explicit_and_keeps_visible_contract(tmp_p
         "position_mechanisms": [{"trace": "k" * 2000000}],
     })
     by_id["S16B"]["content"].update({
-        "our15": [
+        "gw": 6,
+        "fixtures_expected": 1,
+        "fixtures_reviewed": 1,
+        "unique_fixture_count": 1,
+        "duplicate_fixture_count": 0,
+        "match_by_match_review": [
             {
-                "element_id": 1,
-                "player": "P1",
-                "trajectory": {
-                    "trajectory_classification": "STABLE",
-                    "role_minutes_evolution": {"recent_role": "STARTER"},
-                    "matches": [
-                        {
-                            "gw": 1,
-                            "minutes": 90,
-                            "xg": 0.2,
-                            "raw_provider_payload": "x" * 2000000,
-                        }
-                    ],
-                },
+                "fixture_id": "601",
+                "result": "ARS 2–1 CHE",
+                "venue": "ARS",
+                "formation_system": {"home": "4-3-3", "away": "4-2-3-1"},
+                "coach_pattern": {"raw_trace": "x" * 2000000},
+                "our_players": [
+                    {
+                        "element_id": 1,
+                        "player": "P1",
+                        "starter_sub_unused": "STARTER",
+                        "minutes": 90,
+                        "fpl_points": 6,
+                        "position_role": "9",
+                        "xg": 0.2,
+                        "xa": 0.1,
+                        "xgi": 0.3,
+                        "shots": 3,
+                        "shots_on_target": 2,
+                        "box_touches": 5,
+                        "key_passes": 1,
+                        "chances_created": 1,
+                        "big_chances": 1,
+                        "set_pieces": "UNAVAILABLE",
+                        "penalties": "UNAVAILABLE",
+                        "defensive_contribution": "UNAVAILABLE",
+                        "substitution_timing": "UNAVAILABLE",
+                        "analytical_read": {"classification": "STABLE"},
+                        "raw_provider_payload": "x" * 2000000,
+                    }
+                ],
+                "watch_candidates": [
+                    {
+                        "fixture_id": "601",
+                        "player_id": 99,
+                        "player": "C99",
+                        "evidence_reason": "WATCH",
+                        "role_observation": "STARTER",
+                        "underlying_observation": {"xg": 0.4},
+                        "minutes_evidence": 90,
+                        "classification": "POST_MATCH_CANDIDATE",
+                        "raw_provider_payload": "x" * 2000000,
+                    }
+                ],
+                "tactical_takeaways": {"what_changed": "role"},
             }
         ],
-        "material_universe_candidates": [
-            {
-                "element_id": 99,
-                "name": "C99",
-                "primary_classification": "WATCH",
-                "trajectory": {"trajectory_classification": "RISING", "raw": "x" * 2000000},
-                "minutes": {"xmins": 82, "p_start": 0.92, "raw": "x" * 2000000},
-                "underlying": {"raw": "x" * 2000000},
-                "horizon_1gw": 5.0,
-                "horizon_3gw": 15.0,
-                "horizon_5gw": 25.0,
-            }
-        ],
+        "after_gw_reassessment": {
+            "summary": {"our15_stable": 15},
+            "owned15_review": [
+                {
+                    "element_id": 1,
+                    "player": "P1",
+                    "pre_gw": {},
+                    "gw_evidence": {},
+                    "post_gw": {},
+                    "classification": "STABLE",
+                    "role_change": "ROLE_STABLE",
+                    "minutes_change": "UNAVAILABLE",
+                    "consequence": "HOLD",
+                    "raw_provider_payload": "x" * 2000000,
+                }
+            ],
+            "watchlist_delta": [],
+            "new_watch_candidates": [],
+            "decision_implications": {"act_authority": False},
+        },
+        "full_universe_denominator": 667,
     })
 
     snapshot = build_serving_snapshot(bundle)
     assert list(snapshot["sections"]) == [
-        section_id for section_id, _ in CANONICAL_DEEP_SECTIONS
+        section_id
+        for section_id, _ in canonical_deep_sections(s16b_due=True)
     ]
     assert len(snapshot["sections"]["S02"]["content"]["rows"]) == 15
     assert len(snapshot["sections"]["S11"]["content"]["scanner20"]) == 20
@@ -365,7 +420,10 @@ def test_serving_projection_is_compact_explicit_and_keeps_visible_contract(tmp_p
     assert "route_overlays" not in snapshot["sections"]["S15B"]["content"]["downstream_overlay"]
     assert "position_mechanisms" not in snapshot["sections"]["S16"]["content"]
     assert "raw_provider_payload" not in (
-        snapshot["sections"]["S16B"]["content"]["our15"][0]["trajectory"]["matches"][0]
+        snapshot["sections"]["S16B"]["content"]["match_by_match_review"][0]["our_players"][0]
+    )
+    assert "raw_provider_payload" not in (
+        snapshot["sections"]["S16B"]["content"]["match_by_match_review"][0]["watch_candidates"][0]
     )
     payload = json.dumps(
         snapshot, ensure_ascii=False, separators=(",", ":")
@@ -534,7 +592,7 @@ def test_private_publisher_upgrades_same_occurrence_degraded_to_full(tmp_path: P
     assert baseline["pre_render_status"] == "PASS"
     assert baseline["post_render_status"] == "PASS"
     assert baseline["human_facing_status"] == "PASS"
-    assert len(baseline["section_ids"]) == 23
+    assert len(baseline["section_ids"]) == 22
     assert list(baseline["sections"]) == baseline["section_ids"]
     assert baseline["canonical_bundle_sha256"] == second["canonical_bundle_sha256"]
     assert baseline["canonical_body_sha256"] == second["canonical_body_sha256"]

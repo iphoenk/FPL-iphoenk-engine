@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import (
     DEEP_MANDATORY_SECTIONS,
+    DEEP_WITH_S16B_SECTIONS,
     FINAL_MANDATORY_SECTIONS,
     MANDATORY_SECTIONS,
     MATCH_MANDATORY_SECTIONS,
@@ -61,6 +62,7 @@ _MATCH_SECTION_IDS = MATCH_MANDATORY_SECTIONS
 _PRICE_SECTION_IDS = PRICE_MANDATORY_SECTIONS
 _POST_ALL_MATCH_SECTION_IDS = POST_ALL_MATCH_MANDATORY_SECTIONS
 _FULL_SECTION_IDS = DEEP_MANDATORY_SECTIONS
+_FULL_SECTION_IDS_WITH_S16B = DEEP_WITH_S16B_SECTIONS
 _FINAL_SECTION_IDS = FINAL_MANDATORY_SECTIONS
 _FULL_BACKBONE_CATALOG_MODES = frozenset(
     {"LEGACY", "DEEP", "FULL", "DEADLINE", "OVERLAP"}
@@ -108,7 +110,6 @@ _FULL_DEEP_VISIBLE_ORDER = (
     "EVIDENCE QUALITY",
     "ICON+ MINI-LEAGUE",
     "ALL15 TACTICAL / PROBABILITY REVIEW",
-    "POST-MATCH REVIEW GW1 → NOW",
     "SOURCE HEALTH / FRESHNESS / LINEAGE",
     "ACTION BOARD",
     "FINAL JUDGEMENT",
@@ -134,7 +135,6 @@ _DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS = (
     "EVIDENCE QUALITY",
     "ICON+ MINI-LEAGUE",
     "ALL15 TACTICAL / PROBABILITY REVIEW",
-    "POST-MATCH REVIEW GW1",
     "SOURCE HEALTH / FRESHNESS / LINEAGE",
     "ACTION BOARD",
     "FINAL JUDGEMENT",
@@ -840,7 +840,14 @@ def validate_v12_visible_content_contract(
 
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
         order = tuple(str(value).strip().upper() for value in payload.get("visible_order") or [])
-        if order != tuple(value.upper() for value in _FULL_DEEP_VISIBLE_ORDER):
+        base_order = tuple(value.upper() for value in _FULL_DEEP_VISIBLE_ORDER)
+        insert_at = base_order.index("SOURCE HEALTH / FRESHNESS / LINEAGE")
+        with_s16b = (
+            base_order[:insert_at]
+            + ("POST-MATCH REVIEW",)
+            + base_order[insert_at:]
+        )
+        if order not in {base_order, with_s16b}:
             hard_failures.append("FULL_DEEP_VISIBLE_ORDER_INVALID")
 
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL", "OVERLAP", "POST_ALL_MATCH"}:
@@ -1353,7 +1360,11 @@ def _expected_visible_catalog(report_mode: str, generated_section_ids: Sequence[
     if mode == "FINAL":
         return list(_FINAL_SECTION_IDS)
     if mode in _FULL_BACKBONE_CATALOG_MODES:
-        return list(_FULL_SECTION_IDS)
+        return list(
+            _FULL_SECTION_IDS_WITH_S16B
+            if "S16B" in {str(value).upper() for value in generated_section_ids}
+            else _FULL_SECTION_IDS
+        )
     return list(generated_section_ids)
 
 
@@ -1797,6 +1808,13 @@ def validate_pre_render_qa(
     for label in degraded_count_labels:
         expected_counts.pop(label, None)
     required_visible_markers = _required_visible_markers(resolved_report_mode)
+    if "S16B" in expected_section_ids:
+        required_visible_markers = list(required_visible_markers) + [
+            "S16B.1",
+            "MATCH-BY-MATCH REVIEW",
+            "S16B.2",
+            "AFTER-GW REASSESSMENT",
+        ]
     if serious_decision_required:
         required_visible_markers = list(required_visible_markers) + list(
             _SERIOUS_DECISION_VISIBLE_MARKERS

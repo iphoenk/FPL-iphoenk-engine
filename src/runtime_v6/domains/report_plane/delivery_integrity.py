@@ -72,11 +72,21 @@ DEEP_MANDATORY_SECTIONS = (
     "S15",
     "S15B",
     "S16",
-    "S16B",
     "S17",
     "S18",
     "S19",
 )
+_DEEP_S16B_INSERT_INDEX = DEEP_MANDATORY_SECTIONS.index("S17")
+DEEP_WITH_S16B_SECTIONS = tuple(
+    list(DEEP_MANDATORY_SECTIONS[:_DEEP_S16B_INSERT_INDEX])
+    + ["S16B"]
+    + list(DEEP_MANDATORY_SECTIONS[_DEEP_S16B_INSERT_INDEX:])
+)
+
+
+def deep_mandatory_sections(*, s16b_due: bool) -> tuple[str, ...]:
+    return DEEP_WITH_S16B_SECTIONS if s16b_due else DEEP_MANDATORY_SECTIONS
+
 MATCH_MANDATORY_SECTIONS = tuple(f"MATCH{index}" for index in range(1, 14))
 PRICE_MANDATORY_SECTIONS = tuple(f"PRICE{index}" for index in range(1, 12))
 POST_ALL_MATCH_MANDATORY_SECTIONS = tuple(
@@ -97,7 +107,7 @@ MANDATORY_SECTIONS = DEEP_MANDATORY_SECTIONS
 # Keep this set broad; per-section validators remain responsible for proving
 # the degradation reason, counts, missing scope, and anti-fabrication semantics.
 PARTIAL_ALLOWED_SECTIONS = frozenset(
-    DEEP_MANDATORY_SECTIONS
+    DEEP_WITH_S16B_SECTIONS
     + MATCH_MANDATORY_SECTIONS
     + PRICE_MANDATORY_SECTIONS
     + POST_ALL_MATCH_MANDATORY_SECTIONS

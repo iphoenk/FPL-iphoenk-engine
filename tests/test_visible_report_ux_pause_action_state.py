@@ -57,11 +57,16 @@ def test_global_visible_presentation_contract_is_decision_first_and_compact():
 
 
 def test_global_presentation_layer_does_not_change_deep_exact_structure():
-    contract = canonical_mode_contract(_canonical(), "DEEP")
-    assert len(contract["expected_section_ids"]) == 23
-    assert {"S06B", "S14B", "S16B"} <= set(contract["expected_section_ids"])
-    assert contract["expected_visible_order"][0] == "DECISION / CURRENT STATUS"
-    assert contract["expected_visible_order"][-1] == "FINAL JUDGEMENT"
+    base = canonical_mode_contract(_canonical(), "DEEP", s16b_due=False)
+    due = canonical_mode_contract(_canonical(), "DEEP", s16b_due=True)
+    assert len(base["expected_section_ids"]) == 22
+    assert {"S06B", "S14B"} <= set(base["expected_section_ids"])
+    assert "S16B" not in base["expected_section_ids"]
+    assert len(due["expected_section_ids"]) == 23
+    assert due["expected_section_ids"][19:21] == ["S16B", "S17"]
+    assert base["expected_visible_order"][0] == "DECISION / CURRENT STATUS"
+    assert base["expected_visible_order"][-1] == "FINAL JUDGEMENT"
+    assert due["expected_visible_order"][-1] == "FINAL JUDGEMENT"
 
 
 def test_operational_action_enum_is_exact_and_aliases_are_rejected():

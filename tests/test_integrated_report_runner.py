@@ -366,11 +366,14 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     )
 
     canonical = runner.CANONICAL_PATH.read_text(encoding="utf-8")
-    expected = canonical_mode_contract(canonical, "DEEP")["expected_section_ids"]
+    expected = canonical_mode_contract(
+        canonical, "DEEP", s16b_due=False
+    )["expected_section_ids"]
     actual = [row["section_id"] for row in out["report"]["sections"]]
     assert actual == expected
-    assert len(actual) == 23
-    assert {"S06B", "S14B", "S15B", "S16B"} <= set(actual)
+    assert len(actual) == 22
+    assert {"S06B", "S14B", "S15B"} <= set(actual)
+    assert "S16B" not in actual
     s11 = next(row for row in out["report"]["sections"] if row["section_id"] == "S11")
     assert "scanner20" in s11["content"]
     assert "actionable_watchlist" in s11["content"]
@@ -396,18 +399,26 @@ def test_integrated_deep_runner_executes_owner_stages_and_materializes_full_cata
     assert (tmp_path / "out/execution_proof.json").exists()
 
 
-def test_deep_contract_includes_expanded_human_backbone():
+def test_deep_contract_supports_base22_and_due23_without_renumbering():
     canonical = runner.CANONICAL_PATH.read_text(encoding="utf-8")
-    section_ids = canonical_mode_contract(canonical, "DEEP")["expected_section_ids"]
-    assert section_ids == [
+    base = canonical_mode_contract(
+        canonical, "DEEP", s16b_due=False
+    )["expected_section_ids"]
+    due = canonical_mode_contract(
+        canonical, "DEEP", s16b_due=True
+    )["expected_section_ids"]
+    assert base == [
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
         "S07", "S08", "S09", "S10", "S11", "S12", "S13",
-        "S14", "S14B", "S15", "S15B", "S16", "S16B",
+        "S14", "S14B", "S15", "S15B", "S16",
         "S17", "S18", "S19",
     ]
+    assert due == base[:19] + ["S16B"] + base[19:]
+    assert len(base) == 22
+    assert len(due) == 23
 
 
-def test_deep_human_manifest_fails_closed_when_new_section_is_missing():
+def test_deep_human_manifest_does_not_require_s16b_when_not_materialized():
     sections = []
     for section_id in (
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
@@ -422,7 +433,7 @@ def test_deep_human_manifest_fails_closed_when_new_section_is_missing():
         })
     manifest = build_deep_human_facing_manifest({"sections": sections})
     assert manifest["status"] == "FAIL"
-    assert "HUMAN_SECTION_MISSING=S16B" in manifest["failures"]
+    assert "HUMAN_SECTION_MISSING=S16B" not in manifest["failures"]
 
 
 def test_captain_review_exposes_distributional_and_mini_league_evidence():

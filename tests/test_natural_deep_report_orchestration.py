@@ -6,6 +6,7 @@ import pytest
 
 from src.engines.price_radar import MODEL_THRESHOLD
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.visible_mode_presentation_locks import validate_deadline_final_presentation_lock
 from src.runtime_v6.domains.report_plane.delivery_integrity import (
     DEEP_MANDATORY_SECTIONS,
     FINAL_MANDATORY_SECTIONS,
@@ -27,6 +28,7 @@ from src.engines.v12_report_orchestration import (
     compact_engine_data_status,
     materialize_all15,
     materialize_deep_report,
+    materialize_deadline_final_report,
     materialize_natural_post_match_report,
     render_deep_text,
     render_natural_post_match_text,
@@ -1808,3 +1810,116 @@ def test_post_match_actual_update_requires_execution_proof_before_claim():
     assert "POSTERIOR UPDATED" in body
     assert "PREVIOUS VALUE=0.72" in body
     assert "CURRENT VALUE=0.81" in body
+
+
+def test_locked_deadline_overlay_runs_in_required_deep_ci():
+    assert validate_deadline_final_presentation_lock() == []
+    report = {
+        "report_mode": "DEADLINE",
+        "deadline_presentation": {
+            "official_deadline": "03 Oct 2026, 17:00 WIB",
+            "countdown": "T-30m",
+            "checkpoint": "FINAL REVIEW",
+            "decision_state": "WAIT",
+            "S01": {
+                "transfer_legality": "LEGAL",
+                "execution_readiness": "READY",
+                "unresolved_blocker": "None",
+            },
+            "S05": {
+                "late_news_rows": [{
+                    "player": "P1",
+                    "news": "Available",
+                    "availability_impact": "No downgrade",
+                    "evidence_tier": "OFFICIAL",
+                    "as_of": "16:20 WIB",
+                    "decision_impact": "No change",
+                }],
+                "predicted_xi_rows": [{
+                    "player": "P1",
+                    "predicted_status": "START",
+                    "evidence_tier": "RELIABLE_REPORTER",
+                    "confidence": "HIGH",
+                    "decision_consequence": "No change",
+                }],
+            },
+            "S08": {"captain_rows": [
+                {"role": "Captain", "player": "P7", "state": "LOCKED", "reversal_trigger": "Official absence"},
+                {"role": "Vice", "player": "P8", "state": "LOCKED", "reversal_trigger": "Captain reversal"},
+            ]},
+            "S14": {"route_rows": [{
+                "route": "HOLD", "legal": True, "affordable": True,
+                "1gw": 0.0, "3gw": 0.0, "5gw": 0.0, "p_hold": 1.0,
+                "value_of_waiting": "High", "reversal_abort": "New material evidence", "action": "WAIT",
+            }]},
+            "S18": {"action_board": {
+                "NOW": "WAIT",
+                "NEXT": "Check late news",
+                "TRIGGER TO ACT": "Material edge",
+                "LATEST SAFE DECISION POINT": "T-5m",
+                "COST OF WAITING": "Low",
+                "ABORT / REVERSAL": "New negative evidence",
+                "BEST ALTERNATIVE": "HOLD",
+            }},
+        },
+        "sections": [
+            {"section_id": "S01", "label": "DECISION / CURRENT STATUS", "state": "COMPLETE", "content": {}},
+            {"section_id": "S05", "label": "FIXTURES / REST / CONDITIONS", "state": "COMPLETE", "content": {}},
+            {"section_id": "S08", "label": "CAPTAIN / VICE-CAPTAIN FRONTIER", "state": "COMPLETE", "content": {}},
+            {"section_id": "S14", "label": "PACKAGE OPTIMIZER / TRANSFER FRONTIER", "state": "DEGRADED", "degradation_reason": "controlled fixture", "content": {}},
+            {"section_id": "S18", "label": "ACTION BOARD", "state": "COMPLETE", "content": {}},
+        ],
+    }
+    body = render_deep_text(report)
+    assert body.startswith("FPL MASTER V12 — DEADLINE REPORT")
+    assert "Official deadline: 03 Oct 2026, 17:00 WIB" in body
+    assert "Countdown: T-30m" in body
+    assert "Checkpoint: FINAL REVIEW" in body
+    assert "Decision state: WAIT" in body
+    assert "| Player | News | Availability impact | Evidence tier | As of | Decision impact |" in body
+    assert "| Player | Predicted status | Evidence tier | Confidence | Decision consequence |" in body
+    assert "| Role | Player | State | Reversal trigger |" in body
+    assert "| Route | Legal | Affordable | 1GW | 3GW | 5GW | P>HOLD | Value of waiting | Reversal / Abort | Action |" in body
+    assert "| Field | Current call |" in body
+
+
+def test_locked_final_gw_package_18_rows_before_alternatives_runs_in_required_deep_ci():
+    canonical = CANONICAL.read_text(encoding="utf-8")
+    lock = {
+        "target_gw": 7,
+        "transfers_out": ["P1"],
+        "transfers_in": ["P16"],
+        "number_of_moves": 1,
+        "ft_hit_treatment": "1 FT / no hit",
+        "bank_after_if_known": None,
+        "formation": "3-5-2",
+        "xi_exact11": [f"P{i}" for i in range(2, 12)] + ["P16"],
+        "bench_gk": "P12",
+        "outfield_bench_priority_1_3": ["P13", "P14", "P15"],
+        "captain": "P7",
+        "vice_captain": "P8",
+        "chip": "No chip",
+        "primary_action": "ACT",
+        "abort_trigger": "Official absence",
+        "fallback": "HOLD",
+        "evidence_timestamp": "2026-10-03T16:55:00+07:00",
+        "canonical_authority_version": "V12",
+    }
+    report = materialize_deadline_final_report(
+        canonical_text=canonical,
+        report_mode="FINAL",
+        section_payloads={"GW_LOCK_PACKAGE": {"state": "COMPLETE", "content": lock}},
+        deadline_presentation={
+            "official_deadline": "03 Oct 2026, 17:00 WIB",
+            "countdown": "T-5m",
+            "checkpoint": "FINAL CONFIRMATION",
+            "decision_state": "ACT",
+        },
+        s16b_due=False,
+    )
+    body = render_deep_text(report)
+    package = body.split("## GW LOCK PACKAGE", 1)[1].split("##", 1)[0]
+    table_rows = [line for line in package.splitlines() if line.startswith("| ")][2:]
+    assert len(table_rows) == 18
+    assert "| Bank after | UNKNOWN / UNAVAILABLE |" in package
+    assert body.index("## GW LOCK PACKAGE") < body.index("PACKAGE OPTIMIZER / TRANSFER FRONTIER")

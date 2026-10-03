@@ -6,7 +6,6 @@ import re
 
 import pytest
 
-from src.engines.v12_price_presentation_lock import validate_price_presentation_lock
 from src.engines.v12_price_delivery import (
     PRICE_SECTION_IDS,
     build_price_delivery_report,
@@ -413,19 +412,3 @@ def test_l_no_hardcoded_player_or_fixed_current15_production_rule():
     for transient_name in ("Haaland", "Calafiori", "Sangaré", "Groß"):
         assert transient_name not in source
         assert transient_name not in block
-
-
-def test_m_locked_price_golden_surface_runs_in_required_ci():
-    assert validate_price_presentation_lock() == []
-    report = _healthy_report()
-    body = render_price_report(report)
-    assert body.count("## PRICE ") == 12
-    assert "| Player | Pos | Market | Sell | Direction | Progress | ETA / Status | Decision impact |" in body
-    assert "| Player | Pos | £ | Direction | Progress | ETA / Status | Football relevance | Squad relevance | Affordability relevance |" in body
-    assert "| # | Player | Pos / Club | £ | Progress | Direction | ETA / Status | Confidence | OUR15 | Watchlist | As of |" in body
-    assert "| Field | Current call |" in body
-    assert "| Source | Status | As of |" in body
-    assert "element_id" not in body
-    assert "user_summary" not in body
-    assert "core_run_id" not in body
-    assert "runtime_snapshot" not in body

@@ -7,6 +7,7 @@ import pytest
 
 from src.engines import live_state_service as service
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
+from src.engines.visible_mode_presentation_locks import validate_match_presentation_lock
 from src.engines.v12_report_orchestration import materialize_match_report, render_match_text
 from src.runtime_v6.domains.report_plane.report_qa import (
     _validate_v12_rendered_body,
@@ -243,11 +244,14 @@ def test_match13_materializes_from_locked_submitted_picks_and_passes_semantics(t
 
     body = render_match_text(report)
     assert body.count("## MATCH ") == 13
-    assert "SCORING AUTHORITY: LOCKED_SUBMITTED_PICKS" in body
-    assert "BENCH GK: P15" in body
-    assert "OUTFIELD AUTOSUB PRIORITY: 1 P12, 2 P13, 3 P14" in body
-    assert "BONUS/BPS STATUS: PROVISIONAL" in body
-    assert "NEXT CRITICAL OBSERVATION: fixture 101 full-time" in body
+    assert "Submitted FPL picks locked at deadline." in body
+    assert "| GK | P15 |" in body
+    assert "| 1 | P12 |" in body and "| 2 | P13 |" in body and "| 3 | P14 |" in body
+    assert "## MATCH 7 — BONUS / BPS" in body
+    assert "Status: Provisional" in body
+    assert "Next critical observation\nfixture 101 full-time" in body
+    assert "element_id" not in body
+    assert "LOCKED_SUBMITTED_PICKS" not in body
 
     content_contract = report["content_contract"]
     semantic = validate_v12_visible_content_contract(
@@ -322,3 +326,29 @@ def test_stage_f_match_final_barrier_requires_single_report_and_incremental_obli
     )
     assert duplicate_result["status"] == "FAIL"
     assert "MATCH_DUPLICATE_SECTION" in duplicate_result["failures"]
+
+
+def test_locked_match_golden_surface_runs_in_required_lifecycle_ci(tmp_path, monkeypatch):
+    assert validate_match_presentation_lock() == []
+    live = _run(tmp_path, monkeypatch, _snapshot())
+    report = materialize_match_report(
+        canonical_text=CANONICAL.read_text(encoding="utf-8"),
+        live_payload=live,
+        next_critical_observation="fixture 101 full-time",
+        next_critical_reason="clarifies autosub and role consequence",
+        next_reassess_at="after fixture 101 FT",
+    )
+    body = render_match_text(report)
+    assert body.count("## MATCH ") == 13
+    assert "| Player | Pos | Club | Match status |" in body
+    assert "| Slot | Player |" in body
+    assert "| Role | Player | Raw pts | Multiplier | Effective pts | Appearance |" in body
+    assert "| Player | Match status | Minutes | Raw pts | Multiplier | Effective pts |" in body
+    assert "| Player | Bonus | BPS |" in body
+    assert "Bench GK:" in body
+    assert "Outfield autosub priority:" in body
+    assert "Next critical observation\nfixture 101 full-time" in body
+    assert "Why it matters\nclarifies autosub and role consequence" in body
+    assert "When to reassess\nafter fixture 101 FT" in body
+    assert "element_id" not in body
+    assert "LOCKED_SUBMITTED_PICKS" not in body

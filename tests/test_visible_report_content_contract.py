@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 
 from src.runtime_v6.domains.report_plane.delivery_integrity import MANDATORY_SECTIONS
+from src.runtime_v6.domains.report_plane.human_presentation_qa import validate_human_presentation_surface
 from src.runtime_v6.domains.report_plane.report_qa import (
     _FULL_DEEP_VISIBLE_ORDER,
     _MATCH_VISIBLE_ORDER,
@@ -335,8 +336,8 @@ def _match_body(*, extra=""):
         "PERSONAL IMPACT FIRST\nP8: CAMEO_BLOCKED_AUTOSUB",
         "GLOBAL AUTOSUB STATE",
         "CAPTAIN / VICE CONSEQUENCE",
-        "OWNED LIVE/FINAL POINTS",
-        "BONUS/BPS",
+        "OWNED LIVE / FINAL POINTS",
+        "BONUS / BPS",
         "CARDS / INJURY / DEFCON / ROLE EVENTS",
         "RELEVANT LEAGUE-WIDE SIGNALS",
         "ICON+ LIVE",
@@ -1040,3 +1041,25 @@ def test_natural_regression_deep_action_markers_match_current_s18_contract():
     assert "ABORT / REVERSAL" in markers
     assert "NEXT:" not in markers
     assert "TRIGGERS:" not in markers
+
+
+def test_shared_human_presentation_gate_rejects_machine_language_and_allows_fpl_acronyms():
+    clean = "EO 82/58 (141.4%) | xPts 7.2 | xMins 88 | BPS 40 | DNP | FT 1 | GW7 | FPL"
+    assert validate_human_presentation_surface(clean, report_mode="MATCH") == []
+
+    leaked = (
+        "element_id=123\n"
+        "user_summary: {'entry_id': 3462711}\n"
+        "actual_paths=500000\n"
+        "workflow_id=999\n"
+        "fingerprint=abc123\n"
+        "CURRENT_VALID\n"
+    )
+    failures = validate_human_presentation_surface(leaked, report_mode="MATCH")
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=element_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=entry_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=user_summary" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=actual_paths" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=raw_run_or_workflow_id" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=raw_sha_or_fingerprint" in failures
+    assert "HUMAN_PRESENTATION_MACHINE_LANGUAGE_LEAK=CURRENT_VALID" in failures

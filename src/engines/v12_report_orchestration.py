@@ -2912,6 +2912,37 @@ def materialize_deep_report(
     return report
 
 
+def materialize_deadline_final_report(
+    *,
+    canonical_text: str,
+    report_mode: str,
+    section_payloads: Mapping[str, Mapping[str, Any]] | None,
+    deadline_presentation: Mapping[str, Any],
+    s16b_due: bool | None = None,
+) -> dict[str, Any]:
+    """Materialize Deadline/Final as a presentation overlay on canonical DEEP truth."""
+    mode = str(report_mode or "").strip().upper()
+    if mode not in {"DEADLINE", "FINAL"}:
+        raise ReportOrchestrationError(
+            f"deadline/final materializer requires DEADLINE or FINAL, got {mode or '<empty>'}"
+        )
+    due = (
+        bool(s16b_due)
+        if s16b_due is not None
+        else "S16B" in dict(section_payloads or {})
+    )
+    report = _materialize_canonical_report(
+        canonical_text=canonical_text,
+        structural_mode=mode,
+        reported_mode=mode,
+        section_payloads=section_payloads,
+        s16b_due=due,
+    )
+    report["s16b_due"] = due
+    report["deadline_presentation"] = dict(deadline_presentation or {})
+    return report
+
+
 def _post_match_structural_route(
     report_mode: str,
     *,
@@ -3098,6 +3129,8 @@ def materialize_match_report(
     cards_injury_defcon_role_events: Sequence[Mapping[str, Any]] | None = None,
     next_gw_learning: Sequence[Mapping[str, Any]] | None = None,
     next_critical_observation: str | None = None,
+    next_critical_reason: str | None = None,
+    next_reassess_at: str | None = None,
     source_freshness: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Materialize the Canonical MATCH1..MATCH13 surface from locked live truth.
@@ -3327,7 +3360,9 @@ def materialize_match_report(
                         if lifecycle.get("incremental_post_match_due")
                         else "next scoring-GW fixture state change"
                     )
-                )
+                ),
+                "why_it_matters": next_critical_reason,
+                "when_to_reassess": next_reassess_at,
             },
         },
         "MATCH13": {
@@ -3355,8 +3390,8 @@ def materialize_match_report(
             "PERSONAL IMPACT FIRST",
             "GLOBAL AUTOSUB STATE",
             "CAPTAIN / VICE CONSEQUENCE",
-            "OWNED LIVE/FINAL POINTS",
-            "BONUS/BPS",
+            "OWNED LIVE / FINAL POINTS",
+            "BONUS / BPS",
             "CARDS / INJURY / DEFCON / ROLE EVENTS",
             "RELEVANT LEAGUE-WIDE SIGNALS",
             "ICON+ LIVE",
@@ -3408,185 +3443,10 @@ def materialize_match_report(
 
 
 def render_match_text(report: Mapping[str, Any]) -> str:
-    """Render one coherent Canonical MATCH1..MATCH13 human-facing report."""
-    blocks: list[str] = []
-    for section in report.get("sections") or []:
-        sid = str(section.get("section_id") or "").upper()
-        label = str(section.get("label") or "")
-        state = str(section.get("state") or "")
-        content = (
-            dict(section.get("content") or {})
-            if isinstance(section.get("content"), Mapping)
-            else {}
-        )
-        lines = [_visible_section_heading(sid, label), f"Status: {state}"]
-        reason = str(section.get("degradation_reason") or "").strip()
-        if state != "COMPLETE" and reason:
-            lines.append(f"Reason: {reason}")
+    """Render the locked MATCH1..MATCH13 presentation contract."""
+    from src.engines.v12_locked_mode_renderers import render_match_locked_text
 
-        if sid == "MATCH1":
-            lines.extend(
-                [
-                    f"SCORING GW: {content.get('scoring_gw')}",
-                    f"FIXTURES LIVE: {content.get('fixtures_live')}",
-                    f"FIXTURES FT: {content.get('fixtures_ft')}",
-                    f"FIXTURES NOT STARTED: {content.get('fixtures_not_started')}",
-                    f"TIMESTAMP: {content.get('timestamp')}",
-                    f"LIFECYCLE: {content.get('lifecycle_mode')} / {content.get('transition')}",
-                    "WEATHER: MATCH CURRENT",
-                ]
-            )
-        elif sid == "MATCH2":
-            rows = [
-                dict(row)
-                for row in content.get("rows") or []
-                if isinstance(row, Mapping)
-            ]
-            lines.extend(
-                _markdown_table(
-                    ("element_id", "player_name", "position", "club", "fixture_status"),
-                    [
-                        (
-                            row.get("element"),
-                            row.get("name"),
-                            row.get("position"),
-                            row.get("team"),
-                            row.get("fixture_status"),
-                        )
-                        for row in rows
-                    ],
-                )
-            )
-            lines.append("XI: " + ", ".join(str(x) for x in content.get("xi") or []))
-            lines.append("BENCH: " + ", ".join(str(x) for x in content.get("bench") or []))
-            lines.append(f"SCORING AUTHORITY: {content.get('authority')}")
-        elif sid == "MATCH3":
-            for row in content.get("rows") or []:
-                if isinstance(row, Mapping):
-                    lines.append(
-                        "- "
-                        + " | ".join(
-                            f"{_human_label(key)}={value}"
-                            for key, value in row.items()
-                            if isinstance(value, (str, int, float, bool)) or value is None
-                        )
-                    )
-        elif sid == "MATCH4":
-            bench_gk = content.get("bench_gk")
-            if isinstance(bench_gk, Mapping):
-                bench_gk = bench_gk.get("name") or bench_gk.get("element")
-            priority = [
-                row.get("name") or row.get("element")
-                if isinstance(row, Mapping)
-                else row
-                for row in content.get("outfield_autosub_priority") or []
-            ]
-            lines.append(f"BENCH GK: {bench_gk or 'UNAVAILABLE'}")
-            lines.append(
-                "OUTFIELD AUTOSUB PRIORITY: "
-                + ", ".join(
-                    f"{index} {value}"
-                    for index, value in enumerate(priority, start=1)
-                )
-            )
-            lines.append(f"AUTOSUB STATE: {content.get('status') or 'PROVISIONAL'}")
-        elif sid == "MATCH5":
-            captain = dict(content.get("captain") or {})
-            vice = dict(content.get("vice") or {})
-            lines.extend(
-                [
-                    "CAPTAIN: "
-                    f"{captain.get('name')} | raw={captain.get('raw_points')} | "
-                    f"multiplier={captain.get('multiplier')} | effective={captain.get('effective_points')} | "
-                    f"appearance={captain.get('appearance_state')}",
-                    "VICE: "
-                    f"{vice.get('name')} | raw={vice.get('raw_points')} | "
-                    f"multiplier={vice.get('multiplier')} | effective={vice.get('effective_points')} | "
-                    f"appearance={vice.get('appearance_state')}",
-                    f"VICE TAKEOVER: {content.get('vice_takeover_state')}",
-                    f"FINAL CONSEQUENCE: {content.get('final_consequence')}",
-                ]
-            )
-        elif sid == "MATCH6":
-            lines.extend(
-                _markdown_table(
-                    ("element_id", "player", "state", "minutes", "raw_points", "multiplier", "effective_points"),
-                    [
-                        (
-                            row.get("element_id"),
-                            row.get("player"),
-                            row.get("state"),
-                            row.get("minutes"),
-                            row.get("raw_points"),
-                            row.get("multiplier"),
-                            row.get("effective_points"),
-                        )
-                        for row in content.get("rows") or []
-                        if isinstance(row, Mapping)
-                    ],
-                )
-            )
-        elif sid == "MATCH7":
-            lines.append(
-                "BONUS/BPS STATUS: "
-                + str(content.get("status") or "PROVISIONAL")
-            )
-            lines.append(f"PROVISIONAL: {content.get('provisional') is True}")
-            for row in content.get("rows") or []:
-                if isinstance(row, Mapping):
-                    lines.append(
-                        f"- {row.get('player')} | bonus={row.get('bonus')} | bps={row.get('bps')}"
-                    )
-        elif sid in {"MATCH8", "MATCH9", "MATCH11"}:
-            rows = [
-                dict(row)
-                for row in content.get("rows") or []
-                if isinstance(row, Mapping)
-            ]
-            if rows:
-                for row in rows:
-                    lines.append(
-                        "- "
-                        + " | ".join(
-                            f"{_human_label(key)}={value}"
-                            for key, value in row.items()
-                            if isinstance(value, (str, int, float, bool)) or value is None
-                        )
-                    )
-            else:
-                lines.append("NONE MATERIAL / NONE SUPPORTABLE")
-            if sid == "MATCH8":
-                lines.append("OBSERVATION ≠ AUTOMATIC MODEL CHANGE")
-            if sid == "MATCH11":
-                lines.append("NEXT-GW LEARNING IS EVIDENCE, NOT AUTOMATIC TRANSFER")
-        elif sid == "MATCH10":
-            if state == "COMPLETE":
-                lines.append("MANAGER COVERAGE: COMPLETE")
-            else:
-                lines.append("MINI_LEAGUE SOURCE: DEGRADED")
-            lines.extend(
-                _render_generic_human_content(content)
-                or ["Current ICON+ consequence unavailable."]
-            )
-        elif sid == "MATCH12":
-            lines.append(
-                "NEXT CRITICAL OBSERVATION: "
-                + str(content.get("observation") or "UNAVAILABLE")
-            )
-        elif sid == "MATCH13":
-            lines.extend(
-                [
-                    "FACT: Official FPL fixture/event-live and locked submitted picks.",
-                    "MODEL: Frozen pre-deadline prediction snapshot where available.",
-                    "INFERENCE: Personal/live consequences are explicitly labelled.",
-                ]
-            )
-            lines.extend(_render_generic_human_content(content))
-        else:
-            lines.extend(_render_generic_human_content(content))
-        blocks.append("\n".join(lines))
-    return "\n\n".join(blocks)
-
+    return render_match_locked_text(report)
 
 def _visible_section_heading(section_id: Any, label: Any) -> str:
     """Render a heading shape that the visible-body validator can parse."""
@@ -5948,7 +5808,16 @@ def _render_deep_visible_contract_lines(
 
 
 def render_deep_text(report: Mapping[str, Any]) -> str:
-    """Human-facing DEEP renderer retaining nested analytic evidence."""
+    """Human-facing DEEP renderer with bounded Deadline/Final presentation overlay."""
+    mode = str(report.get("report_mode") or "DEEP").strip().upper()
+    deadline_mode = mode in {"DEADLINE", "FINAL"}
+    if deadline_mode:
+        from src.engines.v12_locked_mode_renderers import (
+            deadline_header_lines,
+            deadline_section_overlay_lines,
+            render_gw_lock_package,
+        )
+
     sections = [
         dict(row)
         for row in report.get("sections") or []
@@ -5984,6 +5853,8 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
     }
 
     blocks: list[str] = []
+    if deadline_mode:
+        blocks.append("\n".join(deadline_header_lines(report)))
     for row in sections:
         label = str(row.get("label") or "")
         state = str(row.get("state") or "")
@@ -6015,15 +5886,21 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                 + str(binding.get("status") or "UNAVAILABLE")
             )
 
-        visible_lines, visible_excluded = (
-            _render_deep_visible_contract_lines(
-                section_id=section_id,
-                content=content_map,
-                owned_ids=owned_ids,
-                owned_names=owned_names,
+        if deadline_mode and section_id == "GW_LOCK_PACKAGE":
+            visible_lines = render_gw_lock_package(content_map)
+            visible_excluded = tuple(content_map.keys())
+        else:
+            visible_lines, visible_excluded = (
+                _render_deep_visible_contract_lines(
+                    section_id=section_id,
+                    content=content_map,
+                    owned_ids=owned_ids,
+                    owned_names=owned_names,
+                )
             )
-        )
         lines.extend(visible_lines)
+        if deadline_mode and section_id != "GW_LOCK_PACKAGE":
+            lines.extend(deadline_section_overlay_lines(section_id, report))
 
         scout = [
             dict(item)

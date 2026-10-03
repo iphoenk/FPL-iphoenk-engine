@@ -10,6 +10,7 @@ delivery gate. It must never reconstruct football decisions.
 from typing import Any, Mapping
 
 from src.engines.v12_deep_delivery import validate_deep_decision_content_delivery
+from src.engines.v12_deep_presentation_lock import validate_rendered_deep_presentation
 from src.engines.v12_delivery_reliability import canonical_deep_sections
 from src.runtime_v6.domains.report_plane.report_qa import (
     _validate_v12_rendered_body,
@@ -133,7 +134,7 @@ def validate_final_delivery_barrier(
                 prefix="DEEP",
             )
         )
-        failures.extend(validate_deep_decision_content_delivery(report, text))
+        failures.extend(validate_deep_decision_content_delivery(report, text))\n        failures.extend(validate_rendered_deep_presentation(text, report))
 
     elif mode == "MATCH":
         failures.extend(

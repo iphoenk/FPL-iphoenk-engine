@@ -303,6 +303,7 @@ jobs:
           tests/test_delivery_schedule_policy.py
           tests/test_data_platform_precompute_control.py
           tests/test_runtime_cross_cpu_proof_registry.py
+          tests/test_camoufox_report_time_sources.py
 
   runtime-cross-cpu-probe:
     name: runtime-cross-cpu-probe-${{ matrix.label }}

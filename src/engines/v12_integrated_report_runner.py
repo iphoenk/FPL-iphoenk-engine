@@ -274,6 +274,7 @@ def _decision_snapshot_from_report(
     s02 = _section_content_from_report(report, "S02")
     s06 = _section_content_from_report(report, "S06")
     s09 = _section_content_from_report(report, "S09")
+    s15 = _section_content_from_report(report, "S15")
     s15b = _section_content_from_report(report, "S15B")
     s17 = _section_content_from_report(report, "S17")
     s19 = _section_content_from_report(report, "S19")
@@ -347,8 +348,19 @@ def _decision_snapshot_from_report(
         "player_state": player_state,
         "mini_league": _mini_delta_state(s15b),
         "finance_state": (
-            (s17.get("source_health") or {}).get("finance")
-        ),
+            (
+                (s15.get("evidence_assessment") or s15.get("evidence_quality") or {})
+                .get("Finance", {})
+                .get("state")
+            )
+            if isinstance(
+                (s15.get("evidence_assessment") or s15.get("evidence_quality") or {})
+                .get("Finance", {}),
+                Mapping,
+            )
+            else None
+        )
+        or (s17.get("source_health") or {}).get("finance"),
         "chip_state": s09.get("chip"),
     }
 

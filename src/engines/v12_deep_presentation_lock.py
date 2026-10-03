@@ -30,6 +30,55 @@ def validate_deep_presentation_lock_contract(
     if list(sections) != expected_order:
         failures.append("SECTION_SCHEMA_ORDER_MISMATCH")
 
+    expected_header = [
+        "FPL MASTER V12 — DEEP REPORT",
+        "Planning GW",
+        "Logical report slot",
+        "Report",
+        "Sections",
+    ]
+    if list(cfg.get("header_order") or []) != expected_header:
+        failures.append("HEADER_ORDER_MISMATCH")
+
+    expected_roles = {
+        "HEADER": "What report am I reading?",
+        "S01": "What should I do now?",
+        "S14": "What did the optimizer/search establish?",
+        "S15": "Can I trust the available evidence enough for this decision?",
+        "S17": "Did the technical system deliver that evidence correctly, freshly and from the correct occurrence?",
+        "S19": "What is the final consolidated judgement?",
+    }
+    if dict(cfg.get("information_architecture") or {}) != expected_roles:
+        failures.append("INFORMATION_ARCHITECTURE_MISMATCH")
+
+    expected_ownership = {
+        "Squad evidence completeness": "S15",
+        "Availability evidence quality": "S15",
+        "Underlying evidence quality": "S15",
+        "Tactical/role evidence quality": "S15",
+        "Fixture evidence completeness": "S15",
+        "Non-PL workload completeness": "S15",
+        "Finance completeness": "S15",
+        "Price evidence decision usability": "S15",
+        "Mini-league evidence usefulness": "S15",
+        "Weather evidence usefulness": "S15",
+        "PRIOR vs CURRENT semantics": "S15",
+        "V6 factual pipeline health": "S17",
+        "Canonical V12 computation health": "S17",
+        "Optimizer/MC execution health": "S17",
+        "Price pipeline health": "S17",
+        "Mini-league pipeline health": "S17",
+        "Weather pipeline health": "S17",
+        "Exact occurrence binding": "S17",
+        "Serving/private delivery": "S17",
+        "Presentation QA": "S17",
+        "Privacy boundary": "S17",
+        "Workflow/run IDs": "S17_AUDIT_ONLY",
+        "SHA/fingerprint": "S17_AUDIT_ONLY",
+    }
+    if dict(cfg.get("ownership_matrix") or {}) != expected_ownership:
+        failures.append("OWNERSHIP_MATRIX_MISMATCH")
+
     expected_tables = {
         "S01": [("Axis","Status","Current call")],
         "S02": [("Player","Pos","Opponent","Pstart","xMins","1GW xPts","3GW","5GW","Note")],
@@ -40,7 +89,7 @@ def validate_deep_presentation_lock_contract(
         "S11": [("Player","Pos","£","xMins","Pstart","DNP","Score","Admit","Evidence")],
         "S12": [("#","Player","£","Progress","ETA")],
         "S13": [("#","Player","£","Progress","ETA")],
-        "S15": [("Evidence domain","Status")],
+        "S15": [("Evidence domain","Quality","Decision impact")],
         "S15B": [
             ("Scope","Definition","Coverage"),
             ("Rank","Manager","Team","Points","Gap"),
@@ -106,6 +155,23 @@ def validate_deep_presentation_lock_contract(
     if list(s14.get("blocks") or []) != expected_s14_blocks:
         failures.append("S14_SEMANTIC_BLOCK_CONTRACT_MISMATCH")
 
+    s15 = sections.get("S15") or {}
+    if list(s15.get("blocks") or []) != [
+        "Overall evidence confidence",
+        "Evidence limitations",
+        "Decision implication",
+        "PRIOR != CURRENT",
+    ]:
+        failures.append("S15_BLOCK_CONTRACT_MISMATCH")
+
+    s17 = sections.get("S17") or {}
+    if list(s17.get("blocks") or []) != [
+        "Freshness",
+        "Lineage",
+        "Audit note (optional compact)",
+    ]:
+        failures.append("S17_BLOCK_CONTRACT_MISMATCH")
+
     s15b = sections.get("S15B") or {}
     if s15b.get("forbid_table_merge") is not True:
         failures.append("S15B_TABLE_MERGE_NOT_FORBIDDEN")
@@ -123,6 +189,14 @@ def validate_deep_presentation_lock_contract(
         "merged_unrelated_tables_forbidden",
         "missing_supported_population_denominator_forbidden",
         "percentage_without_count_denominator_forbidden_when_population_known",
+        "header_identity_only",
+        "header_decision_forbidden",
+        "header_optimizer_detail_forbidden",
+        "header_technical_plumbing_forbidden",
+        "s15_decision_evidence_only",
+        "s17_technical_provenance_only",
+        "pipeline_health_not_equivalent_to_evidence_quality",
+        "prior_must_not_be_presented_as_current",
     ):
         if rules.get(key) is not True:
             failures.append(f"GLOBAL_RULE_NOT_LOCKED={key}")
@@ -176,6 +250,52 @@ def validate_rendered_deep_presentation(
     sections_cfg = dict(cfg.get("sections") or {})
     rendered = _rendered_sections(body)
     failures: list[str] = []
+
+    report_mode = str((report or {}).get("report_mode") or "DEEP").strip().upper()
+    if report_mode == "DEEP":
+        first_heading = re.search(r"(?m)^##\s+1\.\s+", str(body or ""))
+        header_text = (
+            str(body or "")[:first_heading.start()].strip()
+            if first_heading
+            else str(body or "").strip()
+        )
+        header_lines = [line.strip() for line in header_text.splitlines() if line.strip()]
+        if len(header_lines) != 5:
+            failures.append(f"HEADER_LINE_COUNT={len(header_lines)}/5")
+        else:
+            if header_lines[0] != "FPL MASTER V12 — DEEP REPORT":
+                failures.append("HEADER_TITLE_MISMATCH")
+            expected_prefixes = (
+                "Planning GW:",
+                "Logical report slot:",
+                "Report:",
+                "Sections:",
+            )
+            for line, prefix in zip(header_lines[1:], expected_prefixes):
+                if not line.startswith(prefix):
+                    failures.append("HEADER_FIELD_ORDER_MISMATCH=" + prefix.rstrip(":"))
+            if "READY_FULL" not in header_lines[3] and "READY_DEGRADED" not in header_lines[3]:
+                failures.append("HEADER_REPORT_VALIDITY_MISSING")
+            if "lifecycle-visible" not in header_lines[4]:
+                failures.append("HEADER_LIFECYCLE_COUNT_MISSING")
+
+        header_upper = header_text.upper()
+        for token in (
+            "CANONICAL RUN",
+            "ORCHESTRATOR",
+            "REPORT RUN ID",
+            "PRIVATE DELIVERY",
+            "PRESENTATION QA",
+            "SERVING NOTE",
+            "SELECTED ACTION",
+            "SHA",
+            "FINGERPRINT",
+            "ROUTES:",
+            "UNIVERSE:",
+            "MC:",
+        ):
+            if token in header_upper:
+                failures.append("HEADER_FORBIDDEN_CONTENT=" + token)
 
     due = bool((report or {}).get("s16b_due"))
     expected = [
@@ -260,6 +380,49 @@ def validate_rendered_deep_presentation(
         re.I,
     ):
         failures.append("RENDERED_INTERNAL_SNAKE_CASE")
+
+    s15_text = rendered.get("S15", "")
+    if s15_text and state_by_sid.get("S15") == "COMPLETE":
+        s15_upper = s15_text.upper()
+        for required in (
+            "OVERALL EVIDENCE CONFIDENCE:",
+            "EVIDENCE LIMITATIONS",
+            "DECISION IMPLICATION",
+            "PRIOR != CURRENT",
+        ):
+            if required not in s15_upper:
+                failures.append("S15_REQUIRED_BLOCK_MISSING=" + required.rstrip(":"))
+        for forbidden in (
+            "ORCHESTRATOR",
+            "PRIVATE DELIVERY",
+            "PRESENTATION QA",
+            "PRIVACY BOUNDARY",
+            "CACHE HEALTH",
+            "RUN ID",
+            "SHA",
+            "FINGERPRINT",
+            "WORKFLOW HEALTH",
+        ):
+            if forbidden in s15_upper:
+                failures.append("S15_TECHNICAL_OVERLAP=" + forbidden)
+
+    s17_text = rendered.get("S17", "")
+    if s17_text and state_by_sid.get("S17") == "COMPLETE":
+        s17_upper = s17_text.upper()
+        for required in ("FRESHNESS", "LINEAGE"):
+            if required not in s17_upper:
+                failures.append("S17_REQUIRED_BLOCK_MISSING=" + required)
+        for forbidden in (
+            "SQUAD EVIDENCE",
+            "FINANCE COMPLETENESS",
+            "FIXTURE EVIDENCE QUALITY",
+            "WORKLOAD EVIDENCE",
+            "PLAYER AVAILABILITY EVIDENCE",
+            "TACTICAL EVIDENCE QUALITY",
+            "WEATHER EVIDENCE USEFULNESS",
+        ):
+            if forbidden in s17_upper:
+                failures.append("S17_ANALYST_EVIDENCE_OVERLAP=" + forbidden)
 
     s15b = rendered.get("S15B", "")
     if s15b and state_by_sid.get("S15B") == "COMPLETE":

@@ -47,7 +47,15 @@ def _table(columns: list[str], rows: int, *, sid: str) -> list[str]:
 def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
     degraded = degraded or set()
     cfg = load_deep_presentation_lock()
-    blocks: list[str] = []
+    blocks: list[str] = [
+        "\n".join([
+            "FPL MASTER V12 — DEEP REPORT",
+            "Planning GW: GW6",
+            "Logical report slot: 03 Oct 2026, 21:30 WIB",
+            "Report: 🟢 READY_FULL · Exact occurrence",
+            "Sections: 22/22 lifecycle-visible · S16B not due",
+        ])
+    ]
     report_sections = []
     for sid in cfg["section_order"]:
         if sid == "S16B":
@@ -66,12 +74,35 @@ def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
                 if count is None:
                     count = 1
                 lines.extend(_table(table["columns"], int(count), sid=sid))
+            if sid == "S15":
+                lines.extend([
+                    "Overall evidence confidence: MEDIUM-HIGH",
+                    "Evidence limitations",
+                    "- Price movement: monitor only.",
+                    "PRIOR != CURRENT: prior evidence is never represented as CURRENT.",
+                    "Decision implication",
+                    "Evidence is decision-usable; stale evidence cannot independently trigger ACT.",
+                ])
             if sid == "S16":
                 for index in range(1, 16):
                     lines.append(f"### PLAYER {index} — P{index}")
                     lines.append("Readable player evidence.")
+            if sid == "S17":
+                lines.extend([
+                    "Freshness",
+                    "Decision-critical technical sources are within contract.",
+                    "Lineage",
+                    "Report mode DEEP; exact occurrence binding verified.",
+                ])
         blocks.append("\n".join(lines))
-    return "\n\n".join(blocks), {"s16b_due": False, "sections": report_sections}
+    return "\n\n".join(blocks), {
+        "report_mode": "DEEP",
+        "report_slot": "2026-10-03T21:30:00+07:00",
+        "planning_gw": 6,
+        "exact_occurrence": True,
+        "s16b_due": False,
+        "sections": report_sections,
+    }
 
 
 def test_rendered_deep_schema_lock_accepts_exact_markdown():
@@ -145,3 +176,37 @@ def test_s04_grouping_code_no_longer_hardcodes_supported_groups_empty():
     assert '"OTHER MATERIAL": []' not in source
     assert '"TEAM / TACTICAL"' in source
     assert '"OTHER MATERIAL"' in source
+
+def test_rendered_deep_schema_lock_rejects_header_duplication():
+    body, report = _valid_body()
+    body = body.replace(
+        "Sections: 22/22 lifecycle-visible · S16B not due",
+        "Sections: 22/22 lifecycle-visible · S16B not due\nMC: 500000",
+        1,
+    )
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "HEADER_LINE_COUNT=6/5" in failures
+    assert "HEADER_FORBIDDEN_CONTENT=MC:" in failures
+
+
+def test_rendered_deep_schema_lock_rejects_s15_technical_overlap():
+    body, report = _valid_body()
+    body = body.replace(
+        "Decision implication\nEvidence is decision-usable; stale evidence cannot independently trigger ACT.",
+        "Decision implication\nEvidence is decision-usable; stale evidence cannot independently trigger ACT.\nPrivate delivery: PASS",
+        1,
+    )
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "S15_TECHNICAL_OVERLAP=PRIVATE DELIVERY" in failures
+
+
+def test_rendered_deep_schema_lock_rejects_s17_analyst_overlap():
+    body, report = _valid_body()
+    body = body.replace(
+        "Report mode DEEP; exact occurrence binding verified.",
+        "Report mode DEEP; exact occurrence binding verified.\nFinance completeness: Strong",
+        1,
+    )
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "S17_ANALYST_EVIDENCE_OVERLAP=FINANCE COMPLETENESS" in failures
+

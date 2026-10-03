@@ -23,6 +23,7 @@ from .delivery_integrity import (
     PRICE_MANDATORY_SECTIONS,
 )
 from .visible_body_contract import validate_visible_report_body
+from .human_presentation_qa import validate_human_presentation_surface
 
 
 # QA-only mirrors of Canonical V12 invariants. These values are validation
@@ -1268,10 +1269,13 @@ def _validate_v12_rendered_body(
     rendered_body: str,
     content_contract: Mapping[str, Any] | None,
 ) -> list[str]:
-    if not isinstance(content_contract, Mapping):
-        return []
-    failures: list[str] = []
     body = str(rendered_body or "")
+    failures: list[str] = validate_human_presentation_surface(
+        body,
+        report_mode=report_mode,
+    )
+    if not isinstance(content_contract, Mapping):
+        return failures
     lower = body.casefold()
     for phrase in _DEBUG_VISIBLE_PHRASES:
         if phrase.casefold() in lower:

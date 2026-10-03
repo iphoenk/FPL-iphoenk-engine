@@ -6,17 +6,8 @@
     "FPL MASTER V12 — DEEP REPORT",
     "Planning GW",
     "Logical report slot",
-    "Canonical run",
-    "Report status",
-    "Delivery",
-    "Private delivery",
-    "Presentation QA",
-    "Sections",
-    "MC",
-    "Routes",
-    "Universe",
-    "Selected action",
-    "Serving note"
+    "Report",
+    "Sections"
   ],
   "global_rules": {
     "human_analyst_style": true,
@@ -366,16 +357,34 @@
     "S15": {
       "title": "EVIDENCE QUALITY",
       "blocks": [
-        "No PRIOR represented as CURRENT note"
+        "Overall evidence confidence",
+        "Evidence limitations",
+        "Decision implication",
+        "PRIOR != CURRENT"
       ],
       "tables": [
         {
           "name": "Evidence quality",
           "columns": [
             "Evidence domain",
-            "Status"
+            "Quality",
+            "Decision impact"
           ]
         }
+      ],
+      "forbidden_primary_content": [
+        "V6 workflow health",
+        "V12 workflow health",
+        "orchestrator status",
+        "run IDs",
+        "occurrence binding",
+        "serving status",
+        "private delivery",
+        "presentation QA",
+        "privacy boundary",
+        "cache health",
+        "SHA/fingerprint",
+        "workflow plumbing"
       ]
     },
     "S15B": {
@@ -523,15 +532,34 @@
     },
     "S17": {
       "title": "SOURCE HEALTH / FRESHNESS / LINEAGE",
+      "blocks": [
+        "Freshness",
+        "Lineage",
+        "Audit note"
+      ],
       "tables": [
         {
-          "name": "Source health",
+          "name": "Technical provenance",
           "columns": [
             "Plane",
             "Status"
           ]
         }
-      ]
+      ],
+      "forbidden_primary_content": [
+        "Squad evidence completeness",
+        "Availability evidence quality",
+        "Underlying evidence quality",
+        "Tactical/role evidence quality",
+        "Fixture evidence completeness",
+        "Non-PL workload completeness",
+        "Finance completeness",
+        "Price evidence decision usability",
+        "Mini-league evidence usefulness",
+        "Weather evidence usefulness",
+        "PRIOR vs CURRENT semantics"
+      ],
+      "audit_note_optional": true
     },
     "S18": {
       "title": "ACTION BOARD",
@@ -563,5 +591,57 @@
       ],
       "tables": []
     }
+  },
+  "header_ownership": {
+    "purpose": "Report identity only",
+    "forbidden_primary_content": [
+      "Canonical run",
+      "orchestrator run ID",
+      "report run ID",
+      "long occurrence plumbing",
+      "Delivery detail",
+      "Private delivery detail",
+      "SHA/fingerprint",
+      "Presentation QA detail",
+      "MC",
+      "Routes",
+      "Universe",
+      "optimizer count",
+      "Selected action",
+      "Serving note"
+    ]
+  },
+  "information_ownership": {
+    "HEADER": "Report identity only",
+    "S01": "Current decision / current action",
+    "S14": "Optimizer, Monte Carlo, route and search evidence",
+    "S15": "Decision evidence quality, completeness, CURRENT/PRIOR semantics and usability",
+    "S17": "Technical source health, freshness, exact-occurrence binding, serving lineage and QA provenance",
+    "S19": "Final consolidated judgement"
+  },
+  "s15_s17_ownership_matrix": {
+    "Squad evidence completeness": "S15",
+    "Availability evidence quality": "S15",
+    "Underlying evidence quality": "S15",
+    "Tactical/role evidence quality": "S15",
+    "Fixture evidence completeness": "S15",
+    "Non-PL workload completeness": "S15",
+    "Finance completeness": "S15",
+    "Price evidence decision usability": "S15",
+    "Mini-league evidence usefulness": "S15",
+    "Weather evidence usefulness": "S15",
+    "PRIOR vs CURRENT semantics": "S15",
+    "V6 factual pipeline health": "S17",
+    "Canonical V12 computation health": "S17",
+    "Optimizer/MC execution health": "S17",
+    "Price pipeline health": "S17",
+    "Mini-league pipeline health": "S17",
+    "Weather pipeline health": "S17",
+    "Exact occurrence binding": "S17",
+    "Serving/private delivery": "S17",
+    "Presentation QA": "S17",
+    "Privacy boundary": "S17",
+    "Workflow/run IDs": "S17_AUDIT_ONLY",
+    "SHA/fingerprint": "S17_AUDIT_ONLY"
   }
 }

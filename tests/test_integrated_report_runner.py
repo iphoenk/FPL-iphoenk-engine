@@ -1244,8 +1244,8 @@ def test_mini_league_s15b_visible_renderer_keeps_comprehensive_contract(monkeypa
     )
     body = "\n".join(lines)
     assert "DENOMINATOR SCOPES" in body
-    assert "LEAGUE3_INCL_US" in body
-    assert "RIVALS2_EXCL_US" in body
+    assert "All managers including us" in body
+    assert "All managers excluding us" in body
     assert "COMPETITIVE_WINDOW" in body
     assert "OUR15 EXPOSURE, LEAGUE" in body
     assert "OUR15 EXPOSURE, RIVALS" in body

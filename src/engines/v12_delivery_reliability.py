@@ -1945,6 +1945,20 @@ def write_serving_artifacts(
                 "presentation_qa": "🟢 PASS" if qa_pass else "🟡 DEGRADED",
                 "privacy_boundary": "🟢 Private serving boundary enforced",
             }
+            # S17 is governed like the other decision-critical sections.
+            # Finalizing delivery provenance changes its payload, so refresh
+            # only the presentation binding fingerprint; no analytics or
+            # decision payload is recomputed.
+            binding = dict(content.get("authoritative_binding") or {})
+            if str(binding.get("status") or "").upper() == "BOUND":
+                binding["payload_fingerprint"] = _fingerprint(
+                    {
+                        key: value
+                        for key, value in content.items()
+                        if key != "authoritative_binding"
+                    }
+                )
+                content["authoritative_binding"] = binding
             row["content"] = content
         report["sections"] = sections
         from src.engines.v12_report_orchestration import render_deep_text

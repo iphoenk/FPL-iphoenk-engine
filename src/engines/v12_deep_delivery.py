@@ -247,7 +247,11 @@ def validate_deep_decision_content_delivery(
             "LEAGUE LANDSCAPE:",
             "DENOMINATOR SCOPES",
             "COMPETITIVE WINDOW",
-            "OUR15 EXPOSURE, LEAGUE",
+            "OUR15 LEAGUE",
+            "OUR15 RIVALS",
+            "OUR15 COMPETITIVE WINDOW",
+            "COMPETITIVE RIVALS",
+            "COMPETITIVE-WINDOW RIVAL-ONLY THREATS",
             "CAPTAIN LANDSCAPE",
         ):
             if token not in upper:
@@ -570,8 +574,12 @@ def validate_deep_decision_content_delivery(
         }
         if not required_axes.issubset(axis_names):
             failures.append("S18_MULTI_AXIS_INCOMPLETE")
-        if "MULTI-AXIS ACTION BOARD" not in upper:
-            failures.append("S18_MULTI_AXIS_NOT_VISIBLE")
+        # The locked renderer exposes the six analyst axes as bounded headings.
+        # Do not require the retired aggregate "MULTI-AXIS ACTION BOARD" banner.
+        for visible_axis in ("### TRANSFER", "### XI", "### CAPTAIN", "### PRICE", "### FINANCE", "### MAIN WATCH FLAGS"):
+            if visible_axis not in upper:
+                failures.append("S18_MULTI_AXIS_NOT_VISIBLE")
+                break
         if board.get("best_alternative") is not None and (
             "best_alternative_executable" not in board
         ):

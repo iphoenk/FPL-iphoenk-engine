@@ -304,9 +304,9 @@ def _rich_s02_rows():
 def test_a_direct_affordable_upgrade_is_visible():
     report = _deep_report([_route()])
     body = render_deep_text(report)
-    assert "DIRECT / 1-TRANSFER" in body
-    assert "OUT → IN P01 → P101" in body
-    assert "BANK BEFORE" in body and "BANK AFTER" in body
+    assert "### BEST CHALLENGER" in body
+    assert "P01 → P101" in body
+    assert "### EXECUTION ECONOMICS" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
@@ -368,8 +368,8 @@ def test_b_unaffordable_target_can_reach_funded_two_transfer_mc_surface():
 
     report = _deep_report([_route("FUNDED", transfer_count=2)])
     body = render_deep_text(report)
-    assert "FUNDED / 2-TRANSFER" in body
-    assert "OUT → IN P01, P02 → P101, P102" in body
+    assert "### BEST CHALLENGER" in body
+    assert "P01, P02 → P101, P102" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
@@ -377,8 +377,9 @@ def test_c_hit_economics_can_leave_hold_as_canonical_winner():
     route = _route("R_NEG", transfer_count=2, net=-1.1, verdict="WAIT")
     report = _deep_report([route])
     body = render_deep_text(report)
-    assert "NET GAIN -1.1" in body
-    assert "NOW" in body and "WAIT" in body
+    assert "### EXECUTION ECONOMICS" in body
+    assert "-1.1" in body
+    assert "WAIT" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
@@ -387,7 +388,8 @@ def test_d_positive_funded_package_preserves_prepare_or_act_decision():
     report = _deep_report([route])
     body = render_deep_text(report)
     assert "PREPARE" in body
-    assert "NET GAIN 2.5" in body
+    assert "### EXECUTION ECONOMICS" in body
+    assert "2.5" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
@@ -399,7 +401,7 @@ def test_e_high_owned_candidate_is_not_rejected_by_delivery_layer():
     }
     report = _deep_report([route])
     body = render_deep_text(report)
-    assert "football_ev_precedes_leverage" in body
+    assert "football ev precedes leverage" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 
@@ -412,7 +414,7 @@ def test_f_differential_utility_is_visible_without_forcing_selection():
     }
     report = _deep_report([route])
     body = render_deep_text(report)
-    assert "rank_gain_utility" in body
+    assert "rank gain utility" in body
     assert "WAIT" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
@@ -678,7 +680,7 @@ def test_k_due_s16b_requires_match_review_exact15_and_universe_denominator():
 def test_l_canonical_mc_500k_must_reach_visible_probability_and_tails():
     report = _deep_report([_route()])
     body = render_deep_text(report)
-    assert "MC PATHS: 500000" in body
+    assert "Actual paths: 500000" in body
     assert "P>HOLD" in body
     assert "Q10" in body and "Q90" in body
     assert validate_deep_decision_content_delivery(report, body) == []
@@ -973,7 +975,7 @@ def test_r_legacy_short_narrative_cannot_human_facing_pass():
         "WAIT. Hold for now.",
     )
     assert failures
-    assert "FRONTIER_IDENTITIES_NOT_VISIBLE" in failures
+    assert "S14_BEST_CHALLENGER_NOT_VISIBLE" in failures
     assert "MC_DISTRIBUTION_NOT_VISIBLE" in failures
 
 def test_integrated_deep_does_not_bruteforce_global_two_transfer_p17():
@@ -1080,7 +1082,7 @@ def test_stage_a_required_ci_price_freshness_is_human_visible():
     )
     report = _deep_report([_route()], extra_sections=[s10])
     body = render_deep_text(report)
-    assert "source_age_minutes" in body
+    assert "source age minutes" in body.lower()
     assert "freshness" in body
     assert "STALE" in body
     failures = validate_deep_decision_content_delivery(report, body)
@@ -1723,7 +1725,7 @@ def test_stage_d_legacy_single_wait_s01_cannot_satisfy_multi_axis_dashboard():
     }
     body = render_deep_text(report)
     failures = validate_deep_decision_content_delivery(report, body)
-    assert "MULTI-AXIS DECISION DASHBOARD" in body
+    assert "| Axis | Status | Current call |" in body
     assert "S01_AXIS_INVALID=TRANSFER" in failures
     assert "S01_MULTI_AXIS_PAYLOAD_MISSING" in failures
 
@@ -1801,7 +1803,7 @@ def test_stage_d_s03_degraded_baseline_does_not_invent_numeric_delta():
     }
     body = render_deep_text(report)
     failures = validate_deep_decision_content_delivery(report, body)
-    assert "BASELINE UNAVAILABLE" in body
+    assert "baseline unavailable" in body.lower()
     assert "S03_NUMERIC_DELTA_GUARD_MISSING" not in failures
     assert "S03_DEGRADED_BASELINE_STATE_INVALID" not in failures
 

@@ -22,6 +22,7 @@ from src.engines.price_radar import (
     OFFICIAL_UPDATE_TIMEZONE,
 )
 from src.engines.visible_content_proof import canonical_mode_contract
+from src.engines.v12_competitive_window import resolve_competitive_window
 from src.engines.v12_section_resolver import (
     resolve_section,
     validate_resolved_sections,
@@ -3142,6 +3143,37 @@ def materialize_match_report(
         "official_finalization_authoritative": True,
     }
     icon = dict(icon_live or {})
+    if icon:
+        submitted_scope = dict(icon.get("submitted_picks_exposure") or {})
+        standings_scope = dict(icon.get("live_standings_rank") or {})
+        user_summary = dict(icon.get("user_summary") or {})
+        our_rank = (
+            icon.get("current_live_rank")
+            or user_summary.get("rank")
+            or icon.get("our_rank")
+        )
+        league_size = (
+            icon.get("expected_manager_count")
+            or submitted_scope.get("expected_count")
+            or standings_scope.get("expected_count")
+            or icon.get("league_size")
+        )
+        competitive_window = resolve_competitive_window(our_rank, league_size)
+        icon["competitive_window"] = competitive_window
+        expected_ranks = set(competitive_window.get("ranks") or [])
+        rival_source = icon.get("competitive_rival_live_consequence")
+        if rival_source is None:
+            rival_source = (icon.get("rival_live_points") or {}).get("rows") or []
+        icon["competitive_rival_live_consequence"] = [
+            dict(row)
+            for row in rival_source or []
+            if isinstance(row, Mapping)
+            and (
+                not expected_ranks
+                or int(row.get("rank") or 0) in expected_ranks
+            )
+        ]
+        icon.pop("direct_rival_live_consequence", None)
     icon_state = (
         "COMPLETE"
         if str(icon.get("status") or "").upper() in {"FRESH", "COMPLETE"}

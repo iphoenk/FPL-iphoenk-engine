@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "contract": "CAMOUFOX_PUBLIC_INFORMATION_ACQUISITION_V1",
+  "policy": {
+    "transport": "CAMOUFOX",
+    "public_read_only": true,
+    "authentication_forbidden": true,
+    "member_or_paywalled_pages_forbidden": true,
+    "captcha_solving_forbidden": true,
+    "official_fpl_api_remains_direct": true,
+    "structured_api_and_csv_sources_remain_direct": true,
+    "raw_capture_never_mutates_dss_or_model": true,
+    "raw_capture_never_becomes_verified_fact_without_existing_evidence_validation": true,
+    "source_failure_is_non_blocking": true
+  },
+  "defaults": {
+    "navigation_timeout_seconds": 18,
+    "settle_milliseconds": 750,
+    "max_visible_text_chars": 120000
+  },
+  "sources": [
+    {
+      "source_id": "ffscout_editorial",
+      "source_class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "purpose": ["team_news", "predicted_lineups", "injury_context", "role_context"],
+      "urls": [
+        "https://www.fantasyfootballscout.co.uk/team-news/",
+        "https://www.fantasyfootballscout.co.uk/"
+      ]
+    },
+    {
+      "source_id": "rotowire",
+      "source_class": "SECONDARY_AVAILABILITY",
+      "enabled": true,
+      "purpose": ["predicted_lineups", "injury_signal", "starting_xi_signal"],
+      "urls": [
+        "https://www.rotowire.com/soccer/lineups.php"
+      ]
+    },
+    {
+      "source_id": "premier_league_official_news",
+      "source_class": "VERIFIED_NEWS",
+      "enabled": true,
+      "purpose": ["official_team_news", "manager_quote", "press_conference"],
+      "urls": [
+        "https://www.premierleague.com/news"
+      ]
+    },
+    {
+      "source_id": "onefpl",
+      "source_class": "MODEL_CHALLENGER",
+      "enabled": true,
+      "purpose": ["price_prediction", "transfer_trends", "captaincy_context"],
+      "urls": [
+        "https://onefpl.com/"
+      ]
+    },
+    {
+      "source_id": "fffix",
+      "source_class": "CHALLENGER_REFERENCE",
+      "enabled": true,
+      "purpose": ["price_prediction", "predicted_points", "predicted_lineups"],
+      "urls": [
+        "https://www.fantasyfootballfix.com/"
+      ]
+    },
+    {
+      "source_id": "ffhub",
+      "source_class": "CHALLENGER_REFERENCE",
+      "enabled": true,
+      "purpose": ["predicted_points", "team_optimization", "ownership_context"],
+      "urls": [
+        "https://www.fantasyfootballhub.co.uk/"
+      ]
+    }
+  ]
+}

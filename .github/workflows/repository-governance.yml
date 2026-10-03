@@ -31,6 +31,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
@@ -101,7 +102,33 @@ jobs:
           import sys
 
           payload = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
-          body = (payload.get("pull_request") or {}).get("body") or ""
+          pr = payload.get("pull_request") or {}
+          body = pr.get("body") or ""
+
+          # A PR body can be edited after the synchronize event that queued this
+          # workflow. Read the current PR body when possible so documentation
+          # synchronization validates current repository truth rather than a
+          # stale event snapshot. Fall back to the event payload if the API is
+          # unavailable.
+          repo = os.environ.get("GITHUB_REPOSITORY", "")
+          pr_number = pr.get("number")
+          token = os.environ.get("GITHUB_TOKEN", "")
+          if repo and pr_number and token:
+              import urllib.request
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/pulls/{pr_number}",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      current_pr = json.load(response)
+                  body = current_pr.get("body") or body
+              except Exception as exc:
+                  print(f"::warning::Could not refresh current PR body; using event snapshot: {exc}")
 
           iso = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})"
           change = re.search(rf"(?mi)^Change timestamp:\s*({iso})\s*$", body)

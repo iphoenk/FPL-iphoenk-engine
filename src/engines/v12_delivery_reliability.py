@@ -1179,6 +1179,14 @@ def build_presentation_qa_manifest(bundle: Mapping[str, Any]) -> dict[str, Any]:
         }) == 15
     )
 
+    from src.engines.v12_deep_presentation_lock import (
+        validate_rendered_deep_presentation,
+    )
+    information_architecture_failures = validate_rendered_deep_presentation(
+        str(bundle.get("visible_body") or ""),
+        bundle.get("report") if isinstance(bundle.get("report"), Mapping) else {},
+    )
+
     return {
         "schema_version": 1,
         "section_count": len(sections),
@@ -1203,6 +1211,8 @@ def build_presentation_qa_manifest(bundle: Mapping[str, Any]) -> dict[str, Any]:
         "prior_without_source_occurrence": prior_mislabelled,
         "decision_first": bool(sections and sections[0].get("section_id") == "S01"),
         "technical_health_in_s17": "S17" in actual_ids,
+        "information_architecture_pass": not information_architecture_failures,
+        "information_architecture_failures": information_architecture_failures,
         "final_judgement_present": bool(
             str(content("S19").get("final_judgement") or "").strip()
             or str(content("S19").get("summary") or "").strip()
@@ -1225,6 +1235,7 @@ def validate_presentation_qa_manifest(manifest: Mapping[str, Any]) -> list[str]:
         "all15_complete_when_claimed",
         "decision_first",
         "technical_health_in_s17",
+        "information_architecture_pass",
         "final_judgement_present",
         "visible_report_body_non_empty",
     )
@@ -1350,7 +1361,10 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
         "roadmap_reoptimizes_on_new_evidence", "bgw_context",
         "bgw_reoptimization_trigger",
     ),
-    "S15": ("evidence_quality", "model_execution"),
+    "S15": (
+        "evidence_assessment", "evidence_quality", "overall_evidence_confidence",
+        "evidence_limitations", "decision_implication", "prior_current_semantics",
+    ),
     "S15B": (
         "schema_version", "snapshot_id", "league_id", "league_name",
         "league_kind", "planning_gw", "generated_at", "coverage_state",
@@ -1378,7 +1392,11 @@ _SERVING_SECTION_KEYS: dict[str, tuple[str, ...]] = {
         "recency_weighting", "bayesian_update", "candidate_traceability",
         "fixture_ids_expected", "fixture_ids_reviewed",
     ),
-    "S17": ("engine_data_status", "source_health", "auth_authority", "lineage"),
+    "S17": (
+        "engine_data_status", "source_health", "technical_planes",
+        "freshness_summary", "lineage_summary", "audit_note",
+        "auth_authority", "lineage",
+    ),
     "S18": (
         "action_board", "NOW", "NEXT", "TRIGGER TO ACT",
         "LATEST SAFE DECISION POINT", "COST OF WAITING",
@@ -1910,6 +1928,90 @@ def write_serving_artifacts(
         execution["root_failure"] = bundle.get("root_failure")
     bundle["execution_proof"] = execution
 
+    if str(bundle.get("report_mode") or "").upper() == "DEEP":
+        report = dict(bundle.get("report") or {})
+        report["report_slot"] = bundle.get("report_slot")
+        report["planning_gw"] = bundle.get("planning_gw")
+        prefetch_binding = dict(execution.get("report_prefetch_binding") or {})
+        exact_occurrence = prefetch_binding.get("same_occurrence_bound") is True
+        report["exact_occurrence_bound"] = exact_occurrence
+        report["delivery_status"] = delivery_status
+
+        sections = [
+            dict(row)
+            for row in report.get("sections") or []
+            if isinstance(row, Mapping)
+        ]
+        for row in sections:
+            if str(row.get("section_id") or "") != "S17":
+                continue
+            content = dict(row.get("content") or {})
+            technical_planes = [
+                dict(item)
+                for item in content.get("technical_planes") or []
+                if isinstance(item, Mapping)
+            ]
+            by_plane = {
+                str(item.get("plane") or ""): item
+                for item in technical_planes
+            }
+            if "Exact-occurrence binding" in by_plane:
+                by_plane["Exact-occurrence binding"]["status"] = (
+                    "🟢 Verified" if exact_occurrence else "🔴 Not verified"
+                )
+            if "Private serving / delivery" in by_plane:
+                by_plane["Private serving / delivery"]["status"] = (
+                    "🟢 PASS · READY_FULL"
+                    if delivery_status == "READY_FULL"
+                    else "🟡 READY_DEGRADED"
+                )
+            qa_pass = all(
+                str(value or "").upper() == "PASS"
+                for value in (
+                    (bundle.get("pre_render_qa") or {}).get("status"),
+                    (bundle.get("post_render_qa") or {}).get("status"),
+                    (bundle.get("human_facing_qa") or {}).get("status"),
+                )
+            )
+            if "Presentation QA" in by_plane:
+                by_plane["Presentation QA"]["status"] = (
+                    "🟢 PASS" if qa_pass else "🟡 DEGRADED"
+                )
+            if "Privacy boundary" in by_plane:
+                by_plane["Privacy boundary"]["status"] = (
+                    "🟢 Private serving boundary enforced"
+                )
+            content["technical_planes"] = technical_planes
+            content["lineage_summary"] = (
+                f"Visible report is bound to exact DEEP occurrence {bundle.get('report_slot')} "
+                "and is served from that exact logical slot."
+                if exact_occurrence
+                else f"DEEP occurrence {bundle.get('report_slot')} exact binding is not verified."
+            )
+            content["audit_note"] = (
+                "Run IDs and hashes remain in canonical audit artifacts; "
+                "the main report keeps only compact provenance."
+            )
+            row["content"] = content
+        report["sections"] = sections
+        bundle["report"] = report
+
+        from src.engines.v12_report_orchestration import render_deep_text
+        final_visible_body = render_deep_text(report)
+        from src.engines.v12_deep_presentation_lock import (
+            validate_rendered_deep_presentation,
+        )
+        presentation_failures = validate_rendered_deep_presentation(
+            final_visible_body,
+            report,
+        )
+        if presentation_failures:
+            raise DeliveryReliabilityError(
+                "final DEEP information architecture failed: "
+                + ",".join(presentation_failures)
+            )
+        bundle["visible_body"] = final_visible_body
+
     snapshot = build_serving_snapshot(bundle)
     occurrence_state = build_occurrence_state(bundle)
     presentation_qa = build_presentation_qa_manifest(bundle)
@@ -1927,6 +2029,7 @@ def write_serving_artifacts(
         "report_bundle.json": json.dumps(
             bundle, indent=2, ensure_ascii=False, default=str
         ) + "\n",
+        "report_body.md": str(bundle.get("visible_body") or ""),
         "execution_proof.json": json.dumps(
             execution, indent=2, ensure_ascii=False, default=str
         ) + "\n",

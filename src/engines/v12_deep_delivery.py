@@ -192,21 +192,19 @@ def validate_deep_decision_content_delivery(
         ) >= 2
     ]
     mc = dict(s14.get("monte_carlo") or {})
-    if state("S14") == "COMPLETE" and non_hold:
+    if state("S14") == "COMPLETE":
         for token, code in (
-            ("OUT → IN", "FRONTIER_IDENTITIES_NOT_VISIBLE"),
-            ("1GW", "FRONTIER_1GW_NOT_VISIBLE"),
-            ("2GW", "FRONTIER_2GW_NOT_VISIBLE"),
-            ("3GW", "FRONTIER_3GW_NOT_VISIBLE"),
-            ("5GW", "FRONTIER_5GW_NOT_VISIBLE"),
-            ("P>HOLD", "FRONTIER_PROBABILITY_NOT_VISIBLE"),
-            ("Q10", "FRONTIER_DOWNSIDE_NOT_VISIBLE"),
-            ("Q90", "FRONTIER_UPSIDE_NOT_VISIBLE"),
-            ("BANK BEFORE", "FRONTIER_BANK_BEFORE_NOT_VISIBLE"),
-            ("BANK AFTER", "FRONTIER_BANK_AFTER_NOT_VISIBLE"),
+            ("SEARCH INTEGRITY", "S14_SEARCH_INTEGRITY_NOT_VISIBLE"),
+            ("CANONICAL MONTE CARLO", "S14_MC_NOT_VISIBLE"),
+            ("VERDICT", "S14_VERDICT_NOT_VISIBLE"),
+            ("BEST CHALLENGER", "S14_BEST_CHALLENGER_NOT_VISIBLE"),
+            ("EXECUTION ECONOMICS", "S14_EXECUTION_ECONOMICS_NOT_VISIBLE"),
+            ("ACTIONABILITY CONCLUSION", "S14_ACTIONABILITY_NOT_VISIBLE"),
         ):
             if token not in upper:
                 failures.append(code)
+        if "SCAN-DERIVED CHALLENGERS" in upper:
+            failures.append("S14_FULL_CHALLENGER_DUMP_VISIBLE")
         if not any(str(row.get("route") or "").upper() == "HOLD" for row in routes):
             failures.append("HOLD_COMPARATOR_MISSING")
     if state("S14") == "COMPLETE":
@@ -225,7 +223,7 @@ def validate_deep_decision_content_delivery(
     if funded and "FUNDED / 2-TRANSFER" not in upper:
         failures.append("FUNDING_ROUTE_NOT_VISIBLE")
     if int(mc.get("actual_paths") or 0) >= 500_000:
-        if "MC PATHS" not in upper:
+        if "ACTUAL PATHS" not in upper:
             failures.append("MC_PATH_COUNT_NOT_VISIBLE")
         if "P>HOLD" not in upper or "Q10" not in upper or "Q90" not in upper:
             failures.append("MC_DISTRIBUTION_NOT_VISIBLE")
@@ -427,11 +425,8 @@ def validate_deep_decision_content_delivery(
                 if key not in row:
                     failures.append(f"S02_HUMAN_FIELD_MISSING={index}:{key}")
                     break
-        if "CURRENT15 AUTHORITY:" not in upper:
+        if "CURRENT SQUAD EVIDENCE:" not in upper:
             failures.append("S02_AUTHORITY_NOT_VISIBLE")
-        for token in ("H/A", "OWNERSHIP SOURCE"):
-            if token not in upper:
-                failures.append(f"S02_VISIBLE_FIELD_MISSING={token}")
 
     s03 = content("S03")
     delta = dict(s03.get("decision_delta") or {})
@@ -516,8 +511,8 @@ def validate_deep_decision_content_delivery(
                 if key not in row:
                     failures.append(f"S07_BATTLE_FIELD_MISSING={index}:{key}")
                     break
-        if battles and "COMPETITIVE EO A" not in upper:
-            failures.append("S07_COMPETITIVE_EO_NOT_VISIBLE")
+        if battles and "LINEUP IMPLICATION:" not in upper:
+            failures.append("S07_LINEUP_IMPLICATION_NOT_VISIBLE")
 
     if state("S10") == "COMPLETE":
         if "PREDICTION_STRENGTH" not in upper:
@@ -993,9 +988,9 @@ def validate_deep_decision_content_delivery(
             failures.append("S08_FOOTBALL_BASELINE_ORDER_MISSING")
         if s08.get("mini_league_overlay_second") is not True:
             failures.append("S08_MINI_LEAGUE_OVERLAY_ORDER_MISSING")
-        if "OWNED FINAL-XI CAPTAIN FRONTIER" not in upper:
+        if "FOOTBALL CAPTAIN FRONTIER" not in upper:
             failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
-        if "EXPOSURE / LEVERAGE CLASS" not in upper:
+        if "EO/LEVERAGE CONTEXT:" not in upper:
             failures.append("S08_EXPOSURE_CLASS_NOT_VISIBLE")
 
     s15b = content("S15B")
@@ -1069,8 +1064,8 @@ def validate_deep_decision_content_delivery(
                         f"S15B_FULL_LEAGUE_ROW_MISSING={index}:{','.join(missing)}"
                     )
                     break
-        if "FULL ICON+ COMPOSITION" not in upper:
-            failures.append("S15B_FULL_LEAGUE_COMPOSITION_NOT_VISIBLE")
+        if "FULL ICON+ COMPOSITION" in upper:
+            failures.append("S15B_FULL_LEAGUE_COMPOSITION_VISIBLE_FORBIDDEN")
 
         for scope_key, payload_key in (
             ("LEAGUE", "league_our15_exposure"),
@@ -1353,7 +1348,7 @@ def validate_deep_decision_content_delivery(
                     failures.append(f"{sid}_TERMINAL_DATE_STATE_MISSING={index}")
                     break
         if rows:
-            if "SOURCE_AGE_MINUTES" not in upper:
+            if "SOURCE AGE MINUTES" not in upper:
                 failures.append(f"{sid}_PRICE_SOURCE_AGE_NOT_VISIBLE")
             if "FRESHNESS" not in upper:
                 failures.append(f"{sid}_PRICE_FRESHNESS_NOT_VISIBLE")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 """V12 natural analytic/report orchestration.
 
 This module does not acquire V6 data and does not own player mathematics.
@@ -3606,6 +3607,16 @@ def _markdown_cell(value: Any) -> str:
 
 def _human_summary(value: Any) -> str:
     """Compact nested evidence without Python/JSON dict syntax."""
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate.startswith(("{", "[")):
+            try:
+                parsed = ast.literal_eval(candidate)
+            except (SyntaxError, ValueError):
+                parsed = None
+            if isinstance(parsed, (Mapping, list, tuple, set)):
+                return _human_summary(parsed)
+        return value
     if value is None:
         return "UNAVAILABLE"
     if isinstance(value, Mapping):
@@ -3879,7 +3890,7 @@ def _render_deep_visible_contract_lines(
             ) or "UNAVAILABLE"
         if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             return ", ".join(_compact(v) for v in value) or "UNAVAILABLE"
-        return str(value)
+        return _human_summary(value)
 
     if section_id == "S01":
         dashboard = dict(payload.get("decision_dashboard") or {})

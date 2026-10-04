@@ -1454,30 +1454,32 @@ def _load_personal_inputs(
     *,
     runtime_data_root: Path,
     private_data_root: Path | None,
+    planning_gw: int,
 ) -> dict[str, dict[str, Any]]:
-    """Read personal evidence from the governed private checkout before runtime fallback.
+    """Use the shared personal evidence adapter and selector for PRICE.
 
-    The private checkout is intentionally separate from runtime-data-v6. PRICE must
-    consume the same private personal snapshot that the integrated runner was given,
-    without copying it into the factual/public runtime tree.
+    Personal artifacts stay in the private checkout. PRICE shares the same
+    candidate collection and freshness/identity selection used by DEEP rather
+    than reading a second private-data format or copying it into runtime-data-v6.
     """
-    roots = []
-    if private_data_root is not None:
-        roots.append(Path(private_data_root) / "personal")
-    roots.append(Path(runtime_data_root) / "data/v6/personal")
-    result: dict[str, dict[str, Any]] = {}
-    for key, filename in (
-        ("current_team", "current_team.json"),
-        ("submitted_picks", "submitted_picks.json"),
-    ):
-        for root in roots:
-            payload = _read_json(root / filename, {})
-            if isinstance(payload, Mapping) and payload:
-                result[key] = dict(payload)
-                break
-        else:
-            result[key] = {}
-    return result
+    from src.engines.v12_deep_delivery import select_personal_evidence
+    from src.engines.v12_personal_data_plane import collect_personal_evidence_candidates
+
+    candidates = collect_personal_evidence_candidates(
+        runtime_root=runtime_data_root,
+        legacy_state=None,
+        planning_gw=planning_gw,
+        private_root=private_data_root,
+        allow_legacy_private_sources=False,
+        require_private_personal=False,
+        enforce_public_disclosure=True,
+    )
+    selected = select_personal_evidence(candidates, planning_gw=planning_gw)
+    payload = dict(selected.get("payload") or {})
+    source_class = str(selected.get("source_class") or "").upper()
+    if source_class == "OFFICIAL_SUBMITTED_PICKS":
+        return {"current_team": {}, "submitted_picks": payload}
+    return {"current_team": payload, "submitted_picks": {}}
 
 
 def _planning_gw_from_bootstrap(bootstrap: Mapping[str, Any]) -> int:
@@ -1602,6 +1604,7 @@ def run_price_occurrence(
     personal_inputs = _load_personal_inputs(
         runtime_data_root=runtime_data_root,
         private_data_root=private_data_root,
+        planning_gw=planning_gw,
     )
     current_team = personal_inputs["current_team"]
     submitted = personal_inputs["submitted_picks"]

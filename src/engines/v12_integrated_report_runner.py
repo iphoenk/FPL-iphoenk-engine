@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
+from src.engines.v12_captain_frontier import decide_captain_vice
 from src.engines.v12_mini_league_overlay import (
     attach_mini_league_overlay,
     build_mini_league_snapshot,
@@ -3744,7 +3745,14 @@ def _captain_decision_surface(
     lineup: Mapping[str, Any] | None,
     lineup_state: str,
     mini_detail: Mapping[str, Any],
+    projections: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    """One canonical C/VC decision surface.
+
+    P1.7 remains the legal football baseline.  P1.3B one-GW PMFs establish a
+    position-neutral football frontier.  P1.8 exposure may resolve only a
+    CLOSE frontier; it never promotes a dominated football candidate.
+    """
     current15_ids = [
         element
         for element in (_surface_element(row) for row in owned)
@@ -3762,20 +3770,143 @@ def _captain_decision_surface(
     ]
     final_xi_ids = list(dict.fromkeys(final_xi_ids))
     final_xi_set = set(final_xi_ids)
-    captain_id = _surface_element((lineup or {}).get("captain"))
-    vice_id = _surface_element((lineup or {}).get("vice_captain"))
+    baseline_captain_id = _surface_element((lineup or {}).get("captain"))
+    baseline_vice_id = _surface_element((lineup or {}).get("vice_captain"))
 
-    frontier = [
+    leverage_rows = [
         dict(row)
         for row in mini_detail.get("captain_leverage") or []
         if isinstance(row, Mapping)
         and int(row.get("element_id") or 0) in final_xi_set
     ]
-    frontier_map = {
+    leverage_map = {
         int(row.get("element_id") or 0): row
-        for row in frontier
+        for row in leverage_rows
         if int(row.get("element_id") or 0) > 0
     }
+    pmap = _projection_map(projections)
+
+    decision_candidates: list[dict[str, Any]] = []
+    for element in final_xi_ids:
+        player = pmap.get(element) or {}
+        mechanism = (
+            _visible_position_mechanism(player, action="HOLD")
+            if player else {}
+        )
+        complete = dict(mechanism.get("complete_player_distribution") or {})
+        horizon = dict((player.get("horizons") or {}).get("1") or {})
+        point_distribution = dict(horizon.get("point_distribution") or {})
+        if not point_distribution.get("probabilities"):
+            point_distribution = dict(complete.get("point_distribution") or {})
+        visible = leverage_map.get(element) or {}
+        decision_candidates.append(
+            {
+                **visible,
+                "element_id": element,
+                "player": (
+                    visible.get("player")
+                    or player.get("name")
+                    or f"element:{element}"
+                ),
+                "position": player.get("position"),
+                "team_id": player.get("team_id"),
+                "expected_points": (
+                    visible.get("expected_points")
+                    if visible.get("expected_points") is not None
+                    else horizon.get("mean")
+                    if horizon.get("mean") is not None
+                    else point_distribution.get("adjusted_expected_total")
+                    if point_distribution.get("adjusted_expected_total") is not None
+                    else point_distribution.get("expected_points")
+                ),
+                "p_start": mechanism.get("p_start", visible.get("p_start")),
+                "xmins": mechanism.get("xmins", visible.get("xmins")),
+                "p_dnp": mechanism.get("p_dnp"),
+                "point_distribution": point_distribution,
+                "league_scope": dict(visible.get("league_scope") or {}),
+                "competitive_scope": dict(
+                    visible.get("competitive_scope") or {}
+                ),
+            }
+        )
+
+    scopes = dict(mini_detail.get("denominator_scopes") or {})
+    league_scope = dict(scopes.get("LEAGUE") or {})
+    competitive_scope = dict(scopes.get("COMPETITIVE") or {})
+    league_complete = bool(
+        int(league_scope.get("expected") or 0) > 0
+        and int(league_scope.get("collected") or 0)
+        == int(league_scope.get("expected") or 0)
+    )
+    competitive_complete = bool(
+        (mini_detail.get("competitive_window") or {}).get("complete") is True
+        and int(competitive_scope.get("expected") or 0) > 0
+        and int(competitive_scope.get("collected") or 0)
+        == int(competitive_scope.get("expected") or 0)
+    )
+    risk_posture = str(
+        (mini_detail.get("strategy_implication") or {}).get("model_posture")
+        or "BALANCED"
+    ).upper()
+
+    decision = decide_captain_vice(
+        decision_candidates,
+        baseline_captain_id=baseline_captain_id,
+        baseline_vice_id=baseline_vice_id,
+        risk_posture=risk_posture,
+        league_complete=league_complete,
+        competitive_complete=competitive_complete,
+    )
+
+    profiles = [
+        dict(row)
+        for row in decision.get("profiles") or []
+        if isinstance(row, Mapping)
+    ]
+    profiles_by_id = {
+        int(row.get("element_id") or 0): row
+        for row in profiles
+        if int(row.get("element_id") or 0) > 0
+    }
+    mean_rank = {
+        int(row.get("element_id") or 0): rank
+        for rank, row in enumerate(
+            sorted(
+                profiles,
+                key=lambda item: (
+                    -float(item.get("expected_points"))
+                    if item.get("expected_points") is not None
+                    else float("inf"),
+                    int(item.get("element_id") or 10**9),
+                ),
+            ),
+            start=1,
+        )
+    }
+
+    def decorate(raw: Mapping[str, Any] | None) -> dict[str, Any]:
+        row = dict(raw or {})
+        element = int(row.get("element_id") or 0)
+        merged = {
+            **dict(leverage_map.get(element) or {}),
+            **row,
+        }
+        merged["football_rank"] = mean_rank.get(element)
+        merged["p_haul"] = merged.get("p_haul", merged.get("p_ge_10"))
+        merged["blank_probability"] = merged.get("p_blank")
+        merged["haul_probability"] = merged.get("p_haul")
+        merged["ceiling_q90"] = merged.get("q90")
+        return merged
+
+    decorated_frontier = [
+        decorate(row)
+        for row in decision.get("frontier") or []
+        if isinstance(row, Mapping)
+    ]
+    decorated_profiles = [decorate(row) for row in profiles]
+    captain = decorate(decision.get("captain"))
+    vice = decorate(decision.get("vice_captain"))
+    football_leader = decorate(decision.get("football_leader"))
 
     safe_pool_ids = [
         element
@@ -3786,6 +3917,9 @@ def _captain_decision_surface(
         if element is not None and element in final_xi_set
     ]
     safe_pool_ids = list(dict.fromkeys(safe_pool_ids))
+
+    captain_id = _surface_element(captain)
+    vice_id = _surface_element(vice)
     legal = bool(
         captain_id is not None
         and vice_id is not None
@@ -3795,33 +3929,46 @@ def _captain_decision_surface(
         and captain_id in final_xi_set
         and vice_id in final_xi_set
     )
-    if not legal or str(lineup_state or "").upper() != "COMPLETE":
-        decision_state = "WAIT"
-    elif len(safe_pool_ids) > 1:
+    decision_state = (
+        "WAIT"
+        if not legal or str(lineup_state or "").upper() != "COMPLETE"
+        else str(decision.get("decision_state") or "PREPARE").upper()
+    )
+    if decision_state not in {"WAIT", "PREPARE", "LOCK"}:
         decision_state = "PREPARE"
-    else:
-        decision_state = "LOCK"
 
-    football_captain = dict(frontier_map.get(int(captain_id or 0)) or {})
-    football_vice = dict(frontier_map.get(int(vice_id or 0)) or {})
-    if len(safe_pool_ids) > 1:
-        reconciliation = (
-            "P1.7 captain_safe_pool contains multiple legal final-XI candidates; "
-            "football baseline is retained and mini-league exposure is advisory "
-            "until fresh deadline evidence resolves the near-tie."
+    classification = str(decision.get("classification") or "FRAGILE").upper()
+    mini_override = bool(decision.get("mini_league_override_applied"))
+    reconciliation = str(decision.get("reason") or "")
+    if mini_override:
+        reconciliation += (
+            " Competitive Window/league exposure resolved the CLOSE football "
+            "frontier under the current risk posture."
         )
-    else:
-        reconciliation = (
-            "P1.7 football-optimal captain/vice retained. Mini-league exposure "
-            "did not override the football baseline."
+    elif classification == "CLOSE":
+        reconciliation += (
+            " Competitive evidence did not force a switch; no exposure-only "
+            "candidate is allowed outside the football frontier."
         )
 
     return {
         "decision_state": decision_state,
-        "captain": football_captain,
-        "vice_captain": football_vice,
-        "captain_frontier": frontier,
+        "captain": captain,
+        "vice_captain": vice,
+        "football_leader": football_leader,
+        "football_frontier_classification": classification,
+        "captain_frontier": decorated_frontier,
+        "captain_profiles": decorated_profiles,
+        "pairwise_captain_comparison": list(decision.get("pairwise") or []),
+        "competitive_context": dict(
+            decision.get("competitive_context") or {}
+        ),
+        "risk_posture": risk_posture,
+        "vice_fallback_reason": decision.get("vice_reason"),
+        # Compatibility-only P1.7 surface retained for existing health consumers.
+        # It is no longer interpreted as proof of a football near-tie.
         "captain_safe_pool": safe_pool_ids,
+        "captain_safe_pool_semantics": "P1_7_COMPATIBILITY_ONLY_NOT_FRONTIER",
         "candidate_universe_proof": {
             "current15_ids": current15_ids,
             "final_xi_ids": final_xi_ids,
@@ -3834,22 +3981,24 @@ def _captain_decision_surface(
             "captain_vice_distinct": captain_id != vice_id if captain_id is not None and vice_id is not None else False,
             "frontier_subset_of_final_xi": all(
                 int(row.get("element_id") or 0) in final_xi_set
-                for row in frontier
+                for row in decorated_frontier
             ),
         },
         "football_baseline_first": True,
         "mini_league_overlay_second": True,
-        "mini_league_override_applied": False,
+        "mini_league_override_applied": mini_override,
         "near_tie_authority": {
-            "source": "P1_7_CAPTAIN_SAFE_POOL",
-            "candidate_count": len(safe_pool_ids),
+            "source": "V12_CAPTAIN_FRONTIER_P1_3B_PMF",
+            "classification": classification,
+            "frontier_candidate_count": len(decorated_frontier),
         },
         "reconciliation_reason": reconciliation,
         "authority": (
-            "P1.7 final-XI football captain baseline + P1.8 LEAGUE/RIVALS/COMPETITIVE "
-            "exposure overlay; no second captain optimizer"
+            "P1.7 final-XI legality + P1.3B canonical one-GW return distributions "
+            "+ P1.8 LEAGUE/COMPETITIVE context; no second football optimizer"
         ),
         "raw_mean_is_not_sole_authority": True,
+        "governance": dict(decision.get("governance") or {}),
     }
 
 
@@ -3878,6 +4027,9 @@ def _final_judgement_surface(
     )
     bench = dict((lineup or {}).get("bench") or {})
     captain = dict(captain_surface.get("captain") or {})
+    football_captain = dict(
+        captain_surface.get("football_leader") or captain
+    )
     vice = dict(captain_surface.get("vice_captain") or {})
     competitive_context = dict(mini_detail.get("competitive_window") or {})
     return {
@@ -3905,10 +4057,13 @@ def _final_judgement_surface(
             for value in bench.get("order") or []
         ],
         "football_optimal_captain": {
-            "element_id": captain.get("element_id"),
-            "player": captain.get("player"),
-            "football_rank": captain.get("football_rank"),
-            "xpts": captain.get("expected_points"),
+            "element_id": football_captain.get("element_id"),
+            "player": football_captain.get("player"),
+            "football_rank": football_captain.get("football_rank"),
+            "xpts": football_captain.get("expected_points"),
+            "frontier_classification": captain_surface.get(
+                "football_frontier_classification"
+            ),
         },
         "mini_league_captain_context": {
             "league_scope": captain.get("league_scope"),
@@ -4265,7 +4420,7 @@ def _action_board_surface(
         {
             "axis": "CAPTAIN",
             "NOW": dashboard.get("CAPTAIN"),
-            "NEXT": "refresh S08 frontier and Direct exposure",
+            "NEXT": "refresh S08 frontier and Competitive Window exposure",
             "TRIGGER TO ACT": "captain frontier resolves under fresh supportable evidence",
             "LATEST SAFE DECISION POINT": "FINAL_PRE_DEADLINE_CAPTAIN_CHECK",
             "COST OF WAITING": "none unless new team news or role evidence arrives",
@@ -5644,6 +5799,16 @@ def refresh_price_only_state(
         stage3_visible=stage3_visible,
         all15_rows=all15_rows,
     )
+    action_board["captain_decision"] = {
+        "captain": dict(captain_surface.get("captain") or {}),
+        "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "football_leader": dict(captain_surface.get("football_leader") or {}),
+        "frontier_classification": captain_surface.get(
+            "football_frontier_classification"
+        ),
+        "risk_posture": captain_surface.get("risk_posture"),
+        "source": "S08_CANONICAL_CAPTAIN_DECISION",
+    }
 
     bindings = {
         "S01": "STAGE3_DECISION+S08+S09+S10+S17",
@@ -6218,7 +6383,30 @@ def refresh_mini_league_only_state(
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
+        projections=projections,
     )
+
+    captain_frontier_ids = {
+        int(row.get("element_id") or 0)
+        for row in captain_surface.get("captain_frontier") or []
+        if isinstance(row, Mapping)
+    }
+    selected_captain_id = _surface_element(captain_surface.get("captain"))
+    selected_vice_id = _surface_element(captain_surface.get("vice_captain"))
+    mini_deep_detail["captain_leverage"] = [
+        {
+            **dict(row),
+            "football_frontier_member": int(row.get("element_id") or 0)
+            in captain_frontier_ids,
+            "selected_captain": int(row.get("element_id") or 0)
+            == int(selected_captain_id or 0),
+            "selected_vice": int(row.get("element_id") or 0)
+            == int(selected_vice_id or 0),
+            "decision_authority": "EVIDENCE_ONLY_S08_OWNS_C_VC_DECISION",
+        }
+        for row in mini_deep_detail.get("captain_leverage") or []
+        if isinstance(row, Mapping)
+    ]
 
     # S14 keeps the frozen football frontier/MC, replacing only its P1.8 fields.
     stage3_visible = dict(section_payloads["S14"].get("content") or {})
@@ -6303,12 +6491,22 @@ def refresh_mini_league_only_state(
         stage3_visible=stage3_visible,
         all15_rows=all15_rows,
     )
+    action_board["captain_decision"] = {
+        "captain": dict(captain_surface.get("captain") or {}),
+        "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "football_leader": dict(captain_surface.get("football_leader") or {}),
+        "frontier_classification": captain_surface.get(
+            "football_frontier_classification"
+        ),
+        "risk_posture": captain_surface.get("risk_posture"),
+        "source": "S08_CANONICAL_CAPTAIN_DECISION",
+    }
 
     bindings = {
         "S01": "STAGE3_DECISION+S08+S09+S10+S17",
         "S02": "CURRENT15_RESOLUTION+P1_1_P1_3+S05+S15B",
         "S07": "P1_7_XI_BATTLE+P1_1+S05+S15B",
-        "S08": "P1_7_LINEUP",
+        "S08": "P1_7_LEGALITY+P1_3B_CAPTAIN_FRONTIER+P1_8_COMPETITIVE_TIEBREAK",
         "S14": "P1_2_PACKAGE_UTILITY+P1_4_MONTE_CARLO+P1_8_MINI_LEAGUE_OVERLAY",
         "S15B": "P1_8_MINI_LEAGUE_SNAPSHOT+P1_8_MINI_LEAGUE_OVERLAY",
         "S16": "P1_1_P1_3_FULL_UNIVERSE+P1_6_TACTICAL_ROLE",
@@ -8043,6 +8241,16 @@ def run_deep(
         stage3_visible=stage3_visible,
         all15_rows=all15_rows,
     )
+    action_board["captain_decision"] = {
+        "captain": dict(captain_surface.get("captain") or {}),
+        "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "football_leader": dict(captain_surface.get("football_leader") or {}),
+        "frontier_classification": captain_surface.get(
+            "football_frontier_classification"
+        ),
+        "risk_posture": captain_surface.get("risk_posture"),
+        "source": "S08_CANONICAL_CAPTAIN_DECISION",
+    }
 
     sections = {
         "S01": _section(
@@ -8475,7 +8683,7 @@ def run_deep(
         "S04": "BOUND_OCCURRENCE_MATERIALITY+STAGEC",
         "S06": "P1_7_LINEUP",
         "S07": "P1_7_XI_BATTLE+P1_1+S05+S15B",
-        "S08": "P1_7_LINEUP",
+        "S08": "P1_7_LEGALITY+P1_3B_CAPTAIN_FRONTIER+P1_8_COMPETITIVE_TIEBREAK",
         "S10": "OFFICIAL_FPL_PRICE_FACT+PRICE_PREDICTOR",
         "S11": "WATCHLIST20",
         "S12": "OFFICIAL_FPL_PREDICTOR_RISE20",
@@ -8499,6 +8707,38 @@ def run_deep(
             "report_slot": report_slot,
         }
         section["content"] = content
+
+    s08_content = dict((sections.get("S08") or {}).get("content") or {})
+    s18_content = dict((sections.get("S18") or {}).get("content") or {})
+    s19_content = dict((sections.get("S19") or {}).get("content") or {})
+    s18_cap = dict(
+        (s18_content.get("action_board") or {}).get("captain_decision") or {}
+    )
+    s19_judgement = dict(s19_content.get("final_judgement") or {})
+    s08_c = _surface_element(s08_content.get("captain"))
+    s08_v = _surface_element(s08_content.get("vice_captain"))
+    s18_c = _surface_element(s18_cap.get("captain"))
+    s18_v = _surface_element(s18_cap.get("vice_captain"))
+    s19_c = _surface_element(s19_judgement.get("final_captain"))
+    s19_v = _surface_element(s19_judgement.get("vice"))
+    if not (
+        s08_c is not None
+        and s08_v is not None
+        and s08_c == s18_c == s19_c
+        and s08_v == s18_v == s19_v
+        and s08_c in {
+            _surface_element(row)
+            for row in (lineup or {}).get("starting_xi") or []
+        }
+        and s08_v in {
+            _surface_element(row)
+            for row in (lineup or {}).get("starting_xi") or []
+        }
+        and s08_c != s08_v
+    ):
+        raise IntegratedRunnerError(
+            "CAPTAIN_VICE_CANONICAL_CONSISTENCY_FAIL:S08_S18_S19"
+        )
 
     math_stack = build_visible_mathematical_decision_stack(
         stage3_math_proof

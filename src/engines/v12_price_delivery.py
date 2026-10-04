@@ -1454,7 +1454,7 @@ def _load_personal_inputs(
     *,
     runtime_data_root: Path,
     private_data_root: Path | None,
-    planning_gw: int,
+    planning_gw: int | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Use the shared personal evidence adapter and selector for PRICE.
 
@@ -1464,6 +1464,20 @@ def _load_personal_inputs(
     """
     from src.engines.v12_deep_delivery import select_personal_evidence
     from src.engines.v12_personal_data_plane import collect_personal_evidence_candidates
+
+    if planning_gw is None:
+        private_team = _read_json(
+            (private_data_root / "personal/current_team.json")
+            if private_data_root is not None
+            else Path("__missing__"),
+            {},
+        ) or {}
+        try:
+            planning_gw = int(private_team.get("gw") or 0)
+        except (TypeError, ValueError):
+            planning_gw = 0
+        if planning_gw <= 0:
+            raise PriceDeliveryError("planning_gw unavailable for personal evidence selection")
 
     candidates = collect_personal_evidence_candidates(
         runtime_root=runtime_data_root,

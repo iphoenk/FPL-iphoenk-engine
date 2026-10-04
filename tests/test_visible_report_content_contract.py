@@ -17,7 +17,7 @@ from src.runtime_v6.domains.report_plane.report_qa import (
 )
 from test_support.report_visible_body import valid_visible_body
 from src.engines.v12_final_delivery_barrier import validate_final_delivery_barrier
-from src.runtime_v6.domains.report_plane.visible_body_contract import _watchlist_contract
+from src.runtime_v6.domains.report_plane.visible_body_contract import _rank20_contract, _watchlist_contract
 
 
 def _bench():
@@ -1034,13 +1034,34 @@ def test_natural_regression_watchlist_scanner_ignores_actionable_table_positions
 
 def test_natural_regression_deep_action_markers_match_current_s18_contract():
     markers = _required_visible_markers("DEEP")
-    assert "MULTI-AXIS ACTION BOARD" in markers
+    assert "ACTION BOARD" in markers
+    assert "MULTI-AXIS ACTION BOARD" not in markers
+    assert "MULTI-GW PLAN / CONTINGENCY" in markers
+    assert "3-GW SQUAD STAGING" not in markers
     assert "TRIGGER TO ACT" in markers
     assert "LATEST SAFE DECISION POINT" in markers
     assert "COST OF WAITING" in markers
     assert "ABORT / REVERSAL" in markers
     assert "NEXT:" not in markers
     assert "TRIGGERS:" not in markers
+
+
+
+def test_locked_rank20_currency_header_maps_to_canonical_price_field():
+    rows = [
+        f"| {rank} | P{rank} | £{5 + rank / 10:.1f} | {80 + rank / 10:.1f}% | 06:00 WIB |"
+        for rank in range(1, 21)
+    ]
+    body = "\n".join(
+        [
+            "| # | Player | £ | Progress | ETA |",
+            "| --- | --- | --- | --- | --- |",
+            *rows,
+        ]
+    )
+    actual, failures = _rank20_contract(body, label="RISE20")
+    assert actual == 20
+    assert failures == []
 
 
 def test_shared_human_presentation_gate_rejects_machine_language_and_allows_fpl_acronyms():

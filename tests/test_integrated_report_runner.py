@@ -10,6 +10,7 @@ from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_stage3_acceptance import _truthful_source_degraded_sections
 from src.engines.v12_report_orchestration import (
     DEEP_HUMAN_SECTION_REQUIREMENTS,
+    _human_summary,
     _render_deep_visible_contract_lines,
     _render_math_stack_lines,
     build_calendar_workload_context,
@@ -657,6 +658,22 @@ def test_math_stack_renderer_is_type_safe_for_degraded_scalar_placeholders():
     assert "E[xPts]=UNAVAILABLE" in body
     assert "P(START)=UNAVAILABLE" in body
     assert "state=UNAVAILABLE" in body
+
+
+
+def test_human_summary_never_emits_raw_mapping_repr_for_nested_lists():
+    text = _human_summary(
+        {
+            "weather": [
+                {"fixture": 51, "condition": "NORMAL"},
+                {"fixture": 52, "condition": "NOTABLE"},
+            ]
+        }
+    )
+    assert "{'" not in text
+    assert '"fixture"' not in text
+    assert "fixture=51" in text
+    assert "condition=NORMAL" in text
 
 
 def test_runner_source_has_no_legacy_runtime_imports():

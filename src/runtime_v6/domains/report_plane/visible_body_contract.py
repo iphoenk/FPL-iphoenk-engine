@@ -171,8 +171,14 @@ def _count_markdown_table_rows(section_body: str) -> int:
 
 
 def _normalize_header(value: str) -> str:
-    raw = str(value or "").strip().lower().replace("%", "_pct")
-    raw = re.sub(r"[`*]", "", raw)
+    source = str(value or "").strip()
+    # The locked human-facing RISE20/FALL20 schema uses the compact "£"
+    # header. Preserve that presentation while mapping it back to the
+    # canonical current_price field for post-render validation.
+    if source in {"£", "£m", "£M"}:
+        return "current_price"
+    raw = source.lower().replace("%", "_pct")
+    raw = re.sub(r"[\`*]", "", raw)
     raw = re.sub(r"[^a-z0-9#]+", "_", raw).strip("_")
     return _HEADER_ALIASES.get(raw, raw)
 

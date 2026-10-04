@@ -167,6 +167,34 @@
       "capabilities": ["recent_competitive_match", "starting_lineup", "minutes_load", "substitution_timing", "role_observation", "knock_or_injury", "extra_time", "travel_rest_context", "recent_shape_observation", "role_change_observation", "tactical_pattern_observation"],
       "consensus_vote": false,
       "authority_ceiling": "VERIFIED_CONTEXT"
+    },
+    {
+      "id": "fpl_analytics_dashboard",
+      "name": "FPL Analytics Dashboard",
+      "class": "MODEL_CHALLENGER",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_TARGETED_WEB",
+      "domains": ["fplanalyticsdashboard.com"],
+      "queries": ["FPL Analytics Dashboard player probabilities", "FPL Analytics Dashboard captain distribution"],
+      "capabilities": ["point_potential", "score_distribution", "probability_6_plus", "ceiling_probability", "fixture_swing", "chip_context"],
+      "consensus_vote": false,
+      "authority_ceiling": "ADVISORY",
+      "maturity_states": ["NOT_MATURE", "AVAILABLE_CURRENT", "AVAILABLE_STALE", "NO_RELEVANT_DATA", "UNAVAILABLE"],
+      "root_family_policy": "official_fpl_or_opta_for_facts_dashboard_model_for_derived_outputs"
+    },
+    {
+      "id": "allaboutfpl",
+      "name": "AllAboutFPL",
+      "class": "PUNDIT_CONSENSUS",
+      "enabled": true,
+      "retrieval": "REPORT_TIME_BOUNDED_EDITORIAL_WEB",
+      "domains": ["allaboutfpl.com"],
+      "queries": ["site:allaboutfpl.com FPL gameweek captain", "site:allaboutfpl.com FPL predicted lineup", "site:allaboutfpl.com FPL team news"],
+      "capabilities": ["predicted_lineups", "injury_context", "rotation_concern", "tactical_role", "captaincy", "differential", "buy_hold_sell"],
+      "consensus_vote": false,
+      "authority_ceiling": "ADVISORY",
+      "article_age_policy": "current_gameweek_only",
+      "root_family_policy": "quoted_primary_fact_is_root_deduplicated_editorial_analysis_is_allaboutfpl_editorial"
     }
   ]
 }

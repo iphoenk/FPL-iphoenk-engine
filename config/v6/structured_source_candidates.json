@@ -125,9 +125,28 @@
     },
     {
       "id": "cardstats",
-      "domain": null,
-      "status": "PENDING_EXACT_DOMAIN_VALIDATION",
-      "semantic_class": "DISCIPLINE_DATA_CANDIDATE"
+      "domain": "cardstats.io",
+      "status": "ADMISSION_AUDIT_PENDING_ACTIVATION",
+      "semantic_class": "DISCIPLINE_DATA_CANDIDATE",
+      "factual_allowlist": [
+        "player_yellow_cards",
+        "player_red_cards",
+        "fouls_committed",
+        "fouls_won",
+        "team_disciplinary_facts",
+        "referee_cards_per_game",
+        "referee_fouls_per_game",
+        "referee_penalties"
+      ],
+      "forbidden_fields": [
+        "player_rating",
+        "recommended_transfers",
+        "card_prediction",
+        "risk_rating",
+        "optimizer_output"
+      ],
+      "promotion_decision": "PENDING_LIVE_ADMISSION_AUDIT",
+      "notes": "Public CardStats pages expose current Premier League referee discipline facts. Promotion remains disabled until access, cost, provenance, deterministic identity, freshness, schema stability, and incremental-value gates are all evidenced."
     },
     {
       "id": "fplanalyticsdashboard_factual",

@@ -11,8 +11,19 @@
     "source_url",
     "summary"
   ],
+  "lineage_required_for_sources": ["fpl_analytics_dashboard", "allaboutfpl"],
+  "required_lineage_fields": [
+    "fetched_at",
+    "freshness_state",
+    "root_family",
+    "independence_state",
+    "identity_state",
+    "parser_version"
+  ],
   "allowed_source_classes": [
     "MODEL_CHALLENGER",
+    "DIAGNOSTIC_CHALLENGER",
+    "ANALYTICAL_CHALLENGER",
     "FIXTURE_STRATEGY_EXPERT",
     "PUNDIT_CONSENSUS",
     "COMMUNITY_SIGNAL",
@@ -43,6 +54,9 @@
     "secondary_availability_is_advisory_and_requires_crosscheck": true,
     "fixture_expert_signals_do_not_vote_in_player_consensus": true,
     "onefpl_signals_are_model_challenger_context": true,
-    "signals_without_source_url_are_rejected": true
+    "signals_without_source_url_are_rejected": true,
+    "stale_or_unavailable_evidence_is_not_current": true,
+    "root_family_is_required_for_external_lineage": true,
+    "external_evidence_is_categorical_not_a_score": true
   }
 }

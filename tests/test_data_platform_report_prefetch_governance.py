@@ -231,6 +231,26 @@ def test_report_prefetch_force_is_governed_and_not_implicit():
     assert '[[ "$V6_PREFETCH_FORCE" == "true" ]] && args+=(--force)' in workflow
 
 
+def test_full_master_resolves_the_required_personal_and_mini_league_scopes():
+    policy = load_policy()
+    env, summary = resolve_prefetch(
+        policy,
+        event_name="workflow_dispatch",
+        dispatch_values={
+            "report_kind": "full_master",
+            "logical_slot": "2026-10-05T04:30:00+07:00",
+            "scope": "",
+            "gw_from": "",
+            "gw_to": "",
+            "force": "true",
+        },
+    )
+
+    assert summary["scope"] == ["personal", "mini_league"]
+    assert env["V6_PREFETCH_PERSONAL"] == "true"
+    assert env["V6_PREFETCH_MINI_LEAGUE"] == "true"
+
+
 def test_report_prefetch_generated_after_target_slot_has_zero_source_age():
     slot = datetime(2026, 9, 5, 5, 30, tzinfo=timezone.utc)
     age, is_fresh = freshness(slot + timedelta(seconds=1), slot, 35)

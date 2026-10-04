@@ -713,9 +713,9 @@ jobs:
               fail("private personal prefetch is not fresh for its target occurrence")
           if manifest.get("personal_requested") is not True:
               fail("private personal scope was not requested")
-          if str(team.get("auth_state") or "").upper() != "AUTH_AVAILABLE":
+          if auth_state != "AUTH_AVAILABLE":
               fail("authoritative personal authentication is unavailable")
-          if int(team.get("entry_id") or 0) != expected_team_id:
+          if entry_id != expected_team_id:
               fail("private personal team identity mismatch")
           if team_gw <= 0 or team_gw != manifest_gw:
               fail("private personal event does not match the report event")

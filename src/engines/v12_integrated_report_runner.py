@@ -8721,7 +8721,14 @@ def run_deep(
     s18_v = _surface_element(s18_cap.get("vice_captain"))
     s19_c = _surface_element(s19_judgement.get("final_captain"))
     s19_v = _surface_element(s19_judgement.get("vice"))
-    if not (
+    captain_consistency_required = bool(
+        str(lineup_state or "").upper() == "COMPLETE"
+        and all(
+            str((sections.get(sid) or {}).get("state") or "").upper() == "COMPLETE"
+            for sid in ("S08", "S18", "S19")
+        )
+    )
+    if captain_consistency_required and not (
         s08_c is not None
         and s08_v is not None
         and s08_c == s18_c == s19_c

@@ -1158,10 +1158,9 @@ def test_stage_c_captain_surface_uses_final_xi_and_p1_7_safe_pool(monkeypatch):
     assert surface["candidate_universe_proof"]["vice_in_final_xi"] is True
     assert surface["candidate_universe_proof"]["frontier_subset_of_final_xi"] is True
     assert surface["mini_league_override_applied"] is False
-    assert surface["near_tie_authority"] == {
-        "source": "P1_7_CAPTAIN_SAFE_POOL",
-        "candidate_count": 2,
-    }
+    assert surface["near_tie_authority"]["source"] == "V12_CAPTAIN_FRONTIER_P1_3B_PMF"
+    assert surface["near_tie_authority"]["classification"] == "FRAGILE"
+    assert surface["captain_safe_pool_semantics"] == "P1_7_COMPATIBILITY_ONLY_NOT_FRONTIER"
 
 
 def test_stage_c_s19_explicitly_consumes_s08_and_s15b(monkeypatch):
@@ -1207,7 +1206,7 @@ def test_stage_c_s19_explicitly_consumes_s08_and_s15b(monkeypatch):
     assert judgement["football_optimal_captain"]["element_id"] == 1
     assert judgement["final_captain"]["element_id"] == 1
     assert judgement["vice"]["element_id"] == 2
-    assert judgement["captain_state"] == "LOCK"
+    assert judgement["captain_state"] == "PREPARE"
     assert judgement["football_baseline_preserved"] is True
     assert judgement["mini_league_captain_context"]["label"] == "BEHAVIOURAL BASELINE"
 

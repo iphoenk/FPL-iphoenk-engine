@@ -236,6 +236,39 @@ def _rank20_contract(
     *,
     label: str,
 ) -> tuple[int, list[str]]:
+    # The locked human-facing Rank20 table is intentionally five columns.
+    # Full 17-field semantics remain compute-authoritative upstream; R6 verifies
+    # the visible rank set, stable player identities, and non-empty locked fields.
+    locked_headers = ["rank", "player_name", "current_price", "current_progress_percent", "eta_human"]
+    for headers, rows in _parse_markdown_tables(section_body):
+        canonical = [_normalize_header(header) for header in headers]
+        if canonical != locked_headers:
+            continue
+        failures: list[str] = []
+        records: dict[int, tuple[str, str, str, str]] = {}
+        for row in rows:
+            if len(row) != len(locked_headers):
+                failures.append(f"VISIBLE_RANK20_ROW_MALFORMED={label}")
+                continue
+            try:
+                rank = int(row[0].strip())
+            except (TypeError, ValueError):
+                failures.append(f"VISIBLE_RANK20_RANK_INVALID={label}")
+                continue
+            if rank in records:
+                failures.append(f"VISIBLE_RANK20_DUPLICATE_RANK={label}:{rank}")
+                continue
+            records[rank] = tuple(value.strip() for value in row[1:])
+        actual = len(records)
+        if actual == 20 and set(records) != set(range(1, 21)):
+            failures.append(f"VISIBLE_RANK20_RANK_SET_INVALID={label}")
+        players = [values[0] for _, values in sorted(records.items())]
+        if any(not value for values in records.values() for value in values):
+            failures.append(f"VISIBLE_RANK20_SCHEMA_MISSING={label}:VISIBLE_FIELD")
+        if len(players) != len(set(players)):
+            failures.append(f"VISIBLE_RANK20_PLAYER_DUPLICATE={label}")
+        return actual, failures
+
     records: dict[int, dict[str, Any]] = {}
     failures: list[str] = []
     table_duplicate_ranks: set[int] = set()

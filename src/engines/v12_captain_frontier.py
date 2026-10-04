@@ -358,6 +358,8 @@ def _competitive_tiebreak(
     *,
     football_leader: Mapping[str, Any],
     risk_posture: str,
+    risk_context: Mapping[str, Any] | None,
+    risk_context_complete: bool,
     league_complete: bool,
     competitive_complete: bool,
 ) -> tuple[Mapping[str, Any], bool, dict[str, Any]]:
@@ -398,6 +400,9 @@ def _competitive_tiebreak(
 
     context = {
         "risk_posture": posture,
+        "risk_posture_evidence": dict(risk_context or {}),
+        "risk_posture_context_complete": bool(risk_context_complete),
+        "football_frontier_close": len(frontier) >= 2,
         "league_complete": bool(league_complete),
         "competitive_window_complete": bool(competitive_complete),
         "captain_exposure_complete": exposure_complete,
@@ -407,16 +412,19 @@ def _competitive_tiebreak(
     }
     if (
         posture == "BALANCED"
+        or not risk_context_complete
         or not league_complete
         or not competitive_complete
         or not exposure_complete
         or len(frontier) < 2
     ):
-        context["tie_break_status"] = (
-            "PRESERVE_FOOTBALL_LEADER_BALANCED"
-            if posture == "BALANCED"
-            else "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
-        )
+        if posture == "BALANCED":
+            tie_break_status = "PRESERVE_FOOTBALL_LEADER_BALANCED"
+        elif not risk_context_complete:
+            tie_break_status = "UNAVAILABLE_INCOMPLETE_RISK_POSTURE_CONTEXT"
+        else:
+            tie_break_status = "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
+        context["tie_break_status"] = tie_break_status
         return football_leader, False, context
 
     reverse = posture == "PROTECT"
@@ -496,6 +504,8 @@ def decide_captain_vice(
     baseline_captain_id: int | None,
     baseline_vice_id: int | None,
     risk_posture: str = "BALANCED",
+    risk_context: Mapping[str, Any] | None = None,
+    risk_context_complete: bool = True,
     league_complete: bool = False,
     competitive_complete: bool = False,
 ) -> dict[str, Any]:
@@ -553,6 +563,8 @@ def decide_captain_vice(
     mini_changed = False
     competitive = {
         "risk_posture": str(risk_posture or "BALANCED").upper(),
+        "risk_posture_evidence": dict(risk_context or {}),
+        "risk_posture_context_complete": bool(risk_context_complete),
         "tie_break_status": "NOT_APPLICABLE_FOOTBALL_CLEAR",
         "competitive_consequence": [],
         "relative_points_not_invented_from_eo": True,
@@ -562,6 +574,8 @@ def decide_captain_vice(
             frontier,
             football_leader=football_leader,
             risk_posture=risk_posture,
+            risk_context=risk_context,
+            risk_context_complete=risk_context_complete,
             league_complete=league_complete,
             competitive_complete=competitive_complete,
         )

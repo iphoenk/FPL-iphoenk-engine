@@ -3847,7 +3847,7 @@ def _captain_decision_surface(
             or dict(visible.get("competitive_scope") or {})
         )
         competitive_eo = competitive_scope.get("eo_pct")
-        if competitive_eo is None:
+        if competitive_eo is None or not isinstance(competitive_eo, (int, float)):
             exposure_class = "UNAVAILABLE"
         elif float(competitive_eo) >= 120.0:
             exposure_class = "PROTECTION_HEAVY"

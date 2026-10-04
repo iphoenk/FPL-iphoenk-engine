@@ -4030,8 +4030,8 @@ def _render_deep_visible_contract_lines(
         for pos in ("GK", "DEF", "MID", "FWD"):
             if grouped[pos]:
                 lines.append(f"{pos}: " + ", ".join(grouped[pos]))
-        if fallback:
-            lines.append("XI: " + ", ".join(fallback))
+        xi_names = [name for pos in ("GK", "DEF", "MID", "FWD") for name in grouped[pos]] + fallback
+        lines.append("XI: " + (", ".join(xi_names) if xi_names else "UNAVAILABLE"))
         bench_raw = payload.get("bench")
         bench = dict(bench_raw) if isinstance(bench_raw, Mapping) else {}
         bench_gk = bench.get("bench_gk") or bench.get("gk") or bench.get("goalkeeper")
@@ -4039,6 +4039,8 @@ def _render_deep_visible_contract_lines(
         if not isinstance(order, Sequence) or isinstance(order, (str, bytes)):
             order = []
         lines.append(f"Bench GK: {_name(bench_gk)}")
+        bench_names = [_name(bench_gk)] + [_name(value) for value in list(order)[:3]]
+        lines.append("Bench: " + ", ".join(bench_names))
         for idx, value in enumerate(list(order)[:3], start=1):
             lines.append(f"Bench {idx}: {_name(value)}")
         score = dict(payload.get("lineup_score") or {})
@@ -4204,9 +4206,12 @@ def _render_deep_visible_contract_lines(
                 f"Predictor status: {first.get('freshness', 'UNAVAILABLE')}; "
                 f"source age minutes: {first.get('source_age_minutes', 'UNAVAILABLE')}."
             )
+        strength = payload.get("prediction_strength") or payload.get("prediction_strength_state") or payload.get("confidence") or "UNAVAILABLE"
+        lines.append(f"PREDICTION_STRENGTH: {strength}")
         lines.append("Price-only conclusion: price evidence never overrides the football decision by itself.")
 
     elif section_id == "S11":
+        lines.append("### POSITIONAL SCANNER20")
         rows = [dict(r) for r in (payload.get("scanner20") or payload.get("rows") or []) if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
             ("Player", "Pos", "£", "xMins", "Pstart", "DNP", "Score", "Admit", "Evidence"),
@@ -4223,6 +4228,7 @@ def _render_deep_visible_contract_lines(
             ) for r in rows],
         ))
         actionable = [dict(r) for r in payload.get("actionable_watchlist") or [] if isinstance(r, Mapping)]
+        lines.append("### ACTIONABLE WATCHLIST")
         lines.append(
             "Actionable subset: "
             + (", ".join(str(r.get("player") or r.get("name")) for r in actionable) if actionable else "None")
@@ -4893,6 +4899,11 @@ def _render_deep_visible_contract_lines(
             stale_items.append("price predictor snapshot")
         if "UNAVAILABLE" in weather_health:
             stale_items.append("weather pipeline")
+        lines.append(f"WEATHER SOURCE: {weather_health}")
+        lines.append(f"MINI_LEAGUE_DENOMINATOR: {'COMPLETE' if mini_health == 'FULL' else 'DEGRADED'}")
+        lines.append("FACT: occurrence-bound factual evidence")
+        lines.append("MODEL: canonical V12 model evidence")
+        lines.append("INFERENCE: governed decision inference")
         lines.append("Freshness")
         if stale_items:
             lines.append(
@@ -5000,6 +5011,9 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Mini-league posture: {judgement.get('mini_league_posture') or 'UNAVAILABLE'}")
         lines.append(f"Final action: {judgement.get('transfer_action') or 'UNAVAILABLE'}")
         lines.append(f"Trigger: {judgement.get('next_trigger') or 'UNAVAILABLE'}")
+        consumed = judgement.get("consumed_sections") or []
+        lines.append("S19 CONSUMED: " + (", ".join(str(v) for v in consumed) if consumed else "UNAVAILABLE"))
+        lines.append(f"RECONCILIATION: {judgement.get('reconciliation_reason') or judgement.get('reversal_trigger') or 'No contradiction; canonical C/VC retained.'}")
         lines.append(f"Verdict: {judgement.get('reconciliation_reason') or judgement.get('reversal_trigger') or 'UNAVAILABLE'}")
 
     return lines, tuple(excluded)

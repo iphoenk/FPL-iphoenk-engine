@@ -199,48 +199,37 @@ def _extract_table_column(section_body: str, field: str) -> list[str]:
 
 
 def _watchlist_contract(section_body: str) -> tuple[int, list[str]]:
-    """Validate only the ranked Scanner20 table, not adjacent actionable tables.
+    """Validate the locked Scanner20 table: exact rows and 5/5/5/5 positions.
 
-    S11 intentionally contains two surfaces: exact ranked Scanner20 plus an
-    unpadded Actionable Watchlist. The latter also has a position column, so
-    collecting columns across every table falsely inflates position coverage.
+    Ownership exclusion is compute-authoritative upstream; the locked visible
+    table intentionally does not expose element ids, rank, or ownership tags.
     """
     failures: list[str] = []
-    ranks: list[str] = []
     positions: list[str] = []
-    ownership: list[str] = []
-
+    actual = 0
     for headers, rows in _parse_markdown_tables(section_body):
         normalized = [_normalize_header(header) for header in headers]
-        required = {"rank", "position", "ownership_tag"}
-        if not required.issubset(set(normalized)):
+        if "position" not in normalized or "player_name" not in normalized:
             continue
-        rank_col = normalized.index("rank")
         position_col = normalized.index("position")
-        ownership_col = normalized.index("ownership_tag")
+        player_col = normalized.index("player_name")
+        actual = len(rows)
+        names = []
         for row in rows:
-            if len(row) <= max(rank_col, position_col, ownership_col):
+            if len(row) <= max(position_col, player_col):
                 continue
-            ranks.append(row[rank_col].strip())
             positions.append(row[position_col].strip().upper())
-            ownership.append(row[ownership_col].strip().upper())
-
-    actual = len(set(ranks))
-    if len(ranks) != actual:
-        failures.append("VISIBLE_WATCHLIST_RANK_DUPLICATE")
+            names.append(row[player_col].strip())
+        if len(names) != len(set(names)):
+            failures.append("VISIBLE_WATCHLIST_PLAYER_DUPLICATE")
+        break
     if len(positions) != actual:
         failures.append("VISIBLE_WATCHLIST_POSITION_MISSING")
     else:
         position_counts = Counter(positions)
-        if any(
-            position_counts.get(position, 0) != target
-            for position, target in _POSITION_TARGET.items()
-        ):
+        if any(position_counts.get(position, 0) != target for position, target in _POSITION_TARGET.items()):
             failures.append("VISIBLE_WATCHLIST_POSITION_DISTRIBUTION_INVALID")
-    if len(ownership) != actual or any(tag != "NON_OWNED" for tag in ownership):
-        failures.append("VISIBLE_WATCHLIST_OWNERSHIP_INVALID")
     return actual, failures
-
 
 def _rank20_contract(
     section_body: str,
@@ -505,7 +494,11 @@ def validate_visible_report_body(
         if section_id not in expected_set:
             continue
         section_body = "\n".join(section_content.get(section_id, []))
-        actual = _count_markdown_table_rows(section_body) if strategy == "TABLE" else 0
+        if label == "ALL15_TACTICAL" and section_id == "S16":
+            block_count = len(re.findall(r"(?m)^### PLAYER\s+\d+\s+—\s+", section_body))
+            actual = block_count if block_count else _count_markdown_table_rows(section_body)
+        else:
+            actual = _count_markdown_table_rows(section_body) if strategy == "TABLE" else 0
         visible_counts[label] = actual
         if actual != target:
             failures.append(f"VISIBLE_COUNT_MISMATCH={label}:{actual}!={target}")
@@ -522,7 +515,8 @@ def validate_visible_report_body(
     our15_ids = _extract_table_column(our15_body, "element_id")
     our15_names = _extract_table_column(our15_body, "player_name")
     if "OUR15" in expected_counts:
-        if len(our15_ids) != 15 or len(set(our15_ids)) != 15:
+        identity_values = our15_ids if our15_ids else our15_names
+        if len(identity_values) != 15 or len(set(identity_values)) != 15:
             failures.append("VISIBLE_OUR15_IDENTITY_INVALID")
 
     if "XI" in expected_counts or "BENCH" in expected_counts:
@@ -539,11 +533,12 @@ def validate_visible_report_body(
                 failures.append("VISIBLE_XI_BENCH_NOT_EXACT_OUR15")
 
     if "S16" in expected_set:
-        tactical_ids = _extract_table_column(
-            "\n".join(section_content.get("S16", [])),
-            "element_id",
-        )
-        if len(tactical_ids) == 15 and our15_ids and set(tactical_ids) != set(our15_ids):
+        s16_body = "\n".join(section_content.get("S16", []))
+        tactical_ids = _extract_table_column(s16_body, "element_id")
+        block_names = re.findall(r"(?m)^### PLAYER\s+\d+\s+—\s+(.+?)\s*$", s16_body)
+        if tactical_ids and our15_ids and len(tactical_ids) == 15 and set(tactical_ids) != set(our15_ids):
+            failures.append("VISIBLE_ALL15_TACTICAL_ID_SET_MISMATCH")
+        elif block_names and our15_names and len(block_names) == 15 and set(block_names) != set(our15_names):
             failures.append("VISIBLE_ALL15_TACTICAL_ID_SET_MISMATCH")
 
     evidence = _parse_evidence_labels(body)

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "provider": "cardstats",
+  "domain": "cardstats.io",
+  "audit_date": "2026-10-04",
+  "decision": "PROMOTE_V6_NO",
+  "access": {
+    "public_pages_observed": true,
+    "cost": "UNPROVEN",
+    "authentication": "PUBLIC_PAGES_NO_LOGIN_OBSERVED_ACCOUNT_OPTIONAL_NOT_PROVEN",
+    "automation_acceptability": "UNPROVEN",
+    "bounded_retrieval": "UNPROVEN_IN_RUNTIME_HTTP_ENVIRONMENT"
+  },
+  "coverage": {
+    "current_premier_league_pages": true,
+    "player_facts": true,
+    "referee_facts": true,
+    "team_facts": "NOT_PROVEN"
+  },
+  "identity": {
+    "source_native_numeric_ids": true,
+    "player_identity": "SOURCE_ID_PRESENT_OFFICIAL_FPL_BRIDGE_NOT_PROVEN",
+    "team_identity": "NOT_PROVEN",
+    "referee_identity": "SOURCE_ID_PRESENT_CANONICAL_BRIDGE_NOT_PROVEN",
+    "name_only_join_allowed": false
+  },
+  "provenance": {
+    "source_native_factual_fields_observed": ["yellow_cards", "red_cards", "fouls", "fouls_won", "tackles", "referee_cards_per_game", "referee_fouls_per_game"],
+    "root_family": "UNRESOLVED_PENDING_PROVENANCE_INVESTIGATION",
+    "predictive_fields_admitted": false,
+    "odds_or_recommendation_fields_admitted": false
+  },
+  "freshness": {
+    "current_season_labels_observed": true,
+    "machine_freshness_contract": "UNPROVEN",
+    "parser_schema_stability": "UNPROVEN"
+  },
+  "incremental_value": "POTENTIAL_DISCIPLINE_SECURITY_CONTEXT_ONLY",
+  "failure_isolation": "CANDIDATE_NONBLOCKING_NOT_ACTIVE",
+  "evidence_urls": [
+    "https://cardstats.io/player/37563876",
+    "https://cardstats.io/referee/14812-darren-england-referee-stats",
+    "https://cardstats.io/privacy"
+  ],
+  "reason": "Public current Premier League discipline pages are visible, but promotion-critical cost/automation acceptability, upstream provenance, deterministic official-FPL identity bridges, freshness contract, and schema stability are not all proven. Keep candidate non-active and fail-soft."
+}

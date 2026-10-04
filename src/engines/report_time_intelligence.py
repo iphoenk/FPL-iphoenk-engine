@@ -52,6 +52,18 @@ def validate_registry(registry: dict[str, Any] | None = None) -> dict[str, Any]:
     onefpl = next((row for row in sources if row.get("id") == "onefpl"), {})
     ben = next((row for row in sources if row.get("id") == "ben_crellin"), {})
     reddit = next((row for row in sources if row.get("id") == "reddit_fantasypl"), {})
+    analytics_dashboard = next((row for row in sources if row.get("id") == "fpl_analytics_dashboard"), {})
+    allaboutfpl = next((row for row in sources if row.get("id") == "allaboutfpl"), {})
+    six_source_boundaries_ok = (
+        analytics_dashboard.get("class") == "MODEL_CHALLENGER"
+        and analytics_dashboard.get("retrieval") == "REPORT_TIME_TARGETED_WEB"
+        and analytics_dashboard.get("consensus_vote") is False
+        and set(analytics_dashboard.get("maturity_states") or {})
+        == {"NOT_MATURE", "AVAILABLE_CURRENT", "AVAILABLE_STALE", "NO_RELEVANT_DATA", "UNAVAILABLE"}
+        and allaboutfpl.get("class") == "PUNDIT_CONSENSUS"
+        and allaboutfpl.get("consensus_vote") is False
+        and allaboutfpl.get("article_age_policy") == "current_gameweek_only"
+    )
     ok = (
         not duplicates
         and not invalid_classes
@@ -63,6 +75,7 @@ def validate_registry(registry: dict[str, Any] | None = None) -> dict[str, Any]:
         and ben.get("consensus_vote") is False
         and reddit.get("class") == "COMMUNITY_SIGNAL"
         and reddit.get("consensus_vote") is False
+        and six_source_boundaries_ok
     )
     return {
         "registry": registry.get("registry"),
@@ -70,6 +83,7 @@ def validate_registry(registry: dict[str, Any] | None = None) -> dict[str, Any]:
         "enabled": sum(1 for row in sources if row.get("enabled") is True),
         "duplicates": duplicates,
         "invalid_classes": invalid_classes,
+        "six_source_boundaries_ok": six_source_boundaries_ok,
         "integrity_ok": bool(ok),
     }
 
@@ -106,6 +120,8 @@ def validate_evidence(
     now = now or datetime.now(timezone.utc)
     sources = _source_map(registry)
     required = set(schema.get("required_signal_fields") or [])
+    lineage_sources = set(schema.get("lineage_required_for_sources") or [])
+    lineage_required = set(schema.get("required_lineage_fields") or [])
     allowed_stances = set(schema.get("allowed_stances") or [])
     allowed_classes = set(schema.get("allowed_source_classes") or [])
     accepted: list[dict[str, Any]] = []
@@ -121,6 +137,11 @@ def validate_evidence(
         if missing:
             rejected.append({"index": index, "source_id": source_id, "reason": "MISSING_FIELDS", "fields": missing})
             continue
+        if source_id in lineage_sources:
+            missing_lineage = sorted(key for key in lineage_required if raw.get(key) in {None, ""})
+            if missing_lineage:
+                rejected.append({"index": index, "source_id": source_id, "reason": "MISSING_LINEAGE_FIELDS", "fields": missing_lineage})
+                continue
         if source is None or source.get("enabled") is not True:
             rejected.append({"index": index, "source_id": source_id, "reason": "SOURCE_NOT_ENABLED"})
             continue

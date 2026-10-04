@@ -495,7 +495,8 @@ def validate_visible_report_body(
             continue
         section_body = "\n".join(section_content.get(section_id, []))
         if label == "ALL15_TACTICAL" and section_id == "S16":
-            actual = len(re.findall(r"(?m)^### PLAYER\s+\d+\s+—\s+", section_body))
+            block_count = len(re.findall(r"(?m)^### PLAYER\s+\d+\s+—\s+", section_body))
+            actual = block_count if block_count else _count_markdown_table_rows(section_body)
         else:
             actual = _count_markdown_table_rows(section_body) if strategy == "TABLE" else 0
         visible_counts[label] = actual

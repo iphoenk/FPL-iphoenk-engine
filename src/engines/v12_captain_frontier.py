@@ -111,9 +111,9 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
         canonical_haul = _f(tails.get("ge_10"))
     p_start = _f(row.get("p_start"))
     xmins = _f(row.get("xmins"))
+    # DNP cannot be inferred as 1-P(start): cameo states exist and would be
+    # misclassified as DNP.  Missing DNP evidence stays missing/fail-safe.
     p_dnp = _f(row.get("p_dnp"))
-    if p_dnp is None and p_start is not None:
-        p_dnp = max(0.0, min(1.0, 1.0 - p_start))
 
     profile = {
         "element_id": _i(row.get("element_id", row.get("element"))),
@@ -203,6 +203,7 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "p_ge_10",
         "p_start",
         "xmins",
+        "p_dnp",
     )
     profile["football_evidence_complete"] = bool(
         pmf is not None and all(profile.get(key) is not None for key in required)
@@ -451,6 +452,12 @@ def _competitive_tiebreak(
                 else float("inf"),
                 _scope_value(row, "competitive_scope", "eo_pct")
                 if _scope_value(row, "competitive_scope", "eo_pct") is not None
+                else float("inf"),
+                _scope_value(row, "league_scope", "captain_pct")
+                if _scope_value(row, "league_scope", "captain_pct") is not None
+                else float("inf"),
+                _scope_value(row, "league_scope", "eo_pct")
+                if _scope_value(row, "league_scope", "eo_pct") is not None
                 else float("inf"),
                 -(_f(row.get("expected_points")) or float("-inf")),
             ),

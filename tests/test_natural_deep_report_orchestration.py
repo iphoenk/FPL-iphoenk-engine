@@ -192,11 +192,17 @@ def test_zero_price_rows_require_concrete_unavailable_reason():
 
 def test_actionable_price_radar_keeps_all15_price_facts_even_without_predictor():
     result = build_actionable_price_radar(owned15=_owned15(), predictor_artifact=None)
-    assert result["state"] == "COMPLETE"
+    assert result["state"] == "DEGRADED"
     assert result["available_count"] == 15
     assert len(result["rows"]) == 15
     assert all(row["price_fact"] == "FACT" for row in result["rows"])
     assert all(row["predictor_direction"] == "UNAVAILABLE" for row in result["rows"])
+    assert all(
+        row["predictor_unavailable_reason"] == "NO_PLAYER_PREDICTOR_EVIDENCE"
+        for row in result["rows"]
+    )
+    assert len(result["genuine_predictor_unavailable"]) == 15
+    assert "genuinely unavailable/unsupported" in result["degradation_reason"]
 
 
 def test_icon_submitted_picks_survive_standings_failure():

@@ -36,7 +36,7 @@ jobs:
           python - <<'PY'
           import os
           import shlex
-          from datetime import datetime
+          from datetime import datetime, timedelta
           from zoneinfo import ZoneInfo
 
           tokens = shlex.split(os.environ["COMMAND"])
@@ -70,8 +70,12 @@ jobs:
           if dt.second != 0 or dt.microsecond != 0:
               raise SystemExit("report_slot must be exact to the minute")
           now = datetime.now(ZoneInfo("Asia/Jakarta"))
-          if dt > now:
-              raise SystemExit("report_slot must not be in the future")
+          scheduler_skew = timedelta(minutes=5)
+          if dt > now + scheduler_skew:
+              raise SystemExit("report_slot exceeds bounded scheduler skew")
+          # A governed scheduler may enqueue a logical slot a few minutes early.
+          # Keep report_slot unchanged: downstream factual binding and generated_at
+          # checks remain occurrence-bound and cannot claim pre-slot output as current.
 
           checkpoint = args.get("checkpoint_time") or dt.strftime("%H:%M")
           if checkpoint != dt.strftime("%H:%M"):

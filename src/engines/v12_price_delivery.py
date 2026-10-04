@@ -671,7 +671,7 @@ def build_price_delivery_report(
                 "affordability_relevance": (
                     "EVALUATE_WITH_ROUTE_FINANCE"
                     if team_resolution.get("supportable")
-                    else "OWNERSHIP_SCOPE_UNRESOLVED"
+                    else "NOT_ASSESSED_CURRENT_SQUAD_UNVERIFIED"
                 ),
             }
         )
@@ -693,10 +693,7 @@ def build_price_delivery_report(
                 "YES"
                 if team_resolution.get("supportable")
                 and int(row.get("element_id") or -1) in set(owned_ids)
-                else "STALE_SCOPE"
-                if not team_resolution.get("supportable")
-                and int(row.get("element_id") or -1) in set(owned_ids)
-                else "NO"
+                else "UNKNOWN"
             )
             row["watchlist_flag"] = (
                 "YES"
@@ -748,11 +745,15 @@ def build_price_delivery_report(
     ).upper()
     source = dict(source_lineage or {})
 
-    price_risk = [
-        row
-        for row in (our15.get("rows") or [])
-        if str(row.get("direction") or "").upper() in {"FALL", "RISE"}
-    ]
+    price_risk = (
+        [
+            row
+            for row in (our15.get("rows") or [])
+            if str(row.get("direction") or "").upper() in {"FALL", "RISE"}
+        ]
+        if team_resolution.get("supportable")
+        else []
+    )
     meaningful_route_risk = any(
         row.get("target_plus_0_1") is False
         or row.get("outgoing_minus_0_1") is False
@@ -797,7 +798,9 @@ def build_price_delivery_report(
         "affordability_changed": (
             "MATERIAL_RISK" if meaningful_route_risk else "NO_PROVEN_MATERIAL_CHANGE"
         ),
-        "price_pressure": len(price_risk),
+        "price_pressure": (
+            len(price_risk) if team_resolution.get("supportable") else None
+        ),
         "football_decision_override": False,
     }
     by_id["PRICE2"].update(
@@ -1024,7 +1027,7 @@ def _human_scalar(value: Any) -> str:
         "NO_PROVEN_MATERIAL_CHANGE": "No proven material change",
         "CURRENT_V12_WATCHLIST": "Current V12 watchlist",
         "EVALUATE_WITH_ROUTE_FINANCE": "Evaluate with route finance",
-        "OWNERSHIP_SCOPE_UNRESOLVED": "Ownership scope unresolved",
+        "NOT_ASSESSED_CURRENT_SQUAD_UNVERIFIED": "Not assessed; current squad could not be verified",
         "STALE_SCOPE": "Stale scope",
         "KNOWN": "Known",
         "UNKNOWN": "Unknown",
@@ -1066,7 +1069,16 @@ def render_price_report(report: Mapping[str, Any]) -> str:
         if str(section.get("state") or "").upper() != "COMPLETE":
             lines.append("Scope status: " + _human_scalar(section.get("state")))
             if section.get("degradation_reason"):
-                lines.append("Scope note: " + _human_scalar(section.get("degradation_reason")))
+                reason = _human_scalar(section.get("degradation_reason"))
+                if (
+                    section.get("section_id") == "PRICE2"
+                    and not current.get("supportable")
+                ):
+                    reason = (
+                        "Current squad could not be verified from authoritative personal "
+                        "evidence. Ownership status remains unknown."
+                    )
+                lines.append("Scope note: " + reason)
         content = dict(section.get("content") or {})
 
         if index == 1:
@@ -1106,9 +1118,18 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 f"Current15 authority: {_human_scalar(content.get('source_class') or content.get('ownership_state'))}",
                 f"Planning GW: {_human_scalar(content.get('gw'))}",
                 f"Observed at: {_human_scalar(content.get('observed_at'))}",
-                f"Squad completeness: {len(rows)}/15",
-                f"Selling-value availability: {sell_available}/{len(rows) if rows else 15}",
             ])
+            if current.get("supportable"):
+                lines.append(f"Squad completeness: {len(rows)}/15")
+            else:
+                lines.append("Current squad completeness: Unavailable")
+                if rows:
+                    lines.append(
+                        f"Historical ownership evidence: {len(rows)}/15 player IDs from GW{content.get('gw')}; not treated as current."
+                    )
+            lines.append(
+                f"Selling-value availability: {sell_available}/{len(rows) if rows else 15}"
+            )
             lines.extend(_table(
                 ("Player","Pos","Market","Sell","Direction","Progress","ETA / Status","Decision impact"),
                 [(
@@ -1435,6 +1456,52 @@ def _read_json(path: Path, default: Any = None) -> Any:
         return default
 
 
+def _load_personal_inputs(
+    *,
+    runtime_data_root: Path,
+    private_data_root: Path | None,
+    planning_gw: int | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Use the shared personal evidence adapter and selector for PRICE.
+
+    Personal artifacts stay in the private checkout. PRICE shares the same
+    candidate collection and freshness/identity selection used by DEEP rather
+    than reading a second private-data format or copying it into runtime-data-v6.
+    """
+    from src.engines.v12_deep_delivery import select_personal_evidence
+    from src.engines.v12_personal_data_plane import collect_personal_evidence_candidates
+
+    if planning_gw is None:
+        private_team = _read_json(
+            (private_data_root / "personal/current_team.json")
+            if private_data_root is not None
+            else Path("__missing__"),
+            {},
+        ) or {}
+        try:
+            planning_gw = int(private_team.get("gw") or 0)
+        except (TypeError, ValueError):
+            planning_gw = 0
+        if planning_gw <= 0:
+            raise PriceDeliveryError("planning_gw unavailable for personal evidence selection")
+
+    candidates = collect_personal_evidence_candidates(
+        runtime_root=runtime_data_root,
+        legacy_state=None,
+        planning_gw=planning_gw,
+        private_root=private_data_root,
+        allow_legacy_private_sources=False,
+        require_private_personal=False,
+        enforce_public_disclosure=True,
+    )
+    selected = select_personal_evidence(candidates, planning_gw=planning_gw)
+    payload = dict(selected.get("payload") or {})
+    source_class = str(selected.get("source_class") or "").upper()
+    if source_class == "OFFICIAL_SUBMITTED_PICKS":
+        return {"current_team": {}, "submitted_picks": payload}
+    return {"current_team": payload, "submitted_picks": {}}
+
+
 def _planning_gw_from_bootstrap(bootstrap: Mapping[str, Any]) -> int:
     events = [
         dict(row)
@@ -1529,6 +1596,7 @@ def _scenario_routes(state: Mapping[str, Any]) -> list[dict[str, Any]]:
 def run_price_occurrence(
     *,
     runtime_data_root: Path,
+    private_data_root: Path | None = None,
     canonical_path: Path,
     state_path: Path,
     report_slot: str,
@@ -1553,12 +1621,13 @@ def run_price_occurrence(
         fixtures = []
     planning_gw = _planning_gw_from_bootstrap(bootstrap)
 
-    current_team = _read_json(
-        runtime_data_root / "data/v6/personal/current_team.json", {}
-    ) or {}
-    submitted = _read_json(
-        runtime_data_root / "data/v6/personal/submitted_picks.json", {}
-    ) or {}
+    personal_inputs = _load_personal_inputs(
+        runtime_data_root=runtime_data_root,
+        private_data_root=private_data_root,
+        planning_gw=planning_gw,
+    )
+    current_team = personal_inputs["current_team"]
+    submitted = personal_inputs["submitted_picks"]
     explicit = explicit_user_evidence_from_state(state)
     resolution = resolve_current15(
         planning_gw=planning_gw,

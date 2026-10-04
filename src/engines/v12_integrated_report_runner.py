@@ -9330,6 +9330,11 @@ def main() -> int:
     if mode == "PRICE":
         bundle = run_price_occurrence(
             runtime_data_root=Path(args.runtime_data_root),
+            private_data_root=(
+                Path(args.private_data_root)
+                if args.private_data_root
+                else None
+            ),
             canonical_path=CANONICAL_PATH,
             state_path=STATE_PATH,
             report_slot=args.report_slot,

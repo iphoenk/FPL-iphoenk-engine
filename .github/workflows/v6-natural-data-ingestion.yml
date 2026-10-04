@@ -691,6 +691,8 @@ jobs:
               return parsed.astimezone(timezone.utc)
 
           expected_team_id = int(os.environ["FPL_TEAM_ID"])
+          entry_id = int(team.get("entry_id") or 0)
+          auth_state = str(team.get("auth_state") or "").upper()
           manifest_gw = int(manifest.get("gw") or 0)
           team_gw = int(team.get("gw") or 0)
           slot = instant(os.environ["PRIVATE_LOGICAL_SLOT"])

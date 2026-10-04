@@ -656,7 +656,7 @@ def decide_captain_vice(
             "eo_is_not_expected_points": True,
             "candidate_specific_relative_mc_fabricated": False,
             "cross_player_correlation": "NOT_MODELLED_YET",
-            "blank_threshold_not_hardcoded": True,
+            "blank_semantics": "P_FPL_POINTS_LE_2_FROM_CANONICAL_PMF_WHEN_AVAILABLE",
             "bonus_residual_distribution_fabricated": False,
             "mc500k_mutated": False,
         },

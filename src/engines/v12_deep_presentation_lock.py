@@ -427,12 +427,16 @@ def validate_rendered_deep_presentation(
     s15b = rendered.get("S15B", "")
     if s15b and state_by_sid.get("S15B") == "COMPLETE":
         for table in _rendered_tables(s15b):
+            population_columns = {
+                "Coverage", "Owned", "Starter", "Bench", "Captain", "Vice", "EO",
+                "Squad overlap", "XI overlap", "League C", "League EO",
+                "Competitive C", "Competitive EO",
+            }
+            # Competitive-rival Captain/Vice cells are player identities, not ratios.
+            if "Position vs us" in table["columns"]:
+                population_columns -= {"Captain", "Vice"}
             for col_index, column in enumerate(table["columns"]):
-                if column not in {
-                    "Coverage", "Owned", "Starter", "Bench", "Captain", "Vice", "EO",
-                    "Squad overlap", "XI overlap", "League C", "League EO",
-                    "Competitive C", "Competitive EO",
-                }:
+                if column not in population_columns:
                     continue
                 for row in table["rows"]:
                     if col_index >= len(row):

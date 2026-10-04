@@ -3614,7 +3614,7 @@ def _human_summary(value: Any) -> str:
             label = str(key).replace("_", " ")
             if isinstance(item, Mapping):
                 sub = ", ".join(
-                    f"{str(k).replace('_', ' ')}={v}"
+                    f"{str(k).replace('_', ' ')}={_human_summary(v)}"
                     for k, v in item.items()
                     if v not in (None, "", [], {})
                 )
@@ -3910,9 +3910,8 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
-            ("ID", "Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
+            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
-                r.get("element_id") or r.get("element"),
                 r.get("player") or r.get("name"),
                 r.get("position"),
                 r.get("opponent"),
@@ -3994,7 +3993,7 @@ def _render_deep_visible_contract_lines(
         )
 
     elif section_id == "S05":
-        lines.append(f"Fixture topology: {payload.get('gw_topology') or 'UNAVAILABLE'}")
+        lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
         fixtures = payload.get("fixtures") or []
         if fixtures:
             lines.append("PL fixtures: " + _compact(fixtures))
@@ -4006,6 +4005,7 @@ def _render_deep_visible_contract_lines(
                 f"non-PL={coverage.get('verified_non_pl_schedule_bound', 'UNAVAILABLE')}; "
                 f"weather={coverage.get('weather_binding_status', 'UNAVAILABLE')}."
             )
+        lines.append("### PLAYER WORKLOAD / TRAVEL")
         workloads = [dict(r) for r in payload.get("player_workload") or [] if isinstance(r, Mapping)]
         material_load = [
             r for r in workloads
@@ -4021,6 +4021,7 @@ def _render_deep_visible_contract_lines(
             ) if material_load else "No material workload flag.")
         )
         weather = payload.get("weather")
+        lines.append("### WEATHER")
         lines.append("Weather: " + (_compact(weather) if weather else "No material weather signal."))
         lines.append("Decision use: context only; no separate optimizer or news authority.")
 
@@ -4186,6 +4187,7 @@ def _render_deep_visible_contract_lines(
         )
 
     elif section_id == "S09":
+        lines.append("### CHIP LEDGER")
         ledger = payload.get("chip_ledger")
         ledger_map = dict(ledger) if isinstance(ledger, Mapping) else {}
         aliases = (
@@ -4199,6 +4201,9 @@ def _render_deep_visible_contract_lines(
             value = next((ledger_map.get(k) for k in keys if k in ledger_map), None)
             chip_rows.append((label, _compact(value if value is not None else "UNAVAILABLE")))
         lines.extend(_markdown_table(("Chip", "Status"), chip_rows))
+        remaining = [label for label, value in chip_rows if "AVAILABLE" in str(value).upper() or "UNUSED" in str(value).upper()]
+        lines.append("Remaining: " + (", ".join(remaining) if remaining else "None / governed by ledger"))
+        lines.append("Free Hit: " + _compact(next((value for label, value in chip_rows if label == "Free Hit"), "UNAVAILABLE")))
         lines.append(f"Current decision: {payload.get('considered_now') if payload.get('considered_now') is not None else 'No chip action'}")
         lines.append(f"Reason: {payload.get('hold_reason') or payload.get('trigger') or 'UNAVAILABLE'}")
 
@@ -4957,6 +4962,7 @@ def _render_deep_visible_contract_lines(
             )
 
     elif section_id == "S18":
+        lines.append("### MULTI-AXIS ACTION BOARD")
         board = dict(payload.get("action_board") or {})
         axes = [dict(r) for r in board.get("axes") or [] if isinstance(r, Mapping)]
         by_axis = {str(r.get("axis") or "").upper(): r for r in axes}
@@ -4973,10 +4979,10 @@ def _render_deep_visible_contract_lines(
             if row:
                 lines.append(
                     f"Now: {_compact(row.get('NOW'))}. Next: {_compact(row.get('NEXT'))}. "
-                    f"Trigger: {_compact(row.get('TRIGGER TO ACT'))}. "
-                    f"Latest safe point: {_compact(row.get('LATEST SAFE DECISION POINT'))}. "
-                    f"Cost of waiting: {_compact(row.get('COST OF WAITING'))}. "
-                    f"Abort/reversal: {_compact(row.get('ABORT / REVERSAL'))}."
+                    f"TRIGGER TO ACT: {_compact(row.get('TRIGGER TO ACT'))}. "
+                    f"LATEST SAFE DECISION POINT: {_compact(row.get('LATEST SAFE DECISION POINT'))}. "
+                    f"COST OF WAITING: {_compact(row.get('COST OF WAITING'))}. "
+                    f"ABORT / REVERSAL: {_compact(row.get('ABORT / REVERSAL'))}."
                 )
                 if display == "CAPTAIN":
                     cap_decision = dict(board.get("captain_decision") or {})

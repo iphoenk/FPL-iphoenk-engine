@@ -118,7 +118,7 @@ def valid_visible_body(
         "S12": "RISE20",
         "S13": "FALL20",
         "S14": "Package Optimizer / Transfer Frontier",
-        "S14B": "3-GW Squad Staging",
+        "S14B": "Multi-GW Plan / Contingency",
         "S15": "Evidence Quality",
         "S15B": "ICON+ Mini-League",
         "S16": "ALL15 Tactical / Probability Review",
@@ -423,7 +423,7 @@ def valid_visible_body(
             lines.append("ENGINE / DATA STATUS")
             lines.append("V6 core: GREEN | Publication: PASS | Universe authority: FULL")
         elif section_id == "S18":
-            lines.append("### MULTI-AXIS ACTION BOARD")
+            lines.append("### ACTION BOARD")
             lines.extend(
                 _table(
                     [

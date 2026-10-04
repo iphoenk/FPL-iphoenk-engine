@@ -108,6 +108,275 @@ def _current_mode_contract_failures(
     return failures
 
 
+def _deep_semantic_population_failures(
+    report: Mapping[str, Any],
+    body: str,
+) -> list[str]:
+    """Fail closed when occurrence-supported evidence is lost after production."""
+
+    def section(section_id: str) -> tuple[str, dict[str, Any]]:
+        for raw in report.get("sections") or []:
+            if not isinstance(raw, Mapping):
+                continue
+            if str(raw.get("section_id") or "").upper() != section_id:
+                continue
+            return (
+                str(raw.get("state") or raw.get("status") or "").upper(),
+                dict(raw.get("content") or {}),
+            )
+        return ("MISSING", {})
+
+    def missing(value: Any) -> bool:
+        return value is None or str(value).strip().upper() == "UNAVAILABLE"
+
+    def body_section(start_number: str, end_number: str) -> str:
+        start_token = f"## {start_number}."
+        end_token = f"## {end_number}."
+        start = body.find(start_token)
+        if start < 0:
+            return ""
+        end = body.find(end_token, start + len(start_token))
+        return body[start:] if end < 0 else body[start:end]
+
+    failures: list[str] = []
+
+    # S08: canonical PMF evidence may be incomplete truthfully, but it may not
+    # disappear between the captain owner and the visible RETURN PROFILE.
+    s08_state, s08 = section("S08")
+    profiles = [
+        dict(row)
+        for row in s08.get("captain_profiles") or []
+        if isinstance(row, Mapping)
+    ]
+    pmf_supported = [
+        row for row in profiles if row.get("pmf_available") is True
+    ]
+    for row in pmf_supported:
+        if any(
+            missing(row.get(key))
+            for key in ("p_blank", "p_haul", "p_ge_10")
+        ):
+            failures.append(
+                "S08_AVAILABLE_PMF_DROPPED="
+                + str(row.get("element_id") or "UNKNOWN")
+            )
+    if s08_state == "COMPLETE":
+        incomplete = [
+            str(row.get("element_id") or "UNKNOWN")
+            for row in profiles
+            if row.get("football_evidence_complete") is not True
+        ]
+        if incomplete:
+            failures.append(
+                "S08_COMPLETE_MASKS_INCOMPLETE_EVIDENCE="
+                + ",".join(incomplete)
+            )
+    s08_body = body_section("8", "9")
+    if (
+        pmf_supported
+        and "Pblank=UNAVAILABLE | Phaul=UNAVAILABLE | P>=10=UNAVAILABLE"
+        in s08_body
+    ):
+        failures.append("S08_RENDER_DROPPED_AVAILABLE_RETURN_PROFILE")
+
+    # S10: use canonical element identity. Matching predictor evidence must bind
+    # to visible direction/progress; genuine no-row/unsupported evidence may
+    # remain unavailable only under a degraded section state.
+    s10_state, s10 = section("S10")
+    s10_rows = [
+        dict(row)
+        for row in s10.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    binding_failures = [
+        str(value)
+        for value in s10.get("semantic_binding_failures") or []
+    ]
+    if binding_failures:
+        failures.append(
+            "S10_PREDICTOR_BINDING_FAILURE="
+            + ",".join(binding_failures)
+        )
+    genuine_missing = list(s10.get("genuine_predictor_unavailable") or [])
+    if s10_state == "COMPLETE" and genuine_missing:
+        failures.append("S10_COMPLETE_MASKS_GENUINE_PREDICTOR_UNAVAILABLE")
+    by_element: dict[int, dict[str, Any]] = {}
+    for row in s10_rows:
+        try:
+            element = int(row.get("element_id") or 0)
+        except (TypeError, ValueError):
+            element = 0
+        if element > 0:
+            by_element[element] = row
+        if row.get("predictor_binding_state") == "BOUND" and (
+            missing(row.get("direction"))
+            or missing(row.get("official_or_provider_progress"))
+        ):
+            failures.append(
+                "S10_AVAILABLE_PREDICTOR_DROPPED="
+                + str(row.get("element_id") or "UNKNOWN")
+            )
+
+    supported_elsewhere: set[int] = set()
+    for sid in ("S12", "S13"):
+        _, content = section(sid)
+        for row in content.get("rows") or []:
+            if not isinstance(row, Mapping):
+                continue
+            try:
+                element = int(
+                    row.get("element_id")
+                    or row.get("element")
+                    or row.get("id")
+                    or 0
+                )
+            except (TypeError, ValueError):
+                element = 0
+            progress = row.get(
+                "official_or_provider_progress",
+                row.get("current_progress_percent", row.get("projected_percent")),
+            )
+            if element > 0 and not missing(progress):
+                supported_elsewhere.add(element)
+    for element in sorted(supported_elsewhere & set(by_element)):
+        row = by_element[element]
+        if missing(row.get("direction")) or missing(
+            row.get("official_or_provider_progress")
+        ):
+            failures.append(
+                f"S10_S12_S13_CROSS_SECTION_BINDING_LOSS={element}"
+            )
+    s10_body = body_section("10", "11")
+    supported_s10 = sum(
+        row.get("predictor_binding_state") == "BOUND"
+        and not missing(row.get("direction"))
+        and not missing(row.get("official_or_provider_progress"))
+        for row in s10_rows
+    )
+    if (
+        supported_s10 > 0
+        and s10_rows
+        and s10_body.count("| UNAVAILABLE | UNAVAILABLE |") >= len(s10_rows)
+    ):
+        failures.append("S10_RENDER_DROPPED_AVAILABLE_PREDICTOR_FIELDS")
+
+    # S11: presentation adapter is a direct view over canonical football_score
+    # and admission_gate. Actionable must equal the admitted Scanner20 subset.
+    s11_state, s11 = section("S11")
+    s11_rows = [
+        dict(row)
+        for row in (s11.get("scanner20") or s11.get("rows") or [])
+        if isinstance(row, Mapping)
+    ]
+    semantic_s11 = [
+        str(value)
+        for value in s11.get("semantic_binding_failures") or []
+    ]
+    if semantic_s11:
+        failures.append(
+            "S11_PRESENTATION_BINDING_FAILURE="
+            + ",".join(semantic_s11)
+        )
+    admitted_ids: set[int] = set()
+    for row in s11_rows:
+        gate = dict(row.get("admission_gate") or {})
+        gate_admitted = gate.get("admitted")
+        element = int(row.get("element_id") or 0)
+        if row.get("football_score") is not None and missing(row.get("score")):
+            failures.append(f"S11_AVAILABLE_SCORE_DROPPED={element}")
+        if isinstance(gate_admitted, bool):
+            if missing(row.get("admit")) or row.get("admit") is not gate_admitted:
+                failures.append(f"S11_ADMISSION_BINDING_LOSS={element}")
+            if gate_admitted:
+                admitted_ids.add(element)
+        if gate and missing(row.get("evidence")):
+            failures.append(f"S11_EVIDENCE_BINDING_LOSS={element}")
+    actionable_ids = {
+        int(row.get("element_id") or 0)
+        for row in s11.get("actionable_watchlist") or []
+        if isinstance(row, Mapping)
+    }
+    if s11_rows and actionable_ids != admitted_ids:
+        failures.append("S11_ACTIONABLE_ADMISSION_INCONSISTENT")
+    if s11_state == "COMPLETE" and any(
+        missing(row.get("score"))
+        or missing(row.get("admit"))
+        or missing(row.get("evidence"))
+        for row in s11_rows
+    ):
+        failures.append("S11_COMPLETE_MASKS_REQUIRED_UNAVAILABLE")
+    s11_body = body_section("11", "12")
+    if (
+        s11_rows
+        and not any(
+            missing(row.get("score"))
+            or missing(row.get("admit"))
+            or missing(row.get("evidence"))
+            for row in s11_rows
+        )
+        and s11_body.count("| UNAVAILABLE | UNAVAILABLE | UNAVAILABLE |")
+        >= len(s11_rows)
+    ):
+        failures.append("S11_RENDER_DROPPED_CANONICAL_PRESENTATION_FIELDS")
+
+    # S16: values are copied from canonical 1GW event probabilities and PMF.
+    # Genuine unsupported fields force DEGRADED; available evidence may not be
+    # silently lost while the section still claims COMPLETE.
+    s16_state, s16 = section("S16")
+    s16_rows = [
+        dict(row)
+        for row in s16.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    if s16.get("semantic_binding_failures"):
+        failures.append("S16_CANONICAL_PROBABILITY_BINDING_FAILURE")
+    genuine_probability_missing = list(
+        s16.get("genuine_probability_unavailable") or []
+    )
+    if s16_state == "COMPLETE" and genuine_probability_missing:
+        failures.append("S16_COMPLETE_MASKS_GENUINE_PROBABILITY_UNAVAILABLE")
+    supported_rows = 0
+    for row in s16_rows:
+        probabilities = dict(row.get("probabilities") or {})
+        evidence = dict(row.get("probability_evidence") or {})
+        unsupported = {
+            str(value)
+            for value in evidence.get("unsupported_fields") or []
+        }
+        if evidence.get("binding_failures"):
+            failures.append(
+                "S16_AVAILABLE_PROBABILITY_DROPPED="
+                + str(row.get("element_id") or "UNKNOWN")
+            )
+        required = ("p_goal", "p_assist", "p_return", "p_haul", "p_blank")
+        for key in required:
+            if key not in unsupported and (
+                evidence.get("event_probabilities_available") is True
+                or evidence.get("point_distribution_available") is True
+            ) and missing(probabilities.get(key)):
+                failures.append(
+                    "S16_VISIBLE_PROBABILITY_MISSING="
+                    + str(row.get("element_id") or "UNKNOWN")
+                    + ":"
+                    + key
+                )
+        if all(not missing(probabilities.get(key)) for key in required):
+            supported_rows += 1
+
+    s16_body = body_section("16", "17")
+    all_unavailable_probability_line = (
+        "Probability: Pgoal UNAVAILABLE; Passist UNAVAILABLE; "
+        "Preturn UNAVAILABLE; Phaul UNAVAILABLE; Pblank UNAVAILABLE"
+    )
+    if (
+        supported_rows > 0
+        and s16_body.count(all_unavailable_probability_line) >= supported_rows
+    ):
+        failures.append("S16_RENDER_DROPPED_AVAILABLE_PROBABILITIES")
+
+    return list(dict.fromkeys(failures))
+
+
 def validate_final_delivery_barrier(
     *,
     report_mode: str,
@@ -136,6 +405,7 @@ def validate_final_delivery_barrier(
         )
         failures.extend(validate_deep_decision_content_delivery(report, text))
         failures.extend(validate_rendered_deep_presentation(text, report))
+        failures.extend(_deep_semantic_population_failures(report, text))
 
     elif mode == "MATCH":
         failures.extend(

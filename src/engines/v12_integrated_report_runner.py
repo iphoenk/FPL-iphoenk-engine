@@ -2281,6 +2281,17 @@ def _stage3_math_proof(
         or {}
     )
     xmins = dict(player.get("xmins") or {})
+    horizon_1gw = dict((player.get("horizons") or {}).get("1") or {})
+    event_probabilities = dict(
+        horizon_1gw.get("event_probabilities")
+        or fixture.get("event_probabilities")
+        or {}
+    )
+    point_distribution = dict(
+        horizon_1gw.get("point_distribution")
+        or fixture.get("point_distribution")
+        or {}
+    )
     decision_route = next(
         (
             dict(row)
@@ -2316,14 +2327,12 @@ def _stage3_math_proof(
         },
         "xmins_distribution": xmins.get("xmins_distribution"),
         "posterior_predictive": {
-            "source_contract": (
-                (fixture.get("position_engine") or {}).get(
-                    "posterior_predictive"
-                )
-                or {}
-            ).get("contract"),
-            "event_probabilities": complete,
-            "point_distribution": fixture.get("point_distribution"),
+            "source_owner": "V12_PLAYER_EVENTS",
+            "source_contract": "P1.3/P1.3B_POSTERIOR_PREDICTIVE",
+            "event_probabilities": event_probabilities or None,
+            "point_distribution": point_distribution or None,
+            "recomputed": False,
+            "duplicate_math_created": False,
         },
         "horizons": {
             label: _point_distribution_summary(
@@ -2538,9 +2547,33 @@ def _enrich_all15_rows(
             else {}
         )
         complete = dict(mechanism.get("complete_player_distribution") or {})
-        event_prob = dict(complete.get("event_probabilities") or {})
-        point_dist = dict(complete.get("point_distribution") or {})
+        horizon_1gw = dict((player.get("horizons") or {}).get("1") or {})
+        event_prob = dict(
+            horizon_1gw.get("event_probabilities")
+            or fixture.get("event_probabilities")
+            or {}
+        )
+        point_dist = dict(
+            horizon_1gw.get("point_distribution")
+            or fixture.get("point_distribution")
+            or {}
+        )
         quantiles = dict(point_dist.get("quantiles") or {})
+        probability_values = {
+            "p_goal": event_prob.get("p_goal_return"),
+            "p_assist": event_prob.get("p_assist_return"),
+            "p_return": event_prob.get("p_attacking_return"),
+            "p_haul": point_dist.get("p_haul_10_plus"),
+            "p_blank": point_dist.get("p_fpl_blank"),
+            "Q10": quantiles.get("Q10"),
+            "Q50": quantiles.get("Q50"),
+            "Q90": quantiles.get("Q90"),
+        }
+        probability_unsupported = [
+            key
+            for key in ("p_goal", "p_assist", "p_return", "p_haul", "p_blank")
+            if probability_values.get(key) is None
+        ]
         exposure = exposures.get(element) or {}
         team_id = int(
             owned_row.get("team_id")
@@ -2603,15 +2636,16 @@ def _enrich_all15_rows(
                 if isinstance(player.get("tactical_role_component"), Mapping)
                 else row.get("tactical_role")
             ),
-            "probabilities": {
-                "p_goal": event_prob.get("p_goal_return"),
-                "p_assist": event_prob.get("p_assist_return"),
-                "p_return": event_prob.get("p_attacking_return"),
-                "p_haul": point_dist.get("p_haul_10_plus"),
-                "p_blank": point_dist.get("p_fpl_blank"),
-                "Q10": quantiles.get("Q10"),
-                "Q50": quantiles.get("Q50"),
-                "Q90": quantiles.get("Q90"),
+            "probabilities": probability_values,
+            "probability_evidence": {
+                "source_owner": "V12_PLAYER_EVENTS",
+                "source_contract": "P1.3/P1.3B_POSTERIOR_PREDICTIVE",
+                "event_probabilities_available": bool(event_prob),
+                "point_distribution_available": bool(point_dist),
+                "binding_failures": [],
+                "unsupported_fields": probability_unsupported,
+                "recomputed": False,
+                "duplicate_math_created": False,
             },
             "bayesian_state": {
                 "status": (
@@ -2645,11 +2679,13 @@ def _enrich_all15_rows(
             },
             "posterior_signal": {
                 "posterior_rates": player.get("posterior_rates"),
-                "posterior_predictive": (
-                    (fixture.get("position_engine") or {}).get(
-                        "posterior_predictive"
-                    )
-                ),
+                "posterior_predictive": {
+                    "source_owner": "V12_PLAYER_EVENTS",
+                    "source_contract": "P1.3/P1.3B_POSTERIOR_PREDICTIVE",
+                    "event_probabilities": event_prob or None,
+                    "point_distribution": point_dist or None,
+                    "recomputed": False,
+                },
                 "point_distribution_1gw": mechanism.get("1GW"),
             },
             "role_detail": {
@@ -5971,10 +6007,18 @@ def refresh_price_only_state(
         "bank_status": finance.get("bank_status"),
         "sell_value_status": finance.get("sell_value_status"),
     }
+    price_partial_state = str(
+        (price_radar or {}).get("state")
+        or ("DEGRADED" if price_radar else "UNAVAILABLE")
+    ).upper()
     section_payloads["S10"] = _section(
-        "COMPLETE" if price_radar else "DEGRADED",
+        price_partial_state,
         bound("S10", s10) if price_radar else s10,
-        None if price_radar else "Official FPL predictor radar unavailable",
+        (
+            (price_radar or {}).get("degradation_reason")
+            if price_partial_state != "COMPLETE"
+            else None
+        ),
     )
 
     s11 = dict(section_payloads["S11"].get("content") or {})
@@ -8160,6 +8204,7 @@ def run_deep(
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
+        projections=projections,
     )
     chip_state = (finance or {}).get("chips")
     chip_available = (
@@ -8339,6 +8384,77 @@ def run_deep(
         "source": "S08_CANONICAL_CAPTAIN_DECISION",
     }
 
+    captain_incomplete = [
+        int(row.get("element_id") or 0)
+        for row in captain_surface.get("captain_profiles") or []
+        if isinstance(row, Mapping)
+        and row.get("football_evidence_complete") is not True
+    ]
+    if str(lineup_state or "").upper() != "COMPLETE":
+        captain_section_state = lineup_state
+        captain_section_reason = lineup_reason
+    elif captain_incomplete:
+        captain_section_state = "DEGRADED"
+        captain_section_reason = (
+            "canonical captain distribution/security evidence genuinely incomplete "
+            "for selected-XI elements="
+            + ",".join(str(value) for value in captain_incomplete)
+        )
+    else:
+        captain_section_state = "COMPLETE"
+        captain_section_reason = None
+
+    price_section_state = str(
+        (price_radar or {}).get("state")
+        or ("DEGRADED" if price_radar else "UNAVAILABLE")
+    ).upper()
+    price_section_reason = (
+        (price_radar or {}).get("degradation_reason")
+        if price_section_state != "COMPLETE"
+        else None
+    )
+
+    s16_unsupported = [
+        {
+            "element_id": int(row.get("element_id") or 0),
+            "fields": list(
+                ((row.get("probability_evidence") or {}).get("unsupported_fields"))
+                or []
+            ),
+        }
+        for row in all15_rows
+        if isinstance(row, Mapping)
+        and ((row.get("probability_evidence") or {}).get("unsupported_fields"))
+    ]
+    s16_binding_failures = [
+        int(row.get("element_id") or 0)
+        for row in all15_rows
+        if isinstance(row, Mapping)
+        and ((row.get("probability_evidence") or {}).get("binding_failures"))
+    ]
+    if not projections:
+        s16_section_state = "DEGRADED"
+        s16_section_reason = (
+            "P1.1/P1.3 occurrence projection unavailable: "
+            + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
+        )
+    elif s16_binding_failures:
+        s16_section_state = "DEGRADED"
+        s16_section_reason = (
+            "available canonical probability evidence failed S16 binding for elements="
+            + ",".join(str(value) for value in s16_binding_failures)
+        )
+    elif s16_unsupported:
+        s16_section_state = "DEGRADED"
+        s16_section_reason = (
+            "canonical probability evidence genuinely unsupported for "
+            + str(len(s16_unsupported))
+            + " OUR15 player(s)"
+        )
+    else:
+        s16_section_state = "COMPLETE"
+        s16_section_reason = None
+
     sections = {
         "S01": _section(
             "COMPLETE",
@@ -8489,9 +8605,9 @@ def run_deep(
             lineup_reason,
         ),
         "S08": _section(
-            lineup_state,
+            captain_section_state,
             captain_surface,
-            lineup_reason,
+            captain_section_reason,
         ),
         "S09": _section(
             "COMPLETE" if chip_available else "DEGRADED",
@@ -8511,14 +8627,14 @@ def run_deep(
             None if chip_available else "authenticated chip state unavailable in bound current-team artifact",
         ),
         "S10": _section(
-            "COMPLETE" if price_radar else "DEGRADED",
+            price_section_state,
             {
                 **(price_radar or {"rows": []}),
                 "bank": (finance or {}).get("bank"),
                 "bank_status": (finance or {}).get("bank_status"),
                 "sell_value_status": (finance or {}).get("sell_value_status"),
             },
-            None if price_radar else "Official FPL predictor radar unavailable",
+            price_section_reason,
         ),
         "S11": _section(
             watch_state,
@@ -8601,9 +8717,11 @@ def run_deep(
             ),
         ),
         "S16": _section(
-            "COMPLETE" if projections else "DEGRADED",
+            s16_section_state,
             {
                 "rows": all15_rows,
+                "semantic_binding_failures": s16_binding_failures,
+                "genuine_probability_unavailable": s16_unsupported,
                 "position_mechanisms": (
                     [
                         _visible_position_mechanism(player, action=operational_action)
@@ -8616,10 +8734,7 @@ def run_deep(
                     "This section exposes probability state, tactical mechanism, uncertainty and fixture context behind the projections."
                 ),
             },
-            None if projections else (
-                "P1.1/P1.3 occurrence projection unavailable: "
-                + (projection_failure or "UNKNOWN_PROJECTION_FAILURE")
-            ),
+            s16_section_reason,
             available_count=len(all15_rows),
             expected_count=15,
         ),

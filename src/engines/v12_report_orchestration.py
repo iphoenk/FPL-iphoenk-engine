@@ -251,6 +251,59 @@ def _watchlist_admission(row: Mapping[str, Any], family: Mapping[str, Any]) -> d
     }
 
 
+def _watchlist_presentation_adapter(
+    row: Mapping[str, Any],
+    family: Mapping[str, Any],
+    admission: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind canonical watchlist owner fields to the locked S11 presentation schema."""
+    score = row.get("football_score")
+    admitted = admission.get("admitted")
+    checks = dict(admission.get("checks") or {})
+    failed_checks = [
+        key for key, passed in checks.items()
+        if passed is not True
+    ]
+    friendly = {
+        "availability_present": "availability evidence missing",
+        "availability_supportable": "availability below secure threshold",
+        "p_start_secure": "Pstart below secure threshold",
+        "xmins_secure": "xMins below secure threshold",
+        "p_dnp_present": "DNP evidence missing",
+        "p_dnp_secure": "DNP risk above secure threshold",
+        "canonical_evidence_complete": "canonical evidence incomplete",
+        "position_specific_inputs_complete": "position evidence coverage incomplete",
+    }
+    coverage = family.get("coverage")
+    if admitted is True:
+        evidence = (
+            "Admission checks passed"
+            + (
+                f"; position evidence coverage {round(float(coverage) * 100.0, 1)}%"
+                if coverage is not None else ""
+            )
+        )
+    elif admitted is False:
+        evidence = "Not admitted: " + ", ".join(
+            friendly.get(key, key) for key in failed_checks
+        )
+    else:
+        evidence = "UNAVAILABLE"
+
+    return {
+        "score": score if score is not None else "UNAVAILABLE",
+        "admit": admitted if isinstance(admitted, bool) else "UNAVAILABLE",
+        "evidence": evidence,
+        "presentation_binding": {
+            "score_source": "football_score",
+            "admit_source": "admission_gate.admitted",
+            "evidence_source": "admission_gate.checks+position_specific_evidence.coverage",
+            "recomputed_score": False,
+            "recomputed_admission": False,
+        },
+    }
+
+
 def build_watchlist20(
     *,
     evaluated_universe: Sequence[Mapping[str, Any]],
@@ -281,9 +334,11 @@ def build_watchlist20(
         canonical_rank = raw.get("canonical_rank")
         family = _watchlist_feature_family(raw)
         admission = _watchlist_admission(raw, family)
+        presentation = _watchlist_presentation_adapter(raw, family, admission)
         rows.append(
             {
                 **dict(raw),
+                **presentation,
                 "element_id": element,
                 "position": position,
                 "position_specific_evidence": family,
@@ -342,16 +397,45 @@ def build_watchlist20(
         row["action"] = "WATCH"
 
     complete = len(selected) == 20 and all(counts.get(pos) == 5 for pos in POSITIONS)
-    if authority == "FULL" and complete:
+    semantic_binding_failures = [
+        int(row.get("element_id") or 0)
+        for row in selected
+        if row.get("score") == "UNAVAILABLE"
+        or row.get("admit") == "UNAVAILABLE"
+        or row.get("evidence") == "UNAVAILABLE"
+    ]
+    actionable_ids = {
+        int(row.get("element_id") or 0)
+        for row in actionable
+    }
+    admitted_ids = {
+        int(row.get("element_id") or 0)
+        for row in selected
+        if row.get("admit") is True
+    }
+    actionable_consistent = actionable_ids == admitted_ids
+    if authority == "FULL" and complete and not semantic_binding_failures and actionable_consistent:
         state = "COMPLETE"
         reason = None
     else:
         state = "DEGRADED" if selected else "UNAVAILABLE"
         missing = {pos: max(0, 5 - counts.get(pos, 0)) for pos in POSITIONS}
-        reason = (
-            "current canonical evaluated universe does not support exact 5/5/5/5"
-            f"; missing={missing}"
-        )
+        reasons = []
+        if not complete:
+            reasons.append(
+                "current canonical evaluated universe does not support exact 5/5/5/5"
+                f"; missing={missing}"
+            )
+        if semantic_binding_failures:
+            reasons.append(
+                "canonical watchlist fields failed presentation binding for elements="
+                + ",".join(str(value) for value in semantic_binding_failures)
+            )
+        if not actionable_consistent:
+            reasons.append("actionable subset does not match canonical admission state")
+        if authority != "FULL":
+            reasons.append("universe authority is PARTIAL")
+        reason = "; ".join(reasons) or "watchlist presentation evidence degraded"
     return {
         "state": state,
         "available_count": len(selected),
@@ -365,6 +449,9 @@ def build_watchlist20(
         "full_eligible_universe_scanned_count": len(scanned_ids),
         "owned_excluded": not bool(owned & {int(row["element_id"]) for row in selected}),
         "degradation_reason": reason,
+        "semantic_binding_failures": semantic_binding_failures,
+        "actionable_admission_consistent": actionable_consistent,
+        "presentation_adapter": "CANONICAL_WATCHLIST_TO_S11_V1",
         "selection_uses_existing_canonical_evaluation_only": True,
         "macro_weights": {
             "PROVEN_HISTORICAL": 0.20,
@@ -1198,7 +1285,7 @@ def _normalize_real_price_row(row: Mapping[str, Any]) -> dict[str, Any] | None:
     if projection is None:
         return None
     projected = _finite_price_number(projection.get("projected_percent"))
-    element = row.get("id")
+    element = row.get("element_id", row.get("element", row.get("id")))
     if projected is None or element is None:
         return None
     try:
@@ -1572,6 +1659,8 @@ def build_actionable_price_radar(
                 "price_fact": "FACT" if current_price != "UNAVAILABLE" else "UNAVAILABLE",
                 "authenticated_sell_value": sell_value,
                 "sell_value_evidence_state": sell_value_evidence_state,
+                "direction": (visible or {}).get("direction", "UNAVAILABLE"),
+                "official_or_provider_progress": (visible or {}).get("official_or_provider_progress", "UNAVAILABLE"),
                 "predictor_direction": (visible or {}).get("direction", "UNAVAILABLE"),
                 "predictor_progress": (visible or {}).get("official_or_provider_progress", "UNAVAILABLE"),
                 "prediction_strength": (visible or {}).get("prediction_strength", "UNAVAILABLE"),
@@ -1622,23 +1711,77 @@ def build_actionable_price_radar(
                 "predictor_projected_percent": (visible or {}).get("projected_percent", "UNAVAILABLE"),
                 "predictor_classification": "MODEL" if pred_raw else "UNAVAILABLE",
                 "predictor_evidence": pred_raw or None,
+                "predictor_binding_state": "BOUND" if visible is not None else "UNAVAILABLE",
+                "predictor_unavailable_reason": (
+                    None
+                    if visible is not None
+                    else "CURRENT_PROJECTION_UNSUPPORTED"
+                    if pred_raw
+                    else "NO_PLAYER_PREDICTOR_EVIDENCE"
+                ),
             }
         )
 
-    complete = len(identities) == 15
+    identity_complete = len(identities) == 15
+    predictor_supported_count = sum(
+        row.get("predictor_binding_state") == "BOUND"
+        for row in identities
+    )
+    predictor_complete_count = sum(
+        row.get("direction") != "UNAVAILABLE"
+        and row.get("official_or_provider_progress") != "UNAVAILABLE"
+        for row in identities
+    )
+    semantic_binding_failures = [
+        int(row.get("element_id") or 0)
+        for row in identities
+        if row.get("predictor_binding_state") == "BOUND"
+        and (
+            row.get("direction") == "UNAVAILABLE"
+            or row.get("official_or_provider_progress") == "UNAVAILABLE"
+        )
+    ]
+    genuinely_unavailable = [
+        {
+            "element_id": int(row.get("element_id") or 0),
+            "reason": row.get("predictor_unavailable_reason"),
+        }
+        for row in identities
+        if row.get("predictor_binding_state") != "BOUND"
+    ]
+    if not identity_complete:
+        state = "DEGRADED" if identities else "UNAVAILABLE"
+        degradation_reason = "owned price identity coverage is not exact15"
+    elif semantic_binding_failures:
+        state = "DEGRADED"
+        degradation_reason = (
+            "predictor evidence was bound but required visible direction/progress was lost "
+            "for elements=" + ",".join(str(value) for value in semantic_binding_failures)
+        )
+    elif genuinely_unavailable:
+        state = "DEGRADED"
+        degradation_reason = (
+            "predictor evidence genuinely unavailable/unsupported for "
+            + str(len(genuinely_unavailable))
+            + " owned player(s); official current price remains factual"
+        )
+    else:
+        state = "COMPLETE"
+        degradation_reason = None
     return {
-        "state": "COMPLETE" if complete else ("DEGRADED" if identities else "UNAVAILABLE"),
+        "state": state,
         "available_count": len(identities),
         "expected_count": 15,
         "rows": identities,
-        "identity_complete": complete,
-        "predictor_complete_count": sum(
-            row.get("predictor_direction") != "UNAVAILABLE" for row in identities
-        ),
+        "identity_complete": identity_complete,
+        "predictor_supported_count": predictor_supported_count,
+        "predictor_complete_count": predictor_complete_count,
+        "semantic_binding_failures": semantic_binding_failures,
+        "genuine_predictor_unavailable": genuinely_unavailable,
         "date_state_complete_count": sum(
             bool(row.get("date_state_complete")) for row in identities
         ),
-        "degradation_reason": None if complete else "owned price identity coverage is not exact15",
+        "degradation_reason": degradation_reason,
         "price_alone_may_create_act": False,
     }
 
@@ -4275,9 +4418,9 @@ def _render_deep_visible_contract_lines(
                 r.get("xmins"),
                 r.get("p_start"),
                 r.get("dnp") or r.get("p_dnp"),
-                r.get("score") or r.get("watchlist_score"),
-                r.get("admit") or r.get("admission") or r.get("actionable"),
-                r.get("evidence") or r.get("evidence_summary") or r.get("reason"),
+                r.get("score"),
+                r.get("admit"),
+                r.get("evidence"),
             ) for r in rows],
         ))
         actionable = [dict(r) for r in payload.get("actionable_watchlist") or [] if isinstance(r, Mapping)]

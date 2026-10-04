@@ -3643,6 +3643,28 @@ def _human_summary(value: Any) -> str:
     return str(value)
 
 
+def _sanitize_mapping_reprs(text: str) -> str:
+    """Convert bounded serialized Python containers before human-facing QA."""
+    output = str(text or "")
+    pattern = re.compile(r"\\{[^{}\\n]*\\}")
+    for _ in range(8):
+        changed = False
+        for match in list(pattern.finditer(output)):
+            candidate = match.group(0)
+            try:
+                parsed = ast.literal_eval(candidate)
+            except (SyntaxError, ValueError):
+                continue
+            if not isinstance(parsed, (Mapping, list, tuple, set)):
+                continue
+            output = output[:match.start()] + _human_summary(parsed) + output[match.end():]
+            changed = True
+            break
+        if not changed:
+            break
+    return output
+
+
 def _markdown_table(
     headers: Sequence[str],
     rows: Sequence[Sequence[Any]],
@@ -4100,6 +4122,7 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Reason: {payload.get('reason') or 'UNAVAILABLE'}")
 
     elif section_id == "S07":
+        lines.append("LINEUP RISK / AUTOSUB LOGIC")
         rows = [dict(r) for r in payload.get("risk_rows") or [] if isinstance(r, Mapping)]
         if rows:
             for row in rows:
@@ -5316,7 +5339,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         if generic:
             lines.extend(generic)
         blocks.append("\n".join(lines))
-    return "\n\n".join(blocks)
+    return _sanitize_mapping_reprs("\n\n".join(blocks))
 
 
 def validate_human_facing_body(

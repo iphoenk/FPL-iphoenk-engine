@@ -2543,6 +2543,15 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
     def mapping_or_empty(value: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, Mapping) else {}
 
+    def visible(value: Any) -> str:
+        if value in (None, "", [], {}):
+            return "UNAVAILABLE"
+        if isinstance(value, Mapping):
+            return "; ".join(f"{k}={visible(v)}" for k, v in value.items()) or "UNAVAILABLE"
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            return ", ".join(visible(v) for v in value) or "UNAVAILABLE"
+        return str(value)
+
     availability = mapping_or_empty(payload.get("availability_mixture"))
     events = mapping_or_empty(payload.get("event_probabilities"))
     point_distribution = mapping_or_empty(payload.get("point_distribution"))
@@ -2550,7 +2559,7 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
     lines = [
         "### MATHEMATICAL DECISION STACK",
         "BAYESIAN PRIOR -> POSTERIOR / SHRINKAGE: "
-        f"{payload.get('bayesian_prior_posterior_shrinkage', 'UNAVAILABLE')}",
+        f"{visible(payload.get('bayesian_prior_posterior_shrinkage'))}",
         "AVAILABILITY MIXTURE: "
         f"P(AVAILABLE)={availability.get('p_available', 'UNAVAILABLE')} | "
         f"P(START)={availability.get('p_start', 'UNAVAILABLE')} | "
@@ -2558,7 +2567,7 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
         f"P(CAMEO)={availability.get('p_cameo', 'UNAVAILABLE')} | "
         f"P(LATE CAMEO)={availability.get('p_late_cameo', 'UNAVAILABLE')} | "
         f"P(DNP)={availability.get('p_dnp', 'UNAVAILABLE')}",
-        f"XMINS DISTRIBUTION: {payload.get('xmins_distribution', 'UNAVAILABLE')}",
+        f"XMINS DISTRIBUTION: {visible(payload.get('xmins_distribution'))}",
         "EVENT PROBABILITIES: "
         f"P(GOAL)={events.get('p_goal', 'UNAVAILABLE')} | "
         f"P(ASSIST)={events.get('p_assist', 'UNAVAILABLE')} | "
@@ -2572,21 +2581,21 @@ def _render_math_stack_lines(stack: Mapping[str, Any]) -> list[str]:
         f"E[xPts]={point_distribution.get('expected_points', 'UNAVAILABLE')} | "
         f"variance={point_distribution.get('variance', 'UNAVAILABLE')} | "
         f"std={point_distribution.get('std', 'UNAVAILABLE')} | "
-        f"quantiles={point_distribution.get('quantiles', 'UNAVAILABLE')} | "
-        f"tails={point_distribution.get('tails', 'UNAVAILABLE')}",
-        f"HORIZONS 1GW / 3GW / 5GW: {payload.get('horizons', 'UNAVAILABLE')}",
+        f"quantiles={visible(point_distribution.get('quantiles'))} | "
+        f"tails={visible(point_distribution.get('tails'))}",
+        f"HORIZONS 1GW / 3GW / 5GW: {visible(payload.get('horizons'))}",
         f"P(OUTPERFORM HOLD/COMPARATOR): {payload.get('p_outperform', 'UNAVAILABLE')}",
         f"EXPECTED REGRET: {payload.get('expected_regret', 'UNAVAILABLE')}",
-        f"TAIL / FLOOR / CEILING: {payload.get('tail_risk', 'UNAVAILABLE')}",
+        f"TAIL / FLOOR / CEILING: {visible(payload.get('tail_risk'))}",
         "INFORMATION VALUE OF WAITING: "
-        f"{payload.get('information_value_of_waiting', 'UNAVAILABLE')}",
-        f"COVARIANCE / CORRELATION: {payload.get('covariance_correlation', 'UNAVAILABLE')}",
+        f"{visible(payload.get('information_value_of_waiting'))}",
+        f"COVARIANCE / CORRELATION: {visible(payload.get('covariance_correlation'))}",
         "MONTE CARLO: "
         f"state={mc.get('execution_state', 'UNAVAILABLE')} | "
         f"N={mc.get('actual_paths', 'UNAVAILABLE')} | "
         f"correlated={mc.get('correlated', 'UNAVAILABLE')} | "
         f"reason={mc.get('reason', mc.get('degradation_reason', 'UNAVAILABLE'))} | "
-        f"convergence={mc.get('convergence_evidence', 'UNAVAILABLE')}",
+        f"convergence={visible(mc.get('convergence_evidence'))}",
     ]
     return lines
 

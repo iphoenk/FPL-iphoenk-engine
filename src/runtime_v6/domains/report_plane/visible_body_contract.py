@@ -75,6 +75,7 @@ _HEADER_ALIASES = {
     "dir": "direction",
     "now": "current_progress_percent",
     "current_progress": "current_progress_percent",
+    "progress": "current_progress_percent",
     "projected": "projection_offset_0_percent",
     "projection": "projection_offset_0_percent",
     "cycle": "predicted_change_cycle",

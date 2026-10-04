@@ -176,6 +176,10 @@ def _display(value: Any) -> str:
         return "UNAVAILABLE"
     if isinstance(value, float):
         return f"{value:.3f}".rstrip("0").rstrip(".")
+    if isinstance(value, Mapping):
+        return "; ".join(f"{k}={_display(v)}" for k, v in value.items()) or "UNAVAILABLE"
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return ", ".join(_display(v) for v in value) or "UNAVAILABLE"
     return str(value)
 
 

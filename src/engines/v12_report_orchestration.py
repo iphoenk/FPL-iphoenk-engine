@@ -3890,7 +3890,7 @@ def _render_deep_visible_contract_lines(
             ) or "UNAVAILABLE"
         if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             return ", ".join(_compact(v) for v in value) or "UNAVAILABLE"
-        return str(value)
+        return _human_summary(value)
 
     if section_id == "S01":
         dashboard = dict(payload.get("decision_dashboard") or {})

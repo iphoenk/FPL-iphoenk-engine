@@ -415,8 +415,8 @@ def publish_private_output(
     # binding; its hash must be the same bytes verified by the orchestrator and
     # exposed as latest/report.md. PRICE keeps report_body.md as canonical.
     canonical_body_sha = (
-        before["serving_report.md"]
-        if report_mode == "DEEP" and "serving_report.md" in before
+        sha256_file(canonical_dir / "serving_report.md")
+        if report_mode == "DEEP" and (canonical_dir / "serving_report.md").is_file()
         else before["report_body.md"]
     )
     digest = build_private_digest(

@@ -411,8 +411,7 @@ def publish_private_output(
     latest_dir = private_root / "latest"
 
     canonical_bundle_sha = before["report_bundle.json"]
-    canonical_body_sha = before["report_body.md"]
-    digest = build_private_digest(
+    # DEEP serving is finalized in serving_report.md after delivery provenance\n    # binding; its hash must be the same bytes verified by the orchestrator and\n    # exposed as latest/report.md. PRICE keeps report_body.md as canonical.\n    canonical_body_sha = (\n        before["serving_report.md"]\n        if report_mode == "DEEP"\n        else before["report_body.md"]\n    )\n    digest = build_private_digest(
         bundle,
         proof,
         canonical_bundle_sha256=canonical_bundle_sha,

@@ -732,9 +732,17 @@ jobs:
                       if safe_reason.fullmatch(token):
                           safe.append(token)
                           continue
-                      code = token.split("=", 1)[0].strip()
+                      code, separator, detail = token.partition("=")
+                      code = code.strip()
                       if re.fullmatch(r"[A-Z0-9_:-]+", code):
-                          safe.append(code)
+                          if code == "VISIBLE_REQUIRED_MARKER_MISSING" and separator:
+                              marker = detail.strip().upper()
+                              if re.fullmatch(r"[A-Z0-9 /+_:-]+", marker):
+                                  safe.append(f"{code}={marker}")
+                              else:
+                                  safe.append(code)
+                          else:
+                              safe.append(code)
                   print(f"V12_SAFE_QA_DIAGNOSTIC stage={stage} status={row.get('status')} failures={','.join(safe) or 'REDACTED'}")
           PY
 

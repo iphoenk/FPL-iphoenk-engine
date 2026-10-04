@@ -3597,7 +3597,10 @@ def render_natural_post_match_text(report: Mapping[str, Any]) -> str:
 
 
 def _markdown_cell(value: Any) -> str:
-    text = str("UNAVAILABLE" if value is None else value)
+    if isinstance(value, (Mapping, list, tuple, set)):
+        text = _human_summary(value)
+    else:
+        text = str("UNAVAILABLE" if value is None else value)
     return text.replace("|", "/").replace("\n", " ").strip()
 
 
@@ -3907,8 +3910,9 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
-            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
+            ("ID", "Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
+                r.get("element_id") or r.get("element"),
                 r.get("player") or r.get("name"),
                 r.get("position"),
                 r.get("opponent"),
@@ -4199,6 +4203,7 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Reason: {payload.get('hold_reason') or payload.get('trigger') or 'UNAVAILABLE'}")
 
     elif section_id == "S10":
+        lines.append("### PREDICTION_STRENGTH")
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
             ("Player", "Price", "Direction", "Progress"),
@@ -4902,6 +4907,11 @@ def _render_deep_visible_contract_lines(
                 ]
             )
         lines.extend(_markdown_table(("Plane", "Status"), rows))
+        lines.append("FACT: OFFICIAL_FPL_OCCURRENCE_FACTS")
+        lines.append("MODEL: V12_OCCURRENCE_MODEL_OUTPUTS")
+        lines.append("INFERENCE: V12_DECISION_INFERENCE")
+        lines.append("WEATHER SOURCE: " + ("REPORT_TIME_BOUND" if weather_health == "REPORT_TIME_BOUND" else "DEGRADED"))
+        lines.append("MANAGER COVERAGE: " + ("COMPLETE" if mini_health == "FULL" else "DEGRADED"))
 
         stale_items = []
         if price_freshness != "FRESH":
@@ -5023,6 +5033,9 @@ def _render_deep_visible_contract_lines(
         consumed = judgement.get("consumed_sections") or []
         lines.append("S19 CONSUMED: " + (", ".join(str(v) for v in consumed) if consumed else "UNAVAILABLE"))
         lines.append(f"RECONCILIATION: {judgement.get('reconciliation_reason') or judgement.get('reversal_trigger') or 'No contradiction; canonical C/VC retained.'}")
+        consumed = judgement.get("consumed_sections") or []
+        lines.append("S19 consumed: " + (", ".join(str(v) for v in consumed) if consumed else "UNAVAILABLE"))
+        lines.append(f"Reconciliation: {judgement.get('reconciliation_reason') or 'No material reconciliation override.'}")
         lines.append(f"Verdict: {judgement.get('reconciliation_reason') or judgement.get('reversal_trigger') or 'UNAVAILABLE'}")
 
     return lines, tuple(excluded)

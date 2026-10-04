@@ -412,3 +412,88 @@ def test_l_no_hardcoded_player_or_fixed_current15_production_rule():
     for transient_name in ("Haaland", "Calafiori", "Sangaré", "Groß"):
         assert transient_name not in source
         assert transient_name not in block
+
+
+def test_m_private_personal_inputs_are_loaded_from_private_checkout_before_public_runtime(tmp_path):
+    from src.engines import v12_price_delivery as delivery
+
+    loader = getattr(delivery, "_load_personal_inputs", None)
+    assert callable(loader), "PRICE must expose one tested private-personal input binding"
+
+    runtime_root = tmp_path / "runtime-data"
+    private_root = tmp_path / "private-reports"
+    (runtime_root / "data/v6/personal").mkdir(parents=True)
+    (private_root / "personal").mkdir(parents=True)
+    team = {
+        "auth_state": "AUTH_AVAILABLE",
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "entry_id": 3462711,
+        "gw": 6,
+        "generated_at": "2026-10-05T05:29:00+07:00",
+        "players": _team_rows(list(range(1, 16))),
+    }
+    (private_root / "personal/current_team.json").write_text(
+        __import__("json").dumps(team), encoding="utf-8"
+    )
+
+    loaded = loader(runtime_data_root=runtime_root, private_data_root=private_root)
+
+    assert loaded["current_team"]["entry_id"] == 3462711
+    assert [row["element_id"] for row in loaded["current_team"]["players"]] == list(range(1, 16))
+    assert loaded["current_team"]["auth_state"] == "AUTH_AVAILABLE"
+
+
+def test_n_expired_gw5_personal_snapshot_keeps_ids_but_is_not_current15():
+    bootstrap = _bootstrap(100)
+    team = {
+        "auth_state": "AUTH_EXPIRED",
+        "squad_state": "SUBMITTED_PICKS_ONLY",
+        "entry_id": 3462711,
+        "gw": 5,
+        "generated_at": "2026-10-04T22:04:47+07:00",
+        "players": _team_rows(list(range(1, 16))),
+    }
+
+    resolved = resolve_current15(
+        planning_gw=6,
+        bootstrap=bootstrap,
+        authenticated_current_team=team,
+    )
+
+    assert resolved["state"] == "STALE"
+    assert resolved["supportable"] is False
+    assert resolved["element_ids"] == list(range(1, 16))
+
+
+def test_o_unknown_price_ownership_stays_unknown_and_internal_scope_text_never_renders():
+    stale = resolve_current15(
+        planning_gw=6,
+        bootstrap=_bootstrap(260),
+        authenticated_current_team={
+            "auth_state": "AUTH_EXPIRED",
+            "squad_state": "SUBMITTED_PICKS_ONLY",
+            "gw": 5,
+            "generated_at": "2026-10-04T22:04:47+07:00",
+            "players": _team_rows(list(range(1, 16))),
+        },
+    )
+    report = build_price_delivery_report(
+        canonical_text=_canonical(),
+        report_slot="2026-10-05T05:30:00+07:00",
+        planning_gw=6,
+        bootstrap=_bootstrap(260),
+        team_resolution=stale,
+        predictor_artifact=_predictor(),
+        evaluated_universe=_universe(),
+        universe_authority="FULL",
+    )
+    body = render_price_report(report)
+
+    assert all(row["our15_flag"] == "UNKNOWN" for row in report["rise20"]["rows"])
+    assert all(row["our15_flag"] == "UNKNOWN" for row in report["fall20"]["rows"])
+    assert "Ownership scope unresolved" not in body
+    assert "Current squad could not be verified" in body
+    assert "VISIBLE_INTERNAL_OWNERSHIP_SCOPE" in validate_price_visible_body(
+        body.replace("Current squad could not be verified", "Ownership scope unresolved"),
+        report=report,
+    )

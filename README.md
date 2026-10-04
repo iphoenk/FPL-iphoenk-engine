@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-04T14:20:00Z`
+> **Last runtime/documentation sync:** `2026-10-04T21:32:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 

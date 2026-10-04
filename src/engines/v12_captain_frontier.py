@@ -258,6 +258,60 @@ def _dominates(a: Mapping[str, Any], b: Mapping[str, Any]) -> bool:
     return bool(all_no_worse and any_better)
 
 
+def _first_order_stochastic_dominates(
+    a: Mapping[str, Any],
+    b: Mapping[str, Any],
+) -> bool:
+    """True only when A's canonical core PMF FSD-dominates B's.
+
+    This is deliberately stronger than a tiny mean edge.  No arbitrary
+    probability or xPts threshold is introduced: every support threshold must
+    be no worse and at least one must be strictly better.
+    """
+    pa = a.get("_pmf")
+    pb = b.get("_pmf")
+    if not isinstance(pa, Mapping) or not isinstance(pb, Mapping):
+        return False
+    support = sorted({float(x) for x in pa} | {float(x) for x in pb})
+    strict = False
+    for threshold in support:
+        cdf_a = sum(
+            float(probability)
+            for points, probability in pa.items()
+            if float(points) <= threshold + EPS
+        )
+        cdf_b = sum(
+            float(probability)
+            for points, probability in pb.items()
+            if float(points) <= threshold + EPS
+        )
+        if cdf_a > cdf_b + EPS:
+            return False
+        if cdf_a + EPS < cdf_b:
+            strict = True
+    return strict
+
+
+def _robust_clear_dominates(
+    a: Mapping[str, Any],
+    b: Mapping[str, Any],
+) -> bool:
+    """Distribution-first CLEAR rule with security guardrails."""
+    if not (
+        a.get("football_evidence_complete")
+        and b.get("football_evidence_complete")
+        and _first_order_stochastic_dominates(a, b)
+    ):
+        return False
+    return bool(
+        _no_worse(_f(a.get("expected_points")), _f(b.get("expected_points")), higher=True)
+        and _no_worse(_f(a.get("p_start")), _f(b.get("p_start")), higher=True)
+        and _no_worse(_f(a.get("xmins")), _f(b.get("xmins")), higher=True)
+        and _no_worse(_f(a.get("p_blank")), _f(b.get("p_blank")), higher=False)
+        and _no_worse(_f(a.get("p_dnp")), _f(b.get("p_dnp")), higher=False)
+    )
+
+
 def _pairwise(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
     pa = a.get("_pmf")
     pb = b.get("_pmf")
@@ -395,6 +449,23 @@ def _competitive_tiebreak(
                 "leverage_exposure": (
                     None if comp_c is None else round(max(0.0, 100.0 - comp_c), 6)
                 ),
+                "league_relative_upside_index_if_captain_succeeds": (
+                    None if league_c is None
+                    else round(max(0.0, 1.0 - league_c / 100.0), 9)
+                ),
+                "league_relative_downside_index_if_captain_fails": (
+                    None if league_c is None
+                    else round(max(0.0, league_c / 100.0), 9)
+                ),
+                "competitive_relative_upside_index_if_captain_succeeds": (
+                    None if comp_c is None
+                    else round(max(0.0, 1.0 - comp_c / 100.0), 9)
+                ),
+                "competitive_relative_downside_index_if_captain_fails": (
+                    None if comp_c is None
+                    else round(max(0.0, comp_c / 100.0), 9)
+                ),
+                "exposure_index_semantics": "P1_8_EXPOSURE_ONLY_NOT_RELATIVE_POINTS_MC",
                 "expected_relative_points_delta_vs_league": None,
                 "expected_relative_points_delta_vs_competitive_window": None,
                 "probability_gain_relative_points": None,
@@ -539,7 +610,7 @@ def decide_captain_vice(
         }
 
     incomplete = [row for row in profiles if not row["football_evidence_complete"]]
-    frontier = [
+    pareto_frontier = [
         row
         for row in profiles
         if not any(
@@ -548,15 +619,19 @@ def decide_captain_vice(
             for other in profiles
         )
     ]
-    pairwise = [
-        _pairwise(a, b)
-        for index, a in enumerate(frontier)
-        for b in frontier[index + 1 :]
-    ]
 
     clear_candidates = []
-    if not incomplete and len(frontier) == 1:
-        clear_candidates = list(frontier)
+    if not incomplete:
+        clear_candidates = [
+            row
+            for row in profiles
+            if all(
+                other.get("element_id") == row.get("element_id")
+                or _robust_clear_dominates(row, other)
+                for other in profiles
+            )
+        ]
+
     classification = (
         "FRAGILE"
         if incomplete
@@ -565,11 +640,40 @@ def decide_captain_vice(
         else "CLOSE"
     )
 
-    football_leader = (
-        clear_candidates[0]
-        if clear_candidates
-        else _football_leader(frontier, pairwise, baseline_captain_id)
-    )
+    if classification == "CLEAR":
+        frontier = list(clear_candidates)
+        pairwise = [
+            _pairwise(clear_candidates[0], other)
+            for other in profiles
+            if other.get("element_id") != clear_candidates[0].get("element_id")
+        ]
+        football_leader = clear_candidates[0]
+    else:
+        frontier = list(pareto_frontier)
+        if classification == "CLOSE" and len(frontier) == 1:
+            leader = frontier[0]
+            frontier.extend(
+                row
+                for row in profiles
+                if row.get("element_id") != leader.get("element_id")
+                and not _robust_clear_dominates(leader, row)
+            )
+            seen: set[int] = set()
+            frontier = [
+                row
+                for row in frontier
+                if row.get("element_id") is not None
+                and int(row["element_id"]) not in seen
+                and not seen.add(int(row["element_id"]))
+            ]
+        pairwise = [
+            _pairwise(a, b)
+            for index, a in enumerate(frontier)
+            for b in frontier[index + 1 :]
+        ]
+        football_leader = _football_leader(
+            frontier, pairwise, baseline_captain_id
+        )
     selected = football_leader
     mini_changed = False
     competitive = {
@@ -613,9 +717,10 @@ def decide_captain_vice(
     if classification == "CLEAR":
         decision_state = "LOCK"
         reason = (
-            "One selected-XI candidate is the unique non-dominated football "
-            "frontier winner across mean, median, upper tail, blank risk and "
-            "start/minutes security; mini-league context cannot override it."
+            "One selected-XI candidate robustly first-order stochastically "
+            "dominates every alternative on the canonical core return PMF while "
+            "remaining no worse on mean/start/minutes/blank/DNP security; "
+            "mini-league context cannot override it."
         )
     elif classification == "CLOSE":
         resolved = competitive.get("tie_break_status") in {
@@ -625,9 +730,10 @@ def decide_captain_vice(
         }
         decision_state = "LOCK" if resolved else "PREPARE"
         reason = (
-            "Multiple selected-XI candidates remain non-dominated on football "
-            "distribution evidence. Mini-league context is used only as a "
-            "secondary tie-break when its required scopes are complete."
+            "No selected-XI candidate satisfies the threshold-free robust CLEAR "
+            "rule across the full return distribution and security evidence. "
+            "Mini-league context is used only as a secondary tie-break inside "
+            "the football frontier when its required scopes are complete."
         )
     else:
         decision_state = "PREPARE"
@@ -663,11 +769,12 @@ def decide_captain_vice(
             "p_haul_semantics": "P_POINTS_GE_10_FROM_CANONICAL_PMF",
             "p_haul_not_double_counted": True,
             "football_distribution_first": True,
+            "clear_rule": "FIRST_ORDER_STOCHASTIC_DOMINANCE_PLUS_SECURITY_NO_ARBITRARY_THRESHOLD",
             "mini_league_second_close_only": True,
             "eo_is_not_expected_points": True,
             "candidate_specific_relative_mc_fabricated": False,
             "cross_player_correlation": "NOT_MODELLED_YET",
-            "blank_semantics": "P_FPL_POINTS_LE_2_FROM_CANONICAL_PMF_WHEN_AVAILABLE",
+            "blank_semantics": "CANONICAL_P_FPL_BLANK_OR_PUBLISHED_BLANK_THRESHOLD_NO_HARDCODE",
             "bonus_residual_distribution_fabricated": False,
             "mc500k_mutated": False,
         },

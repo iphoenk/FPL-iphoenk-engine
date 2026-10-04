@@ -867,12 +867,15 @@ def test_occurrence_orchestrator_trusts_only_bot_authored_receipts():
     assert 'FPL_MASTER_RECEIPT occurrence_id=' in workflow
 
 
-def test_occurrence_orchestrator_rejects_future_slots():
+def test_occurrence_orchestrator_allows_only_bounded_scheduler_skew():
     workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
         encoding="utf-8"
     )
     assert 'datetime.now(ZoneInfo("Asia/Jakarta"))' in workflow
-    assert "report_slot must not be in the future" in workflow
+    assert "timedelta(minutes=5)" in workflow
+    assert "dt > now + scheduler_skew" in workflow
+    assert "report_slot exceeds bounded scheduler skew" in workflow
+    assert "Keep report_slot unchanged" in workflow
 
 
 def test_occurrence_orchestrator_does_not_reuse_pre_slot_private_latest():

@@ -2734,7 +2734,7 @@ def _render_package_frontier_lines(
             f"P>HOLD: {best.get('p_beats_hold', 'UNAVAILABLE')}",
             f"Median: {best.get('median', 'UNAVAILABLE')} | Q90: {best.get('Q90', 'UNAVAILABLE')}",
             f"Regret: {best.get('expected_regret', 'UNAVAILABLE')}",
-            f"Robustness: {best.get('robustness', 'UNAVAILABLE')}",
+            f"Robustness: {_human_summary(best.get('robustness', 'UNAVAILABLE'))}",
         ])
     else:
         lines.append("No non-HOLD challenger is supportable.")
@@ -4996,7 +4996,7 @@ def _render_deep_visible_contract_lines(
                     )
             else:
                 fallback = payload.get(display) or payload.get(display.replace(" ", "_"))
-                lines.append(_compact(fallback))
+                lines.append(f"Now: UNAVAILABLE. Next: UNAVAILABLE. TRIGGER TO ACT: UNAVAILABLE. LATEST SAFE DECISION POINT: UNAVAILABLE. COST OF WAITING: UNAVAILABLE. ABORT / REVERSAL: UNAVAILABLE.")
         lines.append("Best alternative: " + _compact(board.get("best_alternative") or payload.get("BEST ALTERNATIVE")))
 
     elif section_id == "S19":

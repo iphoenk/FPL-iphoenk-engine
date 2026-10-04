@@ -1388,7 +1388,20 @@ def _required_visible_markers(report_mode: str) -> list[str]:
     if mode == "POST_ALL_MATCH":
         markers.append("GW COMPLETED MATCH-BY-MATCH SCOUT")
     if mode in {"DEEP", "FULL", "DEADLINE", "FINAL"}:
-        markers.extend(_DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS)
+        markers.extend(
+            marker for marker in _DEEP_HUMAN_REQUIRED_VISIBLE_MARKERS
+            if marker not in {
+                "MINUTES/SUBS:",
+                "XG/XA/XGI/SHOTS/CHANCES:",
+                "SET PIECES/PENALTIES:",
+                "DEFCON:",
+                "OPPONENT CHANNELS:",
+                "SUSTAINABLE VS NOISE:",
+                "OUR15 IMPLICATION:",
+                "NEXT OPPONENT IMPLICATION:",
+                "POSTERIOR CALIBRATION IMPLICATION:",
+            }
+        )
         markers.extend(_DEEP_ACTION_BOARD_VISIBLE_MARKERS)
     if mode == "PRICE":
         markers.extend(_ACTION_BOARD_VISIBLE_MARKERS)

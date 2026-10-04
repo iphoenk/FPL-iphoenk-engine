@@ -188,7 +188,11 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
             == "PARTIAL_BONUS_RESIDUAL"
         ),
         "league_scope": dict(row.get("league_scope") or {}),
+        "rivals_scope": dict(row.get("rivals_scope") or {}),
         "competitive_scope": dict(row.get("competitive_scope") or {}),
+        "exposure_leverage_class": str(
+            row.get("exposure_leverage_class") or "UNAVAILABLE"
+        ),
         "_pmf": pmf,
     }
     required = (

@@ -103,6 +103,12 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
         expected_points = _mean(pmf)
 
     quantiles = dict(distribution.get("quantiles") or {})
+    tails = dict(distribution.get("tails") or {})
+    blank_threshold = _f(distribution.get("blank_threshold"))
+    canonical_blank = _f(distribution.get("p_fpl_blank"))
+    canonical_haul = _f(distribution.get("p_haul_10_plus"))
+    if canonical_haul is None:
+        canonical_haul = _f(tails.get("ge_10"))
     p_start = _f(row.get("p_start"))
     xmins = _f(row.get("xmins"))
     p_dnp = _f(row.get("p_dnp"))
@@ -116,37 +122,60 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "team_id": row.get("team_id"),
         "expected_points": expected_points,
         "median": (
-            _quantile(pmf, 0.50)
+            _f(quantiles.get("Q50"))
+            if _f(quantiles.get("Q50")) is not None
+            else _quantile(pmf, 0.50)
             if pmf
-            else _f(row.get("median", quantiles.get("Q50")))
+            else _f(row.get("median"))
         ),
         "q75": (
-            _quantile(pmf, 0.75)
+            _f(quantiles.get("Q75"))
+            if _f(quantiles.get("Q75")) is not None
+            else _quantile(pmf, 0.75)
             if pmf
-            else _f(row.get("q75", quantiles.get("Q75")))
+            else _f(row.get("q75"))
         ),
         "q90": (
-            _quantile(pmf, 0.90)
+            _f(quantiles.get("Q90"))
+            if _f(quantiles.get("Q90")) is not None
+            else _quantile(pmf, 0.90)
             if pmf
-            else _f(row.get("q90", quantiles.get("Q90")))
+            else _f(row.get("q90"))
         ),
         "p_blank": (
-            _prob_le(pmf, 2.0)
-            if pmf
-            else _f(row.get("p_blank", distribution.get("p_fpl_blank")))
+            canonical_blank
+            if canonical_blank is not None
+            else _prob_le(pmf, blank_threshold)
+            if pmf and blank_threshold is not None
+            else _f(row.get("p_blank"))
         ),
+        "blank_threshold": blank_threshold,
+        "blank_semantics": distribution.get("blank_definition"),
         "p_ge_6": _prob_ge(pmf, 6.0) if pmf else None,
-        "p_ge_8": _prob_ge(pmf, 8.0) if pmf else None,
-        "p_ge_10": (
-            _prob_ge(pmf, 10.0)
-            if pmf
-            else _f(row.get("p_haul", distribution.get("p_haul_10_plus")))
+        "p_ge_8": (
+            _f(tails.get("ge_8"))
+            if _f(tails.get("ge_8")) is not None
+            else _prob_ge(pmf, 8.0)
+            if pmf else None
         ),
-        "p_ge_12": _prob_ge(pmf, 12.0) if pmf else None,
+        "p_ge_10": (
+            canonical_haul
+            if canonical_haul is not None
+            else _prob_ge(pmf, 10.0)
+            if pmf else None
+        ),
+        "p_ge_12": (
+            _f(tails.get("ge_12"))
+            if _f(tails.get("ge_12")) is not None
+            else _prob_ge(pmf, 12.0)
+            if pmf else None
+        ),
         "p_haul": (
-            _prob_ge(pmf, 10.0)
+            canonical_haul
+            if canonical_haul is not None
+            else _prob_ge(pmf, 10.0)
             if pmf
-            else _f(row.get("p_haul", distribution.get("p_haul_10_plus")))
+            else _f(row.get("p_haul"))
         ),
         "p_start": p_start,
         "xmins": xmins,
@@ -154,6 +183,10 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "pmf_available": pmf is not None,
         "distribution_status": distribution.get("status"),
         "distribution_completeness": distribution.get("distribution_completeness"),
+        "bonus_residual_expectation_only": (
+            str(distribution.get("distribution_completeness") or "").upper()
+            == "PARTIAL_BONUS_RESIDUAL"
+        ),
         "league_scope": dict(row.get("league_scope") or {}),
         "competitive_scope": dict(row.get("competitive_scope") or {}),
         "_pmf": pmf,
@@ -231,15 +264,12 @@ def _pairwise(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
 
     pmf_mean_a = _mean(pa)
     pmf_mean_b = _mean(pb)
-    residual_a = (_f(a.get("expected_points")) or pmf_mean_a) - pmf_mean_a
-    residual_b = (_f(b.get("expected_points")) or pmf_mean_b) - pmf_mean_b
+    adjusted_mean_a = _f(a.get("expected_points"))
+    adjusted_mean_b = _f(b.get("expected_points"))
     delta: dict[float, float] = {}
     for xa, ma in pa.items():
         for xb, mb in pb.items():
-            value = round(
-                (float(xa) + residual_a) - (float(xb) + residual_b),
-                9,
-            )
+            value = round(float(xa) - float(xb), 9)
             delta[value] = delta.get(value, 0.0) + float(ma) * float(mb)
     total = sum(delta.values())
     if total <= 0.0:
@@ -250,9 +280,10 @@ def _pairwise(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
     p_lt = max(0.0, 1.0 - p_gt - p_eq)
     return {
         "status": "AVAILABLE",
-        "method": "EXACT_DISCRETE_PMF_DIFFERENCE",
+        "method": "EXACT_CANONICAL_CORE_DISCRETE_PMF_DIFFERENCE",
         "dependence_assumption": "CONDITIONAL_INDEPENDENCE_CROSS_PLAYER",
         "cross_player_correlation": "NOT_MODELLED_YET",
+        "bonus_residual_handling": "EXPECTATION_ONLY_NOT_STOCHASTICALLY_FABRICATED",
         "a_element_id": a.get("element_id"),
         "a_player": a.get("player"),
         "b_element_id": b.get("element_id"),
@@ -261,6 +292,12 @@ def _pairwise(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any]:
         "p_equal": round(p_eq, 9),
         "p_a_lt_b": round(p_lt, 9),
         "mean_delta": round(sum(value * mass for value, mass in delta.items()), 9),
+        "core_pmf_mean_delta": round(pmf_mean_a - pmf_mean_b, 9),
+        "adjusted_expected_mean_delta": (
+            None
+            if adjusted_mean_a is None or adjusted_mean_b is None
+            else round(adjusted_mean_a - adjusted_mean_b, 9)
+        ),
         "p10": _quantile(delta, 0.10),
         "p50": _quantile(delta, 0.50),
         "p90": _quantile(delta, 0.90),
@@ -285,13 +322,12 @@ def _football_leader(
         for row in frontier
         if row.get("element_id") is not None
     }
-    if baseline_captain_id in by_id:
-        return by_id[int(baseline_captain_id)]
-
     net: dict[int, int] = {element: 0 for element in by_id}
+    available_pairs = 0
     for pair in pairwise:
         if pair.get("status") != "AVAILABLE":
             continue
+        available_pairs += 1
         a = _i(pair.get("a_element_id"))
         b = _i(pair.get("b_element_id"))
         if a not in net or b not in net:
@@ -304,6 +340,8 @@ def _football_leader(
         elif p_lt > p_gt + EPS:
             net[b] += 1
             net[a] -= 1
+    if available_pairs <= 0 and baseline_captain_id in by_id:
+        return by_id[int(baseline_captain_id)]
     return max(
         frontier,
         key=lambda row: (
@@ -604,6 +642,8 @@ def decide_captain_vice(
             "eo_is_not_expected_points": True,
             "candidate_specific_relative_mc_fabricated": False,
             "cross_player_correlation": "NOT_MODELLED_YET",
+            "blank_threshold_not_hardcoded": True,
+            "bonus_residual_distribution_fabricated": False,
             "mc500k_mutated": False,
         },
     }

@@ -341,6 +341,16 @@ def _captain_candidate_fixture(
         "p_dnp": (1.0 - p_start) if p_dnp is None else p_dnp,
         "point_distribution": {
             "status": "READY_COMPLETE_CONDITIONAL_PMF",
+            "distribution_completeness": "PARTIAL_BONUS_RESIDUAL",
+            "blank_threshold": 2,
+            "blank_definition": "CORE_STOCHASTIC_POINTS_AT_OR_BELOW_GOVERNED_THRESHOLD",
+            "p_fpl_blank": sum(v for k, v in pmf.items() if k <= 2),
+            "p_haul_10_plus": sum(v for k, v in pmf.items() if k >= 10),
+            "tails": {
+                "ge_8": sum(v for k, v in pmf.items() if k >= 8),
+                "ge_10": sum(v for k, v in pmf.items() if k >= 10),
+                "ge_12": sum(v for k, v in pmf.items() if k >= 12),
+            },
             "probabilities": {str(k): v for k, v in pmf.items()},
         },
         "league_scope": {
@@ -401,7 +411,7 @@ def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
     assert tz["expected_points"] == pytest.approx(4.811)
     assert tz["p_haul"] == pytest.approx(tz["p_ge_10"])
     assert all(
-        pair["method"] == "EXACT_DISCRETE_PMF_DIFFERENCE"
+        pair["method"] == "EXACT_CANONICAL_CORE_DISCRETE_PMF_DIFFERENCE"
         for pair in out["pairwise"]
         if pair["status"] == "AVAILABLE"
     )

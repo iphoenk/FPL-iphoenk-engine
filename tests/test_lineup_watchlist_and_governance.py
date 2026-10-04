@@ -368,28 +368,28 @@ def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
     rows = [
         _captain_candidate_fixture(
             1, "Tzolakis", expected=4.811, position="GK",
-            pmf={2: 0.60, 6: 0.30, 10: 0.10},
+            pmf={2: 0.55, 6: 0.3372, 10: 0.1128},
             p_start=0.8299, xmins=71.4,
             league_c=1.0, league_eo=12.0,
             competitive_c=0.0, competitive_eo=10.0,
         ),
         _captain_candidate_fixture(
             2, "Bruno", expected=4.681,
-            pmf={2: 0.45, 5: 0.25, 10: 0.15, 15: 0.15},
+            pmf={2: 0.45, 5: 0.4098, 10: 0.04, 15: 0.1002},
             p_start=0.8299, xmins=71.4,
             league_c=18.0, league_eo=80.0,
             competitive_c=22.0, competitive_eo=88.0,
         ),
         _captain_candidate_fixture(
             3, "De Cuyper", expected=4.540, position="DEF",
-            pmf={2: 0.50, 6: 0.25, 10: 0.15, 15: 0.10},
+            pmf={2: 0.50, 6: 0.3567, 10: 0.05, 15: 0.0933},
             p_start=0.8299, xmins=68.8,
             league_c=2.0, league_eo=35.0,
             competitive_c=1.0, competitive_eo=32.0,
         ),
         _captain_candidate_fixture(
             4, "Haaland", expected=4.485, position="FWD",
-            pmf={2: 0.40, 5: 0.25, 10: 0.15, 15: 0.20},
+            pmf={2: 0.40, 5: 0.4593, 10: 0.04, 15: 0.1007},
             p_start=0.8299, xmins=71.4,
             league_c=55.0, league_eo=141.4,
             competitive_c=65.0, competitive_eo=150.0,
@@ -411,7 +411,14 @@ def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
     assert out["captain"]["element_id"] == out["football_leader"]["element_id"]
     assert out["mini_league_override_applied"] is False
     tz = next(row for row in out["profiles"] if row["element_id"] == 1)
+    bruno = next(row for row in out["profiles"] if row["element_id"] == 2)
+    de_cuyper = next(row for row in out["profiles"] if row["element_id"] == 3)
+    haaland = next(row for row in out["profiles"] if row["element_id"] == 4)
     assert tz["expected_points"] == pytest.approx(4.811)
+    assert tz["p_haul"] == pytest.approx(0.1128)
+    assert bruno["p_haul"] == pytest.approx(0.1402)
+    assert de_cuyper["p_haul"] == pytest.approx(0.1433)
+    assert haaland["p_haul"] == pytest.approx(0.1407)
     assert tz["p_haul"] == pytest.approx(tz["p_ge_10"])
     assert all(
         pair["method"] == "EXACT_CANONICAL_CORE_DISCRETE_PMF_DIFFERENCE"

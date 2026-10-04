@@ -478,6 +478,12 @@ def resolve_prefetch(
     logical_slot = str(values.get("logical_slot") or "").strip()
     scope_raw = str(values.get("scope") or "").strip()
     scopes = [_SCOPE_ALIASES.get(part.strip(), part.strip()) for part in scope_raw.split(",") if part.strip()]
+    if report_kind == "full_master" and not scopes:
+        # A full report requires both private personal context and the
+        # governed mini-league facts.  The public transport intentionally
+        # omits `scope` for full_master, so resolve the canonical scopes here
+        # instead of silently producing a stale report-prefetch snapshot.
+        scopes = ["personal", "mini_league"]
     if len(scopes) != len(set(scopes)):
         raise WorkflowControlError("report-prefetch scope contains duplicates")
     unknown_scopes = set(scopes) - _ALLOWED_PREFETCH_SCOPES
@@ -518,7 +524,7 @@ def resolve_prefetch(
         # 05:30+07:00 here would make an identical instant fail the exact
         # publication identity check against 05:30:00+07:00.
         logical_slot = parsed_logical_slot.isoformat()
-        if report_kind != "ad_hoc" and scopes:
+        if report_kind != "ad_hoc" and scope_raw:
             raise WorkflowControlError("scope override is allowed only for ad_hoc report prefetch")
         if report_kind == "ad_hoc" and not scopes:
             raise WorkflowControlError("ad_hoc report prefetch requires a non-empty scope")

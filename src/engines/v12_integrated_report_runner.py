@@ -6007,10 +6007,18 @@ def refresh_price_only_state(
         "bank_status": finance.get("bank_status"),
         "sell_value_status": finance.get("sell_value_status"),
     }
+    price_partial_state = str(
+        (price_radar or {}).get("state")
+        or ("DEGRADED" if price_radar else "UNAVAILABLE")
+    ).upper()
     section_payloads["S10"] = _section(
-        "COMPLETE" if price_radar else "DEGRADED",
+        price_partial_state,
         bound("S10", s10) if price_radar else s10,
-        None if price_radar else "Official FPL predictor radar unavailable",
+        (
+            (price_radar or {}).get("degradation_reason")
+            if price_partial_state != "COMPLETE"
+            else None
+        ),
     )
 
     s11 = dict(section_payloads["S11"].get("content") or {})

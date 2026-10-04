@@ -727,7 +727,14 @@ jobs:
               reason = str(row.get("reason") or "")
               if stage in {"PRE_RENDER_QA", "POST_RENDER_QA", "FINAL_DELIVERY_BARRIER", "HUMAN_FACING_QA", "CANONICAL_RENDER"}:
                   tokens = [token.strip() for token in reason.split(";") if token.strip()]
-                  safe = [token for token in tokens if safe_reason.fullmatch(token)]
+                  safe = []
+                  for token in tokens:
+                      if safe_reason.fullmatch(token):
+                          safe.append(token)
+                          continue
+                      code = token.split("=", 1)[0].strip()
+                      if re.fullmatch(r"[A-Z0-9_:-]+", code):
+                          safe.append(code)
                   print(f"V12_SAFE_QA_DIAGNOSTIC stage={stage} status={row.get('status')} failures={','.join(safe) or 'REDACTED'}")
           PY
 

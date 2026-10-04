@@ -161,7 +161,8 @@ jobs:
             tests/test_fixture_workload_weather_binding.py \
             tests/test_visible_report_content_contract.py \
             tests/test_mini_league_overlay.py \
-            tests/test_lineup_watchlist_and_governance.py
+            tests/test_lineup_watchlist_and_governance.py \
+            tests/test_false_unavailable_semantic_gate.py
 
   lifecycle:
     runs-on: ubuntu-latest

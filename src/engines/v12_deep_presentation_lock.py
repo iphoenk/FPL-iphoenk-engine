@@ -83,7 +83,7 @@ def validate_deep_presentation_lock_contract(
         "S01": [("Axis","Status","Current call")],
         "S02": [("Player","Pos","Opponent","Pstart","xMins","1GW xPts","3GW","5GW","Note")],
         "S06B": [("Player","Pstart","xMins","1GW xPts")],
-        "S08": [("Rank","Player","xPts","Phaul","Pstart","xMins")],
+        "S08": [("Rank","Player","xPts","Pstart","xMins"),("Player","Pblank","Phaul","P>=10","Q90")],
         "S09": [("Chip","Status")],
         "S10": [("Player","Price","Direction","Progress")],
         "S11": [("Player","Pos","£","xMins","Pstart","DNP","Score","Admit","Evidence")],

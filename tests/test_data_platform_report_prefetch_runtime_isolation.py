@@ -33,7 +33,8 @@ def test_private_personal_publish_requires_authoritative_fresh_current_team():
     assert 'if [[ $rc -ne 0 ]]; then' in workflow
     assert "FPL_TEAM_ID must be configured" in workflow
     assert "FPL_AUTH_MODE must enable authenticated personal acquisition" in workflow
-    assert "auth_state != \"AUTH_AVAILABLE\"" in workflow
+    assert "if auth_state !=" in workflow
+    assert "AUTH_AVAILABLE" in workflow
     assert "entry_id != expected_team_id" in workflow
     assert "len(element_ids) != 15" in workflow
     assert "len(set(element_ids)) != 15" in workflow

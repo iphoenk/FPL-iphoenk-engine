@@ -194,22 +194,34 @@
     "S08": {
       "title": "CAPTAIN / VICE CAPTAIN",
       "blocks": [
-        "State",
-        "Football captain frontier",
-        "Current football-optimal C/VC",
-        "P1.7 safe captain pool",
-        "Mini-league context note"
+        "Football frontier classification",
+        "Football leader",
+        "Competitive context",
+        "Current C",
+        "Current VC",
+        "Reason",
+        "VC fallback"
       ],
       "tables": [
         {
-          "name": "Football captain frontier",
+          "name": "Football frontier",
           "columns": [
             "Rank",
             "Player",
             "xPts",
-            "Phaul",
             "Pstart",
             "xMins"
+          ],
+          "rows_exact": 5
+        },
+        {
+          "name": "Return profile",
+          "columns": [
+            "Player",
+            "Pblank",
+            "Phaul",
+            "P>=10",
+            "Q90"
           ],
           "rows_exact": 5
         }

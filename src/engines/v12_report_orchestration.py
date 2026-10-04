@@ -4093,34 +4093,82 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Bench GK: {payload.get('bench_gk') or 'UNAVAILABLE'}")
 
     elif section_id == "S08":
-        frontier = [dict(r) for r in payload.get("captain_frontier") or [] if isinstance(r, Mapping)][:5]
+        frontier = sorted(
+            [
+                dict(r)
+                for r in (
+                    payload.get("captain_profiles")
+                    or payload.get("captain_frontier")
+                    or []
+                )
+                if isinstance(r, Mapping)
+            ],
+            key=lambda r: (
+                int(r.get("football_rank") or 10**9),
+                str(r.get("player") or r.get("name") or ""),
+            ),
+        )[:5]
+        lines.append("#### FOOTBALL FRONTIER")
         lines.extend(_markdown_table(
-            ("Rank", "Player", "xPts", "Phaul", "Pstart", "xMins"),
+            ("Rank", "Player", "xPts", "Pstart", "xMins"),
             [(
                 r.get("football_rank") or idx,
                 r.get("player") or r.get("name"),
-                r.get("xpts") or r.get("expected_points"),
-                r.get("p_haul"),
+                r.get("expected_points", r.get("xpts")),
                 r.get("p_start"),
                 r.get("xmins"),
             ) for idx, r in enumerate(frontier, 1)],
         ))
+        lines.append("#### RETURN PROFILE")
+        lines.extend(_markdown_table(
+            ("Player", "Pblank", "Phaul", "P>=10", "Q90"),
+            [(
+                r.get("player") or r.get("name"),
+                r.get("p_blank", r.get("blank_probability")),
+                r.get("p_haul", r.get("haul_probability")),
+                r.get("p_ge_10"),
+                r.get("q90", r.get("ceiling_q90")),
+            ) for r in frontier],
+        ))
         captain = dict(payload.get("captain") or {})
         vice = dict(payload.get("vice_captain") or {})
+        leader = dict(payload.get("football_leader") or {})
+        context = dict(payload.get("competitive_context") or {})
         lines.append(
-            f"Current call: C {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
-            f"VC {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
+            "Football frontier: "
+            f"{payload.get('football_frontier_classification') or 'UNAVAILABLE'}."
+        )
+        lines.append(
+            "Football leader: "
+            f"{leader.get('player') or leader.get('name') or 'UNAVAILABLE'}."
+        )
+        lines.append(
+            "Competitive context: "
+            f"posture {payload.get('risk_posture') or context.get('risk_posture') or 'UNAVAILABLE'}; "
+            f"tie-break {context.get('tie_break_status') or 'NOT_USED'}; "
+            f"candidate-specific relative MC "
+            + (
+                "available"
+                if any(
+                    str(r.get("relative_points_mc_status") or "").upper() == "AVAILABLE"
+                    for r in context.get("competitive_consequence") or []
+                    if isinstance(r, Mapping)
+                )
+                else "not available, therefore not fabricated from EO"
+            )
+            + "."
+        )
+        lines.append(
+            f"Current C: {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
+            f"Current VC: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
             f"state {payload.get('decision_state') or 'UNAVAILABLE'}."
         )
-        if frontier:
-            lines.append(
-                "EO/leverage context: "
-                + "; ".join(
-                    f"{r.get('player') or r.get('name')}: {str(r.get('exposure_leverage_class') or 'context unavailable').replace('_', ' ')}"
-                    for r in frontier
-                )
-            )
-        lines.append(f"Reconciliation: {payload.get('reconciliation_reason') or 'No material override.'}")
+        lines.append(
+            f"Reason: {payload.get('reconciliation_reason') or 'No material override.'}"
+        )
+        lines.append(
+            f"VC fallback: {payload.get('vice_fallback_reason') or 'UNAVAILABLE'}."
+        )
 
     elif section_id == "S09":
         ledger = payload.get("chip_ledger")
@@ -4900,6 +4948,16 @@ def _render_deep_visible_contract_lines(
                     f"Cost of waiting: {_compact(row.get('COST OF WAITING'))}. "
                     f"Abort/reversal: {_compact(row.get('ABORT / REVERSAL'))}."
                 )
+                if display == "CAPTAIN":
+                    cap_decision = dict(board.get("captain_decision") or {})
+                    cap = dict(cap_decision.get("captain") or {})
+                    vice = dict(cap_decision.get("vice_captain") or {})
+                    lines.append(
+                        "Canonical C/VC: "
+                        f"{cap.get('player') or cap.get('name') or 'UNAVAILABLE'} / "
+                        f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
+                        f"frontier {cap_decision.get('frontier_classification') or 'UNAVAILABLE'}."
+                    )
             else:
                 fallback = payload.get(display) or payload.get(display.replace(" ", "_"))
                 lines.append(_compact(fallback))

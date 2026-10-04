@@ -998,10 +998,20 @@ def validate_deep_decision_content_delivery(
             failures.append("S08_FOOTBALL_BASELINE_ORDER_MISSING")
         if s08.get("mini_league_overlay_second") is not True:
             failures.append("S08_MINI_LEAGUE_OVERLAY_ORDER_MISSING")
-        if "| RANK | PLAYER | XPTS | PHAUL | PSTART | XMINS |" not in upper:
+        if "| RANK | PLAYER | XPTS | PSTART | XMINS |" not in upper:
             failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
-        if "EO/LEVERAGE CONTEXT:" not in upper:
-            failures.append("S08_EXPOSURE_CLASS_NOT_VISIBLE")
+        if "| PLAYER | PBLANK | PHAUL | P>=10 | Q90 |" not in upper:
+            failures.append("S08_RETURN_PROFILE_NOT_VISIBLE")
+        for token, failure in (
+            ("FOOTBALL FRONTIER:", "S08_FRONTIER_CLASSIFICATION_NOT_VISIBLE"),
+            ("FOOTBALL LEADER:", "S08_FOOTBALL_LEADER_NOT_VISIBLE"),
+            ("COMPETITIVE CONTEXT:", "S08_COMPETITIVE_CONTEXT_NOT_VISIBLE"),
+            ("CURRENT C:", "S08_CURRENT_CAPTAIN_NOT_VISIBLE"),
+            ("CURRENT VC:", "S08_CURRENT_VICE_NOT_VISIBLE"),
+            ("VC FALLBACK:", "S08_VICE_FALLBACK_NOT_VISIBLE"),
+        ):
+            if token not in upper:
+                failures.append(failure)
 
     s15b = content("S15B")
     if state("S15B") == "COMPLETE":

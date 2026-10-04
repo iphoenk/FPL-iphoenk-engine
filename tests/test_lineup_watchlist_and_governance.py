@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from src.engines import dss_watchlist, watchlist_public_sanitize
 from src.engines.lineup_governance import build_lineup_decision, build_package_decision
+from src.engines.v12_captain_frontier import decide_captain_vice
 import src.engines.dss_operationalization_overlay as operationalization
 from src.engines.dss_operationalization_overlay import EVALUATORS, load_policy
 from src.models.package_optimizer_v2 import load_config, score_package
@@ -310,3 +313,312 @@ def test_package_optimizer_executes_cluster_and_early_season_guardrails():
     rejected = score_package(players, planning_gw=min(2, int(early["through_gw"])), changes=over_cap)
     assert rejected["valid"] is False
     assert rejected["reason"] == "early_season_change_cap_exceeded"
+
+
+# Captain distribution/frontier regression contract.
+def _captain_candidate_fixture(
+    element,
+    name,
+    *,
+    expected,
+    pmf,
+    position="MID",
+    p_start=0.95,
+    xmins=85.0,
+    p_dnp=None,
+    league_c=20.0,
+    league_eo=80.0,
+    competitive_c=20.0,
+    competitive_eo=80.0,
+):
+    return {
+        "element_id": element,
+        "player": name,
+        "position": position,
+        "expected_points": expected,
+        "p_start": p_start,
+        "xmins": xmins,
+        "p_dnp": (1.0 - p_start) if p_dnp is None else p_dnp,
+        "point_distribution": {
+            "status": "READY_COMPLETE_CONDITIONAL_PMF",
+            "distribution_completeness": "PARTIAL_BONUS_RESIDUAL",
+            "blank_threshold": 2,
+            "blank_definition": "CORE_STOCHASTIC_POINTS_AT_OR_BELOW_GOVERNED_THRESHOLD",
+            "p_fpl_blank": sum(v for k, v in pmf.items() if k <= 2),
+            "p_haul_10_plus": sum(v for k, v in pmf.items() if k >= 10),
+            "tails": {
+                "ge_8": sum(v for k, v in pmf.items() if k >= 8),
+                "ge_10": sum(v for k, v in pmf.items() if k >= 10),
+                "ge_12": sum(v for k, v in pmf.items() if k >= 12),
+            },
+            "probabilities": {str(k): v for k, v in pmf.items()},
+        },
+        "league_scope": {
+            "captain_pct": league_c,
+            "eo_pct": league_eo,
+        },
+        "competitive_scope": {
+            "captain_pct": competitive_c,
+            "eo_pct": competitive_eo,
+        },
+    }
+
+
+def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Tzolakis", expected=4.811, position="GK",
+            pmf={2: 0.55, 6: 0.3372, 10: 0.1128},
+            p_start=0.8299, xmins=71.4,
+            league_c=1.0, league_eo=12.0,
+            competitive_c=0.0, competitive_eo=10.0,
+        ),
+        _captain_candidate_fixture(
+            2, "Bruno", expected=4.681,
+            pmf={2: 0.45, 5: 0.4098, 10: 0.04, 15: 0.1002},
+            p_start=0.8299, xmins=71.4,
+            league_c=18.0, league_eo=80.0,
+            competitive_c=22.0, competitive_eo=88.0,
+        ),
+        _captain_candidate_fixture(
+            3, "De Cuyper", expected=4.540, position="DEF",
+            pmf={2: 0.50, 6: 0.3567, 10: 0.05, 15: 0.0933},
+            p_start=0.8299, xmins=68.8,
+            league_c=2.0, league_eo=35.0,
+            competitive_c=1.0, competitive_eo=32.0,
+        ),
+        _captain_candidate_fixture(
+            4, "Haaland", expected=4.485, position="FWD",
+            pmf={2: 0.40, 5: 0.4593, 10: 0.04, 15: 0.1007},
+            p_start=0.8299, xmins=71.4,
+            league_c=55.0, league_eo=141.4,
+            competitive_c=65.0, competitive_eo=150.0,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="BALANCED",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    assert out["classification"] == "CLOSE"
+    assert out["governance"]["highest_mean_alone_is_not_authority"] is True
+    assert len(out["frontier"]) >= 2
+    frontier_ids = {row["element_id"] for row in out["frontier"]}
+    assert out["captain"]["element_id"] in frontier_ids
+    assert out["captain"]["element_id"] == out["football_leader"]["element_id"]
+    assert out["mini_league_override_applied"] is False
+    tz = next(row for row in out["profiles"] if row["element_id"] == 1)
+    bruno = next(row for row in out["profiles"] if row["element_id"] == 2)
+    de_cuyper = next(row for row in out["profiles"] if row["element_id"] == 3)
+    haaland = next(row for row in out["profiles"] if row["element_id"] == 4)
+    assert tz["expected_points"] == pytest.approx(4.811)
+    assert tz["p_haul"] == pytest.approx(0.1128)
+    assert bruno["p_haul"] == pytest.approx(0.1402)
+    assert de_cuyper["p_haul"] == pytest.approx(0.1433)
+    assert haaland["p_haul"] == pytest.approx(0.1407)
+    assert tz["p_haul"] == pytest.approx(tz["p_ge_10"])
+    assert all(
+        pair["method"] == "EXACT_CANONICAL_CORE_DISCRETE_PMF_DIFFERENCE"
+        for pair in out["pairwise"]
+        if pair["status"] == "AVAILABLE"
+    )
+
+
+def test_gk_can_captain_when_mean_and_distribution_clearly_dominate():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Dominant GK", expected=8.0, position="GK",
+            pmf={6: 0.50, 10: 0.50}, p_start=0.99, xmins=89.0,
+        ),
+        _captain_candidate_fixture(
+            2, "Attacker", expected=6.0, position="FWD",
+            pmf={2: 0.20, 6: 0.50, 10: 0.30}, p_start=0.95, xmins=84.0,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=2,
+        baseline_vice_id=1,
+        risk_posture="ATTACK",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    assert out["classification"] == "CLEAR"
+    assert out["captain"]["player"] == "Dominant GK"
+    assert out["governance"]["position_neutral"] is True
+    assert out["mini_league_override_applied"] is False
+
+
+def test_attacker_with_stronger_upper_tail_enters_close_frontier_despite_lower_mean():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Keeper", expected=5.1, position="GK",
+            pmf={2: 0.20, 6: 0.70, 10: 0.10},
+        ),
+        _captain_candidate_fixture(
+            2, "Forward", expected=5.0, position="FWD",
+            pmf={2: 0.30, 4: 0.30, 10: 0.10, 15: 0.30},
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+    )
+    assert out["classification"] == "CLOSE"
+    assert {row["player"] for row in out["frontier"]} == {"Keeper", "Forward"}
+    forward = next(row for row in out["frontier"] if row["player"] == "Forward")
+    keeper = next(row for row in out["frontier"] if row["player"] == "Keeper")
+    assert forward["q90"] > keeper["q90"]
+    assert forward["expected_points"] < keeper["expected_points"]
+
+
+def test_high_eo_materially_inferior_candidate_cannot_be_promoted():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Football Winner", expected=7.5,
+            pmf={6: 0.50, 10: 0.50}, p_start=0.99, xmins=89,
+            competitive_c=20, competitive_eo=80,
+        ),
+        _captain_candidate_fixture(
+            2, "High EO Inferior", expected=4.0,
+            pmf={2: 0.60, 6: 0.40}, p_start=0.90, xmins=75,
+            competitive_c=80, competitive_eo=170,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="PROTECT",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    assert out["classification"] == "CLEAR"
+    assert out["captain"]["player"] == "Football Winner"
+    assert out["mini_league_override_applied"] is False
+
+
+def test_low_eo_materially_inferior_differential_cannot_be_promoted():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Football Winner", expected=7.5,
+            pmf={6: 0.50, 10: 0.50}, p_start=0.99, xmins=89,
+            competitive_c=60, competitive_eo=145,
+        ),
+        _captain_candidate_fixture(
+            2, "Low EO Inferior", expected=4.0,
+            pmf={2: 0.60, 6: 0.40}, p_start=0.90, xmins=75,
+            competitive_c=1, competitive_eo=8,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="ATTACK",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    assert out["classification"] == "CLEAR"
+    assert out["captain"]["player"] == "Football Winner"
+
+
+def test_close_frontier_can_be_resolved_by_protect_or_attack_posture():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Protection", expected=6.0,
+            pmf={2: 0.25, 6: 0.50, 10: 0.25},
+            competitive_c=70, competitive_eo=150,
+            league_c=60, league_eo=140,
+        ),
+        _captain_candidate_fixture(
+            2, "Leverage", expected=5.9,
+            pmf={2: 0.35, 5: 0.25, 10: 0.10, 15: 0.30},
+            competitive_c=5, competitive_eo=25,
+            league_c=8, league_eo=30,
+        ),
+    ]
+    protect = decide_captain_vice(
+        rows,
+        baseline_captain_id=2,
+        baseline_vice_id=1,
+        risk_posture="PROTECT",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    attack = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="ATTACK",
+        league_complete=True,
+        competitive_complete=True,
+    )
+    assert protect["classification"] == "CLOSE"
+    assert attack["classification"] == "CLOSE"
+    assert protect["captain"]["player"] == "Protection"
+    assert attack["captain"]["player"] == "Leverage"
+    assert protect["competitive_context"]["relative_points_not_invented_from_eo"] is True
+
+
+def test_vice_prioritizes_robust_fallback_not_captain_rank_two():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Clear Captain", expected=8.0,
+            pmf={6: 0.40, 10: 0.60}, p_start=0.99, xmins=89,
+        ),
+        _captain_candidate_fixture(
+            2, "Risky High Mean", expected=6.5,
+            pmf={2: 0.30, 6: 0.40, 10: 0.30},
+            p_start=0.80, p_dnp=0.20, xmins=68,
+        ),
+        _captain_candidate_fixture(
+            3, "Safe Fallback", expected=5.5,
+            pmf={2: 0.20, 6: 0.60, 10: 0.20},
+            p_start=0.98, p_dnp=0.02, xmins=87,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+    )
+    assert out["captain"]["player"] == "Clear Captain"
+    assert out["vice_captain"]["player"] == "Safe Fallback"
+    assert "LOW_DNP_HIGH_START" in out["vice_reason"]
+
+
+def test_missing_mini_league_context_preserves_football_leader_and_fabricates_nothing():
+    rows = [
+        _captain_candidate_fixture(
+            1, "Baseline", expected=6.0,
+            pmf={2: 0.25, 6: 0.50, 10: 0.25},
+            competitive_c=70, competitive_eo=150,
+        ),
+        _captain_candidate_fixture(
+            2, "Alternative", expected=5.9,
+            pmf={2: 0.35, 5: 0.25, 10: 0.10, 15: 0.30},
+            competitive_c=5, competitive_eo=25,
+        ),
+    ]
+    out = decide_captain_vice(
+        rows,
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="ATTACK",
+        league_complete=False,
+        competitive_complete=False,
+    )
+    assert out["classification"] == "CLOSE"
+    assert out["captain"]["player"] == "Baseline"
+    assert out["mini_league_override_applied"] is False
+    assert out["competitive_context"]["tie_break_status"] == (
+        "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
+    )
+    for row in out["competitive_context"]["competitive_consequence"]:
+        assert row["expected_relative_points_delta_vs_league"] is None
+        assert row["probability_gain_relative_points"] is None

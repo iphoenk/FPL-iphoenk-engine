@@ -777,9 +777,13 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
     report = _deep_report([_route()], extra_sections=[s02, s06, s08])
     body = render_deep_text(report)
     assert "Formation:" in body and "XI:" in body and "Bench GK:" in body
-    assert "| Rank | Player | xPts | Phaul | Pstart | xMins |" in body
-    assert "Current call: C P01; VC P02; state LOCK." in body
-    assert "EO/leverage context:" in body
+    assert "| Rank | Player | xPts | Pstart | xMins |" in body
+    assert "| Player | Pblank | Phaul | P>=10 | Q90 |" in body
+    assert "Football frontier:" in body
+    assert "Football leader:" in body
+    assert "Competitive context:" in body
+    assert "Current C: P01; Current VC: P02; state LOCK." in body
+    assert "VC fallback:" in body
     assert validate_deep_decision_content_delivery(report, body) == []
 
 

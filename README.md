@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-04T06:33:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-04T08:19:44+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -27,6 +27,10 @@ DEEP is occurrence-bound, provenance-aware, privacy-safe, and may degrade explic
 ## PRICE human-facing delivery barrier
 
 PRICE follows the same factual/provenance boundary and never invents unavailable manager state or decision output.
+
+## Captaincy
+
+Captaincy is now distribution-first: S08 compares legal selected-XI candidates using canonical P1.3B one-GW return distributions, treats Phaul as the existing P(points ≥ 10) tail rather than a second weighted signal, and classifies the football frontier as CLEAR, CLOSE, or FRAGILE. Mini-league LEAGUE/Competitive Window exposure may break only a CLOSE football decision when standing-gap context is complete; EO never overrides a clear football edge. S15B is evidence-only, while S08, S18, and S19 consume one canonical C/VC decision. Cross-player joint correlation and candidate-specific relative-points captain MC are not currently fabricated when unavailable.
 
 ## Governance
 

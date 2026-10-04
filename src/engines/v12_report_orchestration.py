@@ -4093,11 +4093,21 @@ def _render_deep_visible_contract_lines(
         lines.append(f"Bench GK: {payload.get('bench_gk') or 'UNAVAILABLE'}")
 
     elif section_id == "S08":
-        frontier = [
-            dict(r)
-            for r in payload.get("captain_frontier") or []
-            if isinstance(r, Mapping)
-        ][:5]
+        frontier = sorted(
+            [
+                dict(r)
+                for r in (
+                    payload.get("captain_profiles")
+                    or payload.get("captain_frontier")
+                    or []
+                )
+                if isinstance(r, Mapping)
+            ],
+            key=lambda r: (
+                int(r.get("football_rank") or 10**9),
+                str(r.get("player") or r.get("name") or ""),
+            ),
+        )[:5]
         lines.append("#### FOOTBALL FRONTIER")
         lines.extend(_markdown_table(
             ("Rank", "Player", "xPts", "Pstart", "xMins"),

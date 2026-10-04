@@ -3800,6 +3800,25 @@ def _captain_decision_surface(
         for row in leverage_rows
         if int(row.get("element_id") or 0) > 0
     }
+    league_exposure_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in mini_detail.get("league_our15_exposure") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    rivals_exposure_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (
+            mini_detail.get("rivals_our15_exposure")
+            or mini_detail.get("our15_rival_exposure")
+            or []
+        )
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    competitive_exposure_map = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in mini_detail.get("competitive_our15_exposure") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
     pmap = _projection_map(projections)
 
     decision_candidates: list[dict[str, Any]] = []
@@ -3815,6 +3834,31 @@ def _captain_decision_surface(
         if not point_distribution.get("probabilities"):
             point_distribution = dict(complete.get("point_distribution") or {})
         visible = leverage_map.get(element) or {}
+        league_scope = (
+            league_exposure_map.get(element)
+            or dict(visible.get("league_scope") or {})
+        )
+        rivals_scope = (
+            rivals_exposure_map.get(element)
+            or dict(visible.get("rivals_scope") or {})
+        )
+        competitive_scope = (
+            competitive_exposure_map.get(element)
+            or dict(visible.get("competitive_scope") or {})
+        )
+        competitive_eo = competitive_scope.get("eo_pct")
+        if competitive_eo is None:
+            exposure_class = "UNAVAILABLE"
+        elif float(competitive_eo) >= 120.0:
+            exposure_class = "PROTECTION_HEAVY"
+        elif float(competitive_eo) >= 75.0:
+            exposure_class = "PROTECTION"
+        elif float(competitive_eo) <= 20.0:
+            exposure_class = "HIGH_LEVERAGE"
+        elif float(competitive_eo) <= 50.0:
+            exposure_class = "LEVERAGE"
+        else:
+            exposure_class = "BALANCED"
         decision_candidates.append(
             {
                 **visible,
@@ -3839,10 +3883,10 @@ def _captain_decision_surface(
                 "xmins": mechanism.get("xmins", visible.get("xmins")),
                 "p_dnp": mechanism.get("p_dnp"),
                 "point_distribution": point_distribution,
-                "league_scope": dict(visible.get("league_scope") or {}),
-                "competitive_scope": dict(
-                    visible.get("competitive_scope") or {}
-                ),
+                "league_scope": league_scope,
+                "rivals_scope": rivals_scope,
+                "competitive_scope": competitive_scope,
+                "exposure_leverage_class": exposure_class,
             }
         )
 

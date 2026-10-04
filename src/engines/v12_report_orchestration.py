@@ -3910,9 +3910,8 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
-            ("ID", "Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
+            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
-                r.get("element_id") or r.get("element"),
                 r.get("player") or r.get("name"),
                 r.get("position"),
                 r.get("opponent"),

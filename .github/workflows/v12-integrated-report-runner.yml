@@ -697,6 +697,7 @@ jobs:
             }}-${{ github.run_id }}
 
       - name: Read integrated runner proof
+        if: always()
         id: proof
         working-directory: app
         run: |
@@ -715,7 +716,7 @@ jobs:
           PY
 
       - name: Record Stage3 engineering closure evidence
-        if: needs.parse.outputs.report_mode == 'DEEP'
+        if: always() && needs.parse.outputs.report_mode == 'DEEP'
         id: stage3
         working-directory: app
         env:
@@ -823,7 +824,7 @@ jobs:
           exit 0
 
       - name: Record Stage3 not applicable for PRICE
-        if: needs.parse.outputs.report_mode == 'PRICE'
+        if: always() && needs.parse.outputs.report_mode == 'PRICE'
         working-directory: app
         run: |
           python - <<'PY'

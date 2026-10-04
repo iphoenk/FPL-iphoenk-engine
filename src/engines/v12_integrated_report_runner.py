@@ -3713,6 +3713,22 @@ def _mini_league_deep_detail(
         "strategy_implication": {
             "human_posture": human_posture,
             "model_posture": model_posture,
+            "model_posture_source": (
+                ((mini_overlay or {}).get("risk_posture") or {}).get("source")
+            ),
+            "posture_evidence": {
+                "current_rank": context.get("our_rank"),
+                "league_size": context.get("manager_count"),
+                "leader_gap": context.get("points_to_leader"),
+                "top3_gap": context.get("points_to_top_3"),
+                "top5_gap": context.get("points_to_top_5"),
+                "nearest_above_gap": context.get("points_to_nearest_above"),
+                "nearest_below_cushion": context.get("points_ahead_nearest_below"),
+                "planning_gw": context.get("planning_gw"),
+                "gw_remaining_including_planning_gw": context.get(
+                    "gw_remaining_including_planning_gw"
+                ),
+            },
             "transfer_action": operational_action,
             "xi_rule": "FOOTBALL_BASELINE_FIRST_MINI_LEAGUE_ONLY_BREAKS_NEAR_TIES",
             "captain_rule": (
@@ -3844,16 +3860,43 @@ def _captain_decision_surface(
         and int(competitive_scope.get("collected") or 0)
         == int(competitive_scope.get("expected") or 0)
     )
+    strategy_implication = dict(
+        mini_detail.get("strategy_implication") or {}
+    )
     risk_posture = str(
-        (mini_detail.get("strategy_implication") or {}).get("model_posture")
-        or "BALANCED"
+        strategy_implication.get("model_posture") or "BALANCED"
     ).upper()
+    risk_context = dict(strategy_implication.get("posture_evidence") or {})
+    try:
+        context_rank = int(risk_context.get("current_rank"))
+        context_size = int(risk_context.get("league_size"))
+    except (TypeError, ValueError):
+        context_rank = context_size = 0
+    risk_context_complete = bool(
+        context_rank > 0
+        and context_size >= context_rank
+        and risk_context.get("leader_gap") is not None
+        and risk_context.get("top3_gap") is not None
+        and risk_context.get("top5_gap") is not None
+        and risk_context.get("planning_gw") is not None
+        and risk_context.get("gw_remaining_including_planning_gw") is not None
+        and (
+            context_rank == 1
+            or risk_context.get("nearest_above_gap") is not None
+        )
+        and (
+            context_rank == context_size
+            or risk_context.get("nearest_below_cushion") is not None
+        )
+    )
 
     decision = decide_captain_vice(
         decision_candidates,
         baseline_captain_id=baseline_captain_id,
         baseline_vice_id=baseline_vice_id,
         risk_posture=risk_posture,
+        risk_context=risk_context,
+        risk_context_complete=risk_context_complete,
         league_complete=league_complete,
         competitive_complete=competitive_complete,
     )

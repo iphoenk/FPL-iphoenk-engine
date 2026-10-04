@@ -406,7 +406,10 @@ def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
     assert out["classification"] == "CLOSE"
     assert out["governance"]["highest_mean_alone_is_not_authority"] is True
     assert len(out["frontier"]) >= 2
-    assert out["captain"]["element_id"] == 1
+    frontier_ids = {row["element_id"] for row in out["frontier"]}
+    assert out["captain"]["element_id"] in frontier_ids
+    assert out["captain"]["element_id"] == out["football_leader"]["element_id"]
+    assert out["mini_league_override_applied"] is False
     tz = next(row for row in out["profiles"] if row["element_id"] == 1)
     assert tz["expected_points"] == pytest.approx(4.811)
     assert tz["p_haul"] == pytest.approx(tz["p_ge_10"])

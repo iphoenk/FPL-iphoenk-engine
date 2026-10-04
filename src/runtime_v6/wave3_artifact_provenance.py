@@ -9,6 +9,7 @@ producer run is a completed successful natural issue event in this repository.
 """
 
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -74,6 +75,18 @@ def resolve_natural_source_run(
     observer_created_at = str(observer_run.get("created_at") or "")
     if not observer_created_at:
         raise NaturalProofProvenanceError("missing or invalid observer created_at")
+
+    def created_at_second(value: Any) -> int:
+        text = str(value or "")
+        if not text:
+            raise NaturalProofProvenanceError("missing or invalid source created_at")
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError as exc:
+            raise NaturalProofProvenanceError("missing or invalid source created_at") from exc
+        return int(parsed.timestamp())
+
+    observer_created_second = created_at_second(observer_created_at)
     observer_head_sha = _sha(observer_run.get("head_sha"), "observer head_sha")
     if _repository_name(observer_run, "repository") != expected_repository:
         raise NaturalProofProvenanceError("observer repository mismatch")
@@ -86,7 +99,15 @@ def resolve_natural_source_run(
             continue
         if str(run.get("event") or "") != NATURAL_PROOF_EVENT:
             continue
-        if str(run.get("created_at") or "") != observer_created_at:
+        try:
+            source_created_second = created_at_second(run.get("created_at"))
+        except NaturalProofProvenanceError:
+            continue
+        # GitHub creates sibling workflow runs for one issue-edit fanout
+        # independently; their API created_at timestamps can straddle an
+        # adjacent whole second. Bind within one second while retaining the
+        # same event, commit SHA, repository and workflow-path constraints.
+        if abs(source_created_second - observer_created_second) > 1:
             continue
         try:
             source_head_sha = _sha(run.get("head_sha"), "source head_sha")

@@ -69,6 +69,9 @@ jobs:
               raise SystemExit("report_slot must use Asia/Jakarta +07:00")
           if dt.second != 0 or dt.microsecond != 0:
               raise SystemExit("report_slot must be exact to the minute")
+          now = datetime.now(ZoneInfo("Asia/Jakarta"))
+          if dt > now:
+              raise SystemExit("report_slot must not be in the future")
 
           checkpoint = args.get("checkpoint_time") or dt.strftime("%H:%M")
           if checkpoint != dt.strftime("%H:%M"):
@@ -123,13 +126,25 @@ jobs:
               if OCCURRENCE_ID="$OCCURRENCE_ID" python - <<'PY'
           import json
           import os
+          import sys
+          from datetime import datetime
           from pathlib import Path
           p = Path(os.environ["RUNNER_TEMP"]) / "delivery-status.json"
           obj = json.loads(p.read_text(encoding="utf-8"))
+          report_slot = datetime.fromisoformat(
+              os.environ["OCCURRENCE_ID"].split("|", 1)[1]
+          )
+          generated_at = datetime.fromisoformat(str(obj.get("generated_at") or ""))
           ok = (
               obj.get("occurrence_id") == os.environ["OCCURRENCE_ID"]
               and obj.get("delivery_status") in {"READY_FULL", "READY_DEGRADED"}
+              and generated_at >= report_slot
           )
+          if (
+              obj.get("occurrence_id") == os.environ["OCCURRENCE_ID"]
+              and generated_at < report_slot
+          ):
+              print("PRIVATE_LATEST_BEFORE_OCCURRENCE", file=sys.stderr)
           raise SystemExit(0 if ok else 1)
           PY
               then

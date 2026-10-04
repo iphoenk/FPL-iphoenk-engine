@@ -2533,7 +2533,7 @@ def _render_match_scout_lines(rows: Sequence[Mapping[str, Any]]) -> list[str]:
         lines.append(f"#### FIXTURE ID: {fixture_id}")
         for field, label in labels:
             value = row.get(field, "UNAVAILABLE")
-            lines.append(f"{label}: {value}")
+            lines.append(f"{label}: {_human_summary(value)}")
     return lines
 
 
@@ -4273,6 +4273,15 @@ def _render_deep_visible_contract_lines(
 
     elif section_id == "S14":
         lines.append("Decision layer: full canonical search retained internally; visible output is bounded to search proof, canonical Monte Carlo, verdict, one best challenger, execution economics, and actionability.")
+        search_proof = dict(payload.get("package_search_proof") or payload.get("search_proof") or {})
+        lines.append(
+            "UNIVERSE SCAN / OPTIMAL TEAM IMPACT: "
+            + _compact({
+                "evaluated": search_proof.get("eligible_universe_evaluated", "UNAVAILABLE"),
+                "expected": search_proof.get("eligible_universe_expected", "UNAVAILABLE"),
+                "legal_routes": search_proof.get("legal_route_count", "UNAVAILABLE"),
+            })
+        )
         if payload.get("bgw_context"):
             bgw = dict(payload.get("bgw_context") or {})
             lines.append(
@@ -4280,6 +4289,7 @@ def _render_deep_visible_contract_lines(
             )
 
     elif section_id == "S14B":
+        lines.append("MULTI-GW PLAN / CONTINGENCY: 3-GW SQUAD STAGING")
         staging = [dict(r) for r in payload.get("staging_rows") or [] if isinstance(r, Mapping)]
         for idx, label in enumerate(("Current GW", "Next GW", "Following GW")):
             row = staging[idx] if idx < len(staging) else {}

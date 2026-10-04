@@ -94,6 +94,26 @@ def test_resolves_source_by_immutable_event_fanout_not_mutable_display_title():
     assert result["created_at"] == "2026-09-17T08:28:06Z"
 
 
+def test_resolves_source_with_one_second_fanout_skew():
+    result = resolve_natural_source_run(
+        observer_run=_observer_run(created_at="2026-10-04T19:31:30Z"),
+        source_runs=[_source_run(created_at="2026-10-04T19:31:31Z")],
+        expected_repository=REPOSITORY,
+        expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+    )
+    assert result["id"] == 9001
+
+
+def test_rejects_fanout_skew_over_one_second():
+    with pytest.raises(NaturalProofProvenanceError, match="no exact"):
+        resolve_natural_source_run(
+            observer_run=_observer_run(created_at="2026-10-04T19:31:30Z"),
+            source_runs=[_source_run(created_at="2026-10-04T19:31:32Z")],
+            expected_repository=REPOSITORY,
+            expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+        )
+
+
 def test_source_resolution_fails_closed_when_event_fanout_is_ambiguous():
     with pytest.raises(NaturalProofProvenanceError, match="ambiguous"):
         resolve_natural_source_run(

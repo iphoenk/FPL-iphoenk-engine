@@ -86,6 +86,21 @@ For a personal prefetch V6 may acquire:
 
 If authentication is unavailable or rejected, public submitted picks may remain usable. V6 does not infer bank, purchase price, selling price, FT state, hit state, or chip state from public picks. Unsupported values remain null with explicit availability/auth state.
 
+## Private personal publication acceptance
+
+A completed public-core prefetch is not proof that authenticated Current15 evidence was produced. The isolated `private_personal_publish` job must stop before committing private personal artifacts unless authenticated acquisition is configured and the exact occurrence produces a valid current-team snapshot.
+
+The publisher verifies all of the following before it reports success:
+
+- prefetch exit code is zero (a partial/public-only result is not publishable as personal evidence);
+- the manifest matches the requested report kind and logical slot and is fresh for that report;
+- authentication is `AUTH_AVAILABLE`, and the private entry ID matches configured `FPL_TEAM_ID`;
+- the personal snapshot GW matches the occurrence manifest GW;
+- exactly 15 distinct positive Official FPL element IDs are present;
+- the snapshot timestamp is timezone-aware and within the configured occurrence freshness window.
+
+Missing authentication mode, session/token, or team identity fails the publisher closed. It must not publish a stale prior snapshot as a successful personal prefetch. Credential values remain in the protected publisher environment and are never logged. A downstream Current15 consumer still applies its own exact-occurrence, identity, GW, and freshness checks.
+
 ## Membership and priority-league acquisition
 
 Membership discovery reads all current classic and H2H memberships exposed by Official FPL and excludes system leagues where the Official league type identifies them as system-owned. There is no five-league truncation.

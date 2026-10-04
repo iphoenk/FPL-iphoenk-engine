@@ -745,11 +745,15 @@ def build_price_delivery_report(
     ).upper()
     source = dict(source_lineage or {})
 
-    price_risk = [
-        row
-        for row in (our15.get("rows") or [])
-        if str(row.get("direction") or "").upper() in {"FALL", "RISE"}
-    ]
+    price_risk = (
+        [
+            row
+            for row in (our15.get("rows") or [])
+            if str(row.get("direction") or "").upper() in {"FALL", "RISE"}
+        ]
+        if team_resolution.get("supportable")
+        else []
+    )
     meaningful_route_risk = any(
         row.get("target_plus_0_1") is False
         or row.get("outgoing_minus_0_1") is False
@@ -794,7 +798,9 @@ def build_price_delivery_report(
         "affordability_changed": (
             "MATERIAL_RISK" if meaningful_route_risk else "NO_PROVEN_MATERIAL_CHANGE"
         ),
-        "price_pressure": len(price_risk),
+        "price_pressure": (
+            len(price_risk) if team_resolution.get("supportable") else None
+        ),
         "football_decision_override": False,
     }
     by_id["PRICE2"].update(

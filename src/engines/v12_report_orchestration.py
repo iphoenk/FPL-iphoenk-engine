@@ -3621,7 +3621,7 @@ def _human_summary(value: Any) -> str:
                 if sub:
                     parts.append(f"{label}: {sub}")
             elif isinstance(item, (list, tuple, set)):
-                vals = ", ".join(str(x) for x in item)
+                vals = ", ".join(_human_summary(x) for x in item)
                 if vals:
                     parts.append(f"{label}: {vals}")
             elif item not in (None, ""):

@@ -866,3 +866,19 @@ def test_occurrence_orchestrator_trusts_only_bot_authored_receipts():
     assert 'select(.user.login == "github-actions[bot]")' in workflow
     assert 'FPL_MASTER_RECEIPT occurrence_id=' in workflow
 
+
+def test_occurrence_orchestrator_rejects_future_slots():
+    workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'datetime.now(ZoneInfo("Asia/Jakarta"))' in workflow
+    assert "report_slot must not be in the future" in workflow
+
+
+def test_occurrence_orchestrator_does_not_reuse_pre_slot_private_latest():
+    workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'generated_at = datetime.fromisoformat(str(obj.get("generated_at") or ""))' in workflow
+    assert "generated_at >= report_slot" in workflow
+    assert "PRIVATE_LATEST_BEFORE_OCCURRENCE" in workflow

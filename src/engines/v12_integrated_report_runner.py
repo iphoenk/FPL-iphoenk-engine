@@ -3745,7 +3745,7 @@ def _captain_decision_surface(
     lineup: Mapping[str, Any] | None,
     lineup_state: str,
     mini_detail: Mapping[str, Any],
-    projections: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One canonical C/VC decision surface.
 

@@ -3646,7 +3646,7 @@ def _human_summary(value: Any) -> str:
 def _sanitize_mapping_reprs(text: str) -> str:
     """Convert bounded serialized Python containers before human-facing QA."""
     output = str(text or "")
-    pattern = re.compile(r"\\{[^{}\\n]*\\}")
+    pattern = re.compile(r"\\{.*\\}")
     for _ in range(8):
         changed = False
         for match in list(pattern.finditer(output)):

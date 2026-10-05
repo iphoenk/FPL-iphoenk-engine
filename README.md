@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-05T06:55:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-05T13:24:37+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -13,6 +13,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **V6 factual plane:** governed facts, freshness, fixtures, prices, and source evidence.
 - **Canonical V12:** xMins, probability, tactics, full-universe scanning, optimisation, Monte Carlo, and decision semantics.
 - **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
+
+Canonical FPL entry identity is repository-configured. Authenticated personal acquisition is an optional enrichment for private/current finance facts; when auth is intentionally unavailable, governed Official FPL submitted-picks or explicit owner evidence may still support Current15 identity, while auth-only finance fields remain unavailable.
 
 ## Reports
 

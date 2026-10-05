@@ -28,11 +28,15 @@ def test_v6_report_prefetch_auth_defaults_to_explicit_unavailable_not_invalid_co
     assert "FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'session_cookie' }}" not in workflow
 
 
-def test_private_personal_publish_requires_authoritative_fresh_current_team():
+def test_private_personal_publish_uses_canonical_identity_and_optional_auth():
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert 'Path("config/v6/consumer_context.json")' in workflow
+    assert 'FPL_TEAM_ID_SOURCE=CANONICAL_CONSUMER_CONTEXT' in workflow
+    assert 'FPL_TEAM_ID_SOURCE=PROTECTED_ENV_OVERRIDE' in workflow
+    assert 'PRIVATE_PERSONAL_REFRESH=SKIPPED_AUTH_UNAVAILABLE' in workflow
+    assert 'PUBLIC_CURRENT15_FALLBACK=OFFICIAL_SUBMITTED_PICKS' in workflow
     assert 'if [[ $rc -ne 0 ]]; then' in workflow
-    assert "FPL_TEAM_ID must be configured" in workflow
-    assert "FPL_AUTH_MODE must enable authenticated personal acquisition" in workflow
+    # Once authenticated acquisition is configured, #900 remains fail-closed.
     assert "if auth_state !=" in workflow
     assert "AUTH_AVAILABLE" in workflow
     assert "entry_id != expected_team_id" in workflow

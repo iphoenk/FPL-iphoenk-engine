@@ -653,7 +653,7 @@ jobs:
               raise SystemExit("canonical consumer_context entry_id is unavailable")
           print(entry_id)
           PY
-)"
+          )"
             export FPL_TEAM_ID
             echo "FPL_TEAM_ID_SOURCE=CANONICAL_CONSUMER_CONTEXT"
           else

@@ -26,3 +26,17 @@ def test_v6_report_prefetch_auth_defaults_to_explicit_unavailable_not_invalid_co
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}" in workflow
     assert "FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'session_cookie' }}" not in workflow
+
+
+def test_private_personal_publish_requires_authoritative_fresh_current_team():
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert 'if [[ $rc -ne 0 ]]; then' in workflow
+    assert "FPL_TEAM_ID must be configured" in workflow
+    assert "FPL_AUTH_MODE must enable authenticated personal acquisition" in workflow
+    assert "if auth_state !=" in workflow
+    assert "AUTH_AVAILABLE" in workflow
+    assert "entry_id != expected_team_id" in workflow
+    assert "len(element_ids) != 15" in workflow
+    assert "len(set(element_ids)) != 15" in workflow
+    assert "team_gw != manifest_gw" in workflow
+    assert "PRIVATE_PERSONAL_REFRESH=PASS" in workflow

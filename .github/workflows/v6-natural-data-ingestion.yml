@@ -640,6 +640,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ -z "$FPL_TEAM_ID" ]]; then
+            echo "FPL_TEAM_ID must be configured for authoritative personal publication"
+            exit 1
+          fi
+          if [[ "${FPL_AUTH_MODE,,}" == "disabled" || ( -z "$FPL_SESSION_B64" && -z "$FPL_ACCESS_TOKEN" ) ]]; then
+            echo "FPL_AUTH_MODE must enable authenticated personal acquisition"
+            exit 1
+          fi
           work="$RUNNER_TEMP/v6-private-acquisition"
           rm -rf "$work"
           mkdir -p "$work"
@@ -657,14 +665,65 @@ jobs:
             >"$private_log" 2>&1
           rc=$?
           set -e
-          if [[ $rc -ne 0 && $rc -ne 3 ]]; then
-            echo "PRIVATE_PERSONAL_REFRESH=FAIL"
+          if [[ $rc -ne 0 ]]; then
+            echo "PRIVATE_PERSONAL_REFRESH=FAIL (report prefetch did not complete)"
             exit "$rc"
           fi
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \
             >/dev/null
+          V6_PRIVATE_WORK="$work" python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          root = Path(os.environ["V6_PRIVATE_WORK"])
+          manifest = json.loads((root / "data/v6/report_prefetch/latest.json").read_text())
+          team = json.loads(Path("private-reports/personal/current_team.json").read_text())
+          def fail(message):
+              raise SystemExit(message)
+          def instant(value):
+              parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+              if parsed.tzinfo is None or parsed.utcoffset() is None:
+                  fail("personal publication timestamp is not timezone aware")
+              return parsed.astimezone(timezone.utc)
+
+          expected_team_id = int(os.environ["FPL_TEAM_ID"])
+          entry_id = int(team.get("entry_id") or 0)
+          auth_state = str(team.get("auth_state") or "").upper()
+          manifest_gw = int(manifest.get("gw") or 0)
+          team_gw = int(team.get("gw") or 0)
+          slot = instant(os.environ["PRIVATE_LOGICAL_SLOT"])
+          generated = instant(team.get("generated_at"))
+          now = datetime.now(timezone.utc)
+          players = team.get("players")
+          element_ids = [
+              int(row["element_id"])
+              for row in players
+              if isinstance(row, dict) and str(row.get("element_id", "")).isdigit()
+          ] if isinstance(players, list) else []
+          if manifest.get("report_kind") != os.environ["PRIVATE_REPORT_KIND"]:
+              fail("private personal prefetch report kind mismatch")
+          target = manifest.get("target_logical_report_slot") or manifest.get("logical_slot")
+          if not target or instant(target) != slot:
+              fail("private personal prefetch occurrence mismatch")
+          if manifest.get("fresh_for_target_report") is not True:
+              fail("private personal prefetch is not fresh for its target occurrence")
+          if manifest.get("personal_requested") is not True:
+              fail("private personal scope was not requested")
+          if auth_state != "AUTH_AVAILABLE":
+              fail("authoritative personal authentication is unavailable")
+          if entry_id != expected_team_id:
+              fail("private personal team identity mismatch")
+          if team_gw <= 0 or team_gw != manifest_gw:
+              fail("private personal event does not match the report event")
+          if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
+              fail("private personal artifact must contain 15 unique canonical element IDs")
+          if generated < slot - timedelta(minutes=15) or generated > now + timedelta(minutes=2):
+              fail("private personal artifact is outside its occurrence freshness window")
+          PY
           echo "PRIVATE_PERSONAL_REFRESH=PASS"
 
       - name: Persist private personal snapshot

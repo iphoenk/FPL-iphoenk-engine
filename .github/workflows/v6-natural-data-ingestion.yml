@@ -645,14 +645,14 @@ jobs:
           # never erase a valid canonical team identity.
           if [[ -z "$FPL_TEAM_ID" ]]; then
             FPL_TEAM_ID="$(python - <<'PY'
-import json
-from pathlib import Path
-cfg = json.loads(Path("config/v6/consumer_context.json").read_text(encoding="utf-8"))
-entry_id = int(cfg.get("entry_id") or 0)
-if entry_id <= 0:
-    raise SystemExit("canonical consumer_context entry_id is unavailable")
-print(entry_id)
-PY
+          import json
+          from pathlib import Path
+          cfg = json.loads(Path("config/v6/consumer_context.json").read_text(encoding="utf-8"))
+          entry_id = int(cfg.get("entry_id") or 0)
+          if entry_id <= 0:
+              raise SystemExit("canonical consumer_context entry_id is unavailable")
+          print(entry_id)
+          PY
 )"
             export FPL_TEAM_ID
             echo "FPL_TEAM_ID_SOURCE=CANONICAL_CONSUMER_CONTEXT"

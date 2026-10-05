@@ -88,18 +88,22 @@ If authentication is unavailable or rejected, public submitted picks may remain 
 
 ## Private personal publication acceptance
 
-A completed public-core prefetch is not proof that authenticated Current15 evidence was produced. The isolated `private_personal_publish` job must stop before committing private personal artifacts unless authenticated acquisition is configured and the exact occurrence produces a valid current-team snapshot.
+The canonical FPL entry identity comes from `config/v6/consumer_context.json`; a protected-environment `FPL_TEAM_ID` may override it but is not required merely to identify the configured team.
 
-The publisher verifies all of the following before it reports success:
+Authenticated current-team acquisition is an optional private enrichment because `authenticated_personal_required_for_public_green=false`. When authentication is intentionally unavailable or no session/token is configured, `private_personal_publish` exits successfully without publishing a new authenticated snapshot. Downstream Current15 resolution continues from governed Official FPL submitted-picks evidence and/or explicit owner-confirmed evidence. Finance-only facts such as current selling value, bank, or free transfers remain unavailable unless separately authoritative. Unknown ownership must never be converted to `NO`.
 
-- prefetch exit code is zero (a partial/public-only result is not publishable as personal evidence);
+When authenticated acquisition **is configured**, #900 remains fail-closed. A completed public-core prefetch is not proof that authenticated Current15 evidence was produced, and the isolated publisher must not commit private personal artifacts unless the exact occurrence produces a valid current-team snapshot.
+
+For an authenticated refresh, the publisher verifies all of the following before it reports `PRIVATE_PERSONAL_REFRESH=PASS`:
+
+- prefetch exit code is zero;
 - the manifest matches the requested report kind and logical slot and is fresh for that report;
-- authentication is `AUTH_AVAILABLE`, and the private entry ID matches configured `FPL_TEAM_ID`;
+- authentication is `AUTH_AVAILABLE`, and the private entry ID matches the canonical/overridden `FPL_TEAM_ID`;
 - the personal snapshot GW matches the occurrence manifest GW;
 - exactly 15 distinct positive Official FPL element IDs are present;
 - the snapshot timestamp is timezone-aware and within the configured occurrence freshness window.
 
-Missing authentication mode, session/token, or team identity fails the publisher closed. It must not publish a stale prior snapshot as a successful personal prefetch. Credential values remain in the protected publisher environment and are never logged. A downstream Current15 consumer still applies its own exact-occurrence, identity, GW, and freshness checks.
+A configured-but-failing authenticated acquisition fails closed. An intentionally unavailable auth path is instead recorded as `PRIVATE_PERSONAL_REFRESH=SKIPPED_AUTH_UNAVAILABLE` and must not publish or promote a stale private snapshot as current evidence. Credential values remain in the protected publisher environment and are never logged. Downstream Current15 consumers retain their own identity, GW, freshness, and evidence-class checks.
 
 ## Membership and priority-league acquisition
 

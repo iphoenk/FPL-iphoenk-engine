@@ -86,18 +86,20 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
     assert schedule_policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
 
 def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
-    """Normal core V6 acquisition is schedule-driven; issue transports remain compatibility/recovery only."""
+    """Core V6 acquisition is dispatch-driven by the dedicated GitHub clock."""
     workflow = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     text = workflow.read_text(encoding="utf-8")
+    clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
 
     assert "issue_comment:" in text
     assert "types: [created]" in text
     assert "issues:" in text
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
-    assert SCHEDULE_KEY.search(text)
-    for cron in ("13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"):
-        assert f'cron: "{cron}"' in text
+    assert not SCHEDULE_KEY.search(text)
+    assert SCHEDULE_KEY.search(clock)
+    assert "fpl-external-clock-fallback.yml" in clock
+    assert "gh run watch" in clock
     assert "/v6-master-acquire" not in text
     assert "/v6-report-prefetch" in text
     assert "/v6-manual-recovery" in text
@@ -108,3 +110,4 @@ def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in text
     validator = Path("src/runtime_v6/domains/publication/production_validate.py").read_text(encoding="utf-8")
     assert "single_logical_acquisition_per_scheduler_slot" in validator
+

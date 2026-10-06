@@ -127,7 +127,7 @@ def test_d_p2_workflow_is_non_recurring_non_authoritative_and_reuses_v6():
     assert "src.runtime_v6.domains.acquisition.collector" not in text
     assert "inputs[mode]=report_prefetch" in text
     assert "v6-natural-data-ingestion.yml" not in text  # workflow name comes from governed config/output
-    assert config["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert config["normal_scheduler_authority"] == "GITHUB_FPL_MASTER_SCHEDULER"
     assert config["may_complete_core_operational_slot"] is False
     assert config["may_advance_scheduler_proof"] is False
     assert config["may_acquire_facts_directly"] is False

@@ -133,17 +133,18 @@ def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():
 
 def test_only_ingestion_and_watchdog_are_scheduled_and_recovery_is_manual_only():
     workflows = Path(".github/workflows")
-    scheduled = {
+    scheduled_v6 = {
         path.name
         for path in workflows.glob("v6-*.yml")
         if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
     }
-    assert scheduled == {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
+    assert scheduled_v6 == {"v6-scheduler-watchdog.yml"}
+    clock = (workflows / "fpl-github-clock.yml").read_text(encoding="utf-8")
+    assert re.search(r"(?m)^\s*schedule\s*:", clock)
     recovery = (workflows / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in recovery
     assert "schedule:" not in recovery
     assert "workflow_run:" not in recovery
-
 
 def test_private_repository_runtime_hydration_uses_explicit_read_auth():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")

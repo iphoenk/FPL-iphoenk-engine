@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-05T19:03:04+07:00`
+> **Last runtime/documentation sync:** `2026-10-06T11:36:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,7 +21,7 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-The FPL Master Monitor remains the sole recurring scheduler; GitHub issue-title edits transport genuine natural occurrences to governed V6 ingestion.
+GitHub Actions `v6-natural-data-ingestion.yml` is the sole recurring natural scheduler at hourly :30. It publishes governed V6 factual state and routes only fixed DEEP/PRICE visible occurrences downstream; the former ChatGPT issue-title transport is historical compatibility only.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 

@@ -19,6 +19,7 @@ on:
         default: "manual_recovery"
         type: choice
         options:
+          - master_orchestrated
           - manual_recovery
           - report_prefetch
       reason:
@@ -34,7 +35,7 @@ on:
         required: false
         type: string
       logical_slot:
-        description: "Timezone-aware ISO-8601 logical slot for governed report prefetch"
+        description: "Timezone-aware ISO-8601 logical slot for master_orchestrated or governed report prefetch"
         required: false
         type: string
       scope:
@@ -136,6 +137,7 @@ jobs:
         env:
           V6_DISPATCH_MODE: ${{ inputs.mode }}
           V6_DISPATCH_REASON: ${{ inputs.reason }}
+          V6_DISPATCH_LOGICAL_SLOT: ${{ inputs.logical_slot }}
           V6_MANUAL_CONFIRM: ${{ inputs.confirm }}
         run: python -m src.runtime_v6.domains.control_plane.workflow_control authorize-dispatch
 

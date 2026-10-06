@@ -19,7 +19,7 @@
     "migration_started_at": "2026-10-06T11:30:00+07:00",
     "legacy_history_before": "2026-09-08T10:35:31+07:00",
     "green_after_consecutive_slots": 3,
-    "runtime_authority_id": "GITHUB_FPL_MASTER_CLOCK",
+    "runtime_authority_id": "GITHUB_FPL_MASTER_SCHEDULER",
     "proof_fresh_after_minutes": 75,
     "proof_stale_after_minutes": 135,
     "issue_title_marker": "FPL_MASTER_SLOT",

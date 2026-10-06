@@ -98,14 +98,13 @@ def test_dedicated_master_comment_transport_is_retired():
     policy = _policy()
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     scheduler = policy["scheduler_authority"]
-    assert scheduler["preferred_transport"] == "GITHUB_SCHEDULE"
+    assert scheduler["preferred_transport"] == "DEDICATED_GITHUB_CLOCK"
     assert scheduler["dedicated_control_comment_id"] == 5596106114
     assert scheduler["dedicated_control_comment_event"] == "RETIRED"
     assert policy["governance"]["issue_comment_edit_is_preferred_scheduler_transport"] is False
     assert "types: [created]" in workflow
     assert "github.event.comment.id == 5596106114" not in workflow
     assert "/v6-master-acquire" not in workflow
-
 
 def test_github_scheduler_contract_is_single_hourly_authority():
     policy = _policy()

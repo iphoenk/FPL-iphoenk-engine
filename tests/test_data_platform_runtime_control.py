@@ -199,7 +199,7 @@ def test_production_policy_uses_github_actions_natural_cron():
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
-    assert "  schedule:" not in workflow
+    assert "  schedule:" in workflow
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
 
@@ -338,9 +338,9 @@ def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-20T17:00:00+07:00",
     )
-    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["github_natural_schedule"]["enabled"] is True
     assert control["github_schedule_event"] is False
-    assert control["github_natural_acquisition_schedule_disabled"] is True
+    assert control["github_natural_acquisition_schedule_disabled"] is False
     assert control["scheduler_authority"] == policy["scheduler_authority"]["runtime_authority_id"]
     assert control["single_logical_acquisition_per_scheduler_slot"] is True
     assert control["report_prefetch_cannot_complete_core_operational_slot"] is True

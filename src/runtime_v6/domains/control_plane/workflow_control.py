@@ -99,8 +99,8 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
             raise WorkflowControlError("V6 scheduled_crons_utc entries must be objects")
         cron = str(entry.get("cron") or "").strip()
         kind = str(entry.get("kind") or "").strip()
-        if not cron or kind not in {"primary", "recovery"}:
-            raise WorkflowControlError("V6 scheduled cron requires cron plus primary/recovery kind")
+        if not cron or kind not in {"primary", "recovery", "chatgpt_scheduler"}:
+            raise WorkflowControlError("V6 scheduled cron requires a governed natural schedule kind")
         if cron in scheduled:
             raise WorkflowControlError(f"duplicate V6 scheduled cron: {cron}")
         scheduled[cron] = kind

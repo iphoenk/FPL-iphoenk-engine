@@ -852,6 +852,6 @@ jobs:
             -f report_mode="$REPORT_MODE" \
             -f report_slot="$REPORT_SLOT" \
             -f checkpoint_time="$CHECKPOINT_TIME" \
-            -f scheduler_authority=GITHUB_FPL_MASTER_SCHEDULER
+            -f scheduler_authority=CHATGPT_FPL_MASTER_SCHEDULER
           echo "Dispatched governed visible occurrence: $REPORT_MODE $REPORT_SLOT"
 

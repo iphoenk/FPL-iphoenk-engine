@@ -79,16 +79,103 @@ def test_hierarchy_bench_overlap_and_appearance_partition():
     assert out["bench_is_overlapping_state"] is True
 
 
-def test_availability_reduction_and_unavailable_player():
-    player = {"starts":5,"minutes":420,"status":"a","chance_of_playing_next_round":100}
-    context = {"team_matches_played":6,"prior_start_probability":0.85,"prior_evidence_minutes":1800}
+def test_fpl_flag_is_observation_not_direct_pstart_probability():
+    player = {
+        "starts": 5,
+        "minutes": 420,
+        "status": "a",
+        "chance_of_playing_next_round": 100,
+    }
+    context = {
+        "team_matches_played": 6,
+        "prior_start_probability": 0.85,
+        "prior_evidence_minutes": 1800,
+    }
     healthy = estimate_player_minutes(player, context)
-    half = estimate_player_minutes({**player, "chance_of_playing_next_round":50}, context)
-    zero = estimate_player_minutes({**player, "chance_of_playing_next_round":0}, context)
-    assert half["conditional_probabilities"]["p_start_given_available"] == healthy["conditional_probabilities"]["p_start_given_available"]
-    assert half["start_probability"] == pytest.approx(healthy["start_probability"] * 0.5, abs=1e-4)
-    assert zero["start_probability"] == zero["bench_probability"] == zero["cameo_probability"] == 0.0
-    assert zero["dnp_probability"] == 1.0
+    flag_75 = estimate_player_minutes(
+        {**player, "chance_of_playing_next_round": 75},
+        context,
+    )
+    flag_50 = estimate_player_minutes(
+        {**player, "chance_of_playing_next_round": 50},
+        context,
+    )
+    flag_0 = estimate_player_minutes(
+        {**player, "chance_of_playing_next_round": 0},
+        context,
+    )
+    assert flag_75["start_probability"] == healthy["start_probability"]
+    assert flag_50["start_probability"] == healthy["start_probability"]
+    assert flag_0["start_probability"] == healthy["start_probability"]
+    assert flag_75["availability_observation"]["fpl_flag"] == 75
+    assert flag_75["availability_observation"]["fpl_flag_is_probability"] is False
+    assert (
+        flag_75["governance"]["direct_fpl_flag_to_pstart_forbidden"]
+        is True
+    )
+
+
+def test_normalized_doubt_is_consumed_only_inside_existing_p11_owner():
+    player = {
+        "starts": 5,
+        "minutes": 420,
+        "status": "a",
+        "chance_of_playing_next_round": 75,
+    }
+    base = {
+        "team_matches_played": 6,
+        "prior_start_probability": 0.85,
+        "prior_evidence_minutes": 1800,
+    }
+    healthy = estimate_player_minutes(player, base)
+    doubt = estimate_player_minutes(
+        player,
+        {
+            **base,
+            "availability_evidence_state": {
+                "gw_availability": "DOUBT",
+                "gw_availability_confidence": "LOW",
+                "model_features": {
+                    "gw_availability": "DOUBT",
+                    "explicit_out_for_target": False,
+                },
+            },
+        },
+    )
+    assert doubt["start_probability"] < healthy["start_probability"]
+    assert doubt["start_probability"] != pytest.approx(0.75, abs=1e-4)
+    assert doubt["start_probability"] != pytest.approx(0.45, abs=1e-4)
+    assert any(
+        row["signal"] == "normalized_availability_start_signal"
+        for row in doubt["evidence"]
+    )
+
+
+def test_explicit_target_out_uses_hard_gate_not_fpl_flag():
+    out = estimate_player_minutes(
+        {
+            "starts": 5,
+            "minutes": 420,
+            "status": "a",
+            "chance_of_playing_next_round": 75,
+        },
+        {
+            "team_matches_played": 6,
+            "availability_evidence_state": {
+                "gw_availability": "OUT",
+                "gw_availability_confidence": "HIGH",
+                "model_features": {
+                    "gw_availability": "OUT",
+                    "explicit_out_for_target": True,
+                },
+            },
+        },
+    )
+    assert out["start_probability"] == 0.0
+    assert out["bench_probability"] == 0.0
+    assert out["cameo_probability"] == 0.0
+    assert out["dnp_probability"] == 1.0
+    assert out["availability_source"] == "normalized_evidence:explicit_target_out"
 
 
 def test_dnp_absorbs_unavailable_unused_bench_and_not_selected():

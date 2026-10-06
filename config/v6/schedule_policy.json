@@ -8,7 +8,7 @@
     "name": "FPL V6 hourly fresh-data acquisition",
     "timezone": "Asia/Jakarta",
     "cadence_minutes": 60,
-    "physical_minute": 28,
+    "physical_minute": 30,
     "scheduled_dispatch_tolerance_seconds": 90,
     "logical_slot_minute": 0,
     "control_issue_number": 431,

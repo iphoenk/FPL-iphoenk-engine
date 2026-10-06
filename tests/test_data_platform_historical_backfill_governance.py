@@ -64,11 +64,11 @@ def test_historical_backfill_adds_no_scheduler_or_second_publisher():
     clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
 
     assert policy["scheduled_crons_utc"] == []
-    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
     assert workflow_crons == []
-    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert clock_crons == []
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1

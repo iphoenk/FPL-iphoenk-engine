@@ -583,6 +583,21 @@ def main() -> int:
                 reason=str(os.environ.get("V6_DISPATCH_REASON") or ""),
                 manual_confirm=str(os.environ.get("V6_MANUAL_CONFIRM") or ""),
             )
+            if mode == "master_orchestrated":
+                logical_slot = _parse_dt(str(os.environ.get("V6_DISPATCH_LOGICAL_SLOT") or ""))
+                if logical_slot is None:
+                    raise WorkflowControlError("master_orchestrated dispatch requires logical_slot")
+                if logical_slot.minute != 0 or logical_slot.second != 0 or logical_slot.microsecond != 0:
+                    raise WorkflowControlError("master_orchestrated logical_slot must be exact HH:00")
+                _append(
+                    "GITHUB_ENV",
+                    {
+                        "V6_MASTER_LOGICAL_SLOT": logical_slot.isoformat(),
+                        "V6_MASTER_REASON": str(os.environ.get("V6_DISPATCH_REASON") or ""),
+                        "V6_MASTER_AUDIT": "EXTERNAL_CLOCK_FALLBACK",
+                        "V6_CHATGPT_SCHEDULER_PROOF": "false",
+                    },
+                )
             print(f"Governed V6 {mode} dispatch authorized")
         elif args.command == "authorize-issue-edit":
             issue_title = str(os.environ.get("V6_ISSUE_TITLE") or "")

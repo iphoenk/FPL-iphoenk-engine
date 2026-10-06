@@ -79,7 +79,7 @@ def test_watchdog_config_preserves_github_as_only_acquisition_scheduler():
     watchdog = json.loads(WATCHDOG_CONFIG.read_text(encoding="utf-8"))
     policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
     assert watchdog["role"] == "MONITORING_ONLY"
-    assert watchdog["authority"]["core_scheduler"] == "GITHUB_FPL_MASTER_SCHEDULER"
+    assert watchdog["authority"]["core_scheduler"] == "CHATGPT_FPL_MASTER_SCHEDULER"
     assert watchdog["authority"]["watchdog_is_scheduler_authority"] is False
     assert watchdog["authority"]["watchdog_may_trigger_acquisition"] is False
     assert watchdog["authority"]["watchdog_may_dispatch_ingestion"] is False

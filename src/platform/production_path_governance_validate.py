@@ -21,7 +21,7 @@ SCHEDULE_TRIGGER = re.compile(r"(?m)^\s*schedule\s*:")
 LEGACY_RUNTIME_PUSH = re.compile(
     r"(?:HEAD:refs/heads/|refs/heads/|RUNTIME_BRANCH\s*[:=]\s*)runtime-data-v[345](?:\b|$)"
 )
-ALLOWED_V6_CONTROL_SCHEDULES = {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
+ALLOWED_V6_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml"}
 
 
 class ProductionPathGovernanceError(RuntimeError):
@@ -85,8 +85,8 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
     github_schedule = dict(schedule_policy.get("github_natural_schedule") or {})
     if github_schedule.get("enabled") is not True or github_schedule.get("authority") != "GITHUB_ACTIONS":
         errors.append("GitHub natural acquisition schedule must be the active authority")
-    if (schedule_policy.get("governance") or {}).get("single_schedule_owner") != "GITHUB_ACTIONS:v6-natural-data-ingestion.yml":
-        errors.append("V6 natural ingestion must be the single schedule owner")
+    if (schedule_policy.get("governance") or {}).get("single_schedule_owner") != "GITHUB_ACTIONS:fpl-github-clock.yml":
+        errors.append("Dedicated FPL GitHub clock must be the single schedule owner")
 
 
 def _validate_v6_recovery_guard(errors: list[str]) -> None:
@@ -333,20 +333,32 @@ def validate() -> None:
         for marker in forbidden:
             if marker in text:
                 errors.append(f"V6 ingestion contains forbidden control path: {marker}")
-        if not SCHEDULE_TRIGGER.search(text):
-            errors.append("V6 production ingestion workflow must have the governed GitHub cron")
-        required_natural_crons = {
-            'cron: "13 * * * *"',
+        if SCHEDULE_TRIGGER.search(text):
+            errors.append("V6 production ingestion workflow must be dispatch-only; cron belongs to fpl-github-clock.yml")
+    clock = WORKFLOW_DIR / "fpl-github-clock.yml"
+    if not clock.exists():
+        errors.append("missing dedicated FPL GitHub clock workflow")
+    else:
+        clock_text = _workflow_text(clock)
+        required_clock = {
+            'cron: "18 * * * *"',
             'cron: "28 * * * *"',
-            'cron: "43 * * * *"',
+            'cron: "38 * * * *"',
+            'cron: "48 * * * *"',
             'cron: "58 * * * *"',
+            "fpl-external-clock-fallback.yml",
+            "gh run watch",
+            "natural_clock_proof=",
         }
-        missing_natural_crons = sorted(marker for marker in required_natural_crons if marker not in text)
-        if missing_natural_crons:
+        missing_clock = sorted(marker for marker in required_clock if marker not in clock_text)
+        if missing_clock:
             errors.append(
-                "V6 production ingestion workflow must preserve all four staggered natural cron arrivals: "
-                + ", ".join(missing_natural_crons)
+                "Dedicated FPL GitHub clock missing governed markers: "
+                + ", ".join(missing_clock)
             )
+        if re.search(r"HEAD:refs/heads/runtime-data-", clock_text):
+            errors.append("Dedicated FPL GitHub clock must not publish runtime directly")
+
         if re.search(r"(?m)^\s*workflow_run\s*:", text):
             errors.append("V6 production ingestion workflow must not have workflow_run auto-trigger")
         if re.search(r"HEAD:refs/heads/runtime-data-(?!v6\b)", text):

@@ -21,7 +21,7 @@ SCHEDULE_TRIGGER = re.compile(r"(?m)^\s*schedule\s*:")
 LEGACY_RUNTIME_PUSH = re.compile(
     r"(?:HEAD:refs/heads/|refs/heads/|RUNTIME_BRANCH\s*[:=]\s*)runtime-data-v[345](?:\b|$)"
 )
-ALLOWED_V6_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml"}
+ALLOWED_V6_CONTROL_SCHEDULES = {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
 
 
 class ProductionPathGovernanceError(RuntimeError):
@@ -78,14 +78,15 @@ def _validate_v6_watchdog(errors: list[str]) -> None:
     ):
         if authority.get(key) is not False:
             errors.append(f"V6 watchdog authority must be false: {key}")
-    if authority.get("core_scheduler") != "CHATGPT_FPL_MASTER_MONITOR":
-        errors.append("V6 watchdog must preserve CHATGPT_FPL_MASTER_MONITOR as core scheduler")
+    if authority.get("core_scheduler") != "GITHUB_FPL_MASTER_SCHEDULER":
+        errors.append("V6 watchdog must preserve GitHub FPL Master scheduler authority")
 
     schedule_policy = json.loads(schedule_policy_path.read_text(encoding="utf-8"))
-    if (schedule_policy.get("github_natural_schedule") or {}).get("enabled") is not False:
-        errors.append("GitHub natural acquisition schedule must remain disabled")
-    if (schedule_policy.get("governance") or {}).get("chatgpt_scheduler_is_only_hourly_authority") is not True:
-        errors.append("ChatGPT must remain the only hourly acquisition authority")
+    github_schedule = dict(schedule_policy.get("github_natural_schedule") or {})
+    if github_schedule.get("enabled") is not True or github_schedule.get("authority") != "GITHUB_ACTIONS":
+        errors.append("GitHub natural acquisition schedule must be the active authority")
+    if (schedule_policy.get("governance") or {}).get("single_schedule_owner") != "GITHUB_ACTIONS:v6-natural-data-ingestion.yml":
+        errors.append("V6 natural ingestion must be the single schedule owner")
 
 
 def _validate_v6_recovery_guard(errors: list[str]) -> None:
@@ -140,8 +141,8 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         errors.append("V6 recovery guard invocation must be WORKFLOW_DISPATCH_ONLY")
     if config.get("recurring_automated_initiator") is not False:
         errors.append("V6 recovery guard must not be a recurring automated initiator")
-    if config.get("normal_scheduler_authority") != "CHATGPT_FPL_MASTER_MONITOR":
-        errors.append("V6 recovery guard must preserve ChatGPT FPL Master as normal scheduler authority")
+    if config.get("normal_scheduler_authority") != "GITHUB_FPL_MASTER_SCHEDULER":
+        errors.append("V6 recovery guard must preserve GitHub FPL Master as normal scheduler authority")
     for key in (
         "recovery_counts_as_scheduler_proof",
         "recovery_counts_as_natural_wave3_slot",
@@ -149,10 +150,11 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         "may_edit_fpl_master_slot_title",
         "may_publish_runtime_directly",
         "may_use_v6_publisher_credentials_directly",
-        "github_natural_acquisition_schedule_enabled",
     ):
         if config.get(key) is not False:
             errors.append(f"V6 recovery guard policy must be false: {key}")
+    if config.get("github_natural_acquisition_schedule_enabled") is not True:
+        errors.append("V6 recovery guard must acknowledge the active natural GitHub schedule")
 
     schedule_policy = json.loads(schedule_policy_path.read_text(encoding="utf-8"))
     manual = dict(schedule_policy.get("manual_recovery") or {})
@@ -162,8 +164,8 @@ def _validate_v6_recovery_guard(errors: list[str]) -> None:
         errors.append("manual_recovery must not complete an operational core slot")
     if manual.get("counts_as_completed_scheduled_slot") is not False:
         errors.append("manual_recovery must not count as scheduled proof")
-    if (schedule_policy.get("github_natural_schedule") or {}).get("enabled") is not False:
-        errors.append("recovery guard must not re-enable GitHub natural acquisition schedule")
+    if (schedule_policy.get("github_natural_schedule") or {}).get("enabled") is not True:
+        errors.append("recovery guard must preserve the active GitHub natural acquisition schedule")
 
 
 
@@ -207,8 +209,8 @@ def _validate_v12_precompute_control(errors: list[str]) -> None:
     config = json.loads(config_path.read_text(encoding="utf-8"))
     if config.get("role") != "REPORT_PRECOMPUTE_ONLY":
         errors.append("V12 D-P2 role must remain REPORT_PRECOMPUTE_ONLY")
-    if config.get("normal_scheduler_authority") != "CHATGPT_FPL_MASTER_MONITOR":
-        errors.append("V12 D-P2 must preserve ChatGPT FPL Master scheduler authority")
+    if config.get("normal_scheduler_authority") != "GITHUB_FPL_MASTER_SCHEDULER":
+        errors.append("V12 D-P2 must preserve GitHub FPL Master scheduler authority")
     if config.get("cancel_in_progress") is not False:
         errors.append("V12 D-P2 cancel-in-progress must remain false")
     if config.get("schedule_trigger_enabled") is not False:
@@ -331,8 +333,10 @@ def validate() -> None:
         for marker in forbidden:
             if marker in text:
                 errors.append(f"V6 ingestion contains forbidden control path: {marker}")
-        if SCHEDULE_TRIGGER.search(text):
-            errors.append("V6 production ingestion workflow must not have a GitHub cron")
+        if not SCHEDULE_TRIGGER.search(text):
+            errors.append("V6 production ingestion workflow must have the governed GitHub cron")
+        if 'cron: "30 * * * *"' not in text:
+            errors.append("V6 production ingestion workflow must use the exact hourly :30 UTC cron")
         if re.search(r"(?m)^\s*workflow_run\s*:", text):
             errors.append("V6 production ingestion workflow must not have workflow_run auto-trigger")
         if re.search(r"HEAD:refs/heads/runtime-data-(?!v6\b)", text):

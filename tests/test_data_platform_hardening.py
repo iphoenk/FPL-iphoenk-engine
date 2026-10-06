@@ -23,26 +23,26 @@ from src.runtime_v6.registry import (
 )
 
 
-def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
+def test_workflow_scheduler_matches_v6_github_authority_policy():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 6
+    assert policy["schema_version"] == 7
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
-    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor V12"
+    assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
+    assert policy["scheduler_authority"]["name"] == "FPL V6 hourly fresh-data acquisition"
     assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
-    assert policy["scheduled_crons_utc"] == []
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
-    assert policy["github_natural_schedule"]["enabled"] is False
-    assert policy["github_natural_schedule"]["authority"] == "NONE"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
-    assert workflow_crons == []
+    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 1
+    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert workflow_crons == ["30 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
@@ -50,16 +50,16 @@ def test_workflow_scheduler_matches_v6_chatgpt_authority_policy():
         "58 * * * *",
     ]
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
-    assert policy["governance"]["single_schedule_owner"] == "CHATGPT:FPL Master Monitor V12"
-    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:v6-natural-data-ingestion.yml"
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
-    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
-    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "issues:chatgpt_scheduler"
-    assert policy["scheduler_authority"]["preferred_transport"] == "ISSUE_TITLE_EDIT"
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "GITHUB_SCHEDULE"
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
-    assert policy["scheduler_authority"]["issue_title_transport_enabled"] is True
-    assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is True
+    assert policy["scheduler_authority"]["issue_title_transport_enabled"] is False
+    assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is False
     assert policy["governance"]["issue_comment_is_legacy_scheduler_transport"] is False
     assert policy["scheduler_authority"]["dedicated_control_comment_id"] == 5596106114
     assert "workflow_cron_utc" not in source_registry["cadence"]

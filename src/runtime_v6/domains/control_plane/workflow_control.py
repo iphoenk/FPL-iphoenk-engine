@@ -99,8 +99,8 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
             raise WorkflowControlError("V6 scheduled_crons_utc entries must be objects")
         cron = str(entry.get("cron") or "").strip()
         kind = str(entry.get("kind") or "").strip()
-        if not cron or kind not in {"primary", "recovery"}:
-            raise WorkflowControlError("V6 scheduled cron requires cron plus primary/recovery kind")
+        if not cron or kind not in {"primary", "recovery", "chatgpt_scheduler"}:
+            raise WorkflowControlError("V6 scheduled cron requires a governed natural schedule kind")
         if cron in scheduled:
             raise WorkflowControlError(f"duplicate V6 scheduled cron: {cron}")
         scheduled[cron] = kind
@@ -122,10 +122,10 @@ def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise WorkflowControlError("unexpected V6 schedule policy engine")
     scheduled_cron_kinds(payload)
     scheduler = dict(payload.get("scheduler_authority") or {})
-    if scheduler.get("kind") != "CHATGPT_TASK":
-        raise WorkflowControlError("V6 scheduler authority must be CHATGPT_TASK")
+    if scheduler.get("kind") != "GITHUB_ACTIONS":
+        raise WorkflowControlError("V6 scheduler authority must be GITHUB_ACTIONS")
     if int(scheduler.get("cadence_minutes") or 0) != 60:
-        raise WorkflowControlError("V6 ChatGPT scheduler cadence must be hourly")
+        raise WorkflowControlError("V6 natural scheduler cadence must be hourly")
     return payload
 
 

@@ -9,7 +9,7 @@
     "critical_after_minutes": 135
   },
   "authority": {
-    "core_scheduler": "CHATGPT_FPL_MASTER_MONITOR",
+    "core_scheduler": "GITHUB_FPL_MASTER_SCHEDULER",
     "watchdog_is_scheduler_authority": false,
     "watchdog_may_trigger_acquisition": false,
     "watchdog_may_dispatch_ingestion": false,
@@ -30,5 +30,5 @@
     "PUBLICATION_PROOF_NOT_ADVANCED",
     "CONTROL_PATH_UNRESOLVED"
   ],
-  "governance_note": "The GitHub cron in v6-scheduler-watchdog.yml is a monitoring exception only. config/v6/schedule_policy.json github_natural_schedule.enabled=false remains authoritative for acquisition: there is no GitHub acquisition cron and no second core scheduler."
+  "governance_note": "The GitHub cron in v6-natural-data-ingestion.yml is the sole natural acquisition scheduler. v6-scheduler-watchdog.yml remains monitoring-only and cannot acquire, publish, or advance scheduler proof."
 }

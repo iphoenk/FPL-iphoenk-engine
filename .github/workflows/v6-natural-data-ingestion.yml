@@ -5,6 +5,8 @@ run-name: >-
     format('V6 {0} {1} {2} {3}', inputs.mode, inputs.report_kind, inputs.logical_slot, inputs.reason) ||
     github.event_name == 'issue_comment' &&
     format('V6 issue-comment {0}', github.event.comment.id) ||
+    github.event_name == 'schedule' &&
+    format('V6 natural schedule {0}', github.event.schedule) ||
     github.event.issue.title
   }}
 
@@ -56,6 +58,8 @@ on:
     types: [created]
   issues:
     types: [edited]
+  schedule:
+    - cron: "30 * * * *"
 
 permissions:
   contents: read
@@ -83,6 +87,7 @@ env:
 jobs:
   collect:
     if: >-
+      github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
@@ -491,6 +496,7 @@ jobs:
     if: >-
       always() &&
       (
+        github.event_name == 'schedule' ||
         github.event_name == 'workflow_dispatch' ||
         (
           github.event_name == 'issue_comment' &&
@@ -765,3 +771,70 @@ jobs:
           git pull --rebase origin main
           git push origin HEAD:main
           echo "PRIVATE_PERSONAL_PUBLISH=PASS"
+
+  route-visible-report:
+    name: route-visible-report
+    needs: [collect, publish, orchestration-fulfillment]
+    if: always() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Resolve nominal scheduled occurrence
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from datetime import datetime, timedelta, timezone
+          from zoneinfo import ZoneInfo
+
+          now = datetime.now(timezone.utc)
+          nominal = now.replace(minute=30, second=0, microsecond=0)
+          if nominal > now:
+              nominal -= timedelta(hours=1)
+
+          wib = nominal.astimezone(ZoneInfo("Asia/Jakarta"))
+          london = nominal.astimezone(ZoneInfo("Europe/London"))
+          mode = ""
+          if wib.strftime("%H:%M") in {"04:30", "12:30", "21:30"}:
+              mode = "DEEP"
+          elif london.strftime("%H:%M") == "23:30":
+              mode = "PRICE"
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"due={'true' if mode else 'false'}\n")
+              fh.write(f"mode={mode}\n")
+              fh.write(f"slot={wib.isoformat()}\n")
+              fh.write(f"checkpoint={wib.strftime('%H:%M')}\n")
+          print({
+              "nominal_utc": nominal.isoformat(),
+              "wib": wib.isoformat(),
+              "london": london.isoformat(),
+              "report_mode": mode or "NONE",
+          })
+          PY
+
+      - name: Dispatch exact visible occurrence
+        if: steps.route.outputs.due == 'true'
+        env:
+          REPORT_MODE: ${{ steps.route.outputs.mode }}
+          REPORT_SLOT: ${{ steps.route.outputs.slot }}
+          CHECKPOINT_TIME: ${{ steps.route.outputs.checkpoint }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run fpl-master-occurrence-orchestrator.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f report_mode="$REPORT_MODE" \
+            -f report_slot="$REPORT_SLOT" \
+            -f checkpoint_time="$CHECKPOINT_TIME" \
+            -f scheduler_authority=GITHUB_FPL_MASTER_SCHEDULER
+          echo "Dispatched governed visible occurrence: $REPORT_MODE $REPORT_SLOT"
+

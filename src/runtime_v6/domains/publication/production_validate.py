@@ -143,7 +143,7 @@ def validate_publishable(root: Path = ROOT) -> dict[str, Any]:
 
     if schedule_kind == "report_prefetch":
         _validate_report_prefetch(root, control)
-    elif event_name in {"issue_comment", "issues"} and schedule_kind == "chatgpt_scheduler":
+    elif event_name in {"issue_comment", "issues", "schedule"} and schedule_kind == "chatgpt_scheduler":
         _validate_chatgpt_scheduler(manifest, control)
     elif event_name == "workflow_dispatch" and schedule_kind == "master_orchestrated":
         assert control["scheduled_cycle"] is False
@@ -224,16 +224,24 @@ def _validate_report_prefetch(root: Path, control: dict[str, Any]) -> None:
 
 
 def _validate_chatgpt_scheduler(manifest: dict[str, Any], control: dict[str, Any]) -> None:
-    requested = datetime.fromisoformat(os.environ["V6_MASTER_LOGICAL_SLOT"]).astimezone(timezone.utc)
+    if control.get("event_name") == "schedule":
+        requested = datetime.fromisoformat(str(control["expected_cycle_at"])).astimezone(timezone.utc)
+    else:
+        requested = datetime.fromisoformat(os.environ["V6_MASTER_LOGICAL_SLOT"]).astimezone(timezone.utc)
     assert control["chatgpt_scheduler"] is True
     assert control["chatgpt_scheduler_proof"] is True
     assert control["scheduled_cycle"] is True
-    assert control["master_orchestrated"] is True
     assert control["authoritative_runtime_snapshot"] is True
     assert control["counts_as_completed_operational_slot"] is True
     assert control["logical_slot_source"] == NATURAL_LOGICAL_SLOT_SOURCE
     assert control["expected_cycle_at"] == requested.isoformat()
-    assert manifest["governance"]["production_ingestion_schedule_only"] is False
+    if control.get("event_name") == "schedule":
+        assert control["master_orchestrated"] is False
+        assert control["scheduled_slot_uses_nominal_cron"] is True
+        assert manifest["governance"]["production_ingestion_schedule_only"] is True
+    else:
+        assert control["master_orchestrated"] is True
+        assert manifest["governance"]["production_ingestion_schedule_only"] is False
     assert manifest["governance"]["chatgpt_scheduler_is_authority"] is True
 
 

@@ -97,7 +97,7 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     recovery = json.loads(CONFIG.read_text(encoding="utf-8"))
     schedule = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
     assert recovery["role"] == "SAFE_RECOVERY_ONLY"
-    assert recovery["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert recovery["normal_scheduler_authority"] == "GITHUB_FPL_MASTER_SCHEDULER"
     assert recovery["recovery_mode"] == "manual_recovery"
     assert recovery["recovery_counts_as_scheduler_proof"] is False
     assert recovery["recovery_counts_as_natural_wave3_slot"] is False
@@ -105,7 +105,7 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     assert recovery["invocation_mode"] == "WORKFLOW_DISPATCH_ONLY"
     assert recovery["recurring_automated_initiator"] is False
     assert recovery["may_edit_fpl_master_slot_title"] is False
-    assert schedule["github_natural_schedule"]["enabled"] is False
+    assert schedule["github_natural_schedule"]["enabled"] is True
     assert schedule["manual_recovery"]["counts_as_completed_operational_slot"] is False
     assert schedule["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
     assert NATURAL_EVENT_NAME == "issues"

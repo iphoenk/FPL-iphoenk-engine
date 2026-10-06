@@ -108,7 +108,7 @@ def test_control_plane_contract_is_single_python_owner_for_runtime_identity_and_
     assert CONTROL_PLANE.required_reason == "chatgpt_hourly_master"
     assert CONTROL_PLANE.required_audit == "FPL_MASTER_HOURLY"
     assert CONTROL_PLANE.report_prefetch_command == "/v6-report-prefetch"
-    assert CONTROL_PLANE.scheduler_authority_id == "CHATGPT_FPL_MASTER_MONITOR"
+    assert CONTROL_PLANE.scheduler_authority_id == "GITHUB_FPL_MASTER_SCHEDULER"
     assert CONTROL_PLANE.watchdog_role == "MONITORING_ONLY"
     assert CONTROL_PLANE.recovery_role == "SAFE_RECOVERY_ONLY"
     assert CONTROL_PLANE.watchdog_warning_minutes == 90

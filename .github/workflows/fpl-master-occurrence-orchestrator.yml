@@ -1,7 +1,31 @@
 name: FPL Master occurrence orchestrator
-run-name: FPL Master occurrence ${{ github.event.comment.id }}
+run-name: >-
+  ${{
+    github.event_name == 'workflow_dispatch' &&
+    format('FPL Master occurrence {0} {1}', inputs.report_mode, inputs.report_slot) ||
+    format('FPL Master occurrence comment {0}', github.event.comment.id)
+  }}
 
 on:
+  workflow_dispatch:
+    inputs:
+      report_mode:
+        description: "DEEP or PRICE"
+        required: true
+        type: string
+      report_slot:
+        description: "Exact Asia/Jakarta occurrence ISO-8601"
+        required: true
+        type: string
+      checkpoint_time:
+        description: "Exact local HH:MM"
+        required: true
+        type: string
+      scheduler_authority:
+        description: "Governed caller identity"
+        required: true
+        default: "GITHUB_FPL_MASTER_SCHEDULER"
+        type: string
   issue_comment:
     types: [created]
 
@@ -17,14 +41,21 @@ concurrency:
 jobs:
   orchestrate:
     if: >-
-      github.event.issue.number == 431 &&
-      github.actor == github.repository_owner &&
-      startsWith(github.event.comment.body, '/fpl-master-tick ')
+      (
+        github.event_name == 'workflow_dispatch' &&
+        inputs.scheduler_authority == 'GITHUB_FPL_MASTER_SCHEDULER'
+      ) ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.number == 431 &&
+        github.actor == github.repository_owner &&
+        startsWith(github.event.comment.body, '/fpl-master-tick ')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
       GH_TOKEN: ${{ github.token }}
-      COMMAND: ${{ github.event.comment.body }}
+      COMMAND: ${{ github.event_name == 'workflow_dispatch' && format('/fpl-master-tick report_mode={0} report_slot={1} checkpoint_time={2}', inputs.report_mode, inputs.report_slot, inputs.checkpoint_time) || github.event.comment.body }}
       REQUEST_ID: fpl_master_orchestrator_${{ github.run_id }}
 
     steps:

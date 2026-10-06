@@ -60,10 +60,10 @@ def test_historical_backfill_adds_no_scheduler_or_second_publisher():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     policy = load_policy()
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
-    assert policy["scheduled_crons_utc"] == []
-    assert policy["github_natural_schedule"]["enabled"] is False
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
-    assert workflow_crons == []
+    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert workflow_crons == ["30 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1

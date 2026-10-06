@@ -1233,6 +1233,9 @@ def _projection_model_rows(
         xmins = dict(player.get("xmins") or {})
         horizons = dict(player.get("horizons") or {})
         tactical = dict(player.get("tactical_role_component") or {})
+        availability_evidence = dict(
+            player.get("availability_evidence") or {}
+        )
         gw1 = dict(horizons.get("1") or {})
         gw3 = dict(horizons.get("3") or {})
         gw5 = dict(horizons.get("5") or {})
@@ -1247,6 +1250,16 @@ def _projection_model_rows(
                 ),
                 "recommended_or_locked_role": "UNLOCKED",
                 "p_available": xmins.get("availability", xmins.get("overall_availability", "UNAVAILABLE")),
+                "gw_availability": availability_evidence.get(
+                    "gw_availability", "UNKNOWN"
+                ),
+                "gw_availability_confidence": availability_evidence.get(
+                    "gw_availability_confidence", "LOW"
+                ),
+                "availability_derivation_reason": availability_evidence.get(
+                    "availability_derivation_reason",
+                    "NO_NORMALIZED_EVIDENCE_BOUND",
+                ),
                 "p_start": xmins.get("start_probability", "UNAVAILABLE"),
                 "p_cameo": xmins.get("cameo_probability", "UNAVAILABLE"),
                 "p_dnp": xmins.get("dnp_probability", "UNAVAILABLE"),
@@ -2510,9 +2523,19 @@ def _enrich_all15_rows(
         p_start = row.get("p_start", xm.get("start_probability"))
         xmins = row.get("xmins", xm.get("expected_minutes"))
         status = str(player.get("status") or owned_row.get("status") or "a").lower()
+        availability_evidence = dict(
+            player.get("availability_evidence") or {}
+        )
+        gw_availability = str(
+            availability_evidence.get("gw_availability")
+            or row.get("gw_availability")
+            or "UNKNOWN"
+        ).upper()
         warnings: list[str] = []
         if status != "a":
-            warnings.append(f"STATUS_{status.upper()}")
+            warnings.append(f"FPL_STATUS_{status.upper()}_OBSERVATION")
+        if gw_availability in {"DOUBT", "STRONG_DOUBT", "OUT"}:
+            warnings.append(f"GW_{gw_availability}")
         try:
             if p_start is not None and float(p_start) < 0.70:
                 warnings.append("START_RISK")
@@ -2628,6 +2651,20 @@ def _enrich_all15_rows(
                 else "UNAVAILABLE"
             ),
             "availability": row.get("p_available", xm.get("availability")),
+            "gw_availability": gw_availability,
+            "gw_availability_confidence": (
+                availability_evidence.get("gw_availability_confidence")
+                or row.get("gw_availability_confidence")
+                or "LOW"
+            ),
+            "availability_derivation_reason": (
+                availability_evidence.get("availability_derivation_reason")
+                or row.get("availability_derivation_reason")
+                or "NO_NORMALIZED_EVIDENCE_BOUND"
+            ),
+            "availability_evidence_summary": (
+                availability_evidence.get("observability") or {}
+            ),
             "projection_1gw": row.get("gw_plus_1", _horizon_mean(player, "1")),
             "projection_3gw": row.get("three_gw", _horizon_mean(player, "3")),
             "projection_5gw": row.get("five_gw", _horizon_mean(player, "5")),
@@ -2788,6 +2825,15 @@ def _enrich_watchlist_rows(
             ),
             "xmins": mechanism.get("xmins"),
             "p_start": mechanism.get("p_start"),
+            "gw_availability": (
+                (player.get("availability_evidence") or {}).get(
+                    "gw_availability", "UNKNOWN"
+                )
+                if isinstance(
+                    player.get("availability_evidence"), Mapping
+                )
+                else "UNKNOWN"
+            ),
             "predictor_direction": (
                 price.get("direction")
                 or price.get("change_direction")
@@ -4348,6 +4394,100 @@ def _weather_contract_state_from_calendar(
         )
         else "SOURCE_DEGRADED"
     )
+
+
+def _availability_evidence_health(
+    projections: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    states = [
+        dict(player.get("availability_evidence") or {})
+        for player in (projections or {}).get("players") or []
+        if isinstance(player, Mapping)
+        and isinstance(player.get("availability_evidence"), Mapping)
+    ]
+    observed = [
+        state for state in states
+        if int(
+            (state.get("observability") or {}).get(
+                "active_evidence_count"
+            )
+            or 0
+        ) > 0
+        or int(
+            (state.get("observability") or {}).get(
+                "stale_evidence_count"
+            )
+            or 0
+        ) > 0
+        or int(
+            (state.get("observability") or {}).get(
+                "republication_count"
+            )
+            or 0
+        ) > 0
+    ]
+    return {
+        "state": "BOUND" if states else "UNAVAILABLE",
+        "resolver": "V12_TARGET_AWARE_AVAILABILITY_EVIDENCE_V1",
+        "projection_players_with_state": len(states),
+        "players_with_evidence": len(observed),
+        "active_evidence_count": sum(
+            int(
+                (state.get("observability") or {}).get(
+                    "active_evidence_count"
+                )
+                or 0
+            )
+            for state in states
+        ),
+        "conflicting_evidence_count": sum(
+            int(
+                (state.get("observability") or {}).get(
+                    "conflicting_evidence_count"
+                )
+                or 0
+            )
+            for state in states
+        ),
+        "stale_evidence_count": sum(
+            int(
+                (state.get("observability") or {}).get(
+                    "stale_evidence_count"
+                )
+                or 0
+            )
+            for state in states
+        ),
+        "republication_count": sum(
+            int(
+                (state.get("observability") or {}).get(
+                    "republication_count"
+                )
+                or 0
+            )
+            for state in states
+        ),
+        "availability_counts": {
+            label: sum(
+                1
+                for state in states
+                if str(state.get("gw_availability") or "UNKNOWN")
+                == label
+            )
+            for label in (
+                "AVAILABLE",
+                "LIKELY_AVAILABLE",
+                "DOUBT",
+                "STRONG_DOUBT",
+                "OUT",
+                "UNKNOWN",
+            )
+        },
+        "fpl_flag_direct_probability_mapping": False,
+        "gw_availability_is_categorical": True,
+        "pstart_owner": "V12_PLAYER_MINUTES",
+        "raw_claim_dump_visible": False,
+    }
 
 
 def _evidence_quality_surface(
@@ -6093,6 +6233,9 @@ def refresh_price_only_state(
         }
     )
     s17["source_health"] = source_health
+    s17["injury_availability_evidence"] = (
+        _availability_evidence_health(projections)
+    )
     section_payloads["S17"]["content"] = s17
 
     s18 = dict(section_payloads["S18"].get("content") or {})
@@ -8834,6 +8977,9 @@ def run_deep(
                         )
                     ),
                 },
+                "injury_availability_evidence": (
+                    _availability_evidence_health(projections)
+                ),
                 "auth_authority": {
                     "field": "data/v6/personal/current_team.json:auth_state",
                     "value": str(private_current_team.get("auth_state") or "UNAVAILABLE").upper(),

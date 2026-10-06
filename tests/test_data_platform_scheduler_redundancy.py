@@ -16,19 +16,24 @@ def test_github_natural_cron_is_single_and_former_redundant_crons_are_history_on
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 1
+    assert policy["scheduled_crons_utc"] == [
+        {"cron": "13 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "28 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "43 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "58 * * * *", "kind": "chatgpt_scheduler"},
+    ]
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == ["30 * * * *"]
+    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
         "43 * * * *",
         "58 * * * *",
     ]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
     assert policy["governance"]["github_schedule_events_are_removed"] is False
 
 
@@ -41,12 +46,17 @@ def test_scheduler_migration_boundary_is_explicit():
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
 
 
-def test_scheduled_cron_classifier_exposes_only_the_governed_hourly_cron():
+def test_scheduled_cron_classifier_exposes_only_the_governed_staggered_crons():
     policy = _policy()
-    assert scheduled_cron_kinds(policy) == {"30 * * * *": "chatgpt_scheduler"}
-    assert classify_invocation(policy, event_name="schedule", event={"schedule": "30 * * * *"}) == "chatgpt_scheduler"
-    for cron in policy["github_natural_schedule"]["former_crons_utc"]:
-        assert classify_invocation(policy, event_name="schedule", event={"schedule": cron}) == "scheduled_unknown"
+    expected = {
+        "13 * * * *": "chatgpt_scheduler",
+        "28 * * * *": "chatgpt_scheduler",
+        "43 * * * *": "chatgpt_scheduler",
+        "58 * * * *": "chatgpt_scheduler",
+    }
+    assert scheduled_cron_kinds(policy) == expected
+    for cron in expected:
+        assert classify_invocation(policy, event_name="schedule", event={"schedule": cron}) == "chatgpt_scheduler"
     assert classify_invocation(policy, event_name="schedule", event={"schedule": "7 * * * *"}) == "scheduled_unknown"
 
 

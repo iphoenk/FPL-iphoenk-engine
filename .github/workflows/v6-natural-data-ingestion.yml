@@ -59,7 +59,10 @@ on:
   issues:
     types: [edited]
   schedule:
-    - cron: "30 * * * *"
+    - cron: "13 * * * *"
+    - cron: "28 * * * *"
+    - cron: "43 * * * *"
+    - cron: "58 * * * *"
 
 permissions:
   contents: read
@@ -795,28 +798,49 @@ jobs:
           from zoneinfo import ZoneInfo
 
           now = datetime.now(timezone.utc)
-          nominal = now.replace(minute=30, second=0, microsecond=0)
-          if nominal > now:
-              nominal -= timedelta(hours=1)
+          wib_tz = ZoneInfo("Asia/Jakarta")
+          london_tz = ZoneInfo("Europe/London")
 
-          wib = nominal.astimezone(ZoneInfo("Asia/Jakarta"))
-          london = nominal.astimezone(ZoneInfo("Europe/London"))
+          candidates = []
+          wib_now = now.astimezone(wib_tz)
+          for day_offset in (-1, 0, 1):
+              d = (wib_now + timedelta(days=day_offset)).date()
+              for hh, mm in ((4, 30), (12, 30), (21, 30)):
+                  local = datetime(d.year, d.month, d.day, hh, mm, tzinfo=wib_tz)
+                  candidates.append(("DEEP", local.astimezone(timezone.utc), local))
+
+          london_now = now.astimezone(london_tz)
+          for day_offset in (-1, 0, 1):
+              d = (london_now + timedelta(days=day_offset)).date()
+              local = datetime(d.year, d.month, d.day, 23, 30, tzinfo=london_tz)
+              candidates.append(("PRICE", local.astimezone(timezone.utc), local.astimezone(wib_tz)))
+
+          eligible = []
+          for mode_name, target_utc, target_wib in candidates:
+              delta = now - target_utc
+              if timedelta(minutes=-3) <= delta <= timedelta(minutes=60):
+                  eligible.append((abs(delta.total_seconds()), mode_name, target_utc, target_wib, delta))
+
           mode = ""
-          if wib.strftime("%H:%M") in {"04:30", "12:30", "21:30"}:
-              mode = "DEEP"
-          elif london.strftime("%H:%M") == "23:30":
-              mode = "PRICE"
+          target_wib = wib_now
+          target_utc = now
+          delta = timedelta(0)
+          if eligible:
+              _, mode, target_utc, target_wib, delta = min(eligible, key=lambda row: row[0])
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
               fh.write(f"due={'true' if mode else 'false'}\n")
               fh.write(f"mode={mode}\n")
-              fh.write(f"slot={wib.isoformat()}\n")
-              fh.write(f"checkpoint={wib.strftime('%H:%M')}\n")
+              fh.write(f"slot={target_wib.isoformat()}\n")
+              fh.write(f"checkpoint={target_wib.strftime('%H:%M')}\n")
           print({
-              "nominal_utc": nominal.isoformat(),
-              "wib": wib.isoformat(),
-              "london": london.isoformat(),
+              "observed_utc": now.isoformat(),
+              "target_utc": target_utc.isoformat(),
+              "target_wib": target_wib.isoformat(),
               "report_mode": mode or "NONE",
+              "delta_seconds": int(delta.total_seconds()),
+              "early_bound_seconds": 180,
+              "late_bound_seconds": 3600,
           })
           PY
 

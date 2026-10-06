@@ -71,11 +71,11 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
-    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == ["30 * * * *"]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
     assert prefetch["independent_cron"] is False
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431

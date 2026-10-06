@@ -335,8 +335,18 @@ def validate() -> None:
                 errors.append(f"V6 ingestion contains forbidden control path: {marker}")
         if not SCHEDULE_TRIGGER.search(text):
             errors.append("V6 production ingestion workflow must have the governed GitHub cron")
-        if 'cron: "30 * * * *"' not in text:
-            errors.append("V6 production ingestion workflow must use the exact hourly :30 UTC cron")
+        required_natural_crons = {
+            'cron: "13 * * * *"',
+            'cron: "28 * * * *"',
+            'cron: "43 * * * *"',
+            'cron: "58 * * * *"',
+        }
+        missing_natural_crons = sorted(marker for marker in required_natural_crons if marker not in text)
+        if missing_natural_crons:
+            errors.append(
+                "V6 production ingestion workflow must preserve all four staggered natural cron arrivals: "
+                + ", ".join(missing_natural_crons)
+            )
         if re.search(r"(?m)^\s*workflow_run\s*:", text):
             errors.append("V6 production ingestion workflow must not have workflow_run auto-trigger")
         if re.search(r"HEAD:refs/heads/runtime-data-(?!v6\b)", text):

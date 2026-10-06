@@ -29,7 +29,7 @@ def test_workflow_scheduler_matches_v6_github_authority_policy():
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 7
+    assert policy["schema_version"] == 8
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
     assert policy["scheduler_authority"]["name"] == "FPL V6 hourly fresh-data acquisition"
@@ -37,19 +37,19 @@ def test_workflow_scheduler_matches_v6_github_authority_policy():
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
-    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 1
+    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == ["30 * * * *"]
+    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
         "43 * * * *",
         "58 * * * *",
     ]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
     assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:v6-natural-data-ingestion.yml"
     assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True

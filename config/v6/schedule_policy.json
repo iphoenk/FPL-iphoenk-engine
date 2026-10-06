@@ -1,5 +1,5 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "runtime_branch": "runtime-data-v6",
   "schedule_authority": true,
@@ -25,7 +25,7 @@
     "issue_title_marker": "FPL_MASTER_SLOT",
     "preferred_transport": "GITHUB_SCHEDULE",
     "legacy_issue_comment_transport_enabled": false,
-    "transport_note": "GitHub Actions schedule on v6-natural-data-ingestion.yml is the sole hourly natural scheduler. Issue #431 title transport is retained only as historical compatibility evidence.",
+    "transport_note": "GitHub Actions schedule on v6-natural-data-ingestion.yml is the sole hourly natural scheduler. Four staggered cron arrivals share one logical hourly slot and are deduplicated before acquisition. Issue #431 title transport is historical compatibility only.",
     "dedicated_control_comment_id": 5596106114,
     "dedicated_control_comment_event": "RETIRED",
     "issue_title_transport_enabled": false,
@@ -37,22 +37,40 @@
     "reason": "CUTOVER_AFTER_REPEATED_CHATGPT_SCHEDULED_TASK_WRITE_FAILURES",
     "workflow_schedule_triggers_removed": false,
     "enabled_at": "2026-10-06T11:30:00+07:00",
-    "cron_utc": "30 * * * *",
+    "cron_utc": "28 * * * *",
     "former_crons_utc": [
       "13 * * * *",
       "28 * * * *",
       "43 * * * *",
       "58 * * * *"
     ],
-    "former_crons_are_historical_evidence_only": true
+    "former_crons_are_historical_evidence_only": false,
+    "active_crons_utc": [
+      "13 * * * *",
+      "28 * * * *",
+      "43 * * * *",
+      "58 * * * *"
+    ]
   },
   "scheduled_crons_utc": [
     {
-      "cron": "30 * * * *",
+      "cron": "13 * * * *",
+      "kind": "chatgpt_scheduler"
+    },
+    {
+      "cron": "28 * * * *",
+      "kind": "chatgpt_scheduler"
+    },
+    {
+      "cron": "43 * * * *",
+      "kind": "chatgpt_scheduler"
+    },
+    {
+      "cron": "58 * * * *",
       "kind": "chatgpt_scheduler"
     }
   ],
-  "natural_schedule_redundancy_attempts_per_hour": 1,
+  "natural_schedule_redundancy_attempts_per_hour": 4,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
     "data_acquisition": "V6",
@@ -165,7 +183,10 @@
     "watchdog_is_monitoring_only": true,
     "recurring_recovery_automation_allowed": false,
     "manual_recovery_is_explicit_non_recurring": true,
-    "github_schedule_is_preferred_scheduler_transport": true
+    "github_schedule_is_preferred_scheduler_transport": true,
+    "natural_scheduler_redundancy_enabled": true,
+    "natural_scheduler_redundancy_attempts_per_hour": 4,
+    "redundant_schedule_arrivals_share_one_logical_hourly_slot": true
   },
   "master_orchestrated": {
     "enabled": true,
@@ -220,11 +241,17 @@
   },
   "github_control_schedules": {
     "natural_scheduler_workflow": "v6-natural-data-ingestion.yml",
-    "natural_scheduler_cron_utc": "30 * * * *",
+    "natural_scheduler_cron_utc": "13,28,43,58 * * * *",
     "watchdog_workflow": "v6-scheduler-watchdog.yml",
     "watchdog_cron_utc": "50 * * * *",
     "watchdog_monitoring_only": true,
     "recurring_recovery_guard_enabled": false,
-    "recovery_guard_invocation": "WORKFLOW_DISPATCH_ONLY"
+    "recovery_guard_invocation": "WORKFLOW_DISPATCH_ONLY",
+    "natural_scheduler_crons_utc": [
+      "13 * * * *",
+      "28 * * * *",
+      "43 * * * *",
+      "58 * * * *"
+    ]
   }
 }

@@ -63,7 +63,7 @@ def test_historical_backfill_adds_no_scheduler_or_second_publisher():
     assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == []
+    assert workflow_crons == ["30 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["report_prefetch"]["independent_cron"] is False
     assert workflow.count('\n  publish:\n') == 1

@@ -356,7 +356,7 @@ def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
         logical_slot="2026-09-20T17:00:00+07:00",
     )
     assert updated["governance"]["github_natural_acquisition_schedule_disabled"] is False
-    assert updated["governance"]["github_natural_scheduler_is_authority"] is False
+    assert updated["governance"]["github_natural_scheduler_is_authority"] is True
 
 
 

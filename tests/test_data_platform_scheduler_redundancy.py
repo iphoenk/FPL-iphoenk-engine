@@ -75,8 +75,7 @@ def test_legacy_master_issue_comment_is_no_longer_a_scheduler_ingress():
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
     assert policy["scheduler_authority"]["issue_comment_command"] == ""
     assert "issue_comment:chatgpt_scheduler" not in policy["governance"]["scheduler_health_proof_triggers"]
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
-
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
 
 def test_chatgpt_issue_title_edit_is_the_scheduler_classifier():
     policy = _policy()

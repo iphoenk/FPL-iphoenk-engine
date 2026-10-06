@@ -72,13 +72,13 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
     clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
 
-    assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
+    assert policy["scheduler_authority"]["kind"] == "CHATGPT_AUTOMATION"
     assert policy["scheduled_crons_utc"] == []
-    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
     assert workflow_crons == []
-    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert clock_crons == []
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert prefetch["independent_cron"] is False
     assert prefetch["report_driven"] is True

@@ -110,6 +110,9 @@ from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
 )
+from src.engines.v12_injury_availability import (
+    build_availability_evidence_by_player,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -7126,6 +7129,17 @@ def run_deep(
     if not owned:
         raise IntegratedRunnerError("OUR15 unavailable")
 
+    report_time_evidence = _read_json(
+        runtime_data_root / "data/report_time_evidence.json",
+        {},
+    ) or {}
+    availability_evidence_by_player = build_availability_evidence_by_player(
+        bootstrap,
+        report_time_evidence,
+        report_timestamp=report_slot,
+        target_gw=planning_gw,
+    )
+
     strength = _stage(
         ledger,
         "TEAM_STRENGTH",
@@ -7165,6 +7179,10 @@ def run_deep(
                     "opponent_history_scope"
                 ),
                 scenario_overrides=scenario_overrides,
+                availability_evidence_by_player=(
+                    availability_evidence_by_player
+                ),
+                availability_evidence_cutoff_at=report_slot,
             )
 
         def _stage2_projection_with_cache() -> dict[str, Any]:
@@ -7208,6 +7226,10 @@ def run_deep(
                         "opponent_history_scope"
                     ),
                     builder=_canonical_stage2_builder,
+                    availability_evidence_by_player=(
+                        availability_evidence_by_player
+                    ),
+                    availability_evidence_cutoff_at=report_slot,
                 )
             stage2_cache_proof.clear()
             stage2_cache_proof.update(proof)
@@ -8298,10 +8320,6 @@ def run_deep(
             str(previous_deep.get("report_slot") or "") or None
         ),
     )
-    report_time_evidence = _read_json(
-        runtime_data_root / "data/report_time_evidence.json",
-        {},
-    ) or {}
     report_time_material_news = build_report_time_material_news(
         report_time_evidence,
         bootstrap,

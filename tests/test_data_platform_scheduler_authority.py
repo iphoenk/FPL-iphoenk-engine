@@ -11,8 +11,8 @@ SCHEDULE_KEY = re.compile(r"(?m)^\s*schedule\s*:")
 ALLOWED_CONTROL_SCHEDULES = {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
 
 
-def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog() -> None:
-    """Dedicated FPL clock is the sole physical scheduler; watchdog is monitoring-only."""
+def test_v6_has_chatgpt_natural_authority_plus_monitoring_watchdog() -> None:
+    """ChatGPT is the sole recurring scheduler; watchdog is monitoring-only."""
     workflows = sorted(WORKFLOW_DIR.glob(V6_WORKFLOW_GLOB))
     assert workflows, "expected at least one V6 workflow"
 
@@ -28,9 +28,7 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
     )
 
     clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
-    assert SCHEDULE_KEY.search(clock)
-    for cron in ("18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"):
-        assert f'cron: "{cron}"' in clock
+    assert not SCHEDULE_KEY.search(clock)
     assert "fpl-external-clock-fallback.yml" in clock
 
     watchdog = (WORKFLOW_DIR / "v6-scheduler-watchdog.yml").read_text(encoding="utf-8")
@@ -77,16 +75,16 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
     assert recovery_config["invocation_mode"] == "WORKFLOW_DISPATCH_ONLY"
     assert recovery_config["recurring_automated_initiator"] is False
 
-    assert schedule_policy["github_natural_schedule"]["enabled"] is True
-    assert schedule_policy["github_control_schedules"]["natural_scheduler_workflow"] == "fpl-github-clock.yml"
+    assert schedule_policy["github_natural_schedule"]["enabled"] is False
+    assert schedule_policy["github_control_schedules"]["natural_scheduler_workflow"] == ""
     assert schedule_policy["github_control_schedules"]["recurring_recovery_guard_enabled"] is False
-    assert schedule_policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:fpl-github-clock.yml"
+    assert schedule_policy["governance"]["single_schedule_owner"] == "CHATGPT_AUTOMATION:FPL Master Monitor V12"
     assert schedule_policy["governance"]["v6_ingestion_has_independent_schedule"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_operational_slot"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
 
-def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
-    """Core V6 acquisition is dispatch-driven by the dedicated GitHub clock."""
+def test_v6_ingestion_uses_single_hourly_chatgpt_natural_transport() -> None:
+    """Core V6 acquisition is event-driven by the ChatGPT issue-title transport."""
     workflow = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     text = workflow.read_text(encoding="utf-8")
     clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
@@ -97,7 +95,7 @@ def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
     assert not SCHEDULE_KEY.search(text)
-    assert SCHEDULE_KEY.search(clock)
+    assert not SCHEDULE_KEY.search(clock)
     assert "fpl-external-clock-fallback.yml" in clock
     assert "gh run watch" in clock
     assert "/v6-master-acquire" not in text

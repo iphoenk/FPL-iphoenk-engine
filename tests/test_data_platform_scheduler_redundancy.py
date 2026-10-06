@@ -109,16 +109,15 @@ def test_dedicated_master_comment_transport_is_retired():
 def test_github_scheduler_contract_is_single_hourly_authority():
     policy = _policy()
     scheduler = policy["scheduler_authority"]
-    assert scheduler["name"] == "FPL V6 hourly fresh-data acquisition"
+    assert scheduler["name"] == "FPL GitHub Clock"
     assert scheduler["timezone"] == "Asia/Jakarta"
     assert scheduler["cadence_minutes"] == 60
     assert scheduler["physical_minute"] == 30
     assert scheduler["logical_slot_minute"] == 0
     assert scheduler["required_reason"] == "chatgpt_hourly_master"
     assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"
-    assert scheduler["health_epoch"] == "GITHUB_MASTER_V1"
+    assert scheduler["health_epoch"] == "GITHUB_CLOCK_V1"
     assert scheduler["green_after_consecutive_slots"] == 3
-
 
 def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")

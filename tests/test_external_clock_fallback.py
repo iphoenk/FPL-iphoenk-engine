@@ -52,3 +52,12 @@ def test_master_dispatch_uses_governed_timestamp_parser():
     assert 'label="master_orchestrated logical_slot"' in control
     assert "_parse_dt(" not in control
 
+def test_github_clock_operational_self_chain_is_owner_controlled_and_non_natural():
+    text = (ROOT / ".github" / "workflows" / "fpl-github-clock.yml").read_text(encoding="utf-8")
+    assert "github.event.comment.body == '/fpl-clock-start'" in text
+    assert '(.body == "/fpl-clock-start" or .body == "/fpl-clock-stop")' in text
+    assert "-f chain=true" in text
+    assert "target_minutes = (8, 18, 28, 38, 48, 58)" in text
+    assert "github.event_name == 'schedule' && 'true' || 'false'" in text
+    assert "natural_clock_proof=$NATURAL_PROOF" in text
+

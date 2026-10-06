@@ -14,7 +14,311 @@ def _policy() -> dict:
 def test_github_natural_cron_is_single_and_former_redundant_crons_are_history_only():
     policy = _policy()
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
-    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    clock = Path(".github/workflows/fpl-github-clock.yml").read_text(encoding="utf-8")
+    workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"
+
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 5
+    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert workflow_crons == []
+    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_utc"] == [
+        "13 * * * *",
+        "28 * * * *",
+        "43 * * * *",
+        "58 * * * *",
+    ]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
+
+
+def test_scheduler_migration_boundary_is_explicit():
+    policy = _policy()
+    scheduler = policy["scheduler_authority"]
+    github = policy["github_natural_schedule"]
+    assert scheduler["migration_started_at"] == "2026-10-06T11:30:00+07:00"
+    assert github["enabled_at"] == scheduler["migration_started_at"]
+    assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
+
+
+def test_v6_ingestion_has_no_direct_scheduled_cron_classifier():
+    policy = _policy()
+    assert scheduled_cron_kinds(policy) == {}
+    assert classify_invocation(policy, event_name="schedule", event={"schedule": "28 * * * *"}) == "scheduled_unknown"
+
+
+def test_disabled_github_schedule_arrival_is_noop_defense_in_depth():
+    for minute in (13, 28, 43, 58):
+        assert scheduled_slot_already_completed(
+            {},
+            scheduler_interval_minutes=60,
+            event_name="schedule",
+            schedule_kind="schedule_disabled",
+            schedule_expression=f"{minute} * * * *",
+        ) is True
+
+
+def test_legacy_master_issue_comment_is_no_longer_a_scheduler_ingress():
+    policy = _policy()
+    event = {
+        "comment": {
+            "body": "/v6-master-acquire reason=chatgpt_hourly_master logical_slot=2026-09-08T10:00:00+07:00 audit=FPL_MASTER_HOURLY"
+        }
+    }
+    assert classify_invocation(policy, event_name="issue_comment", event=event) == "governed_issue_command_unknown"
+    assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
+    assert policy["scheduler_authority"]["issue_comment_command"] == ""
+    assert "issue_comment:chatgpt_scheduler" not in policy["governance"]["scheduler_health_proof_triggers"]
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
+
+
+def test_chatgpt_issue_title_edit_is_the_scheduler_classifier():
+    policy = _policy()
+    event = {
+        "issue": {
+            "title": (
+                "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                "logical_slot=2026-09-08T10:00:00+07:00 "
+                "audit=FPL_MASTER_HOURLY observed_at=2026-09-08T10:31:00+07:00"
+            )
+        }
+    }
+    assert classify_invocation(policy, event_name="issues", event=event) == "chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "DEDICATED_GITHUB_CLOCK"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
+    assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is False
+    assert policy["scheduler_authority"]["issue_title_marker"] == "FPL_MASTER_SLOT"
+
+
+def test_dedicated_master_comment_transport_is_retired():
+    policy = _policy()
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    scheduler = policy["scheduler_authority"]
+    assert scheduler["preferred_transport"] == "DEDICATED_GITHUB_CLOCK"
+    assert scheduler["dedicated_control_comment_id"] == 5596106114
+    assert scheduler["dedicated_control_comment_event"] == "RETIRED"
+    assert policy["governance"]["issue_comment_edit_is_preferred_scheduler_transport"] is False
+    assert "types: [created]" in workflow
+    assert "github.event.comment.id == 5596106114" not in workflow
+    assert "/v6-master-acquire" not in workflow
+
+
+def test_github_scheduler_contract_is_single_hourly_authority():
+    policy = _policy()
+    scheduler = policy["scheduler_authority"]
+    assert scheduler["name"] == "FPL GitHub Clock"
+    assert scheduler["timezone"] == "Asia/Jakarta"
+    assert scheduler["cadence_minutes"] == 60
+    assert scheduler["physical_minute"] == 30
+    assert scheduler["logical_slot_minute"] == 0
+    assert scheduler["required_reason"] == "chatgpt_hourly_master"
+    assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"
+    assert scheduler["health_epoch"] == "GITHUB_CLOCK_V1"
+    assert scheduler["green_after_consecutive_slots"] == 3
+
+
+def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "refusing empty-tree acquisition" in workflow
+    assert "starting clean" not in workflow
+    assert "orchestration-fulfillment:" in workflow
+    assert "DATA_SLOT_ALREADY_PUBLISHED_REPORT_CONTINUES" in workflow
+    assert "IDEMPOTENT_NOOP_ALREADY_PUBLISHED" not in workflow
+    assert "continue_report_pipeline=$CONTINUE_REPORT_PIPELINE" in workflow
+    assert "SNAPSHOT_PUBLISHED_VALIDATED" in workflow
+    assert "ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED" in workflow
+
+
+def test_only_ingestion_and_watchdog_are_scheduled_and_recovery_is_manual_only():
+    workflows = Path(".github/workflows")
+    scheduled = {
+        path.name
+        for path in workflows.glob("v6-*.yml")
+        if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
+    }
+    assert scheduled == {"v6-scheduler-watchdog.yml"}
+    recovery = (workflows / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in recovery
+    assert "schedule:" not in recovery
+    assert "workflow_run:" not in recovery
+
+
+def test_private_repository_runtime_hydration_uses_explicit_read_auth():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "V6_RUNTIME_READ_TOKEN: ${{ github.token }}" in workflow
+    assert "AUTHORIZATION: basic $read_auth" in workflow
+    assert workflow.count("AUTHORIZATION: basic $read_auth") >= 3
+    assert "persist-credentials: false" in workflow
+
+
+def test_non_v6_issue_comments_cannot_replace_pending_governed_prefetch():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "fpl-v6-noncommand-{0}" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-report-prefetch')" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-manual-recovery')" in workflow
+    assert "'fpl-v6-hourly-data-ingestion'" in workflow
+    assert "cancel-in-progress: false" in workflow
+, workflow, flags=re.MULTILINE)
+    clock_crons = re.findall(r'^\s+- cron: "([^"]+)"
+
+    assert policy["scheduled_crons_utc"] == [
+        {"cron": "13 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "28 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "43 * * * *", "kind": "chatgpt_scheduler"},
+        {"cron": "58 * * * *", "kind": "chatgpt_scheduler"},
+    ]
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
+    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_utc"] == [
+        "13 * * * *",
+        "28 * * * *",
+        "43 * * * *",
+        "58 * * * *",
+    ]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
+
+
+def test_scheduler_migration_boundary_is_explicit():
+    policy = _policy()
+    scheduler = policy["scheduler_authority"]
+    github = policy["github_natural_schedule"]
+    assert scheduler["migration_started_at"] == "2026-10-06T11:30:00+07:00"
+    assert github["enabled_at"] == scheduler["migration_started_at"]
+    assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
+
+
+def test_scheduled_cron_classifier_exposes_only_the_governed_staggered_crons():
+    policy = _policy()
+    expected = {
+        "13 * * * *": "chatgpt_scheduler",
+        "28 * * * *": "chatgpt_scheduler",
+        "43 * * * *": "chatgpt_scheduler",
+        "58 * * * *": "chatgpt_scheduler",
+    }
+    assert scheduled_cron_kinds(policy) == expected
+    for cron in expected:
+        assert classify_invocation(policy, event_name="schedule", event={"schedule": cron}) == "chatgpt_scheduler"
+    assert classify_invocation(policy, event_name="schedule", event={"schedule": "7 * * * *"}) == "scheduled_unknown"
+
+
+def test_disabled_github_schedule_arrival_is_noop_defense_in_depth():
+    for minute in (13, 28, 43, 58):
+        assert scheduled_slot_already_completed(
+            {},
+            scheduler_interval_minutes=60,
+            event_name="schedule",
+            schedule_kind="schedule_disabled",
+            schedule_expression=f"{minute} * * * *",
+        ) is True
+
+
+def test_legacy_master_issue_comment_is_no_longer_a_scheduler_ingress():
+    policy = _policy()
+    event = {
+        "comment": {
+            "body": "/v6-master-acquire reason=chatgpt_hourly_master logical_slot=2026-09-08T10:00:00+07:00 audit=FPL_MASTER_HOURLY"
+        }
+    }
+    assert classify_invocation(policy, event_name="issue_comment", event=event) == "governed_issue_command_unknown"
+    assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
+    assert policy["scheduler_authority"]["issue_comment_command"] == ""
+    assert "issue_comment:chatgpt_scheduler" not in policy["governance"]["scheduler_health_proof_triggers"]
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+
+
+def test_chatgpt_issue_title_edit_is_the_scheduler_classifier():
+    policy = _policy()
+    event = {
+        "issue": {
+            "title": (
+                "FPL_MASTER_SLOT reason=chatgpt_hourly_master "
+                "logical_slot=2026-09-08T10:00:00+07:00 "
+                "audit=FPL_MASTER_HOURLY observed_at=2026-09-08T10:31:00+07:00"
+            )
+        }
+    }
+    assert classify_invocation(policy, event_name="issues", event=event) == "chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "GITHUB_SCHEDULE"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+    assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is False
+    assert policy["scheduler_authority"]["issue_title_marker"] == "FPL_MASTER_SLOT"
+
+
+def test_dedicated_master_comment_transport_is_retired():
+    policy = _policy()
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    scheduler = policy["scheduler_authority"]
+    assert scheduler["preferred_transport"] == "GITHUB_SCHEDULE"
+    assert scheduler["dedicated_control_comment_id"] == 5596106114
+    assert scheduler["dedicated_control_comment_event"] == "RETIRED"
+    assert policy["governance"]["issue_comment_edit_is_preferred_scheduler_transport"] is False
+    assert "types: [created]" in workflow
+    assert "github.event.comment.id == 5596106114" not in workflow
+    assert "/v6-master-acquire" not in workflow
+
+
+def test_github_scheduler_contract_is_single_hourly_authority():
+    policy = _policy()
+    scheduler = policy["scheduler_authority"]
+    assert scheduler["name"] == "FPL V6 hourly fresh-data acquisition"
+    assert scheduler["timezone"] == "Asia/Jakarta"
+    assert scheduler["cadence_minutes"] == 60
+    assert scheduler["physical_minute"] == 30
+    assert scheduler["logical_slot_minute"] == 0
+    assert scheduler["required_reason"] == "chatgpt_hourly_master"
+    assert scheduler["required_audit"] == "FPL_MASTER_HOURLY"
+    assert scheduler["health_epoch"] == "GITHUB_MASTER_V1"
+    assert scheduler["green_after_consecutive_slots"] == 3
+
+
+def test_workflow_hydration_is_fail_closed_and_fulfillment_is_explicit():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "refusing empty-tree acquisition" in workflow
+    assert "starting clean" not in workflow
+    assert "orchestration-fulfillment:" in workflow
+    assert "DATA_SLOT_ALREADY_PUBLISHED_REPORT_CONTINUES" in workflow
+    assert "IDEMPOTENT_NOOP_ALREADY_PUBLISHED" not in workflow
+    assert "continue_report_pipeline=$CONTINUE_REPORT_PIPELINE" in workflow
+    assert "SNAPSHOT_PUBLISHED_VALIDATED" in workflow
+    assert "ACQUISITION_COMPLETE_PUBLICATION_NOT_VALIDATED" in workflow
+
+
+def test_only_ingestion_and_watchdog_are_scheduled_and_recovery_is_manual_only():
+    workflows = Path(".github/workflows")
+    scheduled = {
+        path.name
+        for path in workflows.glob("v6-*.yml")
+        if re.search(r"(?m)^\s*schedule\s*:", path.read_text(encoding="utf-8"))
+    }
+    assert scheduled == {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
+    recovery = (workflows / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
+    assert "workflow_dispatch:" in recovery
+    assert "schedule:" not in recovery
+    assert "workflow_run:" not in recovery
+
+
+def test_private_repository_runtime_hydration_uses_explicit_read_auth():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "V6_RUNTIME_READ_TOKEN: ${{ github.token }}" in workflow
+    assert "AUTHORIZATION: basic $read_auth" in workflow
+    assert workflow.count("AUTHORIZATION: basic $read_auth") >= 3
+    assert "persist-credentials: false" in workflow
+
+
+def test_non_v6_issue_comments_cannot_replace_pending_governed_prefetch():
+    workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    assert "fpl-v6-noncommand-{0}" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-report-prefetch')" in workflow
+    assert "!startsWith(github.event.comment.body, '/v6-manual-recovery')" in workflow
+    assert "'fpl-v6-hourly-data-ingestion'" in workflow
+    assert "cancel-in-progress: false" in workflow
+, clock, flags=re.MULTILINE)
 
     assert policy["scheduled_crons_utc"] == [
         {"cron": "13 * * * *", "kind": "chatgpt_scheduler"},

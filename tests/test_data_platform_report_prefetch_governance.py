@@ -66,16 +66,20 @@ def test_official_fpl_client_retries_transient_failure_then_succeeds():
 
 def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    clock = (ROOT / ".github/workflows/fpl-github-clock.yml").read_text(encoding="utf-8")
     policy = json.loads(POLICY.read_text(encoding="utf-8"))
     prefetch = policy["report_prefetch"]
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
 
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
-    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["scheduled_crons_utc"] == []
     assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
+    assert workflow_crons == []
+    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert prefetch["independent_cron"] is False
     assert prefetch["report_driven"] is True
     assert prefetch["control_issue_number"] == policy["master_orchestrated"]["control_issue_number"] == 431
@@ -95,7 +99,6 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     assert "steps.scheduler.outputs.kind != 'report_prefetch'" in workflow
     assert "Run report-driven V6 personal and mini-league prefetch" in workflow
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control resolve-prefetch" in workflow
-
 
 def test_report_prefetch_issue_title_transport_is_rejected_by_authorization():
     policy = load_policy()

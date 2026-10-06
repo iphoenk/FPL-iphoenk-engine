@@ -29,7 +29,7 @@ def test_workflow_scheduler_matches_v6_github_authority_policy():
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 8
+    assert policy["schema_version"] == 9
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
     assert policy["scheduler_authority"]["name"] == "FPL V6 hourly fresh-data acquisition"

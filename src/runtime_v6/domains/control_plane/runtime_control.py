@@ -52,7 +52,9 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _is_chatgpt_scheduler(event: str, kind: str) -> bool:
-    return event in {"issue_comment", "issues"} and kind == "chatgpt_scheduler"
+    # Compatibility field name retained for runtime schema stability. The
+    # current physical authority may be GitHub Actions schedule.
+    return event in {"issue_comment", "issues", "schedule"} and kind == "chatgpt_scheduler"
 
 
 def _is_master(event: str, kind: str) -> bool:
@@ -101,7 +103,7 @@ def scheduled_slot_already_completed(
     interval = max(1, int(scheduler_interval_minutes or SCHEDULE_POLICY.cadence_minutes))
     current = _now(now)
 
-    if chatgpt_scheduler:
+    if chatgpt_scheduler and event != "schedule":
         slot_value = _chatgpt_logical_slot(logical_slot)
         if slot_value is None:
             return False
@@ -153,10 +155,10 @@ def build_runtime_control(
     report_prefetch = _is_report_prefetch(event, kind)
     manual_recovery = kind == "manual_recovery"
 
-    if chatgpt_scheduler:
+    if chatgpt_scheduler and not github_schedule_event:
         requested_slot = _chatgpt_logical_slot(logical_slot)
         if requested_slot is None:
-            raise ValueError("ChatGPT scheduler invocation requires V6_MASTER_LOGICAL_SLOT")
+            raise ValueError("Issue-transport scheduler invocation requires V6_MASTER_LOGICAL_SLOT")
         slot = scheduler_slot_start(requested_slot, interval)
         expression = None
         nominal = None
@@ -265,7 +267,7 @@ def build_runtime_control(
         "logical_slot_source": NATURAL_LOGICAL_SLOT_SOURCE if chatgpt_scheduler else "RUNTIME_CLOCK",
         "expected_cycle_at": expected.isoformat() if expected else None,
         "cycle_observed_at": current.isoformat(),
-        "schedule_lag_seconds": round(max(0.0, (current - slot).total_seconds()), 3) if chatgpt_scheduler else None,
+        "schedule_lag_seconds": round(max(0.0, (current - (nominal or slot)).total_seconds()), 3) if chatgpt_scheduler else None,
         "last_chatgpt_scheduler_cycle_at": last_chatgpt_scheduler_cycle.isoformat() if last_chatgpt_scheduler_cycle else None,
         "last_scheduled_cycle_at": last_chatgpt_scheduler_cycle.isoformat() if last_chatgpt_scheduler_cycle else None,
         "last_github_scheduled_cycle_at": last_github_schedule.isoformat() if last_github_schedule else None,
@@ -280,7 +282,7 @@ def build_runtime_control(
         "data_slot_already_fulfilled_before_scheduler_proof": data_slot_already_fulfilled if chatgpt_scheduler else False,
         "single_logical_acquisition_per_scheduler_slot": True,
         "report_prefetch_cannot_complete_core_operational_slot": True,
-        "scheduled_slot_uses_nominal_cron": False,
+        "scheduled_slot_uses_nominal_cron": bool(github_schedule_event and nominal is not None),
     }
 
 

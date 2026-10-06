@@ -90,7 +90,8 @@ def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
     assert SCHEDULE_KEY.search(text)
-    assert 'cron: "30 * * * *"' in text
+    for cron in ("13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"):
+        assert f'cron: "{cron}"' in text
     assert "/v6-master-acquire" not in text
     assert "/v6-report-prefetch" in text
     assert "/v6-manual-recovery" in text

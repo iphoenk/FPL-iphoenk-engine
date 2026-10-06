@@ -70,7 +70,7 @@
     "richest_contract_wins": true
   },
   "governance": {
-    "v6_core_schedule_unchanged": false,
+    "v6_core_schedule_unchanged": true,
     "chatgpt_master_is_only_scheduler": false,
     "github_cron_is_not_report_authority": false,
     "report_schedule_is_v12_downstream": true,

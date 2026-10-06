@@ -37,3 +37,18 @@ def test_github_clock_smoke_trigger_is_owner_only_and_non_natural():
     assert "github.event.comment.body == '/fpl-clock-test'" in text
     assert "github.event_name == 'schedule' && 'true' || 'false'" in text
 
+def test_clock_run_discovery_uses_real_jq_not_unsupported_gh_formatter_flags():
+    clock = (ROOT / ".github" / "workflows" / "fpl-github-clock.yml").read_text(encoding="utf-8")
+    fallback = ENTRY.read_text(encoding="utf-8")
+    for text in (clock, fallback):
+        assert "--jq --arg" not in text
+        assert "| jq -r --arg" in text
+
+
+def test_master_dispatch_uses_governed_timestamp_parser():
+    control = (ROOT / "src" / "runtime_v6" / "domains" / "control_plane" / "workflow_control.py").read_text(
+        encoding="utf-8"
+    )
+    assert 'label="master_orchestrated logical_slot"' in control
+    assert "_parse_dt(" not in control
+

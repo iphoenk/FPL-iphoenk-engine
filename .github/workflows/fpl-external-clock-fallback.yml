@@ -134,7 +134,7 @@ jobs:
                 --branch main \
                 --limit 30 \
                 --json databaseId,createdAt,displayTitle,headBranch \
-                --jq --arg logical "$LOGICAL_SLOT" --argjson epoch "$dispatch_epoch" '
+              | jq -r --arg logical "$LOGICAL_SLOT" --argjson epoch "$dispatch_epoch" '
                   map(
                     select(
                       (.createdAt | fromdateiso8601) >= ($epoch - 5) and
@@ -185,7 +185,7 @@ jobs:
               --branch main \
               --limit 50 \
               --json databaseId,displayTitle,status,conclusion,createdAt \
-              --jq --arg title "$exact_title" '
+            | jq -r --arg title "$exact_title" '
                 map(select(.displayTitle == $title))
                 | sort_by(.createdAt)
                 | last

@@ -113,6 +113,18 @@ def scheduled_slot_already_completed(
             return False
         return scheduler_slot_start(previous_chatgpt, interval) >= current_slot
 
+    if kind == "master_orchestrated" and event == "workflow_dispatch":
+        slot_value = _chatgpt_logical_slot(logical_slot)
+        if slot_value is None:
+            return False
+        current_slot = scheduler_slot_start(slot_value, interval)
+        previous_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
+        if previous_operational is None:
+            previous_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
+        if previous_operational is None:
+            return False
+        return scheduler_slot_start(previous_operational, interval) >= current_slot
+
     previous_operational = _parse_dt(previous_control.get("last_operational_cycle_at"))
     if previous_operational is None:
         previous_operational = _parse_dt(previous_control.get("last_authoritative_cycle_at"))
@@ -159,6 +171,13 @@ def build_runtime_control(
         requested_slot = _chatgpt_logical_slot(logical_slot)
         if requested_slot is None:
             raise ValueError("Issue-transport scheduler invocation requires V6_MASTER_LOGICAL_SLOT")
+        slot = scheduler_slot_start(requested_slot, interval)
+        expression = None
+        nominal = None
+    elif master_orchestrated and event == "workflow_dispatch":
+        requested_slot = _chatgpt_logical_slot(logical_slot)
+        if requested_slot is None:
+            raise ValueError("master_orchestrated dispatch requires V6_MASTER_LOGICAL_SLOT")
         slot = scheduler_slot_start(requested_slot, interval)
         expression = None
         nominal = None

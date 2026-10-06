@@ -14,6 +14,8 @@ def test_external_clock_entrypoint_is_dispatch_only_and_non_natural():
     assert "reason=EXTERNAL_CLOCK_FALLBACK" in text
     assert "scheduler_authority=EXTERNAL_CLOCK_FALLBACK" in text
     assert "natural_proof=false" in text
+    assert "gh run watch" in text
+    assert "Exact external-clock V6 child run was not created" in text
 
 
 def test_v6_dispatch_exposes_governed_master_orchestrated_fallback():

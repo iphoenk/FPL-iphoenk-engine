@@ -157,11 +157,21 @@ def authorize_dispatch(
         and actor == "github-actions[bot]"
         and str(reason).startswith("fpl_master_orchestrator_")
     )
+    master_control = dict(policy.get("master_orchestrated") or {})
+    external_clock_guard_actor = (
+        mode == "master_orchestrated"
+        and actor == str(master_control.get("external_clock_dispatch_actor") or "")
+        and reason == str(master_control.get("external_clock_dispatch_reason") or "")
+        and master_control.get("external_clock_dispatch_role") == "OPERATIONAL_FALLBACK_ONLY"
+        and master_control.get("external_clock_counts_as_scheduler_proof") is False
+        and master_control.get("external_clock_counts_as_natural_acceptance") is False
+    )
     if (
         actor != repository_owner
         and not recovery_guard_actor
         and not precompute_guard_actor
         and not occurrence_orchestrator_guard_actor
+        and not external_clock_guard_actor
     ):
         raise WorkflowControlError("V6 governed dispatch actor is not authorized")
     if not str(reason).strip():

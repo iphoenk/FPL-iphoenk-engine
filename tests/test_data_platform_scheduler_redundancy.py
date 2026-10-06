@@ -46,17 +46,12 @@ def test_scheduler_migration_boundary_is_explicit():
 
 def test_scheduled_cron_classifier_exposes_only_the_governed_staggered_crons():
     policy = _policy()
-    expected = {
-        "13 * * * *": "chatgpt_scheduler",
-        "28 * * * *": "chatgpt_scheduler",
-        "43 * * * *": "chatgpt_scheduler",
-        "58 * * * *": "chatgpt_scheduler",
-    }
-    assert scheduled_cron_kinds(policy) == expected
-    for cron in expected:
-        assert classify_invocation(policy, event_name="schedule", event={"schedule": cron}) == "chatgpt_scheduler"
-    assert classify_invocation(policy, event_name="schedule", event={"schedule": "7 * * * *"}) == "scheduled_unknown"
-
+    assert scheduled_cron_kinds(policy) == {}
+    assert classify_invocation(
+        policy,
+        event_name="schedule",
+        event={"schedule": "28 * * * *"},
+    ) == "scheduled_unknown"
 
 def test_disabled_github_schedule_arrival_is_noop_defense_in_depth():
     for minute in (13, 28, 43, 58):

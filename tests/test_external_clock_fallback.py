@@ -28,3 +28,12 @@ def test_occurrence_orchestrator_accepts_external_fallback_without_new_cron():
     text = ORCH.read_text(encoding="utf-8")
     assert "inputs.scheduler_authority == 'EXTERNAL_CLOCK_FALLBACK'" in text
     assert "\n  schedule:" not in text
+
+def test_github_clock_smoke_trigger_is_owner_only_and_non_natural():
+    text = (ROOT / ".github" / "workflows" / "fpl-github-clock.yml").read_text(encoding="utf-8")
+    assert "issue_comment:" in text
+    assert "github.event.issue.number == 431" in text
+    assert "github.actor == github.repository_owner" in text
+    assert "github.event.comment.body == '/fpl-clock-test'" in text
+    assert "github.event_name == 'schedule' && 'true' || 'false'" in text
+

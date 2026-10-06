@@ -43,7 +43,10 @@ jobs:
     if: >-
       (
         github.event_name == 'workflow_dispatch' &&
-        inputs.scheduler_authority == 'GITHUB_FPL_MASTER_SCHEDULER'
+        (
+          inputs.scheduler_authority == 'GITHUB_FPL_MASTER_SCHEDULER' ||
+          inputs.scheduler_authority == 'EXTERNAL_CLOCK_FALLBACK'
+        )
       ) ||
       (
         github.event_name == 'issue_comment' &&

@@ -44,14 +44,14 @@ def test_scheduler_migration_boundary_is_explicit():
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
 
 
-def test_scheduled_cron_classifier_exposes_only_the_governed_staggered_crons():
+def test_disabled_github_cron_classifier_fails_closed():
     policy = _policy()
     assert scheduled_cron_kinds(policy) == {}
     assert classify_invocation(
         policy,
         event_name="schedule",
         event={"schedule": "28 * * * *"},
-    ) == "scheduled_unknown"
+    ) == "schedule_disabled"
 
 def test_disabled_github_schedule_arrival_is_noop_defense_in_depth():
     for minute in (13, 28, 43, 58):

@@ -8,11 +8,11 @@ from pathlib import Path
 WORKFLOW_DIR = Path(".github/workflows")
 V6_WORKFLOW_GLOB = "v6-*.yml"
 SCHEDULE_KEY = re.compile(r"(?m)^\s*schedule\s*:")
-ALLOWED_CONTROL_SCHEDULES = {"v6-scheduler-watchdog.yml"}
+ALLOWED_CONTROL_SCHEDULES = {"v6-natural-data-ingestion.yml", "v6-scheduler-watchdog.yml"}
 
 
-def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_authority() -> None:
-    """Only the monitoring watchdog may use cron; all acquisition initiation remains ChatGPT/manual-owned."""
+def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog() -> None:
+    """The ingestion cron is sole natural authority; watchdog is monitoring-only."""
     workflows = sorted(WORKFLOW_DIR.glob(V6_WORKFLOW_GLOB))
     assert workflows, "expected at least one V6 workflow"
 
@@ -23,7 +23,7 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
             scheduled.add(workflow.name)
 
     assert scheduled == ALLOWED_CONTROL_SCHEDULES, (
-        "scheduled V6 workflow set must be exactly monitoring watchdog; got "
+        "scheduled V6 workflow set must be ingestion plus monitoring watchdog; got "
         + repr(sorted(scheduled))
     )
 
@@ -44,7 +44,7 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
 
     watchdog_authority = watchdog_config["authority"]
     assert watchdog_config["role"] == "MONITORING_ONLY"
-    assert watchdog_authority["core_scheduler"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert watchdog_authority["core_scheduler"] == "GITHUB_FPL_MASTER_SCHEDULER"
     assert watchdog_authority["watchdog_is_scheduler_authority"] is False
     assert watchdog_authority["watchdog_may_trigger_acquisition"] is False
     assert watchdog_authority["watchdog_may_dispatch_ingestion"] is False
@@ -64,23 +64,23 @@ def test_v6_github_schedules_are_control_plane_only_never_normal_acquisition_aut
     assert "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog" in recovery
     assert "python -m src.runtime_v6.domains.control_plane.scheduler_recovery" in recovery
     assert recovery_config["role"] == "SAFE_RECOVERY_ONLY"
-    assert recovery_config["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_MONITOR"
+    assert recovery_config["normal_scheduler_authority"] == "GITHUB_FPL_MASTER_SCHEDULER"
     assert recovery_config["recovery_counts_as_scheduler_proof"] is False
     assert recovery_config["recovery_counts_as_natural_wave3_slot"] is False
     assert recovery_config["automatic_schedule_enabled"] is False
     assert recovery_config["invocation_mode"] == "WORKFLOW_DISPATCH_ONLY"
     assert recovery_config["recurring_automated_initiator"] is False
 
-    assert schedule_policy["github_natural_schedule"]["enabled"] is False
-    assert schedule_policy["github_control_schedules"]["only_scheduled_v6_control_workflow"] == "v6-scheduler-watchdog.yml"
+    assert schedule_policy["github_natural_schedule"]["enabled"] is True
+    assert schedule_policy["github_control_schedules"]["natural_scheduler_workflow"] == "v6-natural-data-ingestion.yml"
     assert schedule_policy["github_control_schedules"]["recurring_recovery_guard_enabled"] is False
-    assert schedule_policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
+    assert schedule_policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_operational_slot"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
 
 
-def test_v6_ingestion_uses_single_hourly_master_transport() -> None:
-    """Normal core V6 acquisition is Issue #431 title-driven; recovery is non-proof dispatch."""
+def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
+    """Normal core V6 acquisition is schedule-driven; issue transports remain compatibility/recovery only."""
     workflow = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     text = workflow.read_text(encoding="utf-8")
 
@@ -89,7 +89,8 @@ def test_v6_ingestion_uses_single_hourly_master_transport() -> None:
     assert "issues:" in text
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
-    assert not SCHEDULE_KEY.search(text)
+    assert SCHEDULE_KEY.search(text)
+    assert 'cron: "30 * * * *"' in text
     assert "/v6-master-acquire" not in text
     assert "/v6-report-prefetch" in text
     assert "/v6-manual-recovery" in text

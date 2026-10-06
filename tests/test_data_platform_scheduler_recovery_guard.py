@@ -97,7 +97,7 @@ def test_recovery_policy_cannot_claim_scheduler_or_wave3_proof():
     recovery = json.loads(CONFIG.read_text(encoding="utf-8"))
     schedule = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
     assert recovery["role"] == "SAFE_RECOVERY_ONLY"
-    assert recovery["normal_scheduler_authority"] == "GITHUB_FPL_MASTER_SCHEDULER"
+    assert recovery["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_SCHEDULER"
     assert recovery["recovery_mode"] == "manual_recovery"
     assert recovery["recovery_counts_as_scheduler_proof"] is False
     assert recovery["recovery_counts_as_natural_wave3_slot"] is False

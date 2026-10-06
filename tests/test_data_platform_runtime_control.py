@@ -173,10 +173,10 @@ def test_production_policy_uses_github_actions_natural_cron():
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 1
-    assert workflow_crons == ["30 * * * *"]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
+    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
     assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False

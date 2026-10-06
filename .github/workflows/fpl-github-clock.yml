@@ -1,0 +1,134 @@
+name: FPL GitHub clock
+run-name: >-
+  FPL GitHub clock ${{ github.event_name }} ${{ github.event.schedule || 'manual' }}
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "18 * * * *"
+    - cron: "28 * * * *"
+    - cron: "38 * * * *"
+    - cron: "48 * * * *"
+    - cron: "58 * * * *"
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve exact governed tick
+        id: tick
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from ops.render_external_clock import resolve_tick
+
+          row = resolve_tick(datetime.now(timezone.utc))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              for key, value in row.items():
+                  fh.write(f"{key}={value}\n")
+          print(json.dumps(row, sort_keys=True))
+          PY
+
+      - name: Dispatch exact operational fallback
+        id: child
+        env:
+          LOGICAL_SLOT: ${{ steps.tick.outputs.logical_slot }}
+          OBSERVED_AT: ${{ steps.tick.outputs.observed_at }}
+          REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
+          CHECKPOINT_TIME: ${{ steps.tick.outputs.checkpoint_time }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dispatch_epoch="$(date -u +%s)"
+          gh workflow run fpl-external-clock-fallback.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f logical_slot="$LOGICAL_SLOT" \
+            -f observed_at="$OBSERVED_AT" \
+            -f report_mode="$REPORT_MODE" \
+            -f report_slot="$REPORT_SLOT" \
+            -f checkpoint_time="$CHECKPOINT_TIME"
+
+          exact_title="FPL external clock $LOGICAL_SLOT $REPORT_MODE"
+          run_id=""
+          for attempt in $(seq 1 24); do
+            run_id="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow fpl-external-clock-fallback.yml \
+                --event workflow_dispatch \
+                --branch main \
+                --limit 30 \
+                --json databaseId,createdAt,displayTitle \
+                --jq --arg title "$exact_title" --argjson epoch "$dispatch_epoch" '
+                  map(
+                    select(
+                      (.createdAt | fromdateiso8601) >= ($epoch - 5) and
+                      .displayTitle == $title
+                    )
+                  )
+                  | sort_by(.createdAt)
+                  | last
+                  | .databaseId // empty
+                '
+            )"
+            [[ -n "$run_id" ]] && break
+            sleep 5
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Exact fallback child run was not created"
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Created fallback child run: $run_id"
+
+      - name: Wait for exact fallback child
+        env:
+          CHILD_RUN_ID: ${{ steps.child.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run watch "$CHILD_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --exit-status
+          echo "Fallback child terminal success: $CHILD_RUN_ID"
+
+      - name: Write GitHub clock evidence
+        if: always()
+        env:
+          LOGICAL_SLOT: ${{ steps.tick.outputs.logical_slot }}
+          OBSERVED_AT: ${{ steps.tick.outputs.observed_at }}
+          REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
+          CHILD_RUN_ID: ${{ steps.child.outputs.run_id }}
+          NATURAL_PROOF: ${{ github.event_name == 'schedule' && 'true' || 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="PASS"
+          if [[ "${{ job.status }}" != "success" ]]; then
+            status="FAIL"
+          fi
+          body="FPL_GITHUB_CLOCK | status=$status | event=$GITHUB_EVENT_NAME | schedule=${{ github.event.schedule || 'manual' }} | logical_slot=${LOGICAL_SLOT:-UNKNOWN} | observed_at=${OBSERVED_AT:-UNKNOWN} | report_mode=${REPORT_MODE:-UNKNOWN} | report_slot=${REPORT_SLOT:-NONE} | clock_run_id=$GITHUB_RUN_ID | fallback_run_id=${CHILD_RUN_ID:-NONE} | natural_clock_proof=$NATURAL_PROOF"
+          gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body "$body"

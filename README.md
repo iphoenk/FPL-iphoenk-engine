@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-06T16:22:38+07:00`
+> **Last runtime/documentation sync:** `2026-10-06T19:29:14+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,7 +21,7 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-GitHub Actions `v6-natural-data-ingestion.yml` is the sole recurring natural scheduler. It uses four staggered cron arrivals per hour (`:13/:28/:43/:58`) that share one logical hourly slot and deduplicate before acquisition. The same workflow routes fixed DEEP/PRICE checkpoints with a bounded 3-minute-early / 60-minute-late window; the former ChatGPT issue-title transport is historical compatibility only.
+GitHub Actions `fpl-github-clock.yml` is the sole recurring physical scheduler. It is deliberately minimal and uses five staggered cron opportunities per hour (`:18/:28/:38/:48/:58`). Each tick resolves the current exact logical slot, dispatches `fpl-external-clock-fallback.yml`, waits for that exact child to finish, and records clock evidence. `v6-natural-data-ingestion.yml` is dispatch-only for scheduled production execution.
 
 `fpl-external-clock-fallback.yml` is dispatch-only and has no cron. An authenticated external cloud clock may invoke it when GitHub scheduled events are unavailable; it uses `master_orchestrated` for exact operational-slot recovery and the existing occurrence orchestrator for due reports. External fallback never counts as natural scheduler proof or natural acceptance.
 

@@ -171,11 +171,38 @@ jobs:
             --exit-status
           echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
 
-      - name: Dispatch visible report fallback
+      - name: Dispatch visible report fallback idempotently
         if: inputs.report_mode != 'NONE'
         shell: bash
         run: |
           set -euo pipefail
+          exact_title="FPL Master occurrence $REPORT_MODE $REPORT_SLOT"
+          existing="$(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow fpl-master-occurrence-orchestrator.yml \
+              --event workflow_dispatch \
+              --branch main \
+              --limit 50 \
+              --json databaseId,displayTitle,status,conclusion,createdAt \
+              --jq --arg title "$exact_title" '
+                map(select(.displayTitle == $title))
+                | sort_by(.createdAt)
+                | last
+                | select(
+                    .status == "queued" or
+                    .status == "in_progress" or
+                    (.status == "completed" and .conclusion == "success")
+                  )
+                | .databaseId // empty
+              '
+          )"
+
+          if [[ -n "$existing" ]]; then
+            echo "Exact visible occurrence already active/successful: $existing"
+            exit 0
+          fi
+
           gh workflow run fpl-master-occurrence-orchestrator.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \

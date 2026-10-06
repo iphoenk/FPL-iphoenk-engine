@@ -163,27 +163,33 @@ def test_manual_recovery_is_non_authoritative():
 
 def test_production_policy_uses_github_actions_natural_cron():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    clock = Path(".github/workflows/fpl-github-clock.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
+
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
-    assert policy["scheduler_authority"]["name"] == "FPL V6 hourly fresh-data acquisition"
+    assert policy["scheduler_authority"]["name"] == "FPL GitHub Clock"
     assert policy["scheduler_authority"]["runtime_authority_id"] == "GITHUB_FPL_MASTER_SCHEDULER"
-    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:v6-natural-data-ingestion.yml"
+    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:fpl-github-clock.yml"
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
-    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 5
+    assert workflow_crons == []
+    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
     assert policy["scheduler_authority"]["issue_title_transport_enabled"] is False
+
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
     assert "types: [created]" in workflow
@@ -200,10 +206,11 @@ def test_production_policy_uses_github_actions_natural_cron():
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
-    assert "  schedule:" in workflow
+    assert "  schedule:" not in workflow
+    assert "  schedule:" in clock
+    assert "fpl-external-clock-fallback.yml" in clock
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
-
 
 def _chatgpt_control(hour: int, run_id: str | None = None):
     return build_runtime_control(

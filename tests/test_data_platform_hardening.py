@@ -25,38 +25,43 @@ from src.runtime_v6.registry import (
 
 def test_workflow_scheduler_matches_v6_github_authority_policy():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
+    clock = Path(".github/workflows/fpl-github-clock.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     source_registry = json.loads(Path("config/v6/source_registry.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
+    clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
 
-    assert policy["schema_version"] == 9
+    assert policy["schema_version"] == 10
     assert policy["engine"] == "V6_FRESH_DATA_PLATFORM"
     assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
-    assert policy["scheduler_authority"]["name"] == "FPL V6 hourly fresh-data acquisition"
+    assert policy["scheduler_authority"]["name"] == "FPL GitHub Clock"
     assert policy["scheduler_authority"]["timezone"] == "Asia/Jakarta"
     assert policy["scheduler_authority"]["cadence_minutes"] == 60
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
-    assert policy["scheduled_crons_utc"] == [{"cron": "13 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "28 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "43 * * * *", "kind": "chatgpt_scheduler"}, {"cron": "58 * * * *", "kind": "chatgpt_scheduler"}]
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 4
+    assert policy["scheduled_crons_utc"] == []
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 5
     assert policy["github_natural_schedule"]["enabled"] is True
     assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
     assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
-    assert workflow_crons == ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"]
+    assert workflow_crons == []
+    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
         "43 * * * *",
         "58 * * * *",
     ]
-    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is False
-    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:v6-natural-data-ingestion.yml"
+    assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
+    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:fpl-github-clock.yml"
+    assert policy["governance"]["v6_ingestion_has_independent_schedule"] is False
     assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
-    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
-    assert policy["scheduler_authority"]["preferred_transport"] == "GITHUB_SCHEDULE"
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
+    assert policy["scheduler_authority"]["preferred_transport"] == "DEDICATED_GITHUB_CLOCK"
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
     assert policy["scheduler_authority"]["issue_title_transport_enabled"] is False
     assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is False
@@ -66,7 +71,6 @@ def test_workflow_scheduler_matches_v6_github_authority_policy():
     assert source_registry["cadence"]["schedule"] == "hourly"
     assert policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
     assert policy["manual_recovery"]["authoritative_runtime_snapshot"] is False
-
 
 def test_required_platform_sources_are_factual_data_plane_only():
     registry = load_registry()

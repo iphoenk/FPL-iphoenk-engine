@@ -5,8 +5,6 @@ run-name: >-
     format('V6 {0} {1} {2} {3}', inputs.mode, inputs.report_kind, inputs.logical_slot, inputs.reason) ||
     github.event_name == 'issue_comment' &&
     format('V6 issue-comment {0}', github.event.comment.id) ||
-    github.event_name == 'schedule' &&
-    format('V6 natural schedule {0}', github.event.schedule) ||
     github.event.issue.title
   }}
 
@@ -59,11 +57,6 @@ on:
     types: [created]
   issues:
     types: [edited]
-  schedule:
-    - cron: "13 * * * *"
-    - cron: "28 * * * *"
-    - cron: "43 * * * *"
-    - cron: "58 * * * *"
 
 permissions:
   contents: read
@@ -91,7 +84,6 @@ env:
 jobs:
   collect:
     if: >-
-      github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
@@ -501,7 +493,6 @@ jobs:
     if: >-
       always() &&
       (
-        github.event_name == 'schedule' ||
         github.event_name == 'workflow_dispatch' ||
         (
           github.event_name == 'issue_comment' &&

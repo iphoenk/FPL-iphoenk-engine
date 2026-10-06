@@ -12,7 +12,7 @@ ALLOWED_CONTROL_SCHEDULES = {"v6-natural-data-ingestion.yml", "v6-scheduler-watc
 
 
 def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog() -> None:
-    """The ingestion cron is sole natural authority; watchdog is monitoring-only."""
+    """Dedicated FPL clock is the sole physical scheduler; watchdog is monitoring-only."""
     workflows = sorted(WORKFLOW_DIR.glob(V6_WORKFLOW_GLOB))
     assert workflows, "expected at least one V6 workflow"
 
@@ -22,10 +22,16 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
         if SCHEDULE_KEY.search(text):
             scheduled.add(workflow.name)
 
-    assert scheduled == ALLOWED_CONTROL_SCHEDULES, (
-        "scheduled V6 workflow set must be ingestion plus monitoring watchdog; got "
+    assert scheduled == {"v6-scheduler-watchdog.yml"}, (
+        "scheduled V6 workflow set must contain only the monitoring watchdog; got "
         + repr(sorted(scheduled))
     )
+
+    clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
+    assert SCHEDULE_KEY.search(clock)
+    for cron in ("18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"):
+        assert f'cron: "{cron}"' in clock
+    assert "fpl-external-clock-fallback.yml" in clock
 
     watchdog = (WORKFLOW_DIR / "v6-scheduler-watchdog.yml").read_text(encoding="utf-8")
     recovery = (WORKFLOW_DIR / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
@@ -72,26 +78,28 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
     assert recovery_config["recurring_automated_initiator"] is False
 
     assert schedule_policy["github_natural_schedule"]["enabled"] is True
-    assert schedule_policy["github_control_schedules"]["natural_scheduler_workflow"] == "v6-natural-data-ingestion.yml"
+    assert schedule_policy["github_control_schedules"]["natural_scheduler_workflow"] == "fpl-github-clock.yml"
     assert schedule_policy["github_control_schedules"]["recurring_recovery_guard_enabled"] is False
-    assert schedule_policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
+    assert schedule_policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:fpl-github-clock.yml"
+    assert schedule_policy["governance"]["v6_ingestion_has_independent_schedule"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_operational_slot"] is False
     assert schedule_policy["manual_recovery"]["counts_as_completed_scheduled_slot"] is False
 
-
 def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
-    """Normal core V6 acquisition is schedule-driven; issue transports remain compatibility/recovery only."""
+    """Core V6 acquisition is dispatch-driven by the dedicated GitHub clock."""
     workflow = WORKFLOW_DIR / "v6-natural-data-ingestion.yml"
     text = workflow.read_text(encoding="utf-8")
+    clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
 
     assert "issue_comment:" in text
     assert "types: [created]" in text
     assert "issues:" in text
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
-    assert SCHEDULE_KEY.search(text)
-    for cron in ("13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"):
-        assert f'cron: "{cron}"' in text
+    assert not SCHEDULE_KEY.search(text)
+    assert SCHEDULE_KEY.search(clock)
+    assert "fpl-external-clock-fallback.yml" in clock
+    assert "gh run watch" in clock
     assert "/v6-master-acquire" not in text
     assert "/v6-report-prefetch" in text
     assert "/v6-manual-recovery" in text
@@ -102,3 +110,4 @@ def test_v6_ingestion_uses_single_hourly_github_natural_transport() -> None:
     assert "python -m src.runtime_v6.domains.control_plane.workflow_control slot-guard" in text
     validator = Path("src/runtime_v6/domains/publication/production_validate.py").read_text(encoding="utf-8")
     assert "single_logical_acquisition_per_scheduler_slot" in validator
+

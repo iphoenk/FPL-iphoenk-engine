@@ -1,11 +1,11 @@
 {
-  "schema_version": 6,
+  "schema_version": 7,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "runtime_branch": "runtime-data-v6",
   "schedule_authority": true,
   "scheduler_authority": {
-    "kind": "CHATGPT_TASK",
-    "name": "FPL Master Monitor V12",
+    "kind": "GITHUB_ACTIONS",
+    "name": "FPL V6 hourly fresh-data acquisition",
     "timezone": "Asia/Jakarta",
     "cadence_minutes": 60,
     "physical_minute": 30,
@@ -15,28 +15,29 @@
     "issue_comment_command": "",
     "required_reason": "chatgpt_hourly_master",
     "required_audit": "FPL_MASTER_HOURLY",
-    "health_epoch": "CHATGPT_MASTER_V1",
-    "migration_started_at": "2026-09-08T10:35:31+07:00",
+    "health_epoch": "GITHUB_MASTER_V1",
+    "migration_started_at": "2026-10-06T11:30:00+07:00",
     "legacy_history_before": "2026-09-08T10:35:31+07:00",
     "green_after_consecutive_slots": 3,
-    "runtime_authority_id": "CHATGPT_FPL_MASTER_MONITOR",
+    "runtime_authority_id": "GITHUB_FPL_MASTER_SCHEDULER",
     "proof_fresh_after_minutes": 75,
     "proof_stale_after_minutes": 135,
     "issue_title_marker": "FPL_MASTER_SLOT",
-    "preferred_transport": "ISSUE_TITLE_EDIT",
+    "preferred_transport": "GITHUB_SCHEDULE",
     "legacy_issue_comment_transport_enabled": false,
-    "transport_note": "ChatGPT edits issue #431 title with the current logical slot. GitHub remains executor-only. Master acquisition via issue comment is retired; report prefetch remains comment-driven.",
+    "transport_note": "GitHub Actions schedule on v6-natural-data-ingestion.yml is the sole hourly natural scheduler. Issue #431 title transport is retained only as historical compatibility evidence.",
     "dedicated_control_comment_id": 5596106114,
     "dedicated_control_comment_event": "RETIRED",
-    "issue_title_transport_enabled": true,
+    "issue_title_transport_enabled": false,
     "logical_slot_source": "GOVERNED_TRIGGER_EVENT"
   },
   "github_natural_schedule": {
-    "enabled": false,
-    "authority": "NONE",
-    "reason": "GITHUB_SCHEDULER_NOT_RELIABLE_FOR_V6_HOURLY_AUTHORITY",
-    "workflow_schedule_triggers_removed": true,
-    "removed_at": "2026-09-08T10:35:31+07:00",
+    "enabled": true,
+    "authority": "GITHUB_ACTIONS",
+    "reason": "CUTOVER_AFTER_REPEATED_CHATGPT_SCHEDULED_TASK_WRITE_FAILURES",
+    "workflow_schedule_triggers_removed": false,
+    "enabled_at": "2026-10-06T11:30:00+07:00",
+    "cron_utc": "30 * * * *",
     "former_crons_utc": [
       "13 * * * *",
       "28 * * * *",
@@ -45,8 +46,13 @@
     ],
     "former_crons_are_historical_evidence_only": true
   },
-  "scheduled_crons_utc": [],
-  "natural_schedule_redundancy_attempts_per_hour": 0,
+  "scheduled_crons_utc": [
+    {
+      "cron": "30 * * * *",
+      "kind": "chatgpt_scheduler"
+    }
+  ],
+  "natural_schedule_redundancy_attempts_per_hour": 1,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
     "data_acquisition": "V6",
@@ -89,8 +95,8 @@
     "transport_role": "CONTROLLED_NON_NATURAL_RECOVERY_ONLY"
   },
   "governance": {
-    "scheduled_runtime_is_primary_authority": false,
-    "single_schedule_owner": "CHATGPT:FPL Master Monitor V12",
+    "scheduled_runtime_is_primary_authority": true,
+    "single_schedule_owner": "GITHUB_ACTIONS:v6-natural-data-ingestion.yml",
     "v6_is_fresh_data_only": true,
     "v6_may_import_or_call_v3_v4_v5": false,
     "v6_may_publish_decisions_or_predictions": false,
@@ -100,25 +106,25 @@
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
-    "github_natural_scheduler_is_authority": false,
-    "github_schedule_events_are_removed": true,
-    "chatgpt_scheduler_is_only_hourly_authority": true,
-    "chatgpt_scheduler_health_is_current_epoch_authority": true,
-    "legacy_github_scheduler_evidence_is_historical_only": true,
+    "github_natural_scheduler_is_authority": true,
+    "github_schedule_events_are_removed": false,
+    "chatgpt_scheduler_is_only_hourly_authority": false,
+    "chatgpt_scheduler_health_is_current_epoch_authority": false,
+    "legacy_github_scheduler_evidence_is_historical_only": false,
     "scheduler_migration_boundary_is_explicit": true,
     "authoritative_runtime_triggers": [
-      "issues:chatgpt_scheduler",
+      "schedule:chatgpt_scheduler",
       "workflow_dispatch:report_prefetch",
       "issue_comment:report_prefetch"
     ],
     "authoritative_operational_triggers": [
-      "issues:chatgpt_scheduler"
+      "schedule:chatgpt_scheduler"
     ],
     "operational_slot_completing_triggers": [
-      "issues:chatgpt_scheduler"
+      "schedule:chatgpt_scheduler"
     ],
-    "scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
-    "preferred_scheduler_health_proof_trigger": "issues:chatgpt_scheduler",
+    "scheduler_health_proof_trigger": "schedule:chatgpt_scheduler",
+    "preferred_scheduler_health_proof_trigger": "schedule:chatgpt_scheduler",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
@@ -147,18 +153,19 @@
     "scheduler_policy_is_single_runtime_authority": true,
     "scheduler_proof_age_is_read_time_observability": true,
     "scheduler_health_proof_triggers": [
-      "issues:chatgpt_scheduler"
+      "schedule:chatgpt_scheduler"
     ],
-    "issue_title_edit_is_preferred_scheduler_transport": true,
+    "issue_title_edit_is_preferred_scheduler_transport": false,
     "issue_comment_is_legacy_scheduler_transport": false,
     "issue_comment_edit_is_preferred_scheduler_transport": false,
     "issue_title_edit_is_fallback_scheduler_transport": false,
     "audit_transport_is_separate_from_core_execution_proof": true,
     "independent_immutable_execution_proof_is_allowed": true,
-    "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml",
+    "only_scheduled_v6_control_workflow": "v6-natural-data-ingestion.yml",
     "watchdog_is_monitoring_only": true,
     "recurring_recovery_automation_allowed": false,
-    "manual_recovery_is_explicit_non_recurring": true
+    "manual_recovery_is_explicit_non_recurring": true,
+    "github_schedule_is_preferred_scheduler_transport": true
   },
   "master_orchestrated": {
     "enabled": true,
@@ -212,7 +219,9 @@
     "precompute_dispatch_counts_as_completed_operational_slot": false
   },
   "github_control_schedules": {
-    "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml",
+    "natural_scheduler_workflow": "v6-natural-data-ingestion.yml",
+    "natural_scheduler_cron_utc": "30 * * * *",
+    "watchdog_workflow": "v6-scheduler-watchdog.yml",
     "watchdog_cron_utc": "50 * * * *",
     "watchdog_monitoring_only": true,
     "recurring_recovery_guard_enabled": false,

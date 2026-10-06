@@ -70,10 +70,10 @@ def test_report_prefetch_reuses_existing_control_plane_without_new_scheduler():
     prefetch = policy["report_prefetch"]
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
 
-    assert policy["scheduler_authority"]["kind"] == "CHATGPT_TASK"
-    assert policy["scheduled_crons_utc"] == []
-    assert policy["github_natural_schedule"]["enabled"] is False
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
+    assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
+    assert policy["scheduled_crons_utc"] == [{"cron": "30 * * * *", "kind": "chatgpt_scheduler"}]
+    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
     assert workflow_crons == []
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert prefetch["independent_cron"] is False

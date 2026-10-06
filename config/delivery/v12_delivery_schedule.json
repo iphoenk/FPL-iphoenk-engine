@@ -71,10 +71,10 @@
   },
   "governance": {
     "v6_core_schedule_unchanged": true,
-    "chatgpt_master_is_only_scheduler": false,
-    "github_cron_is_not_report_authority": false,
+    "chatgpt_master_is_only_scheduler": true,
+    "github_cron_is_not_report_authority": true,
     "report_schedule_is_v12_downstream": true,
     "owner_adhoc_bypasses_quiet_visibility_suppression": true,
-    "github_actions_is_single_scheduler_authority": true
+    "github_actions_is_single_scheduler_authority": false
   }
 }

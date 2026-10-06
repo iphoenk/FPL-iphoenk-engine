@@ -1,5 +1,5 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "engine": "V6_FRESH_DATA_PLATFORM",
   "runtime_branch": "runtime-data-v6",
   "schedule_authority": true,
@@ -133,13 +133,16 @@
     "authoritative_runtime_triggers": [
       "schedule:chatgpt_scheduler",
       "workflow_dispatch:report_prefetch",
-      "issue_comment:report_prefetch"
+      "issue_comment:report_prefetch",
+      "workflow_dispatch:master_orchestrated"
     ],
     "authoritative_operational_triggers": [
-      "schedule:chatgpt_scheduler"
+      "schedule:chatgpt_scheduler",
+      "workflow_dispatch:master_orchestrated"
     ],
     "operational_slot_completing_triggers": [
-      "schedule:chatgpt_scheduler"
+      "schedule:chatgpt_scheduler",
+      "workflow_dispatch:master_orchestrated"
     ],
     "scheduler_health_proof_trigger": "schedule:chatgpt_scheduler",
     "preferred_scheduler_health_proof_trigger": "schedule:chatgpt_scheduler",
@@ -186,7 +189,12 @@
     "github_schedule_is_preferred_scheduler_transport": true,
     "natural_scheduler_redundancy_enabled": true,
     "natural_scheduler_redundancy_attempts_per_hour": 4,
-    "redundant_schedule_arrivals_share_one_logical_hourly_slot": true
+    "redundant_schedule_arrivals_share_one_logical_hourly_slot": true,
+    "external_clock_fallback_enabled": true,
+    "external_clock_fallback_has_independent_cron": false,
+    "external_clock_fallback_is_operational_only": true,
+    "external_clock_fallback_counts_as_scheduler_health_proof": false,
+    "external_clock_fallback_counts_as_natural_acceptance": false
   },
   "master_orchestrated": {
     "enabled": true,
@@ -199,7 +207,12 @@
     "reason_required": true,
     "control_issue_number": 431,
     "issue_comment_command": "",
-    "issue_title_marker": "FPL_MASTER_SLOT"
+    "issue_title_marker": "FPL_MASTER_SLOT",
+    "external_clock_dispatch_actor": "github-actions[bot]",
+    "external_clock_dispatch_reason": "EXTERNAL_CLOCK_FALLBACK",
+    "external_clock_dispatch_role": "OPERATIONAL_FALLBACK_ONLY",
+    "external_clock_counts_as_scheduler_proof": false,
+    "external_clock_counts_as_natural_acceptance": false
   },
   "report_prefetch": {
     "enabled": true,

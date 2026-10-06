@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-06T21:00:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-07T06:03:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,11 +21,9 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-GitHub Actions `fpl-github-clock.yml` is the sole recurring physical scheduler. It is deliberately minimal and uses five staggered cron opportunities per hour (`:18/:28/:38/:48/:58`). Each tick resolves the current exact logical slot, dispatches `fpl-external-clock-fallback.yml`, waits for that exact child to finish, and records clock evidence. `v6-natural-data-ingestion.yml` is dispatch-only for scheduled production execution. Owner-only `/fpl-clock-test` on control issue #431 is a non-natural smoke trigger for validating the same clock chain without waiting for cron. Because GitHub scheduled events have been intermittently absent, owner-only `/fpl-clock-start` enables a GitHub-only operational self-chain at `:08/:18/:28/:38/:48/:58`; `/fpl-clock-stop` stops future chained dispatches. Self-chain runs are operational fallback only and never count as natural scheduler proof or natural acceptance.
+ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running exactly every HH:30 Asia/Jakarta. At each occurrence it updates control issue #431 with the governed `FPL_MASTER_SLOT` title for the intended HH:00 logical slot, verifies readback, and lets existing GitHub workflows execute V6 acquisition and due-report work downstream. `v6-natural-data-ingestion.yml` remains dispatch/event driven and has no independent production cron.
 
-`fpl-external-clock-fallback.yml` is dispatch-only and has no cron. An authenticated external cloud clock may invoke it when GitHub scheduled events are unavailable; it uses `master_orchestrated` for exact operational-slot recovery and the existing occurrence orchestrator for due reports. External fallback never counts as natural scheduler proof or natural acceptance.
-
-Render fallback client: `ops/render_external_clock.py`. Intended Render cron: `28 * * * *` UTC (hourly). It dispatches the current exact `HH:00` Asia/Jakarta operational slot and pre-fires a due `:30` DEEP/PRICE occurrence when applicable. Runtime secret `FPL_GITHUB_TOKEN` must be a repo-scoped fine-grained GitHub token with Actions read/write for `iphoenk/FPL-iphoenk-engine`; never commit the token. The client has no model, optimizer, factual, or publishing authority of its own.
+GitHub Actions `fpl-github-clock.yml` is manual smoke only via owner `/fpl-clock-test` or workflow_dispatch. It has no schedule and no self-chain. `fpl-external-clock-fallback.yml` remains dispatch-only for explicit operational recovery and never counts as natural scheduler proof or natural acceptance.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 

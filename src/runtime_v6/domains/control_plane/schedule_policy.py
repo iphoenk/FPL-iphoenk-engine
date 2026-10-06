@@ -46,10 +46,10 @@ def load_schedule_policy(path: Path | None = None) -> SchedulerPolicy:
 
     authority = dict(payload.get("scheduler_authority") or {})
     github = dict(payload.get("github_natural_schedule") or {})
-    if authority.get("kind") != "GITHUB_ACTIONS":
-        raise ValueError("schedule_policy:scheduler_authority.kind:must_be_GITHUB_ACTIONS")
-    if github.get("enabled") is not True or github.get("authority") != "GITHUB_ACTIONS":
-        raise ValueError("schedule_policy:github_natural_schedule:must_be_enabled")
+    if authority.get("kind") != "CHATGPT_AUTOMATION":
+        raise ValueError("schedule_policy:scheduler_authority.kind:must_be_CHATGPT_AUTOMATION")
+    if github.get("enabled") is not False:
+        raise ValueError("schedule_policy:github_natural_schedule:must_be_disabled")
 
     cadence = _positive_int(authority.get("cadence_minutes"), "cadence_minutes")
     green_streak = _positive_int(

@@ -24,7 +24,7 @@ on:
       scheduler_authority:
         description: "Governed caller identity"
         required: true
-        default: "GITHUB_FPL_MASTER_SCHEDULER"
+        default: "CHATGPT_FPL_MASTER_SCHEDULER"
         type: string
   issue_comment:
     types: [created]
@@ -44,7 +44,7 @@ jobs:
       (
         github.event_name == 'workflow_dispatch' &&
         (
-          inputs.scheduler_authority == 'GITHUB_FPL_MASTER_SCHEDULER' ||
+          inputs.scheduler_authority == 'CHATGPT_FPL_MASTER_SCHEDULER' ||
           inputs.scheduler_authority == 'EXTERNAL_CLOCK_FALLBACK'
         )
       ) ||

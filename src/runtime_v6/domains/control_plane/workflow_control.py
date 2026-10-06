@@ -98,7 +98,7 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
         dedicated_workflow = str(github_schedule.get("workflow") or "")
         if (
             governance.get("v6_ingestion_has_independent_schedule") is False
-            and governance.get("single_schedule_owner") == "GITHUB_ACTIONS:fpl-github-clock.yml"
+            and governance.get("single_schedule_owner") == "CHATGPT_AUTOMATION:FPL Master Monitor V12"
             and dedicated_workflow == "fpl-github-clock.yml"
         ):
             return {}
@@ -134,8 +134,8 @@ def load_policy(path: Path | str = DEFAULT_POLICY_PATH) -> dict[str, Any]:
         raise WorkflowControlError("unexpected V6 schedule policy engine")
     scheduled_cron_kinds(payload)
     scheduler = dict(payload.get("scheduler_authority") or {})
-    if scheduler.get("kind") != "GITHUB_ACTIONS":
-        raise WorkflowControlError("V6 scheduler authority must be GITHUB_ACTIONS")
+    if scheduler.get("kind") != "CHATGPT_AUTOMATION":
+        raise WorkflowControlError("V6 scheduler authority must be CHATGPT_AUTOMATION")
     if int(scheduler.get("cadence_minutes") or 0) != 60:
         raise WorkflowControlError("V6 natural scheduler cadence must be hourly")
     return payload

@@ -61,7 +61,7 @@ def test_chatgpt_scheduler_uses_explicit_jakarta_logical_slot():
     assert control["chatgpt_scheduler_proof"] is True
     assert control["scheduled_cycle"] is True
     assert control["github_schedule_event"] is False
-    assert control["github_natural_acquisition_schedule_disabled"] is False
+    assert control["github_natural_acquisition_schedule_disabled"] is True
     assert control["expected_cycle_at"] == "2026-09-08T03:00:00+00:00"
     assert control["last_chatgpt_scheduler_cycle_at"] == "2026-09-08T03:00:00+00:00"
     assert control["logical_slot_source"] == "GOVERNED_TRIGGER_EVENT"
@@ -123,7 +123,7 @@ def test_chatgpt_gap_is_runtime_control_failure():
     assert updated["runtime_control_health"] == "RED"
     assert updated["control_failures"] == ["MISSED_CHATGPT_SCHEDULER_SLOT"]
     assert updated["governance"]["chatgpt_scheduler_is_authority"] is True
-    assert updated["governance"]["github_natural_scheduler_is_authority"] is True
+    assert updated["governance"]["github_natural_scheduler_is_authority"] is False
 
 
 def test_generic_master_dispatch_is_authoritative_but_not_scheduler_proof():
@@ -161,34 +161,34 @@ def test_manual_recovery_is_non_authoritative():
     assert updated["control_failures"] == ["NON_AUTHORITATIVE_MANUAL_RECOVERY"]
 
 
-def test_production_policy_uses_github_actions_natural_cron():
+def test_production_policy_uses_chatgpt_scheduler_and_no_github_natural_cron():
     workflow = Path(".github/workflows/v6-natural-data-ingestion.yml").read_text(encoding="utf-8")
     clock = Path(".github/workflows/fpl-github-clock.yml").read_text(encoding="utf-8")
     policy = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
     workflow_crons = re.findall(r'^\s+- cron: "([^"]+)"$', workflow, flags=re.MULTILINE)
     clock_crons = re.findall(r'^\s+- cron: "([^"]+)"$', clock, flags=re.MULTILINE)
 
-    assert policy["scheduler_authority"]["kind"] == "GITHUB_ACTIONS"
-    assert policy["scheduler_authority"]["name"] == "FPL GitHub Clock"
-    assert policy["scheduler_authority"]["runtime_authority_id"] == "GITHUB_FPL_MASTER_SCHEDULER"
-    assert policy["governance"]["single_schedule_owner"] == "GITHUB_ACTIONS:fpl-github-clock.yml"
+    assert policy["scheduler_authority"]["kind"] == "CHATGPT_AUTOMATION"
+    assert policy["scheduler_authority"]["name"] == "FPL Master Monitor V12"
+    assert policy["scheduler_authority"]["runtime_authority_id"] == "CHATGPT_FPL_MASTER_SCHEDULER"
+    assert policy["governance"]["single_schedule_owner"] == "CHATGPT_AUTOMATION:FPL Master Monitor V12"
     assert policy["scheduler_authority"]["physical_minute"] == 30
     assert policy["scheduler_authority"]["logical_slot_minute"] == 0
-    assert policy["github_natural_schedule"]["enabled"] is True
-    assert policy["github_natural_schedule"]["authority"] == "GITHUB_ACTIONS"
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["github_natural_schedule"]["authority"] == "NONE"
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
     assert policy["scheduled_crons_utc"] == []
-    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 5
+    assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
     assert workflow_crons == []
-    assert clock_crons == ["18 * * * *", "28 * * * *", "38 * * * *", "48 * * * *", "58 * * * *"]
+    assert clock_crons == []
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
-    assert policy["governance"]["github_schedule_events_are_removed"] is False
+    assert policy["governance"]["github_schedule_events_are_removed"] is True
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
-    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
-    assert policy["governance"]["scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
+    assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:FPL_MASTER_SLOT"
     assert policy["scheduler_authority"]["legacy_issue_comment_transport_enabled"] is False
-    assert policy["scheduler_authority"]["issue_title_transport_enabled"] is False
+    assert policy["scheduler_authority"]["issue_title_transport_enabled"] is True
 
     assert "workflow_dispatch:" in workflow
     assert "issue_comment:" in workflow
@@ -207,7 +207,7 @@ def test_production_policy_uses_github_actions_natural_cron():
     assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
     assert "  schedule:" not in workflow
-    assert "  schedule:" in clock
+    assert "  schedule:" not in clock
     assert "fpl-external-clock-fallback.yml" in clock
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow
@@ -347,9 +347,9 @@ def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-20T17:00:00+07:00",
     )
-    assert policy["github_natural_schedule"]["enabled"] is True
+    assert policy["github_natural_schedule"]["enabled"] is False
     assert control["github_schedule_event"] is False
-    assert control["github_natural_acquisition_schedule_disabled"] is False
+    assert control["github_natural_acquisition_schedule_disabled"] is True
     assert control["scheduler_authority"] == policy["scheduler_authority"]["runtime_authority_id"]
     assert control["single_logical_acquisition_per_scheduler_slot"] is True
     assert control["report_prefetch_cannot_complete_core_operational_slot"] is True
@@ -364,8 +364,8 @@ def test_runtime_scheduler_metadata_agrees_with_schedule_policy():
         schedule_kind="chatgpt_scheduler",
         logical_slot="2026-09-20T17:00:00+07:00",
     )
-    assert updated["governance"]["github_natural_acquisition_schedule_disabled"] is False
-    assert updated["governance"]["github_natural_scheduler_is_authority"] is True
+    assert updated["governance"]["github_natural_acquisition_schedule_disabled"] is True
+    assert updated["governance"]["github_natural_scheduler_is_authority"] is False
 
 
 

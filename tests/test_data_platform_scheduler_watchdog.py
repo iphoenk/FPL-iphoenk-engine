@@ -75,14 +75,14 @@ def test_watchdog_workflow_is_monitor_only_and_has_no_runtime_write_authority():
     assert "actions/workflows/v6-natural-data-ingestion.yml/dispatches" not in text
 
 
-def test_watchdog_config_preserves_github_as_only_acquisition_scheduler():
+def test_watchdog_config_preserves_chatgpt_as_only_acquisition_scheduler():
     watchdog = json.loads(WATCHDOG_CONFIG.read_text(encoding="utf-8"))
     policy = json.loads(SCHEDULE_POLICY.read_text(encoding="utf-8"))
     assert watchdog["role"] == "MONITORING_ONLY"
-    assert watchdog["authority"]["core_scheduler"] == "GITHUB_FPL_MASTER_SCHEDULER"
+    assert watchdog["authority"]["core_scheduler"] == "CHATGPT_FPL_MASTER_SCHEDULER"
     assert watchdog["authority"]["watchdog_is_scheduler_authority"] is False
     assert watchdog["authority"]["watchdog_may_trigger_acquisition"] is False
     assert watchdog["authority"]["watchdog_may_dispatch_ingestion"] is False
     assert watchdog["authority"]["watchdog_may_publish_runtime"] is False
-    assert policy["github_natural_schedule"]["enabled"] is True
-    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is False
+    assert policy["github_natural_schedule"]["enabled"] is False
+    assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True

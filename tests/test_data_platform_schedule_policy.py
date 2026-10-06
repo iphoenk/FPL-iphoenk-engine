@@ -26,17 +26,17 @@ def test_runtime_scheduler_constants_are_derived_from_single_policy() -> None:
     assert SCHEDULE_POLICY.proof_stale_after_minutes == authority["proof_stale_after_minutes"]
 
 
-def test_policy_loader_fails_closed_if_github_scheduler_is_disabled(tmp_path: Path) -> None:
+def test_policy_loader_fails_closed_if_github_scheduler_is_enabled(tmp_path: Path) -> None:
     payload = json.loads(Path("config/v6/schedule_policy.json").read_text(encoding="utf-8"))
-    payload["github_natural_schedule"]["enabled"] = False
+    payload["github_natural_schedule"]["enabled"] = True
     path = tmp_path / "schedule_policy.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
     try:
         load_schedule_policy(path)
     except ValueError as exc:
-        assert "must_be_enabled" in str(exc)
+        assert "must_be_disabled" in str(exc)
     else:
-        raise AssertionError("policy loader accepted disabled GitHub scheduler authority")
+        raise AssertionError("policy loader accepted enabled GitHub scheduler authority")
 
 
 def test_scheduler_proof_age_thresholds_are_policy_driven() -> None:

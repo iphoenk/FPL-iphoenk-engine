@@ -329,12 +329,12 @@ def apply_runtime_control(
     governance = dict(out.get("governance") or {})
     governance.update(
         {
-            "production_ingestion_schedule_only": False,
+            "production_ingestion_schedule_only": control.get("event_name") == "schedule",
             "production_authoritative_snapshots_require_schedule": False,
             "production_authoritative_snapshots_require_governed_trigger": True,
             "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
             "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
-            "github_natural_scheduler_is_authority": False,
+            "github_natural_scheduler_is_authority": True,
             "github_natural_acquisition_schedule_disabled": (
                 SCHEDULE_POLICY.github_natural_acquisition_schedule_disabled
             ),
@@ -352,7 +352,7 @@ def apply_runtime_control(
             "runtime_schedule_health_is_manifested": True,
             "github_scheduled_recovery_enabled": False,
             "scheduled_recovery_is_idempotent": True,
-            "scheduled_slot_uses_nominal_cron": False,
+            "scheduled_slot_uses_nominal_cron": bool(control.get("scheduled_slot_uses_nominal_cron")),
         }
     )
     out["governance"] = governance
@@ -380,8 +380,9 @@ def main() -> int:
     updated["governance"] = {
         **dict(updated.get("governance") or {}),
         "operational_slot_ledger_is_factual_only": True,
-        "chatgpt_scheduler_is_current_health_authority": True,
-        "legacy_github_scheduler_evidence_is_historical_only": True,
+        "chatgpt_scheduler_is_current_health_authority": False,
+        "github_scheduler_is_current_health_authority": True,
+        "legacy_github_scheduler_evidence_is_historical_only": False,
         "scheduler_reliability_is_separate_from_data_availability": True,
     }
     write_json(MANIFEST, updated)

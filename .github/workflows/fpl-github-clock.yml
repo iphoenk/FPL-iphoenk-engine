@@ -90,7 +90,7 @@ jobs:
                 --branch main \
                 --limit 30 \
                 --json databaseId,createdAt,displayTitle \
-                --jq --arg title "$exact_title" --argjson epoch "$dispatch_epoch" '
+              | jq -r --arg title "$exact_title" --argjson epoch "$dispatch_epoch" '
                   map(
                     select(
                       (.createdAt | fromdateiso8601) >= ($epoch - 5) and

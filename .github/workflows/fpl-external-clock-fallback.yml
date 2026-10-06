@@ -112,16 +112,64 @@ jobs:
           PY
 
       - name: Dispatch authoritative operational V6 fallback
+        id: core
         shell: bash
         run: |
           set -euo pipefail
+          dispatch_epoch="$(date -u +%s)"
           gh workflow run v6-natural-data-ingestion.yml \
             --repo "$GITHUB_REPOSITORY" \
             --ref main \
             -f mode=master_orchestrated \
             -f reason=EXTERNAL_CLOCK_FALLBACK \
             -f logical_slot="$LOGICAL_SLOT"
-          echo "Dispatched master_orchestrated fallback for $LOGICAL_SLOT"
+
+          run_id=""
+          for attempt in $(seq 1 24); do
+            run_id="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow v6-natural-data-ingestion.yml \
+                --event workflow_dispatch \
+                --branch main \
+                --limit 30 \
+                --json databaseId,createdAt,displayTitle,headBranch \
+                --jq --arg logical "$LOGICAL_SLOT" --argjson epoch "$dispatch_epoch" '
+                  map(
+                    select(
+                      (.createdAt | fromdateiso8601) >= ($epoch - 5) and
+                      (.displayTitle | contains("master_orchestrated")) and
+                      (.displayTitle | contains($logical)) and
+                      (.displayTitle | contains("EXTERNAL_CLOCK_FALLBACK"))
+                    )
+                  )
+                  | sort_by(.createdAt)
+                  | last
+                  | .databaseId // empty
+                '
+            )"
+            [[ -n "$run_id" ]] && break
+            sleep 5
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Exact external-clock V6 child run was not created"
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Created exact V6 child run: $run_id"
+
+      - name: Wait for exact operational V6 fallback
+        env:
+          CORE_RUN_ID: ${{ steps.core.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run watch "$CORE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --exit-status
+          echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
 
       - name: Dispatch visible report fallback
         if: inputs.report_mode != 'NONE'

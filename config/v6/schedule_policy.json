@@ -4,8 +4,8 @@
   "runtime_branch": "runtime-data-v6",
   "schedule_authority": true,
   "scheduler_authority": {
-    "kind": "GITHUB_ACTIONS",
-    "name": "FPL GitHub Clock",
+    "kind": "CHATGPT_AUTOMATION",
+    "name": "FPL Master Monitor V12",
     "timezone": "Asia/Jakarta",
     "cadence_minutes": 60,
     "physical_minute": 30,
@@ -15,27 +15,27 @@
     "issue_comment_command": "",
     "required_reason": "chatgpt_hourly_master",
     "required_audit": "FPL_MASTER_HOURLY",
-    "health_epoch": "GITHUB_CLOCK_V1",
+    "health_epoch": "CHATGPT_SCHEDULER_V12_RESTORED_20261007",
     "migration_started_at": "2026-10-06T11:30:00+07:00",
     "legacy_history_before": "2026-09-08T10:35:31+07:00",
     "green_after_consecutive_slots": 3,
-    "runtime_authority_id": "GITHUB_FPL_MASTER_SCHEDULER",
+    "runtime_authority_id": "CHATGPT_FPL_MASTER_SCHEDULER",
     "proof_fresh_after_minutes": 75,
     "proof_stale_after_minutes": 135,
     "issue_title_marker": "FPL_MASTER_SLOT",
-    "preferred_transport": "DEDICATED_GITHUB_CLOCK",
+    "preferred_transport": "ISSUE_TITLE_EDIT",
     "legacy_issue_comment_transport_enabled": false,
-    "transport_note": "The dedicated fpl-github-clock.yml workflow is the sole physical schedule authority. V6 ingestion is dispatch-only for scheduled production execution.",
+    "transport_note": "ChatGPT FPL Master Monitor V12 is the sole recurring scheduler. It edits issue #431 at each HH:30 Asia/Jakarta occurrence; GitHub workflows are downstream executors only.",
     "dedicated_control_comment_id": 5596106114,
     "dedicated_control_comment_event": "RETIRED",
-    "issue_title_transport_enabled": false,
+    "issue_title_transport_enabled": true,
     "logical_slot_source": "GOVERNED_TRIGGER_EVENT"
   },
   "github_natural_schedule": {
-    "enabled": true,
-    "authority": "GITHUB_ACTIONS",
-    "reason": "CUTOVER_AFTER_REPEATED_CHATGPT_SCHEDULED_TASK_WRITE_FAILURES",
-    "workflow_schedule_triggers_removed": false,
+    "enabled": false,
+    "authority": "NONE",
+    "reason": "OWNER_RESTORED_CHATGPT_SCHEDULER_AUTHORITY_2026_10_07",
+    "workflow_schedule_triggers_removed": true,
     "enabled_at": "2026-10-06T11:30:00+07:00",
     "cron_utc": "28 * * * *",
     "former_crons_utc": [
@@ -45,17 +45,11 @@
       "58 * * * *"
     ],
     "former_crons_are_historical_evidence_only": true,
-    "active_crons_utc": [
-      "18 * * * *",
-      "28 * * * *",
-      "38 * * * *",
-      "48 * * * *",
-      "58 * * * *"
-    ],
+    "active_crons_utc": [],
     "workflow": "fpl-github-clock.yml"
   },
   "scheduled_crons_utc": [],
-  "natural_schedule_redundancy_attempts_per_hour": 5,
+  "natural_schedule_redundancy_attempts_per_hour": 0,
   "source_registry_schedule_metadata_authoritative": false,
   "authorities": {
     "data_acquisition": "V6",
@@ -99,7 +93,7 @@
   },
   "governance": {
     "scheduled_runtime_is_primary_authority": true,
-    "single_schedule_owner": "GITHUB_ACTIONS:fpl-github-clock.yml",
+    "single_schedule_owner": "CHATGPT_AUTOMATION:FPL Master Monitor V12",
     "v6_is_fresh_data_only": true,
     "v6_may_import_or_call_v3_v4_v5": false,
     "v6_may_publish_decisions_or_predictions": false,
@@ -109,11 +103,11 @@
     "manual_recovery_must_use_dedicated_v6_publisher": true,
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
-    "github_natural_scheduler_is_authority": true,
-    "github_schedule_events_are_removed": false,
-    "chatgpt_scheduler_is_only_hourly_authority": false,
-    "chatgpt_scheduler_health_is_current_epoch_authority": false,
-    "legacy_github_scheduler_evidence_is_historical_only": false,
+    "github_natural_scheduler_is_authority": false,
+    "github_schedule_events_are_removed": true,
+    "chatgpt_scheduler_is_only_hourly_authority": true,
+    "chatgpt_scheduler_health_is_current_epoch_authority": true,
+    "legacy_github_scheduler_evidence_is_historical_only": true,
     "scheduler_migration_boundary_is_explicit": true,
     "authoritative_runtime_triggers": [
       "schedule:chatgpt_scheduler",
@@ -129,8 +123,8 @@
       "schedule:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
-    "scheduler_health_proof_trigger": "schedule:fpl-github-clock",
-    "preferred_scheduler_health_proof_trigger": "schedule:fpl-github-clock",
+    "scheduler_health_proof_trigger": "issues:FPL_MASTER_SLOT",
+    "preferred_scheduler_health_proof_trigger": "issues:FPL_MASTER_SLOT",
     "master_orchestrated_is_authoritative": true,
     "generic_master_dispatch_does_not_count_as_scheduler_health_proof": true,
     "report_prefetch_is_report_driven_only": true,
@@ -161,7 +155,7 @@
     "scheduler_health_proof_triggers": [
       "schedule:fpl-github-clock"
     ],
-    "issue_title_edit_is_preferred_scheduler_transport": false,
+    "issue_title_edit_is_preferred_scheduler_transport": true,
     "issue_comment_is_legacy_scheduler_transport": false,
     "issue_comment_edit_is_preferred_scheduler_transport": false,
     "issue_title_edit_is_fallback_scheduler_transport": false,
@@ -171,11 +165,11 @@
     "watchdog_is_monitoring_only": true,
     "recurring_recovery_automation_allowed": false,
     "manual_recovery_is_explicit_non_recurring": true,
-    "github_schedule_is_preferred_scheduler_transport": true,
-    "natural_scheduler_redundancy_enabled": true,
-    "natural_scheduler_redundancy_attempts_per_hour": 5,
+    "github_schedule_is_preferred_scheduler_transport": false,
+    "natural_scheduler_redundancy_enabled": false,
+    "natural_scheduler_redundancy_attempts_per_hour": 0,
     "redundant_schedule_arrivals_share_one_logical_hourly_slot": true,
-    "external_clock_fallback_enabled": true,
+    "external_clock_fallback_enabled": false,
     "external_clock_fallback_has_independent_cron": false,
     "external_clock_fallback_is_operational_only": true,
     "external_clock_fallback_counts_as_scheduler_health_proof": false,
@@ -239,20 +233,14 @@
     "precompute_dispatch_counts_as_completed_operational_slot": false
   },
   "github_control_schedules": {
-    "natural_scheduler_workflow": "fpl-github-clock.yml",
-    "natural_scheduler_cron_utc": "18,28,38,48,58 * * * *",
+    "natural_scheduler_workflow": "",
+    "natural_scheduler_cron_utc": "",
     "watchdog_workflow": "v6-scheduler-watchdog.yml",
     "watchdog_cron_utc": "50 * * * *",
     "watchdog_monitoring_only": true,
     "recurring_recovery_guard_enabled": false,
     "recovery_guard_invocation": "WORKFLOW_DISPATCH_ONLY",
-    "natural_scheduler_crons_utc": [
-      "18 * * * *",
-      "28 * * * *",
-      "38 * * * *",
-      "48 * * * *",
-      "58 * * * *"
-    ],
+    "natural_scheduler_crons_utc": [],
     "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml"
   }
 }

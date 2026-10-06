@@ -2,7 +2,7 @@
   "schema_version": 2,
   "authority": "FPL_V12_D_P2_PRECOMPUTE_CONTROL",
   "role": "REPORT_PRECOMPUTE_ONLY",
-  "normal_scheduler_authority": "GITHUB_FPL_MASTER_SCHEDULER",
+  "normal_scheduler_authority": "CHATGPT_FPL_MASTER_SCHEDULER",
   "control_issue_number": 431,
   "trigger_command": "/v12-precompute",
   "dispatch_workflow": "v6-natural-data-ingestion.yml",

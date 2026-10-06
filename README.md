@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-06T13:39:30+07:00`
+> **Last runtime/documentation sync:** `2026-10-06T16:10:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -22,6 +22,8 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
 GitHub Actions `v6-natural-data-ingestion.yml` is the sole recurring natural scheduler. It uses four staggered cron arrivals per hour (`:13/:28/:43/:58`) that share one logical hourly slot and deduplicate before acquisition. The same workflow routes fixed DEEP/PRICE checkpoints with a bounded 3-minute-early / 60-minute-late window; the former ChatGPT issue-title transport is historical compatibility only.
+
+`fpl-external-clock-fallback.yml` is dispatch-only and has no cron. An authenticated external cloud clock may invoke it when GitHub scheduled events are unavailable; it uses `master_orchestrated` for exact operational-slot recovery and the existing occurrence orchestrator for due reports. External fallback never counts as natural scheduler proof or natural acceptance.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 

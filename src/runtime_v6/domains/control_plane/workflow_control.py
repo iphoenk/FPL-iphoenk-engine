@@ -91,8 +91,20 @@ def scheduled_cron_kinds(policy: dict[str, Any]) -> dict[str, str]:
             {"cron": policy.get("primary_cron_utc"), "kind": "primary"},
             {"cron": policy.get("recovery_cron_utc"), "kind": "recovery"},
         ]
-    if not isinstance(configured, list) or not configured:
-        raise WorkflowControlError("V6 schedule policy requires scheduled_crons_utc when GitHub schedule is enabled")
+    if not isinstance(configured, list):
+        raise WorkflowControlError("V6 scheduled_crons_utc must be a list")
+    if not configured:
+        governance = dict(policy.get("governance") or {})
+        dedicated_workflow = str(github_schedule.get("workflow") or "")
+        if (
+            governance.get("v6_ingestion_has_independent_schedule") is False
+            and governance.get("single_schedule_owner") == "GITHUB_ACTIONS:fpl-github-clock.yml"
+            and dedicated_workflow == "fpl-github-clock.yml"
+        ):
+            return {}
+        raise WorkflowControlError(
+            "V6 schedule policy requires scheduled_crons_utc unless a governed dedicated clock owns the schedule"
+        )
     scheduled: dict[str, str] = {}
     for entry in configured:
         if not isinstance(entry, dict):

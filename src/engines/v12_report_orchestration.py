@@ -2161,6 +2161,16 @@ def materialize_all15(
                     "recommended_or_locked_role", "UNAVAILABLE"
                 ),
                 "p_available": model.get("p_available", "UNAVAILABLE"),
+                "gw_availability": model.get(
+                    "gw_availability", "UNKNOWN"
+                ),
+                "gw_availability_confidence": model.get(
+                    "gw_availability_confidence", "LOW"
+                ),
+                "availability_derivation_reason": model.get(
+                    "availability_derivation_reason",
+                    "NO_NORMALIZED_EVIDENCE_BOUND",
+                ),
                 "p_start": model.get("p_start", "UNAVAILABLE"),
                 "p_cameo": model.get("p_cameo", "UNAVAILABLE"),
                 "p_dnp": model.get("p_dnp", "UNAVAILABLE"),

@@ -37,7 +37,7 @@
     "reason": "OWNER_RESTORED_CHATGPT_SCHEDULER_AUTHORITY_2026_10_07",
     "workflow_schedule_triggers_removed": true,
     "enabled_at": "2026-10-06T11:30:00+07:00",
-    "cron_utc": "28 * * * *",
+    "cron_utc": "",
     "former_crons_utc": [
       "13 * * * *",
       "28 * * * *",
@@ -46,7 +46,8 @@
     ],
     "former_crons_are_historical_evidence_only": true,
     "active_crons_utc": [],
-    "workflow": "fpl-github-clock.yml"
+    "workflow": "fpl-github-clock.yml",
+    "disabled_at": "2026-10-07T06:03:00+07:00"
   },
   "scheduled_crons_utc": [],
   "natural_schedule_redundancy_attempts_per_hour": 0,
@@ -110,17 +111,17 @@
     "legacy_github_scheduler_evidence_is_historical_only": true,
     "scheduler_migration_boundary_is_explicit": true,
     "authoritative_runtime_triggers": [
-      "schedule:chatgpt_scheduler",
+      "issues:chatgpt_scheduler",
       "workflow_dispatch:report_prefetch",
       "issue_comment:report_prefetch",
       "workflow_dispatch:master_orchestrated"
     ],
     "authoritative_operational_triggers": [
-      "schedule:chatgpt_scheduler",
+      "issues:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
     "operational_slot_completing_triggers": [
-      "schedule:chatgpt_scheduler",
+      "issues:chatgpt_scheduler",
       "workflow_dispatch:master_orchestrated"
     ],
     "scheduler_health_proof_trigger": "issues:FPL_MASTER_SLOT",
@@ -153,7 +154,7 @@
     "scheduler_policy_is_single_runtime_authority": true,
     "scheduler_proof_age_is_read_time_observability": true,
     "scheduler_health_proof_triggers": [
-      "schedule:fpl-github-clock"
+      "issues:FPL_MASTER_SLOT"
     ],
     "issue_title_edit_is_preferred_scheduler_transport": true,
     "issue_comment_is_legacy_scheduler_transport": false,

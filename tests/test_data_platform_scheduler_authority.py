@@ -50,7 +50,7 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
 
     watchdog_authority = watchdog_config["authority"]
     assert watchdog_config["role"] == "MONITORING_ONLY"
-    assert watchdog_authority["core_scheduler"] == "GITHUB_FPL_MASTER_SCHEDULER"
+    assert watchdog_authority["core_scheduler"] == "CHATGPT_FPL_MASTER_SCHEDULER"
     assert watchdog_authority["watchdog_is_scheduler_authority"] is False
     assert watchdog_authority["watchdog_may_trigger_acquisition"] is False
     assert watchdog_authority["watchdog_may_dispatch_ingestion"] is False
@@ -70,7 +70,7 @@ def test_v6_github_schedules_have_one_natural_authority_plus_monitoring_watchdog
     assert "python -m src.runtime_v6.domains.control_plane.scheduler_watchdog" in recovery
     assert "python -m src.runtime_v6.domains.control_plane.scheduler_recovery" in recovery
     assert recovery_config["role"] == "SAFE_RECOVERY_ONLY"
-    assert recovery_config["normal_scheduler_authority"] == "GITHUB_FPL_MASTER_SCHEDULER"
+    assert recovery_config["normal_scheduler_authority"] == "CHATGPT_FPL_MASTER_SCHEDULER"
     assert recovery_config["recovery_counts_as_scheduler_proof"] is False
     assert recovery_config["recovery_counts_as_natural_wave3_slot"] is False
     assert recovery_config["automatic_schedule_enabled"] is False

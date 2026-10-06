@@ -89,11 +89,10 @@ def test_chatgpt_issue_title_edit_is_the_scheduler_classifier():
         }
     }
     assert classify_invocation(policy, event_name="issues", event=event) == "chatgpt_scheduler"
-    assert policy["scheduler_authority"]["preferred_transport"] == "GITHUB_SCHEDULE"
-    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:chatgpt_scheduler"
+    assert policy["scheduler_authority"]["preferred_transport"] == "DEDICATED_GITHUB_CLOCK"
+    assert policy["governance"]["preferred_scheduler_health_proof_trigger"] == "schedule:fpl-github-clock"
     assert policy["governance"]["issue_title_edit_is_preferred_scheduler_transport"] is False
     assert policy["scheduler_authority"]["issue_title_marker"] == "FPL_MASTER_SLOT"
-
 
 def test_dedicated_master_comment_transport_is_retired():
     policy = _policy()

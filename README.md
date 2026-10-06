@@ -25,6 +25,8 @@ GitHub Actions `v6-natural-data-ingestion.yml` is the sole recurring natural sch
 
 `fpl-external-clock-fallback.yml` is dispatch-only and has no cron. An authenticated external cloud clock may invoke it when GitHub scheduled events are unavailable; it uses `master_orchestrated` for exact operational-slot recovery and the existing occurrence orchestrator for due reports. External fallback never counts as natural scheduler proof or natural acceptance.
 
+Render fallback client: `ops/render_external_clock.py`. Intended Render cron: `28 * * * *` UTC (hourly). It dispatches the current exact `HH:00` Asia/Jakarta operational slot and pre-fires a due `:30` DEEP/PRICE occurrence when applicable. Runtime secret `FPL_GITHUB_TOKEN` must be a repo-scoped fine-grained GitHub token with Actions read/write for `iphoenk/FPL-iphoenk-engine`; never commit the token. The client has no model, optimizer, factual, or publishing authority of its own.
+
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 
 ## DEEP decision-content delivery barrier

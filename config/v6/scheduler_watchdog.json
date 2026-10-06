@@ -9,7 +9,7 @@
     "critical_after_minutes": 135
   },
   "authority": {
-    "core_scheduler": "GITHUB_FPL_MASTER_SCHEDULER",
+    "core_scheduler": "CHATGPT_FPL_MASTER_SCHEDULER",
     "watchdog_is_scheduler_authority": false,
     "watchdog_may_trigger_acquisition": false,
     "watchdog_may_dispatch_ingestion": false,

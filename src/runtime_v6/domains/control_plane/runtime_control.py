@@ -52,8 +52,8 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _is_chatgpt_scheduler(event: str, kind: str) -> bool:
-    # Compatibility field name retained for runtime schema stability. The
-    # current physical authority may be GitHub Actions schedule.
+    # Compatibility field name retained for runtime schema stability.
+    # The recurring physical authority is ChatGPT FPL Master Monitor V12.
     return event in {"issue_comment", "issues", "schedule"} and kind == "chatgpt_scheduler"
 
 
@@ -353,7 +353,7 @@ def apply_runtime_control(
             "production_authoritative_snapshots_require_governed_trigger": True,
             "scheduler_authority": CHATGPT_SCHEDULER_AUTHORITY,
             "scheduler_epoch": CHATGPT_SCHEDULER_EPOCH,
-            "github_natural_scheduler_is_authority": True,
+            "github_natural_scheduler_is_authority": False,
             "github_natural_acquisition_schedule_disabled": (
                 SCHEDULE_POLICY.github_natural_acquisition_schedule_disabled
             ),

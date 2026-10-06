@@ -1,0 +1,198 @@
+name: FPL external clock fallback
+run-name: >-
+  FPL external clock ${{ inputs.logical_slot }} ${{ inputs.report_mode }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      logical_slot:
+        description: "Exact Asia/Jakarta core logical slot HH:00"
+        required: true
+        type: string
+      observed_at:
+        description: "Timezone-aware external clock observation"
+        required: true
+        type: string
+      report_mode:
+        description: "NONE, DEEP, or PRICE"
+        required: true
+        default: "NONE"
+        type: choice
+        options:
+          - NONE
+          - DEEP
+          - PRICE
+      report_slot:
+        description: "Exact +07:00 report occurrence when report_mode is not NONE"
+        required: false
+        type: string
+      checkpoint_time:
+        description: "Exact local HH:MM when report_mode is not NONE"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+concurrency:
+  group: fpl-external-clock-${{ inputs.logical_slot }}
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      LOGICAL_SLOT: ${{ inputs.logical_slot }}
+      OBSERVED_AT: ${{ inputs.observed_at }}
+      REPORT_MODE: ${{ inputs.report_mode }}
+      REPORT_SLOT: ${{ inputs.report_slot }}
+      CHECKPOINT_TIME: ${{ inputs.checkpoint_time }}
+    steps:
+      - name: Validate governed external tick
+        id: validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+
+          logical = datetime.fromisoformat(os.environ["LOGICAL_SLOT"])
+          observed = datetime.fromisoformat(os.environ["OBSERVED_AT"])
+          if logical.utcoffset() is None or int(logical.utcoffset().total_seconds()) != 7 * 3600:
+              raise SystemExit("logical_slot must use Asia/Jakarta +07:00")
+          if logical.minute != 0 or logical.second != 0 or logical.microsecond != 0:
+              raise SystemExit("logical_slot must be exact HH:00")
+          if observed.utcoffset() is None:
+              raise SystemExit("observed_at must be timezone-aware")
+          delta = observed.astimezone(ZoneInfo("Asia/Jakarta")) - logical
+          if not timedelta(minutes=0) <= delta <= timedelta(minutes=70):
+              raise SystemExit("external clock observation is outside the governed logical-slot window")
+
+          mode = os.environ["REPORT_MODE"].upper()
+          if mode not in {"NONE", "DEEP", "PRICE"}:
+              raise SystemExit("report_mode must be NONE, DEEP, or PRICE")
+
+          slot_raw = os.environ.get("REPORT_SLOT", "").strip()
+          checkpoint = os.environ.get("CHECKPOINT_TIME", "").strip()
+          if mode == "NONE":
+              if slot_raw or checkpoint:
+                  raise SystemExit("report_slot/checkpoint_time must be empty for NONE")
+          else:
+              if not slot_raw or not checkpoint:
+                  raise SystemExit("report_slot and checkpoint_time are required")
+              slot = datetime.fromisoformat(slot_raw)
+              if slot.utcoffset() is None or int(slot.utcoffset().total_seconds()) != 7 * 3600:
+                  raise SystemExit("report_slot must use Asia/Jakarta +07:00")
+              if slot.second != 0 or slot.microsecond != 0:
+                  raise SystemExit("report_slot must be exact to the minute")
+              if checkpoint != slot.strftime("%H:%M"):
+                  raise SystemExit("checkpoint_time must equal report_slot local HH:MM")
+              report_delta = observed.astimezone(ZoneInfo("Asia/Jakarta")) - slot
+              if not timedelta(minutes=-5) <= report_delta <= timedelta(minutes=70):
+                  raise SystemExit("report occurrence is outside bounded external-clock window")
+              if mode == "DEEP" and checkpoint not in {"04:30", "12:30", "21:30"}:
+                  raise SystemExit("DEEP checkpoint must be 04:30, 12:30, or 21:30 WIB")
+              if mode == "PRICE":
+                  london = slot.astimezone(ZoneInfo("Europe/London"))
+                  if london.strftime("%H:%M") != "23:30":
+                      raise SystemExit("PRICE checkpoint must bind 23:30 Europe/London")
+
+          print({
+              "logical_slot": logical.isoformat(),
+              "observed_at": observed.isoformat(),
+              "report_mode": mode,
+              "report_slot": slot_raw or None,
+          })
+          PY
+
+      - name: Dispatch authoritative operational V6 fallback
+        id: core
+        shell: bash
+        run: |
+          set -euo pipefail
+          dispatch_epoch="$(date -u +%s)"
+          gh workflow run v6-natural-data-ingestion.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f mode=master_orchestrated \
+            -f reason=EXTERNAL_CLOCK_FALLBACK \
+            -f logical_slot="$LOGICAL_SLOT"
+
+          run_id=""
+          for attempt in $(seq 1 24); do
+            run_id="$(
+              gh run list \
+                --repo "$GITHUB_REPOSITORY" \
+                --workflow v6-natural-data-ingestion.yml \
+                --event workflow_dispatch \
+                --branch main \
+                --limit 30 \
+                --json databaseId,createdAt,displayTitle,headBranch \
+                --jq --arg logical "$LOGICAL_SLOT" --argjson epoch "$dispatch_epoch" '
+                  map(
+                    select(
+                      (.createdAt | fromdateiso8601) >= ($epoch - 5) and
+                      (.displayTitle | contains("master_orchestrated")) and
+                      (.displayTitle | contains($logical)) and
+                      (.displayTitle | contains("EXTERNAL_CLOCK_FALLBACK"))
+                    )
+                  )
+                  | sort_by(.createdAt)
+                  | last
+                  | .databaseId // empty
+                '
+            )"
+            [[ -n "$run_id" ]] && break
+            sleep 5
+          done
+
+          if [[ -z "$run_id" ]]; then
+            echo "::error::Exact external-clock V6 child run was not created"
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Created exact V6 child run: $run_id"
+
+      - name: Wait for exact operational V6 fallback
+        env:
+          CORE_RUN_ID: ${{ steps.core.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run watch "$CORE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --exit-status
+          echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
+
+      - name: Dispatch visible report fallback
+        if: inputs.report_mode != 'NONE'
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow run fpl-master-occurrence-orchestrator.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f report_mode="$REPORT_MODE" \
+            -f report_slot="$REPORT_SLOT" \
+            -f checkpoint_time="$CHECKPOINT_TIME" \
+            -f scheduler_authority=EXTERNAL_CLOCK_FALLBACK
+          echo "Dispatched visible fallback: $REPORT_MODE $REPORT_SLOT"
+
+      - name: Write external-clock audit evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="PASS"
+          if [[ "${{ job.status }}" != "success" ]]; then
+            status="FAIL"
+          fi
+          body="FPL_EXTERNAL_CLOCK_DISPATCH | status=$status | logical_slot=$LOGICAL_SLOT | observed_at=$OBSERVED_AT | report_mode=$REPORT_MODE | report_slot=${REPORT_SLOT:-NONE} | run_id=$GITHUB_RUN_ID | natural_proof=false"
+          gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body "$body"

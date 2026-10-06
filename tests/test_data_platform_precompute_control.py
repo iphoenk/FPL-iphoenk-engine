@@ -210,3 +210,30 @@ def test_d_p2_bot_dispatch_is_narrowly_authorized_for_report_prefetch_only():
             reason="V12_D_P2_PRECOMPUTE",
             manual_confirm="RECOVER_V6",
         )
+
+def test_external_clock_bot_dispatch_is_operational_master_only():
+    policy = load_policy()
+    master = policy["master_orchestrated"]
+    assert master["external_clock_dispatch_actor"] == "github-actions[bot]"
+    assert master["external_clock_dispatch_reason"] == "EXTERNAL_CLOCK_FALLBACK"
+    assert master["external_clock_dispatch_role"] == "OPERATIONAL_FALLBACK_ONLY"
+    assert master["external_clock_counts_as_scheduler_proof"] is False
+    assert master["external_clock_counts_as_natural_acceptance"] is False
+
+    assert authorize_dispatch(
+        policy,
+        actor="github-actions[bot]",
+        repository_owner="iphoenk",
+        mode="master_orchestrated",
+        reason="EXTERNAL_CLOCK_FALLBACK",
+    ) == "master_orchestrated"
+
+    with pytest.raises(WorkflowControlError):
+        authorize_dispatch(
+            policy,
+            actor="github-actions[bot]",
+            repository_owner="iphoenk",
+            mode="master_orchestrated",
+            reason="EXTERNAL_CLOCK_FALLBACK_WRONG",
+        )
+

@@ -157,11 +157,21 @@ def authorize_dispatch(
         and actor == "github-actions[bot]"
         and str(reason).startswith("fpl_master_orchestrator_")
     )
+    master_control = dict(policy.get("master_orchestrated") or {})
+    external_clock_guard_actor = (
+        mode == "master_orchestrated"
+        and actor == str(master_control.get("external_clock_dispatch_actor") or "")
+        and reason == str(master_control.get("external_clock_dispatch_reason") or "")
+        and master_control.get("external_clock_dispatch_role") == "OPERATIONAL_FALLBACK_ONLY"
+        and master_control.get("external_clock_counts_as_scheduler_proof") is False
+        and master_control.get("external_clock_counts_as_natural_acceptance") is False
+    )
     if (
         actor != repository_owner
         and not recovery_guard_actor
         and not precompute_guard_actor
         and not occurrence_orchestrator_guard_actor
+        and not external_clock_guard_actor
     ):
         raise WorkflowControlError("V6 governed dispatch actor is not authorized")
     if not str(reason).strip():
@@ -583,6 +593,21 @@ def main() -> int:
                 reason=str(os.environ.get("V6_DISPATCH_REASON") or ""),
                 manual_confirm=str(os.environ.get("V6_MANUAL_CONFIRM") or ""),
             )
+            if mode == "master_orchestrated":
+                logical_slot = _parse_dt(str(os.environ.get("V6_DISPATCH_LOGICAL_SLOT") or ""))
+                if logical_slot is None:
+                    raise WorkflowControlError("master_orchestrated dispatch requires logical_slot")
+                if logical_slot.minute != 0 or logical_slot.second != 0 or logical_slot.microsecond != 0:
+                    raise WorkflowControlError("master_orchestrated logical_slot must be exact HH:00")
+                _append(
+                    "GITHUB_ENV",
+                    {
+                        "V6_MASTER_LOGICAL_SLOT": logical_slot.isoformat(),
+                        "V6_MASTER_REASON": str(os.environ.get("V6_DISPATCH_REASON") or ""),
+                        "V6_MASTER_AUDIT": "EXTERNAL_CLOCK_FALLBACK",
+                        "V6_CHATGPT_SCHEDULER_PROOF": "false",
+                    },
+                )
             print(f"Governed V6 {mode} dispatch authorized")
         elif args.command == "authorize-issue-edit":
             issue_title = str(os.environ.get("V6_ISSUE_TITLE") or "")

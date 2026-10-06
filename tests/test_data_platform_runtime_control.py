@@ -134,6 +134,7 @@ def test_generic_master_dispatch_is_authoritative_but_not_scheduler_proof():
         now=datetime(2026, 9, 8, 3, 20, tzinfo=timezone.utc),
         event_name="workflow_dispatch",
         schedule_kind="master_orchestrated",
+        logical_slot="2026-09-08T03:00:00+00:00",
     )
     assert control["health"] == "GREEN"
     assert control["master_orchestrated"] is True
@@ -264,6 +265,7 @@ def test_generic_master_goes_to_auxiliary_and_does_not_green_scheduler():
         event_name="workflow_dispatch",
         run_id="manual-master",
         schedule_kind="master_orchestrated",
+        logical_slot="2026-09-08T03:00:00+00:00",
     )
     ledger = build_operational_slots(ledger, control)
     assert ledger["slots"] == []

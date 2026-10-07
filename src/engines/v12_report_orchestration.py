@@ -788,6 +788,15 @@ def build_calendar_workload_context(
         else:
             load_state = "NORMAL LOAD"
 
+        pl_only_rest_interval_days = days_rest
+        if not non_pl_schedule_authority:
+            # A gap between Premier League fixtures is not proof of player
+            # rest when international/cup/other first-team workload is not
+            # bound. Preserve the PL-only interval as diagnostic provenance,
+            # but never expose it as actual rest or NORMAL LOAD.
+            days_rest = None
+            load_state = "NON-PL WORKLOAD UNAVAILABLE"
+
         projection_fixtures = [
             dict(row)
             for row in raw_player.get("planning_fixture_evidence") or []
@@ -837,6 +846,12 @@ def build_calendar_workload_context(
                 "matches_last_days": counts,
                 "minutes_last_days": minutes,
                 "days_rest": days_rest,
+                "pl_only_rest_interval_days": pl_only_rest_interval_days,
+                "workload_scope": (
+                    "FULL_VERIFIED_SCHEDULE"
+                    if non_pl_schedule_authority
+                    else "PL_ONLY_NOT_TOTAL_PLAYER_WORKLOAD"
+                ),
                 "load_state": load_state,
                 "non_pl_competitions": non_pl_competitions,
                 "next_non_pl_event": next_non_pl,
@@ -4225,8 +4240,18 @@ def _render_deep_visible_contract_lines(
         lines.append(
             "Rest/workload: "
             + ("; ".join(
-                f"{r.get('player') or r.get('name') or 'Player'} {r.get('load_state') or ''} "
-                f"(rest {r.get('days_rest', 'UNAVAILABLE')}d)"
+                (
+                    f"{r.get('player') or r.get('name') or 'Player'} "
+                    f"{r.get('load_state') or ''} "
+                    + (
+                        f"(rest {r.get('days_rest')}d)"
+                        if r.get("days_rest") is not None
+                        else (
+                            "(rest UNAVAILABLE; PL-only interval "
+                            f"{r.get('pl_only_rest_interval_days', 'UNAVAILABLE')}d)"
+                        )
+                    )
+                )
                 for r in material_load[:8]
             ) if material_load else "No material workload flag.")
         )

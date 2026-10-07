@@ -788,6 +788,15 @@ def build_calendar_workload_context(
         else:
             load_state = "NORMAL LOAD"
 
+        pl_only_rest_interval_days = days_rest
+        if not non_pl_schedule_authority:
+            # A gap between Premier League fixtures is not proof of player
+            # rest when international/cup/other first-team workload is not
+            # bound. Preserve the PL-only interval as diagnostic provenance,
+            # but never expose it as actual rest or NORMAL LOAD.
+            days_rest = None
+            load_state = "NON-PL WORKLOAD UNAVAILABLE"
+
         projection_fixtures = [
             dict(row)
             for row in raw_player.get("planning_fixture_evidence") or []
@@ -837,6 +846,12 @@ def build_calendar_workload_context(
                 "matches_last_days": counts,
                 "minutes_last_days": minutes,
                 "days_rest": days_rest,
+                "pl_only_rest_interval_days": pl_only_rest_interval_days,
+                "workload_scope": (
+                    "FULL_VERIFIED_SCHEDULE"
+                    if non_pl_schedule_authority
+                    else "PL_ONLY_NOT_TOTAL_PLAYER_WORKLOAD"
+                ),
                 "load_state": load_state,
                 "non_pl_competitions": non_pl_competitions,
                 "next_non_pl_event": next_non_pl,
@@ -2161,6 +2176,14 @@ def materialize_all15(
                     "recommended_or_locked_role", "UNAVAILABLE"
                 ),
                 "p_available": model.get("p_available", "UNAVAILABLE"),
+                "gw_availability": model.get("gw_availability", "UNKNOWN"),
+                "gw_availability_confidence": model.get(
+                    "gw_availability_confidence", "LOW"
+                ),
+                "availability_derivation_reason": model.get(
+                    "availability_derivation_reason",
+                    "NO_NORMALIZED_EVIDENCE_BOUND",
+                ),
                 "p_start": model.get("p_start", "UNAVAILABLE"),
                 "p_cameo": model.get("p_cameo", "UNAVAILABLE"),
                 "p_dnp": model.get("p_dnp", "UNAVAILABLE"),
@@ -2884,13 +2907,39 @@ def _render_package_frontier_lines(
         lines.append("No non-HOLD challenger is supportable.")
 
     economics = dict(payload.get("execution_economics_authority") or {})
+    economics_status = str(
+        payload.get("execution_economics_status") or "UNAVAILABLE"
+    ).upper()
     route_econ = best if best else hold
-    transfer_cost = dict(route_econ.get("transfer_cost") or {}) if isinstance(route_econ.get("transfer_cost"), Mapping) else {}
+    transfer_cost = (
+        dict(route_econ.get("transfer_cost") or {})
+        if isinstance(route_econ.get("transfer_cost"), Mapping)
+        else {}
+    )
+    finance_available = economics_status == "AVAILABLE"
+    ft_visible = (
+        economics.get("free_transfers")
+        if finance_available
+        and str(economics.get("free_transfers_status") or "").upper()
+        not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED"}
+        else "UNAVAILABLE"
+    )
+    hit_visible = (
+        transfer_cost.get("hit_cost", transfer_cost.get("points_cost"))
+        if finance_available
+        else "UNAVAILABLE"
+    )
+    bank_visible = (
+        economics.get("bank")
+        if str(economics.get("bank_status") or "").upper()
+        not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED"}
+        else "UNAVAILABLE"
+    )
     lines.append("### EXECUTION ECONOMICS")
     lines.extend([
-        f"FT: {transfer_cost.get('free_transfers', payload.get('free_transfers', 'UNAVAILABLE'))}",
-        f"Hit: {transfer_cost.get('hit_cost', transfer_cost.get('points_cost', 'UNAVAILABLE'))}",
-        f"Bank: {route_econ.get('bank_before', economics.get('bank', 'UNAVAILABLE'))}",
+        f"FT: {ft_visible}",
+        f"Hit: {hit_visible}",
+        f"Bank: {bank_visible}",
         f"Sell-value availability: {economics.get('sell_value_status', payload.get('sell_value_status', 'UNAVAILABLE'))}",
         f"Affordability: {route_econ.get('affordability', 'UNAVAILABLE')}",
         f"Executability: {route_econ.get('executable', 'UNAVAILABLE')}",
@@ -4191,8 +4240,18 @@ def _render_deep_visible_contract_lines(
         lines.append(
             "Rest/workload: "
             + ("; ".join(
-                f"{r.get('player') or r.get('name') or 'Player'} {r.get('load_state') or ''} "
-                f"(rest {r.get('days_rest', 'UNAVAILABLE')}d)"
+                (
+                    f"{r.get('player') or r.get('name') or 'Player'} "
+                    f"{r.get('load_state') or ''} "
+                    + (
+                        f"(rest {r.get('days_rest')}d)"
+                        if r.get("days_rest") is not None
+                        else (
+                            "(rest UNAVAILABLE; PL-only interval "
+                            f"{r.get('pl_only_rest_interval_days', 'UNAVAILABLE')}d)"
+                        )
+                    )
+                )
                 for r in material_load[:8]
             ) if material_load else "No material workload flag.")
         )

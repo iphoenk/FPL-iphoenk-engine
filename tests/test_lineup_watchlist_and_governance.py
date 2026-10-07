@@ -404,6 +404,11 @@ def test_tzolakis_regression_highest_mean_alone_is_not_clear_captain():
         competitive_complete=True,
     )
     assert out["classification"] == "CLOSE"
+    assert out["decision_state"] == "PREPARE"
+    assert (
+        out["competitive_context"]["tie_break_status"]
+        == "UNRESOLVED_BALANCED_CLOSE"
+    )
     assert out["governance"]["highest_mean_alone_is_not_authority"] is True
     assert len(out["frontier"]) >= 2
     frontier_ids = {row["element_id"] for row in out["frontier"]}

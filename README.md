@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-07T06:03:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-07T10:57:25+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,15 +21,15 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running exactly every HH:30 Asia/Jakarta. At each occurrence it updates control issue #431 with the governed `FPL_MASTER_SLOT` title for the intended HH:00 logical slot, verifies readback, and lets existing GitHub workflows execute V6 acquisition and due-report work downstream. `v6-natural-data-ingestion.yml` remains dispatch/event driven and has no independent production cron.
+ChatGPT automation `FPL Master Monitor V12` is the sole recurring report scheduler. Non-report HH:30 occurrences are silent and perform no production mutation. At a due visible checkpoint, ChatGPT creates exactly one owner `/fpl-master-tick` command on control issue #431 for the exact report slot. The existing occurrence orchestrator then performs the same-occurrence V6 report-prefetch, V12 run, QA, private publication, public proof, receipt, and latest advancement downstream.
 
-GitHub Actions `fpl-github-clock.yml` is manual smoke only via owner `/fpl-clock-test` or workflow_dispatch. It has no schedule and no self-chain. `fpl-external-clock-fallback.yml` remains dispatch-only for explicit operational recovery and never counts as natural scheduler proof or natural acceptance.
+GitHub Actions remain downstream executors only. `fpl-github-clock.yml` has no recurring schedule and no self-chain. `fpl-external-clock-fallback.yml` is dispatch-only for explicit operational recovery; Render/external clocks are not recurring scheduler authority. Manual or recovery execution never counts as natural ChatGPT-scheduled acceptance.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 
 ## DEEP decision-content delivery barrier
 
-DEEP is occurrence-bound, provenance-aware, privacy-safe, and may degrade explicitly when evidence is unavailable rather than inventing data. Its visible renderer is presentation-lock driven: the header carries report identity only, S04 owns material news/developments, S14 is bounded to optimizer/search evidence, S15 owns decision-evidence quality, S17 owns technical health/freshness/lineage, and mini-league context uses the dynamic Competitive Window.
+DEEP is occurrence-bound, provenance-aware, privacy-safe, and may degrade explicitly when evidence is unavailable rather than inventing data. Its visible renderer is presentation-lock driven: the header carries report identity only, S04 owns material news/developments, S14 is bounded to optimizer/search evidence, S15 owns decision-evidence quality, S17 owns technical health/freshness/lineage, and mini-league context uses the dynamic Competitive Window. Target-aware injury/availability evidence preserves raw and normalized claims, target GW/fixture, polarity, provenance, and evidence cutoff; Official FPL 25/50/75 flags are observations rather than direct medical or P(start) probabilities. Missing report-time injury evidence is explicit degradation, never proof of “no material news.”
 
 ## PRICE human-facing delivery barrier
 
@@ -37,7 +37,7 @@ PRICE follows the same factual/provenance boundary and never invents unavailable
 
 ## Captaincy
 
-Captaincy is now distribution-first: S08 compares legal selected-XI candidates using canonical P1.3B one-GW return distributions, treats Phaul as the existing P(points ≥ 10) tail rather than a second weighted signal, and classifies the football frontier as CLEAR, CLOSE, or FRAGILE. Mini-league LEAGUE/Competitive Window exposure may break only a CLOSE football decision when standing-gap context is complete; EO never overrides a clear football edge, and nonnumeric competitive EO is treated as unavailable rather than coerced. S15B is evidence-only, while S08, S18, and S19 consume one canonical C/VC decision. Cross-player joint correlation and candidate-specific relative-points captain MC are not currently fabricated when unavailable.
+Captaincy is distribution-first: S08 compares legal selected-XI candidates using canonical P1.3B one-GW return distributions, treats Phaul as the existing P(points ≥ 10) tail rather than a second weighted signal, and classifies the football frontier as CLEAR, CLOSE, or FRAGILE. A BALANCED+CLOSE frontier remains PREPARE/UNRESOLVED rather than auto-locking the highest mean; in particular, a goalkeeper cannot become a locked captain from a fractional mean edge alone. Mini-league LEAGUE/Competitive Window exposure may break only a CLOSE football decision when the governed posture and standing-gap context support resolution; EO never overrides a clear football edge. S15B is evidence-only, while S08, S18, and S19 consume one canonical C/VC decision.
 
 ## Governance
 

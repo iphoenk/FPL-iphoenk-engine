@@ -19,7 +19,7 @@ from typing import Any, Mapping, Sequence
 
 EPS = 1e-12
 MODEL_OWNER = "V12_CAPTAIN_FRONTIER_RECONCILER"
-MODEL_ID = "v12_captain_frontier_v1"
+MODEL_ID = "v12_captain_frontier_v2"
 
 
 def _f(value: Any) -> float | None:
@@ -486,17 +486,25 @@ def _competitive_tiebreak(
         "relative_points_not_invented_from_eo": True,
         "method": "P1_8_EXPOSURE_TIEBREAK_WITHIN_FOOTBALL_FRONTIER",
     }
+    if posture == "BALANCED":
+        # A CLOSE football frontier is intentionally not auto-LOCKed in a
+        # balanced posture.  In particular, a goalkeeper may not become a
+        # locked captain merely because its mean is fractionally highest while
+        # outfield candidates carry stronger haul/ceiling or materially
+        # different competitive exposure.  Keep the football leader visible,
+        # but require a later evidence-based resolution.
+        context["tie_break_status"] = "UNRESOLVED_BALANCED_CLOSE"
+        context["balanced_close_requires_explicit_resolution"] = True
+        return football_leader, False, context
+
     if (
-        posture == "BALANCED"
-        or not risk_context_complete
+        not risk_context_complete
         or not league_complete
         or not competitive_complete
         or not exposure_complete
         or len(frontier) < 2
     ):
-        if posture == "BALANCED":
-            tie_break_status = "PRESERVE_FOOTBALL_LEADER_BALANCED"
-        elif not risk_context_complete:
+        if not risk_context_complete:
             tie_break_status = "UNAVAILABLE_INCOMPLETE_RISK_POSTURE_CONTEXT"
         else:
             tie_break_status = "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
@@ -726,7 +734,6 @@ def decide_captain_vice(
         resolved = competitive.get("tie_break_status") in {
             "COMPETITIVE_TIEBREAK_APPLIED",
             "FOOTBALL_LEADER_RETAINED",
-            "PRESERVE_FOOTBALL_LEADER_BALANCED",
         }
         decision_state = "LOCK" if resolved else "PREPARE"
         reason = (

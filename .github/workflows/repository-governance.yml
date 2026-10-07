@@ -278,8 +278,11 @@ jobs:
           tests/test_tactical_role_canonical_scorer.py
           tests/test_contextual_player_dynamics.py
           tests/test_player_minutes_finite_state.py
+          tests/test_injury_availability_semantics.py
           tests/test_player_events_posterior_predictive.py
+          tests/test_fixture_workload_weather_binding.py
           tests/test_integrated_report_runner.py
+          tests/test_false_green_content_guard.py
           tests/test_delivery_reliability.py
           tests/test_match_mode_live_score_contract.py
           tests/test_deep_decision_content_delivery_barrier.py

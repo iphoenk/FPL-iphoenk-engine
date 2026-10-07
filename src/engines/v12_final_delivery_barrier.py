@@ -140,6 +140,51 @@ def _deep_semantic_population_failures(
 
     failures: list[str] = []
 
+    # S04/S15/S17: READY_FULL may not hide a missing report-time injury /
+    # availability evidence contract. "No material news" is only supportable
+    # after the current occurrence actually bound the report-time evidence
+    # layer; absence of the layer is DEGRADED, never evidence of no news.
+    s04_state, s04 = section("S04")
+    report_time_bound = s04.get("report_time_evidence_contract_bound") is True
+    injury_health = dict(s04.get("injury_availability_evidence") or {})
+    if s04_state == "COMPLETE" and not report_time_bound:
+        failures.append("S04_COMPLETE_WITHOUT_REPORT_TIME_INJURY_EVIDENCE")
+    if (
+        str(s04.get("news_summary") or "").upper()
+        == "NO MATERIAL NEW EXTERNAL NEWS"
+        and not report_time_bound
+    ):
+        failures.append("S04_NO_NEWS_WITHOUT_REPORT_TIME_EVIDENCE")
+    if (
+        str(s04.get("news_summary") or "").upper()
+        == "NO MATERIAL NEW EXTERNAL NEWS"
+        and str(injury_health.get("state") or "").upper()
+        in {"", "UNAVAILABLE"}
+    ):
+        failures.append("S04_NO_NEWS_WITHOUT_AVAILABILITY_RESOLVER")
+
+    s15_state, s15 = section("S15")
+    evidence_quality = dict(s15.get("evidence_quality") or {})
+    injury_quality = dict(
+        evidence_quality.get("injury / availability intelligence") or {}
+    )
+    if s15_state == "COMPLETE" and str(
+        injury_quality.get("state") or ""
+    ).upper() != "BOUND":
+        failures.append("S15_COMPLETE_MASKS_INJURY_EVIDENCE_DEGRADATION")
+
+    s17_state, s17 = section("S17")
+    source_health = dict(s17.get("source_health") or {})
+    injury_source = str(
+        source_health.get("report_time_injury_evidence") or ""
+    ).upper()
+    s17_injury = dict(s17.get("injury_availability_evidence") or {})
+    if s17_state == "COMPLETE" and (
+        injury_source != "BOUND"
+        or s17_injury.get("report_time_evidence_contract_bound") is not True
+    ):
+        failures.append("S17_COMPLETE_MASKS_INJURY_SOURCE_DEGRADATION")
+
     # S08: canonical PMF evidence may be incomplete truthfully, but it may not
     # disappear between the captain owner and the visible RETURN PROFILE.
     s08_state, s08 = section("S08")
@@ -178,6 +223,26 @@ def _deep_semantic_population_failures(
         in s08_body
     ):
         failures.append("S08_RENDER_DROPPED_AVAILABLE_RETURN_PROFILE")
+
+    captain_class = str(
+        s08.get("football_frontier_classification") or ""
+    ).upper()
+    captain_state = str(s08.get("decision_state") or "").upper()
+    captain_posture = str(s08.get("risk_posture") or "").upper()
+    captain_comp = dict(s08.get("competitive_context") or {})
+    captain_tiebreak = str(captain_comp.get("tie_break_status") or "").upper()
+    if (
+        captain_class == "CLOSE"
+        and captain_posture == "BALANCED"
+        and captain_state == "LOCK"
+    ):
+        failures.append("S08_BALANCED_CLOSE_CAPTAIN_FALSE_LOCK")
+    if (
+        captain_class == "CLOSE"
+        and captain_posture == "BALANCED"
+        and captain_tiebreak == "PRESERVE_FOOTBALL_LEADER_BALANCED"
+    ):
+        failures.append("S08_BALANCED_CLOSE_MEAN_LEADER_AUTO_PRESERVED")
 
     # S10: use canonical element identity. Matching predictor evidence must bind
     # to visible direction/progress; genuine no-row/unsupported evidence may
@@ -339,6 +404,25 @@ def _deep_semantic_population_failures(
     for row in s16_rows:
         probabilities = dict(row.get("probabilities") or {})
         evidence = dict(row.get("probability_evidence") or {})
+        position = str(row.get("position") or "").upper()
+        if position == "GK":
+            irrelevant = {
+                str(value)
+                for value in evidence.get("position_irrelevant_fields") or []
+            }
+            if not {"p_goal", "p_assist", "p_return"}.issubset(irrelevant):
+                failures.append(
+                    "S16_GK_ATTACKING_PROBABILITY_SEMANTICS_MISSING="
+                    + str(row.get("element_id") or "UNKNOWN")
+                )
+            for key in ("p_goal", "p_assist", "p_return"):
+                if not missing(probabilities.get(key)):
+                    failures.append(
+                        "S16_GK_ATTACKING_PROBABILITY_UNSUPPORTED="
+                        + str(row.get("element_id") or "UNKNOWN")
+                        + ":"
+                        + key
+                    )
         unsupported = {
             str(value)
             for value in evidence.get("unsupported_fields") or []

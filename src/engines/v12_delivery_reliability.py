@@ -173,7 +173,7 @@ def inspect_prefetch_terminal(
     )
     checks = {
         "report_slot_timezone_aware": requested is not None,
-        "report_kind_full_master": str(latest.get("report_kind") or "") == "full_master",
+        "report_kind_deep_compatible": str(latest.get("report_kind") or "") in {"full_master", "ad_hoc"},
         "target_report_slot_match": _same_instant(target, requested),
         "report_prefetch_run_id_available": bool(latest.get("report_prefetch_run_id")),
         "occurrence_publication_proven": occurrence_publication_proven,

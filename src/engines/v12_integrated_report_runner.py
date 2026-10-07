@@ -2570,6 +2570,7 @@ def _enrich_all15_rows(
             or {}
         )
         quantiles = dict(point_dist.get("quantiles") or {})
+        position_value = owned_row.get("position") or player.get("position")
         probability_values = {
             "p_goal": event_prob.get("p_goal_return"),
             "p_assist": event_prob.get("p_assist_return"),
@@ -2580,6 +2581,17 @@ def _enrich_all15_rows(
             "Q50": quantiles.get("Q50"),
             "Q90": quantiles.get("Q90"),
         }
+        position_irrelevant_probability_fields: list[str] = []
+        if str(position_value or "").upper() == "GK":
+            # The current P1.3 attacking-event prior is not calibrated for
+            # goalkeeper attacking returns. Do not expose generic priors as
+            # credible GK goal/assist probabilities. Preserve point-PMF
+            # haul/blank evidence, and mark attack-return fields N/A.
+            for key in ("p_goal", "p_assist", "p_return"):
+                probability_values[key] = None
+            position_irrelevant_probability_fields = [
+                "p_goal", "p_assist", "p_return"
+            ]
         probability_unsupported = [
             key
             for key in ("p_goal", "p_assist", "p_return", "p_haul", "p_blank")
@@ -2625,7 +2637,7 @@ def _enrich_all15_rows(
         rivals = rivals_scope.get(element) or {}
         competitive = competitive_scope.get(element) or {}
         row.update({
-            "position": owned_row.get("position") or player.get("position"),
+            "position": position_value,
             "club": team.get("name") or player.get("team") or f"team:{team_id}",
             "team_id": team_id,
             "opponent": opponent_name,
@@ -2669,6 +2681,7 @@ def _enrich_all15_rows(
                 "point_distribution_available": bool(point_dist),
                 "binding_failures": [],
                 "unsupported_fields": probability_unsupported,
+                "position_irrelevant_fields": position_irrelevant_probability_fields,
                 "recomputed": False,
                 "duplicate_math_created": False,
             },
@@ -8512,18 +8525,26 @@ def run_deep(
         else None
     )
 
-    s16_unsupported = [
-        {
-            "element_id": int(row.get("element_id") or 0),
-            "fields": list(
-                ((row.get("probability_evidence") or {}).get("unsupported_fields"))
-                or []
-            ),
+    s16_unsupported = []
+    for row in all15_rows:
+        if not isinstance(row, Mapping):
+            continue
+        evidence = dict(row.get("probability_evidence") or {})
+        unsupported = {
+            str(value) for value in evidence.get("unsupported_fields") or []
         }
-        for row in all15_rows
-        if isinstance(row, Mapping)
-        and ((row.get("probability_evidence") or {}).get("unsupported_fields"))
-    ]
+        position_irrelevant = {
+            str(value)
+            for value in evidence.get("position_irrelevant_fields") or []
+        }
+        material_unsupported = sorted(unsupported - position_irrelevant)
+        if material_unsupported:
+            s16_unsupported.append(
+                {
+                    "element_id": int(row.get("element_id") or 0),
+                    "fields": material_unsupported,
+                }
+            )
     s16_binding_failures = [
         int(row.get("element_id") or 0)
         for row in all15_rows

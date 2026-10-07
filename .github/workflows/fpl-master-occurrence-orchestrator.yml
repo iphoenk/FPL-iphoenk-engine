@@ -389,13 +389,13 @@ jobs:
           stage3_status = str(stage3.get("status") or "").strip().upper()
 
           # Write forensic publication evidence before semantic classification.
-          history_path = f"${{os.environ['HISTORY_DIR']}}/${{os.environ['BODY_NAME']}}"
+          history_path = f"{os.environ['HISTORY_DIR']}/{os.environ['BODY_NAME']}"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"delivery_status=${{delivery_status or 'UNKNOWN'}}\n")
-              fh.write(f"report_sha=${{body_sha}}\n")
-              fh.write(f"report_size=${{len(body)}}\n")
-              fh.write(f"history_path=${{history_path}}\n")
-              fh.write(f"canonical_body_sha256=${{body_sha}}\n")
+              fh.write(f"delivery_status={delivery_status or 'UNKNOWN'}\n")
+              fh.write(f"report_sha={body_sha}\n")
+              fh.write(f"report_size={len(body)}\n")
+              fh.write(f"history_path={history_path}\n")
+              fh.write(f"canonical_body_sha256={body_sha}\n")
               fh.write("terminality=UNKNOWN\n")
 
           evidence = {
@@ -444,7 +444,7 @@ jobs:
           }
           result = classify_occurrence(evidence)
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"terminality=${{result['terminality']}}\n")
+              fh.write(f"terminality={result['terminality']}\n")
 
           if result["terminality"] == "FAILED_VERIFY":
               raise SystemExit("occurrence terminality FAILED_VERIFY: " + ",".join(result["failures"]))

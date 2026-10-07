@@ -127,6 +127,20 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
 
     delivery_status = _status(delivery.get("delivery_status"))
     root_failure = str(delivery.get("root_failure") or "").strip().upper()
+
+    if delivery.get("occurrence_id") not in (None, "", occurrence_id):
+        _add(failures, "DELIVERY_OCCURRENCE_ID_MISMATCH")
+    if delivery.get("report_slot") not in (None, "", requested_slot):
+        _add(failures, "DELIVERY_SLOT_MISMATCH")
+    if delivery.get("report_mode") not in (None, "", mode):
+        _add(failures, "DELIVERY_MODE_MISMATCH")
+    for key, expected, failure in (
+        ("receipt_report_slot", requested_slot, "HISTORICAL_RECEIPT_SLOT_MISMATCH"),
+        ("receipt_report_mode", mode, "HISTORICAL_RECEIPT_MODE_MISMATCH"),
+    ):
+        observed = historical.get(key)
+        if observed not in (None, "", expected):
+            _add(failures, failure)
     stage3_status = _status(stage3.get("validation"))
     engineering_blocks = stage3.get("engineering_closure_blocks_report") is True
     engineering_status = "DEGRADED" if stage3_status == "DEGRADED" else stage3_status or "UNKNOWN"

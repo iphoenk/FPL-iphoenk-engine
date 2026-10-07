@@ -8696,6 +8696,11 @@ def run_deep(
                     else {}
                 ),
             },
+            (
+                None
+                if report_time_evidence_bound
+                else "report-time external news / injury evidence contract is not bound for this occurrence"
+            ),
         ),
         "S05": _section(
             str(calendar_context.get("state") or "DEGRADED"),
@@ -8831,6 +8836,12 @@ def run_deep(
                     "p1_8_downstream_overlay": "EXECUTED" if mini_overlay else "FAILED",
                 },
             },
+            (
+                None
+                if report_time_evidence_bound
+                and availability_evidence_health.get("state") == "BOUND"
+                else "target-aware report-time injury / availability evidence is not fully bound"
+            ),
         ),
         "S15B": _section(
             "COMPLETE" if mini_state == "COMPLETE" and mini_overlay else "DEGRADED",
@@ -8884,7 +8895,12 @@ def run_deep(
             else {}
         ),
         "S17": _section(
-            "COMPLETE",
+            (
+                "COMPLETE"
+                if report_time_evidence_bound
+                and availability_evidence_health.get("state") == "BOUND"
+                else "DEGRADED"
+            ),
             {
                 "engine_data_status": {
                     "runner": "V12_INTEGRATED_REPORT_RUNNER",
@@ -8972,6 +8988,12 @@ def run_deep(
                     "post_match_source": "V12 contextual dynamics over read-only V6 normalized match rows",
                 },
             },
+            (
+                None
+                if report_time_evidence_bound
+                and availability_evidence_health.get("state") == "BOUND"
+                else "technical source health is degraded because report-time injury / availability evidence is not fully bound"
+            ),
         ),
         "S18": _section(
             "COMPLETE",

@@ -271,6 +271,15 @@ jobs:
           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           gh run watch "$run_id" --repo "$GITHUB_REPOSITORY" --exit-status
 
+      - name: Checkout canonical occurrence terminality verifier
+        if: steps.guard.outputs.skip != 'true' && steps.report.outcome == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          path: occurrence-verifier-source
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Verify exact private serving publication
         id: verify
         if: steps.guard.outputs.skip != 'true' && steps.report.outcome == 'success'
@@ -280,6 +289,7 @@ jobs:
           REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
           OCCURRENCE_ID: ${{ steps.parse.outputs.occurrence_id }}
           SERVING_FILE: ${{ steps.parse.outputs.serving_file }}
+          PYTHONPATH: ${{ github.workspace }}/occurrence-verifier-source
         shell: bash
         run: |
           set -euo pipefail
@@ -334,6 +344,14 @@ jobs:
             --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/history-receipt.json"
 
           GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/${history_dir}/digest.json?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/history-digest.json"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+            "/repos/iphoenk/fpl-reports-private/contents/${history_dir}/stage3_acceptance.json?ref=main" \
+            --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/stage3-acceptance.json"
+
+          GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
             "/repos/iphoenk/fpl-reports-private/contents/${history_dir}/${body_name}?ref=main" \
             --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/history-body.md"
 
@@ -349,79 +367,88 @@ jobs:
           import os
           from pathlib import Path
 
+          from src.engines.v12_occurrence_terminality import classify_occurrence
+
           root = Path(os.environ["RUNNER_TEMP"])
           serving = json.loads((root / "serving.json").read_text(encoding="utf-8"))
-          receipt = json.loads(
-              (root / "history-receipt.json").read_text(encoding="utf-8")
-          )
+          receipt = json.loads((root / "history-receipt.json").read_text(encoding="utf-8"))
+          digest = json.loads((root / "history-digest.json").read_text(encoding="utf-8"))
+          stage3 = json.loads((root / "stage3-acceptance.json").read_text(encoding="utf-8"))
+          delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
           mode = os.environ["REPORT_MODE"]
           slot = os.environ["REPORT_SLOT"]
           occurrence_id = os.environ["OCCURRENCE_ID"]
 
-          assert serving.get("report_slot") == slot, serving
-          assert serving.get("report_mode") == mode, serving
-          assert serving.get("runner_status") == "PASS", serving
-
-          assert receipt.get("report_slot") == slot, receipt
-          assert receipt.get("report_mode") == mode, receipt
-          assert receipt.get("private_delivery_status") == "PASS", receipt
-
           body = (root / "history-body.md").read_bytes()
-          assert body, "exact historical report body is empty"
+          latest_body = (root / "latest-body.md").read_bytes() if mode == "DEEP" else body
           body_sha = hashlib.sha256(body).hexdigest()
+          latest_sha = hashlib.sha256(latest_body).hexdigest()
           expected_sha = str(serving.get("canonical_body_sha256") or "")
-          assert len(expected_sha) == 64, serving
-          assert body_sha == expected_sha, {
-              "history_body_sha256": body_sha,
-              "expected_canonical_body_sha256": expected_sha,
-          }
-          assert receipt.get("canonical_body_sha256") == expected_sha, receipt
+          root_failure = str(delivery.get("root_failure") or "").strip().upper()
+          delivery_status = str(delivery.get("delivery_status") or "").strip().upper()
+          stage3_status = str(stage3.get("status") or "").strip().upper()
 
-          if mode == "DEEP":
-              delivery = json.loads(
-                  (root / "delivery-status.json").read_text(encoding="utf-8")
-              )
-              assert delivery.get("occurrence_id") == occurrence_id, delivery
-              assert delivery.get("report_slot") == slot, delivery
-              assert delivery.get("report_mode") == mode, delivery
-              assert delivery.get("delivery_status") in {
-                  "READY_FULL",
-                  "READY_DEGRADED",
-              }, delivery
-
-              expected_sections = [
-                  "S01","S02","S03","S04","S05","S06","S06B","S07","S08","S09",
-                  "S10","S11","S12","S13","S14","S14B","S15","S15B","S16",
-                  "S17","S18","S19",
-              ]
-              if serving.get("s16b_due") is True:
-                  expected_sections.insert(expected_sections.index("S17"), "S16B")
-              assert serving.get("section_ids") == expected_sections, serving
-              if delivery.get("delivery_status") == "READY_FULL":
-                  assert serving.get("pre_render_status") == "PASS", serving
-                  assert serving.get("post_render_status") == "PASS", serving
-                  assert serving.get("human_facing_status") == "PASS", serving
-
-              latest_body = (root / "latest-body.md").read_bytes()
-              assert latest_body, "latest DEEP serving body is empty"
-              assert hashlib.sha256(latest_body).hexdigest() == body_sha, (
-                  "latest/report.md does not match exact historical DEEP body"
-              )
-              delivery_status = delivery["delivery_status"]
-          else:
-              # PRICE currently publishes its canonical full body in exact
-              # per-occurrence history; latest/report.md may still point to DEEP.
-              delivery_status = "READY_FULL"
-
-          history_path = (
-              f"{os.environ['HISTORY_DIR']}/{os.environ['BODY_NAME']}"
-          )
+          # Write forensic publication evidence before semantic classification.
+          history_path = f"${{os.environ['HISTORY_DIR']}}/${{os.environ['BODY_NAME']}}"
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-              fh.write(f"delivery_status={delivery_status}\n")
-              fh.write(f"report_sha={body_sha}\n")
-              fh.write(f"report_size={len(body)}\n")
-              fh.write(f"history_path={history_path}\n")
-              fh.write(f"canonical_body_sha256={body_sha}\n")
+              fh.write(f"delivery_status=${{delivery_status or 'UNKNOWN'}}\n")
+              fh.write(f"report_sha=${{body_sha}}\n")
+              fh.write(f"report_size=${{len(body)}}\n")
+              fh.write(f"history_path=${{history_path}}\n")
+              fh.write(f"canonical_body_sha256=${{body_sha}}\n")
+              fh.write("terminality=UNKNOWN\n")
+
+          evidence = {
+              "report_mode": mode,
+              "report_slot": slot,
+              "occurrence_id": occurrence_id,
+              "serving": {**serving, "canonical_body_sha256": expected_sha},
+              "delivery": delivery,
+              "historical": {
+                  "exists": bool(body),
+                  "path": history_path,
+                  "body_size": len(body),
+                  "body_sha256": body_sha,
+                  "receipt_body_sha256": str(receipt.get("canonical_body_sha256") or ""),
+                  "digest_body_sha256": str(digest.get("canonical_body_sha256") or ""),
+              },
+              "latest": {
+                  "exists": bool(latest_body),
+                  "advanced": latest_sha == body_sha,
+                  "body_sha256": latest_sha,
+              },
+              "private_delivery_status": receipt.get("private_delivery_status"),
+              "exact_publication": receipt.get("serving_snapshot_published") is True,
+              "stage3": {
+                  "validation": stage3_status,
+                  "action": serving.get("stage3_action") or "WAIT",
+                  "engineering_closure_blocks_report": stage3.get("engineering_closure_blocks_report") is True,
+              },
+              "degradation": {
+                  "governed": (
+                      delivery_status == "READY_DEGRADED"
+                      and root_failure in {"ANALYTICS_INCOMPLETE", "BLOCKED_UPSTREAM", "PREFETCH_NOT_TERMINAL"}
+                      and stage3_status == "DEGRADED"
+                      and stage3.get("engineering_closure_blocks_report") is not True
+                  ),
+                  "attributable": bool(root_failure),
+                  "reason": root_failure,
+              },
+              "personal_authority_violation": receipt.get("personal_authority_violation") is True,
+              "privacy_violation": receipt.get("privacy_validation_status") != "PASS",
+              "fabricated_evidence": receipt.get("fabricated_evidence") is True,
+              "mandatory_math_failure": (
+                  stage3.get("mandatory_math_failure") is True
+                  or stage3.get("engineering_closure_blocks_report") is True
+              ),
+          }
+          result = classify_occurrence(evidence)
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"terminality=${{result['terminality']}}\n")
+
+          if result["terminality"] == "FAILED_VERIFY":
+              raise SystemExit("occurrence terminality FAILED_VERIFY: " + ",".join(result["failures"]))
+          print(json.dumps(result, sort_keys=True))
           PY
 
       - name: Publish occurrence receipt
@@ -442,12 +469,15 @@ jobs:
           REPORT_SIZE: ${{ steps.verify.outputs.report_size }}
           HISTORY_PATH: ${{ steps.verify.outputs.history_path }}
           CANONICAL_BODY_SHA256: ${{ steps.verify.outputs.canonical_body_sha256 }}
+          TERMINALITY: ${{ steps.verify.outputs.terminality }}
         shell: bash
         run: |
           set -euo pipefail
 
           if [[ "${REUSE:-}" == "true" ]]; then
             status="READY_REUSED"
+          elif [[ -n "${TERMINALITY:-}" && "${TERMINALITY:-}" != "UNKNOWN" ]]; then
+            status="${TERMINALITY}"
           elif [[ "${VERIFY_OUTCOME:-}" == "success" ]]; then
             status="${DELIVERY_STATUS:-READY_FULL}"
           elif [[ "${PREFETCH_OUTCOME:-}" != "success" ]]; then

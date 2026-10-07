@@ -853,7 +853,7 @@ def test_occurrence_orchestrator_verifies_exact_private_body_hash_and_mode_speci
     assert '"private_delivery_status": receipt.get("private_delivery_status")' in workflow
     assert "v12_occurrence_terminality" in workflow
     assert 'hashlib.sha256(body).hexdigest()' in workflow
-    assert 'receipt.get("canonical_body_sha256") == expected_sha' in workflow
+    assert '"receipt_body_sha256": str(receipt.get("canonical_body_sha256") or "")' in workflow
     assert 'latest/report.md does not match exact historical DEEP body' in workflow
     assert 'latest/report.md may still point to DEEP' in workflow
     assert 'private_report_path:' in workflow

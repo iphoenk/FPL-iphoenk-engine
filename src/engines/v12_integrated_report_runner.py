@@ -110,6 +110,9 @@ from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
 )
+from src.engines.v12_injury_availability import (
+    build_availability_evidence_by_player,
+)
 from src.models.historical_projection import build as build_player_projections
 from src.models.v12_analytics_foundation import (
     load_v6_analytics_foundation,
@@ -4347,6 +4350,54 @@ def _weather_contract_state_from_calendar(
     )
 
 
+def _availability_evidence_health(
+    projections: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    states = [
+        dict(player.get("availability_evidence") or {})
+        for player in (projections or {}).get("players") or []
+        if isinstance(player, Mapping)
+        and isinstance(player.get("availability_evidence"), Mapping)
+    ]
+    observed = [
+        state for state in states
+        if int((state.get("observability") or {}).get("active_evidence_count") or 0) > 0
+        or int((state.get("observability") or {}).get("stale_evidence_count") or 0) > 0
+        or int((state.get("observability") or {}).get("republication_count") or 0) > 0
+    ]
+    return {
+        "state": "BOUND" if states else "UNAVAILABLE",
+        "resolver": "V12_TARGET_AWARE_AVAILABILITY_EVIDENCE_V1",
+        "projection_players_with_state": len(states),
+        "players_with_evidence": len(observed),
+        "active_evidence_count": sum(
+            int((state.get("observability") or {}).get("active_evidence_count") or 0)
+            for state in states
+        ),
+        "conflicting_evidence_count": sum(
+            int((state.get("observability") or {}).get("conflicting_evidence_count") or 0)
+            for state in states
+        ),
+        "stale_evidence_count": sum(
+            int((state.get("observability") or {}).get("stale_evidence_count") or 0)
+            for state in states
+        ),
+        "availability_counts": {
+            label: sum(
+                1 for state in states
+                if str(state.get("gw_availability") or "UNKNOWN") == label
+            )
+            for label in (
+                "AVAILABLE", "LIKELY_AVAILABLE", "DOUBT",
+                "STRONG_DOUBT", "OUT", "UNKNOWN",
+            )
+        },
+        "fpl_flag_direct_probability_mapping": False,
+        "gw_availability_is_categorical": True,
+        "pstart_owner": "V12_PLAYER_MINUTES",
+    }
+
+
 def _evidence_quality_surface(
     *,
     official: Mapping[str, Any] | None,
@@ -7126,6 +7177,20 @@ def run_deep(
     if not owned:
         raise IntegratedRunnerError("OUR15 unavailable")
 
+    report_time_evidence = _read_json(
+        runtime_data_root / "data/report_time_evidence.json",
+        {},
+    ) or {}
+    report_time_evidence_bound = (
+        report_time_evidence.get("contract") == "report_time_evidence_v1"
+    )
+    availability_evidence_by_player = build_availability_evidence_by_player(
+        bootstrap,
+        report_time_evidence,
+        report_timestamp=report_slot,
+        target_gw=planning_gw,
+    )
+
     strength = _stage(
         ledger,
         "TEAM_STRENGTH",
@@ -7165,6 +7230,8 @@ def run_deep(
                     "opponent_history_scope"
                 ),
                 scenario_overrides=scenario_overrides,
+                availability_evidence_by_player=availability_evidence_by_player,
+                availability_evidence_cutoff_at=report_slot,
             )
 
         def _stage2_projection_with_cache() -> dict[str, Any]:
@@ -7208,6 +7275,8 @@ def run_deep(
                         "opponent_history_scope"
                     ),
                     builder=_canonical_stage2_builder,
+                    availability_evidence_by_player=availability_evidence_by_player,
+                    availability_evidence_cutoff_at=report_slot,
                 )
             stage2_cache_proof.clear()
             stage2_cache_proof.update(proof)
@@ -8298,10 +8367,6 @@ def run_deep(
             str(previous_deep.get("report_slot") or "") or None
         ),
     )
-    report_time_evidence = _read_json(
-        runtime_data_root / "data/report_time_evidence.json",
-        {},
-    ) or {}
     report_time_material_news = build_report_time_material_news(
         report_time_evidence,
         bootstrap,
@@ -8367,6 +8432,17 @@ def run_deep(
         ),
         report_slot=report_slot,
     )
+    availability_evidence_health = _availability_evidence_health(projections)
+    evidence_quality["injury / availability intelligence"] = {
+        **availability_evidence_health,
+        "report_time_evidence_contract_bound": report_time_evidence_bound,
+        "state": (
+            "BOUND"
+            if report_time_evidence_bound
+            and availability_evidence_health.get("state") == "BOUND"
+            else "DEGRADED"
+        ),
+    }
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
         stage3_decision=stage3_decision,
@@ -8521,13 +8597,21 @@ def run_deep(
             decision_delta_reason,
         ),
         "S04": _section(
-            "COMPLETE",
+            (
+                "COMPLETE"
+                if report_time_evidence_bound
+                else "DEGRADED"
+            ),
             {
                 "news_summary": (
                     "MATERIAL NEWS PRESENT"
                     if material_news
                     else "NO MATERIAL NEW EXTERNAL NEWS"
+                    if report_time_evidence_bound
+                    else "REPORT-TIME EXTERNAL NEWS / INJURY EVIDENCE UNAVAILABLE"
                 ),
+                "report_time_evidence_contract_bound": report_time_evidence_bound,
+                "injury_availability_evidence": availability_evidence_health,
                 "material_news": material_news,
                 "news_groups": news_groups,
                 "model_developments": model_developments,
@@ -8683,7 +8767,12 @@ def run_deep(
             None if stage3_decision else "Stage3 decision unavailable; roadmap remains non-binding and must reoptimize.",
         ),
         "S15": _section(
-            "COMPLETE",
+            (
+                "COMPLETE"
+                if report_time_evidence_bound
+                and availability_evidence_health.get("state") == "BOUND"
+                else "DEGRADED"
+            ),
             {
                 "evidence_quality": evidence_quality,
                 "model_execution": {
@@ -8799,6 +8888,11 @@ def run_deep(
                     ),
                     "tactical_statistical_data": "HEALTHY" if foundation else "UNAVAILABLE",
                     "mini_league": (mini or {}).get("coverage_state") or "UNAVAILABLE",
+                    "report_time_injury_evidence": (
+                        "BOUND"
+                        if report_time_evidence_bound
+                        else "UNAVAILABLE"
+                    ),
                     "weather": (
                         "REPORT_TIME_BOUND"
                         if _weather_contract_state_from_calendar(calendar_context)
@@ -8815,6 +8909,10 @@ def run_deep(
                             else "DEGRADED_OR_UNAVAILABLE"
                         )
                     ),
+                },
+                "injury_availability_evidence": {
+                    **availability_evidence_health,
+                    "report_time_evidence_contract_bound": report_time_evidence_bound,
                 },
                 "auth_authority": {
                     "field": "data/v6/personal/current_team.json:auth_state",

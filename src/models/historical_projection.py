@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from src.engines.v12_contextual_dynamics import (
     build_contextual_dynamics,

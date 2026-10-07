@@ -101,7 +101,7 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
         _add(failures, "HISTORICAL_BODY_EMPTY")
 
     body_sha = str(historical.get("body_sha256") or "")
-    expected_sha = str(serving.get("canonical_body_sha256") or body_sha)
+    expected_sha = str(serving.get("canonical_body_sha256") or "")
     for value in (
         body_sha,
         str(historical.get("receipt_body_sha256") or ""),

@@ -849,14 +849,17 @@ def test_occurrence_orchestrator_verifies_exact_private_body_hash_and_mode_speci
         encoding="utf-8"
     )
     assert 'body_name = "serving_report.md" if mode == "DEEP" else "report_body.md"' in workflow
-    assert 'history-receipt.json' in workflow
-    assert 'private_delivery_status") == "PASS"' in workflow
-    assert 'hashlib.sha256(body).hexdigest()' in workflow
-    assert 'receipt.get("canonical_body_sha256") == expected_sha' in workflow
-    assert 'latest/report.md does not match exact historical DEEP body' in workflow
-    assert 'latest/report.md may still point to DEEP' in workflow
-    assert 'private_report_path:' in workflow
-    assert 'canonical_body_sha256:' in workflow
+    assert "history-receipt.json" in workflow
+    assert '"private_delivery_status": receipt.get("private_delivery_status")' in workflow
+    assert "v12_occurrence_terminality" in workflow
+    assert "hashlib.sha256(body).hexdigest()" in workflow
+    assert '"receipt_body_sha256": str(receipt.get("canonical_body_sha256") or "")' in workflow
+    assert '"digest_body_sha256": str(digest.get("canonical_body_sha256") or "")' in workflow
+    assert "latest_sha == body_sha" in workflow
+    assert "terminality=UNKNOWN" in workflow
+    assert "TERMINALITY" in workflow
+    assert "private_report_path:" in workflow
+    assert "canonical_body_sha256:" in workflow
 
 
 def test_occurrence_orchestrator_trusts_only_bot_authored_receipts():

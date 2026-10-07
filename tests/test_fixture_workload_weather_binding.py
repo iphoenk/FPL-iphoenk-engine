@@ -456,3 +456,46 @@ def test_major_international_tournaments_map_to_international():
         "AFC Asian Cup",
     ):
         assert v12_s05_binding._category_for_competition(name) == "INTERNATIONAL"
+
+
+def test_pl_only_gap_is_not_presented_as_actual_player_rest():
+    fixtures = [
+        {
+            "id": 8999,
+            "event": 5,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-09-20T14:00:00+00:00",
+        },
+        {
+            "id": 9001,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-10-10T14:00:00+00:00",
+        },
+    ]
+    context = build_calendar_workload_context(
+        planning_gw=6,
+        pl_fixtures=fixtures,
+        team_ids=[1, 2],
+        relevant_players=[
+            {
+                "element_id": 101,
+                "name": "Owned",
+                "team_id": 1,
+                "planning_fixture_evidence": [],
+            }
+        ],
+        verified_schedule_events=[],
+        non_pl_schedule_authority=False,
+        report_timestamp="2026-10-07T04:30:00+07:00",
+        weather_rows=[],
+        weather_forecast_horizon_hours=168.0,
+    )
+    row = context["player_workload"][0]
+    assert context["state"] == "DEGRADED"
+    assert row["days_rest"] is None
+    assert row["pl_only_rest_interval_days"] == 20.0
+    assert row["workload_scope"] == "PL_ONLY_NOT_TOTAL_PLAYER_WORKLOAD"
+    assert row["load_state"] == "NON-PL WORKLOAD UNAVAILABLE"

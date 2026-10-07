@@ -2892,13 +2892,39 @@ def _render_package_frontier_lines(
         lines.append("No non-HOLD challenger is supportable.")
 
     economics = dict(payload.get("execution_economics_authority") or {})
+    economics_status = str(
+        payload.get("execution_economics_status") or "UNAVAILABLE"
+    ).upper()
     route_econ = best if best else hold
-    transfer_cost = dict(route_econ.get("transfer_cost") or {}) if isinstance(route_econ.get("transfer_cost"), Mapping) else {}
+    transfer_cost = (
+        dict(route_econ.get("transfer_cost") or {})
+        if isinstance(route_econ.get("transfer_cost"), Mapping)
+        else {}
+    )
+    finance_available = economics_status == "AVAILABLE"
+    ft_visible = (
+        economics.get("free_transfers")
+        if finance_available
+        and str(economics.get("free_transfers_status") or "").upper()
+        not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED"}
+        else "UNAVAILABLE"
+    )
+    hit_visible = (
+        transfer_cost.get("hit_cost", transfer_cost.get("points_cost"))
+        if finance_available
+        else "UNAVAILABLE"
+    )
+    bank_visible = (
+        economics.get("bank")
+        if str(economics.get("bank_status") or "").upper()
+        not in {"", "UNAVAILABLE", "UNKNOWN", "STALE_NOT_AUTHORIZED", "AUTH_EXPIRED"}
+        else "UNAVAILABLE"
+    )
     lines.append("### EXECUTION ECONOMICS")
     lines.extend([
-        f"FT: {transfer_cost.get('free_transfers', payload.get('free_transfers', 'UNAVAILABLE'))}",
-        f"Hit: {transfer_cost.get('hit_cost', transfer_cost.get('points_cost', 'UNAVAILABLE'))}",
-        f"Bank: {route_econ.get('bank_before', economics.get('bank', 'UNAVAILABLE'))}",
+        f"FT: {ft_visible}",
+        f"Hit: {hit_visible}",
+        f"Bank: {bank_visible}",
         f"Sell-value availability: {economics.get('sell_value_status', payload.get('sell_value_status', 'UNAVAILABLE'))}",
         f"Affordability: {route_econ.get('affordability', 'UNAVAILABLE')}",
         f"Executability: {route_econ.get('executable', 'UNAVAILABLE')}",

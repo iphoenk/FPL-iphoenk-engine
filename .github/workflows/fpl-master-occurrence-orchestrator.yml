@@ -411,6 +411,8 @@ jobs:
                   "body_sha256": body_sha,
                   "receipt_body_sha256": str(receipt.get("canonical_body_sha256") or ""),
                   "digest_body_sha256": str(digest.get("canonical_body_sha256") or ""),
+                  "receipt_report_slot": str(receipt.get("report_slot") or ""),
+                  "receipt_report_mode": str(receipt.get("report_mode") or ""),
               },
               "latest": {
                   "exists": bool(latest_body),

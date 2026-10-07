@@ -20,6 +20,7 @@ def _evidence() -> dict:
             "pre_render_status": "PASS",
             "post_render_status": "PASS",
             "human_facing_status": "PASS",
+            "canonical_body_sha256": BODY_SHA,
         },
         "delivery": {"delivery_status": "READY_FULL", "root_failure": ""},
         "historical": {

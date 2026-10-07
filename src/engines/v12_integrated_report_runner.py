@@ -2510,9 +2510,17 @@ def _enrich_all15_rows(
         p_start = row.get("p_start", xm.get("start_probability"))
         xmins = row.get("xmins", xm.get("expected_minutes"))
         status = str(player.get("status") or owned_row.get("status") or "a").lower()
+        availability_evidence = dict(player.get("availability_evidence") or {})
+        gw_availability = str(
+            availability_evidence.get("gw_availability")
+            or row.get("gw_availability")
+            or "UNKNOWN"
+        ).upper()
         warnings: list[str] = []
         if status != "a":
-            warnings.append(f"STATUS_{status.upper()}")
+            warnings.append(f"FPL_STATUS_{status.upper()}_OBSERVATION")
+        if gw_availability in {"DOUBT", "STRONG_DOUBT", "OUT"}:
+            warnings.append(f"GW_{gw_availability}")
         try:
             if p_start is not None and float(p_start) < 0.70:
                 warnings.append("START_RISK")
@@ -2628,6 +2636,20 @@ def _enrich_all15_rows(
                 else "UNAVAILABLE"
             ),
             "availability": row.get("p_available", xm.get("availability")),
+            "gw_availability": gw_availability,
+            "gw_availability_confidence": (
+                availability_evidence.get("gw_availability_confidence")
+                or row.get("gw_availability_confidence")
+                or "LOW"
+            ),
+            "availability_derivation_reason": (
+                availability_evidence.get("availability_derivation_reason")
+                or row.get("availability_derivation_reason")
+                or "NO_NORMALIZED_EVIDENCE_BOUND"
+            ),
+            "availability_evidence_summary": (
+                availability_evidence.get("observability") or {}
+            ),
             "projection_1gw": row.get("gw_plus_1", _horizon_mean(player, "1")),
             "projection_3gw": row.get("three_gw", _horizon_mean(player, "3")),
             "projection_5gw": row.get("five_gw", _horizon_mean(player, "5")),

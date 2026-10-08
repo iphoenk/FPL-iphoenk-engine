@@ -128,10 +128,16 @@ def run() -> dict[str, Any]:
         previous,
         hours=int(config["policy"].get("deadline_window_hours") or 48),
     )
-    manual_recovery = (
-        str(os.environ.get("V6_SCHEDULE_KIND") or "")
-        == "manual_recovery"
-    )
+    schedule_kind = str(os.environ.get("V6_SCHEDULE_KIND") or "").strip()
+    manual_recovery = schedule_kind == "manual_recovery"
+    report_prefetch = schedule_kind == "report_prefetch"
+    # A report occurrence is allowed to consume only an occurrence-bound,
+    # freshly acquired factual snapshot. The old cadence decision could carry
+    # forward a source-polled hours earlier, making the official predictor
+    # stale while the prefetch itself was labelled current. Report-prefetch is
+    # downstream of ChatGPT scheduler authority, so forcing the source poll
+    # here does not create a scheduler or a second operational slot.
+    force_report_prefetch_poll = report_prefetch
 
     decisions = {
         source["id"]: poll_decision(
@@ -140,7 +146,7 @@ def run() -> dict[str, Any]:
             deadline_window=deadline_window,
             max_attempts_per_request=client.retry_attempts,
             scheduler_interval_minutes=scheduler_interval_minutes,
-            force_poll=manual_recovery,
+            force_poll=manual_recovery or force_report_prefetch_poll,
         )
         for source in sources
     }

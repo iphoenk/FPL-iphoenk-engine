@@ -134,6 +134,29 @@ def inspect_prefetch_terminal(
     publish = _read_json(runtime_root / "data/v6/health/publish_integrity.json", {}) or {}
 
     requested = _parse_aware(report_slot)
+    # latest.json is a moving pointer shared by PRICE/DEEP. Prefer the
+    # immutable occurrence-bound producer record when available, then fall
+    # back for older runtime trees that predate this repair.
+    if requested is not None:
+        key = (
+            f"full_master__{requested.isoformat()}"
+            .replace(":", "")
+            .replace("+", "_plus_")
+            .replace("-", "")
+            .replace("T", "_")
+        )
+        occurrence = _read_json(
+            runtime_root / "data/v6/report_prefetch/occurrences" / f"{key}.json",
+            {},
+        ) or {}
+        if occurrence:
+            latest = occurrence
+            occurrence_health = _read_json(
+                runtime_root / "data/v6/health/report_prefetch_occurrences" / f"{key}.json",
+                {},
+            ) or {}
+            if occurrence_health:
+                health = occurrence_health
     target = _parse_aware(
         latest.get("target_logical_report_slot") or latest.get("logical_slot")
     )

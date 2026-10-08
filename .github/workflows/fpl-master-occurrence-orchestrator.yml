@@ -303,6 +303,12 @@ jobs:
             GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
               "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
               --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/delivery-status.json"
+          else
+            # PRICE has its own exact-serving digest. Never reuse the
+            # previous DEEP latest/delivery_status.json for PRICE verification.
+            GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
+              "/repos/iphoenk/fpl-reports-private/contents/latest/price.json?ref=main" \
+              --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/latest-price.json"
           fi
 
           read -r history_dir body_name < <(
@@ -374,18 +380,41 @@ jobs:
           receipt = json.loads((root / "history-receipt.json").read_text(encoding="utf-8"))
           digest = json.loads((root / "history-digest.json").read_text(encoding="utf-8"))
           stage3 = json.loads((root / "stage3-acceptance.json").read_text(encoding="utf-8"))
-          delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
+          if os.environ["REPORT_MODE"] == "DEEP":
+              delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
+          else:
+              # PRICE is not a DEEP delivery snapshot. Its publisher digest
+              # is the exact serving authority for mode/slot/QA/terminality.
+              delivery = {}
           mode = os.environ["REPORT_MODE"]
           slot = os.environ["REPORT_SLOT"]
           occurrence_id = os.environ["OCCURRENCE_ID"]
 
           body = (root / "history-body.md").read_bytes()
-          latest_body = (root / "latest-body.md").read_bytes() if mode == "DEEP" else body
           body_sha = hashlib.sha256(body).hexdigest()
-          latest_sha = hashlib.sha256(latest_body).hexdigest()
           expected_sha = str(serving.get("canonical_body_sha256") or "")
-          root_failure = str(delivery.get("root_failure") or "").strip().upper()
-          delivery_status = str(delivery.get("delivery_status") or "").strip().upper()
+          if mode == "DEEP":
+              latest_body = (root / "latest-body.md").read_bytes()
+              latest_sha = hashlib.sha256(latest_body).hexdigest()
+              root_failure = str(delivery.get("root_failure") or "").strip().upper()
+              delivery_status = str(delivery.get("delivery_status") or "").strip().upper()
+          else:
+              latest_price = json.loads(
+                  (root / "latest-price.json").read_text(encoding="utf-8")
+              )
+              latest_sha = str(latest_price.get("canonical_body_sha256") or "")
+              root_failure = ""
+              delivery_status = str(
+                  serving.get("delivery_status")
+                  or ("READY_FULL" if str(serving.get("runner_status") or "").upper() == "PASS" else "READY_DEGRADED")
+              ).strip().upper()
+              delivery = {
+                  "occurrence_id": serving.get("occurrence_id"),
+                  "report_slot": serving.get("report_slot"),
+                  "report_mode": serving.get("report_mode"),
+                  "delivery_status": delivery_status,
+                  "root_failure": root_failure,
+              }
           stage3_status = str(stage3.get("status") or "").strip().upper()
 
           # Write forensic publication evidence before semantic classification.
@@ -398,6 +427,32 @@ jobs:
               fh.write(f"canonical_body_sha256={body_sha}\n")
               fh.write("terminality=UNKNOWN\n")
 
+          exact_publication = (
+              receipt.get("private_delivery_status") == "PASS"
+              and (
+                  (
+                      mode == "PRICE"
+                      and latest_price.get("report_mode") == "PRICE"
+                      and latest_price.get("report_slot") == slot
+                      and latest_price.get("occurrence_id") == occurrence_id
+                      and latest_sha == body_sha
+                  )
+                  or (
+                      mode == "DEEP"
+                      and receipt.get("serving_snapshot_published") is True
+                  )
+              )
+          )
+          latest_advanced = (
+              latest_sha == body_sha
+              if mode == "DEEP"
+              else (
+                  latest_price.get("report_mode") == "PRICE"
+                  and latest_price.get("report_slot") == slot
+                  and latest_price.get("occurrence_id") == occurrence_id
+                  and latest_sha == expected_sha
+              )
+          )
           evidence = {
               "report_mode": mode,
               "report_slot": slot,
@@ -415,12 +470,16 @@ jobs:
                   "receipt_report_mode": str(receipt.get("report_mode") or ""),
               },
               "latest": {
-                  "exists": bool(latest_body),
-                  "advanced": latest_sha == body_sha,
+                  "exists": (
+                      bool(latest_body)
+                      if mode == "DEEP"
+                      else bool(latest_price)
+                  ),
+                  "advanced": latest_advanced,
                   "body_sha256": latest_sha,
               },
               "private_delivery_status": receipt.get("private_delivery_status"),
-              "exact_publication": receipt.get("serving_snapshot_published") is True,
+              "exact_publication": exact_publication,
               "stage3": {
                   "validation": stage3_status,
                   "action": serving.get("stage3_action") or "WAIT",

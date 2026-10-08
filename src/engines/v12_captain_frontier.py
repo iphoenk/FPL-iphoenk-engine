@@ -616,6 +616,78 @@ def _goalkeeper_tail_review(
     )
 
 
+def _mini_league_captain_review(
+    selected: Mapping[str, Any],
+    challenger: Mapping[str, Any],
+    *,
+    risk_posture: str,
+    risk_context: Mapping[str, Any] | None,
+    risk_context_complete: bool,
+    league_complete: bool,
+    rivals_complete: bool,
+    competitive_complete: bool,
+    scope_denominators: Mapping[str, Any] | None,
+    behavioural_baseline: str,
+) -> dict[str, Any]:
+    """Report observed captain exposure, not simulated relative points.
+
+    Historical submitted picks are a *baseline*, not a forecast for the
+    target GW.  Keep all three denominators and the current rank/gaps.
+    """
+    scopes = ("league_scope", "rivals_scope", "competitive_scope")
+    scope_names = ("LEAGUE", "RIVALS", "COMPETITIVE")
+    result: dict[str, Any] = {}
+    observed_complete = bool(
+        risk_context_complete and league_complete
+        and rivals_complete and competitive_complete
+    )
+    denominators = dict(scope_denominators or {})
+    for name, scope in zip(scope_names, scopes):
+        current_c = _scope_value(selected, scope, "captain_pct")
+        current_eo = _scope_value(selected, scope, "eo_pct")
+        alt_c = _scope_value(challenger, scope, "captain_pct")
+        alt_eo = _scope_value(challenger, scope, "eo_pct")
+        if any(value is None for value in (current_c, current_eo, alt_c, alt_eo)):
+            observed_complete = False
+        result[name] = {
+            "denominator": dict(denominators.get(name) or {}),
+            "current_captain_pct": current_c,
+            "current_eo_pct": current_eo,
+            "review_captain_pct": alt_c,
+            "review_eo_pct": alt_eo,
+            "review_minus_current_captain_pct_points": (
+                None if current_c is None or alt_c is None
+                else round(alt_c - current_c, 6)
+            ),
+            "review_minus_current_eo_pct_points": (
+                None if current_eo is None or alt_eo is None
+                else round(alt_eo - current_eo, 6)
+            ),
+            "relative_points_gain_probability": None,
+            "relative_points_expected_delta": None,
+        }
+    posture = str(risk_posture or "BALANCED").upper()
+    if posture == "CHASE":
+        posture = "ATTACK"
+    if posture not in {"PROTECT", "ATTACK", "BALANCED"}:
+        posture = "BALANCED"
+    return {
+        "status": "OBSERVED_BASELINE_COMPLETE" if observed_complete else "INCOMPLETE_FAIL_SOFT",
+        "strategy_posture": posture,
+        "risk_posture_evidence_complete": bool(risk_context_complete),
+        "risk_posture_evidence": dict(risk_context or {}),
+        "behavioural_baseline": behavioural_baseline,
+        "target_gw_captain_ownership_forecast": "UNAVAILABLE",
+        "scope_comparison": result,
+        "mini_league_effect_on_review": (
+            "OBSERVED_CONTEXT_ONLY_NOT_RELATIVE_POINTS_MC"
+            if observed_complete else "UNAVAILABLE_INCOMPLETE_SCOPE_OR_RANK_CONTEXT"
+        ),
+        "joint_relative_points_mc": "UNAVAILABLE_NO_SHARED_WORLD_JOINT_PMF",
+        "no_eo_as_expected_points": True,
+    }
+
+
 def decide_captain_vice(
     candidates: Sequence[Mapping[str, Any]],
     *,
@@ -626,6 +698,9 @@ def decide_captain_vice(
     risk_context_complete: bool = True,
     league_complete: bool = False,
     competitive_complete: bool = False,
+    rivals_complete: bool = False,
+    scope_denominators: Mapping[str, Any] | None = None,
+    behavioural_baseline: str = "HISTORICAL_SUBMITTED_PICKS_NOT_TARGET_GW_FORECAST",
 ) -> dict[str, Any]:
     profiles = [
         _distribution_profile(row)
@@ -751,9 +826,21 @@ def decide_captain_vice(
     vice, vice_reason = _select_vice(profiles, captain_id, baseline_vice_id)
     review_challenger = _goalkeeper_tail_review(profiles, selected, classification)
     review_vice = None
+    review_mini_league = None
     if review_challenger is not None:
         review_vice, _ = _select_vice(
             profiles, int(review_challenger["element_id"]), baseline_vice_id
+        )
+        review_mini_league = _mini_league_captain_review(
+            selected, review_challenger,
+            risk_posture=risk_posture,
+            risk_context=risk_context,
+            risk_context_complete=risk_context_complete,
+            league_complete=league_complete,
+            rivals_complete=rivals_complete,
+            competitive_complete=competitive_complete,
+            scope_denominators=scope_denominators,
+            behavioural_baseline=behavioural_baseline,
         )
 
     if classification == "CLEAR":
@@ -818,6 +905,7 @@ def decide_captain_vice(
                 "vice_captain": _public_profile(review_vice) if review_vice is not None else None,
                 "relative_points_mc": "UNAVAILABLE_NO_SHARED_WORLD_JOINT_PMF",
                 "gk_event_calibration": "REQUIRES_CLEAN_SHEET_CONCEDED_SAVES_BONUS_PENALTY_SAVE_AUDIT",
+                "mini_league_review": review_mini_league,
             }
             if review_challenger is not None else None
         ),
@@ -839,6 +927,8 @@ def decide_captain_vice(
             "bonus_residual_distribution_fabricated": False,
             "gk_close_tail_review_fail_safe": True,
             "review_pair_not_auto_executed": True,
+            "mini_league_three_scopes_audited": True,
+            "historical_picks_not_target_gw_forecast": True,
             "mc500k_mutated": False,
         },
     }

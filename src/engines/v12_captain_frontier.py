@@ -580,6 +580,42 @@ def _select_vice(
     )
 
 
+
+def _goalkeeper_tail_review(
+    profiles: Sequence[Mapping[str, Any]],
+    selected: Mapping[str, Any],
+    classification: str,
+) -> Mapping[str, Any] | None:
+    """Flag an unresolved GK captain tail trade-off, never impose a position ban.
+
+    A CLOSE keeper whose attacking alternative has a strictly better >=10 tail
+    and Q90, with no worse start/DNP evidence, cannot be marked LOCK solely
+    by a tiny mean or an exposure-only tie-break.  The underlying GK clean-
+    sheet/saves/conceded/penalty-save distribution must be audited upstream;
+    this function neither discounts the GK PMF nor fabricates a replacement.
+    """
+    if classification != "CLOSE" or str(selected.get("position")).upper() not in {"GK", "GKP"}:
+        return None
+    viable = [
+        row for row in profiles
+        if str(row.get("position")).upper() in {"MID", "FWD"}
+        and row.get("football_evidence_complete")
+        and _strictly_better(_f(row.get("p_ge_10")), _f(selected.get("p_ge_10")), higher=True)
+        and _strictly_better(_f(row.get("q90")), _f(selected.get("q90")), higher=True)
+        and _no_worse(_f(row.get("p_start")), _f(selected.get("p_start")), higher=True)
+        and _no_worse(_f(row.get("p_dnp")), _f(selected.get("p_dnp")), higher=False)
+    ]
+    if not viable:
+        return None
+    return max(
+        viable,
+        key=lambda row: (
+            _f(row.get("expected_points")) or float("-inf"),
+            _f(row.get("p_ge_10")) or float("-inf"),
+        ),
+    )
+
+
 def decide_captain_vice(
     candidates: Sequence[Mapping[str, Any]],
     *,
@@ -713,6 +749,12 @@ def decide_captain_vice(
 
     captain_id = int(selected.get("element_id") or 0)
     vice, vice_reason = _select_vice(profiles, captain_id, baseline_vice_id)
+    review_challenger = _goalkeeper_tail_review(profiles, selected, classification)
+    review_vice = None
+    if review_challenger is not None:
+        review_vice, _ = _select_vice(
+            profiles, int(review_challenger["element_id"]), baseline_vice_id
+        )
 
     if classification == "CLEAR":
         decision_state = "LOCK"
@@ -728,13 +770,21 @@ def decide_captain_vice(
             "FOOTBALL_LEADER_RETAINED",
             "PRESERVE_FOOTBALL_LEADER_BALANCED",
         }
-        decision_state = "LOCK" if resolved else "PREPARE"
+        decision_state = "LOCK" if resolved and review_challenger is None else "PREPARE"
         reason = (
             "No selected-XI candidate satisfies the threshold-free robust CLEAR "
             "rule across the full return distribution and security evidence. "
             "Mini-league context is used only as a secondary tie-break inside "
             "the football frontier when its required scopes are complete."
         )
+        if review_challenger is not None:
+            reason += (
+                " GK captain is CLOSE with an attacking alternative having "
+                "strictly stronger haul tail/Q90 and no worse start/DNP security; "
+                "PREPARE pending GK clean-sheet/conceded/saves/bonus/penalty-save "
+                "calibration and shared-world captain/vice relative-points evidence. "
+                "No automatic captain swap or fabricated Monte Carlo."
+            )
     else:
         decision_state = "PREPARE"
         reason = (
@@ -760,6 +810,17 @@ def decide_captain_vice(
         "mini_league_override_applied": bool(mini_changed),
         "competitive_context": competitive,
         "vice_reason": vice_reason,
+        "review_pair": (
+            {
+                "status": "PREPARE_NOT_EXECUTABLE",
+                "reason": "GK_CLOSE_LOWER_HAUL_TAIL_AND_Q90",
+                "captain": _public_profile(review_challenger),
+                "vice_captain": _public_profile(review_vice) if review_vice is not None else None,
+                "relative_points_mc": "UNAVAILABLE_NO_SHARED_WORLD_JOINT_PMF",
+                "gk_event_calibration": "REQUIRES_CLEAN_SHEET_CONCEDED_SAVES_BONUS_PENALTY_SAVE_AUDIT",
+            }
+            if review_challenger is not None else None
+        ),
         "reason": reason,
         "governance": {
             "owned_selected_xi_only": True,
@@ -776,6 +837,8 @@ def decide_captain_vice(
             "cross_player_correlation": "NOT_MODELLED_YET",
             "blank_semantics": "CANONICAL_P_FPL_BLANK_OR_PUBLISHED_BLANK_THRESHOLD_NO_HARDCODE",
             "bonus_residual_distribution_fabricated": False,
+            "gk_close_tail_review_fail_safe": True,
+            "review_pair_not_auto_executed": True,
             "mc500k_mutated": False,
         },
     }

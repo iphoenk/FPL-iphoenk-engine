@@ -3991,7 +3991,7 @@ def _captain_decision_surface(
             "RIVALS": rivals_scope,
             "COMPETITIVE": competitive_scope,
         },
-        behavioural_baseline="HISTORICAL_SUBMITTED_PICKS_NOT_GW6_FORECAST",
+        behavioural_baseline="HISTORICAL_SUBMITTED_PICKS_NOT_TARGET_GW_FORECAST",
     )
 
     profiles = [

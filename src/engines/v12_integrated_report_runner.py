@@ -3928,7 +3928,13 @@ def _captain_decision_surface(
 
     scopes = dict(mini_detail.get("denominator_scopes") or {})
     league_scope = dict(scopes.get("LEAGUE") or {})
+    rivals_scope = dict(scopes.get("RIVALS") or {})
     competitive_scope = dict(scopes.get("COMPETITIVE") or {})
+    rivals_complete = bool(
+        int(rivals_scope.get("expected") or 0) > 0
+        and int(rivals_scope.get("collected") or 0)
+        == int(rivals_scope.get("expected") or 0)
+    )
     league_complete = bool(
         int(league_scope.get("expected") or 0) > 0
         and int(league_scope.get("collected") or 0)
@@ -3979,6 +3985,13 @@ def _captain_decision_surface(
         risk_context_complete=risk_context_complete,
         league_complete=league_complete,
         competitive_complete=competitive_complete,
+        rivals_complete=rivals_complete,
+        scope_denominators={
+            "LEAGUE": league_scope,
+            "RIVALS": rivals_scope,
+            "COMPETITIVE": competitive_scope,
+        },
+        behavioural_baseline="HISTORICAL_SUBMITTED_PICKS_NOT_GW6_FORECAST",
     )
 
     profiles = [

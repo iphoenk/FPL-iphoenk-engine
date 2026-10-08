@@ -4088,6 +4088,14 @@ def _captain_decision_surface(
         ),
         "risk_posture": risk_posture,
         "vice_fallback_reason": decision.get("vice_reason"),
+        "captain_review_pair": (
+            {
+                **dict(decision["review_pair"]),
+                "captain": decorate(decision["review_pair"].get("captain")),
+                "vice_captain": decorate(decision["review_pair"].get("vice_captain")),
+            }
+            if isinstance(decision.get("review_pair"), Mapping) else None
+        ),
         # Compatibility-only P1.7 surface retained for existing health consumers.
         # It is no longer interpreted as proof of a football near-tie.
         "captain_safe_pool": safe_pool_ids,

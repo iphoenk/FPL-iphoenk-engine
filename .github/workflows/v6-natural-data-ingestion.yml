@@ -223,6 +223,17 @@ jobs:
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind != 'report_prefetch'
         run: python -m src.runtime_v6.domains.control_plane.runtime_control
 
+      # Report-prefetch is downstream of ChatGPT scheduler authority, but its
+      # exact occurrence must still refresh the official V6 source plane. In
+      # particular, official_price_predictor is derived from official_fpl and
+      # must not be carried forward from the prior hourly cadence.
+      - name: Refresh official V6 source plane for report-prefetch
+        if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
+        env:
+          V6_SCHEDULE_KIND: report_prefetch
+          V6_LOGICAL_SLOT: ${{ steps.prefetch_meta.outputs.logical_slot }}
+        run: python -m src.runtime_v6.domains.acquisition.collector
+
       - name: Run report-driven V6 personal and mini-league prefetch
         if: steps.slot_guard.outputs.skip != 'true' && steps.scheduler.outputs.kind == 'report_prefetch'
         shell: bash

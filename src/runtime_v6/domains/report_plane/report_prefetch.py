@@ -1321,6 +1321,21 @@ class PrefetchService:
                 "set_piece_notes_direct_model_override_forbidden": True,
             },
         }
+        # Keep an immutable occurrence-bound producer record. latest.json remains a
+        # convenience pointer, but DEEP and PRICE may be prefetched close together;
+        # downstream consumers must never bind the other mode latest pointer.
+        occurrence_key = (
+            f"{report_kind}__{slot.isoformat()}"
+            .replace(":", "")
+            .replace("+", "_plus_")
+            .replace("-", "")
+            .replace("T", "_")
+        )
+        write_json(
+            self.output_root / "report_prefetch/occurrences" / f"{occurrence_key}.json",
+            manifest,
+            secrets=secrets,
+        )
         write_json(self.output_root / "report_prefetch/latest.json", manifest, secrets=secrets)
         self._publish_health(manifest)
         return manifest

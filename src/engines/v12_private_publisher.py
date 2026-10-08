@@ -164,30 +164,76 @@ def build_private_digest(
     canonical_bundle_sha256: str,
     canonical_body_sha256: str,
 ) -> dict[str, Any]:
-    """Copy canonical status/decision pointers without re-evaluating them."""
+    """Build a compact exact-serving digest for both DEEP and PRICE.
+
+    DEEP already carries report-serving QA fields on the bundle. PRICE is a
+    deliberately independent delivery path, so its QA and section metadata
+    live in execution_proof/report rather than the DEEP serving snapshot.
+    Keeping those fields in latest/<mode>.json prevents the occurrence verifier
+    from accidentally binding PRICE to the previous DEEP delivery_status.json.
+    """
+    report_mode = str(bundle.get("report_mode") or "").upper()
+    report = bundle.get("report") if isinstance(bundle.get("report"), Mapping) else {}
     section_manifest = bundle.get("section_manifest") or []
     section_ids = [
         str(row.get("id") or row.get("section_id") or "")
         for row in section_manifest
         if isinstance(row, Mapping)
     ]
+    if report_mode == "PRICE" and not section_ids:
+        section_ids = [
+            str(row.get("section_id") or "")
+            for row in (report.get("sections") or [])
+            if isinstance(row, Mapping) and str(row.get("section_id") or "")
+        ]
+
+    runner_status = str(
+        bundle.get("runner_status")
+        or execution_proof.get("runner_status")
+        or ""
+    ).upper()
+    pre_render_status = (
+        (bundle.get("pre_render_qa") or {}).get("status")
+        if isinstance(bundle.get("pre_render_qa"), Mapping)
+        else None
+    ) or execution_proof.get("pre_render_qa_status")
+    post_render_status = (
+        (bundle.get("post_render_qa") or {}).get("status")
+        if isinstance(bundle.get("post_render_qa"), Mapping)
+        else None
+    ) or execution_proof.get("post_render_qa_status")
+    human_facing_status = (
+        (bundle.get("human_facing_qa") or {}).get("status")
+        if isinstance(bundle.get("human_facing_qa"), Mapping)
+        else None
+    ) or execution_proof.get("human_facing_qa_status")
+    delivery_status = str(bundle.get("delivery_status") or "").upper()
+    if not delivery_status and report_mode == "PRICE":
+        delivery_status = "READY_FULL" if runner_status == "PASS" else "READY_DEGRADED"
+
     return {
-        "schema_version": 1,
-        "report_mode": bundle.get("report_mode"),
+        "schema_version": 2,
+        "report_mode": report_mode,
         "report_slot": bundle.get("report_slot"),
+        "occurrence_id": bundle.get("occurrence_id")
+        or f"{report_mode}|{bundle.get('report_slot')}",
         "planning_gw": bundle.get("planning_gw"),
-        "runner_status": bundle.get("runner_status"),
-        "pre_render_status": (bundle.get("pre_render_qa") or {}).get("status"),
-        "post_render_status": (bundle.get("post_render_qa") or {}).get("status"),
-        "human_facing_status": (bundle.get("human_facing_qa") or {}).get("status"),
-        "stage3_action": execution_proof.get("stage3_action"),
+        "delivery_status": delivery_status,
+        "runner_status": runner_status,
+        "pre_render_status": pre_render_status,
+        "post_render_status": post_render_status,
+        "human_facing_status": human_facing_status,
+        "stage3_action": (
+            execution_proof.get("stage3_action")
+            if report_mode == "DEEP"
+            else "NOT_APPLICABLE"
+        ),
         "section_ids": section_ids,
         "canonical_bundle_sha256": canonical_bundle_sha256,
         "canonical_body_sha256": canonical_body_sha256,
         "decision_source": "CANONICAL_OUTPUT_COPY_ONLY",
         "math_recomputed": False,
     }
-
 
 
 def build_previous_deep_baseline(

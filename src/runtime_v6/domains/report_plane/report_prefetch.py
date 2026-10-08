@@ -1338,6 +1338,12 @@ class PrefetchService:
         )
         write_json(self.output_root / "report_prefetch/latest.json", manifest, secrets=secrets)
         self._publish_health(manifest)
+        occurrence_health = read_json(self.output_root / "health/report_prefetch.json") or {}
+        write_json(
+            self.output_root / "health/report_prefetch_occurrences" / f"{occurrence_key}.json",
+            occurrence_health,
+            secrets=secrets,
+        )
         return manifest
 
 

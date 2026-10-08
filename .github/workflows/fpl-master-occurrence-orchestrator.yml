@@ -86,10 +86,13 @@ jobs:
                   raise SystemExit(f"duplicate argument: {key}")
               args[key] = value
 
-          allowed = {"report_mode", "report_slot", "checkpoint_time"}
+          allowed = {"report_mode", "report_slot", "checkpoint_time", "force"}
           unknown = set(args) - allowed
           if unknown:
               raise SystemExit(f"unknown arguments: {sorted(unknown)}")
+          force = str(args.get("force") or "false").lower()
+          if force not in {"true", "false"}:
+              raise SystemExit("force must be true or false")
 
           mode = str(args.get("report_mode") or "").upper()
           slot = str(args.get("report_slot") or "")
@@ -134,16 +137,24 @@ jobs:
               fh.write(f"report_kind={report_kind}\n")
               fh.write(f"occurrence_id={occurrence_id}\n")
               fh.write(f"serving_file={serving_file}\n")
+              fh.write(f"force={force}\n")
           PY
 
       - name: Idempotency guard
         id: guard
         env:
           OCCURRENCE_ID: ${{ steps.parse.outputs.occurrence_id }}
+          FORCE_AD_HOC: ${{ steps.parse.outputs.force }}
           FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "${FORCE_AD_HOC:-false}" == "true" ]]; then
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "reuse_source=FORCED_AD_HOC" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           comments_file="$RUNNER_TEMP/issue-431-comments.txt"
           gh api --paginate "/repos/${GITHUB_REPOSITORY}/issues/431/comments?per_page=100" \
             --jq '.[] | select(.user.login == "github-actions[bot]") | .body' \

@@ -585,6 +585,12 @@ def _goalkeeper_tail_review(
     profiles: Sequence[Mapping[str, Any]],
     selected: Mapping[str, Any],
     classification: str,
+    *,
+    risk_posture: str = "BALANCED",
+    risk_context_complete: bool = False,
+    league_complete: bool = False,
+    rivals_complete: bool = False,
+    competitive_complete: bool = False,
 ) -> Mapping[str, Any] | None:
     """Flag an unresolved GK captain tail trade-off, never impose a position ban.
 
@@ -607,6 +613,34 @@ def _goalkeeper_tail_review(
     ]
     if not viable:
         return None
+    posture = str(risk_posture or "BALANCED").upper()
+    if posture == "CHASE":
+        posture = "ATTACK"
+    # Mini-league cannot override football eligibility.  Among *already
+    # viable* attackers only, exposure can choose the review alternative.
+    exposure_ready = bool(
+        risk_context_complete and league_complete and rivals_complete
+        and competitive_complete
+        and all(
+            all(
+                _scope_value(row, scope, field) is not None
+                for scope in ("league_scope", "rivals_scope", "competitive_scope")
+                for field in ("captain_pct", "eo_pct")
+            )
+            for row in viable
+        )
+    )
+    if exposure_ready and posture in {"PROTECT", "ATTACK"}:
+        return sorted(
+            viable,
+            key=lambda row: (
+                _scope_value(row, "competitive_scope", "captain_pct"),
+                _scope_value(row, "competitive_scope", "eo_pct"),
+                _scope_value(row, "league_scope", "captain_pct"),
+                _f(row.get("expected_points")) or float("-inf"),
+            ),
+            reverse=posture == "PROTECT",
+        )[0]
     return max(
         viable,
         key=lambda row: (
@@ -824,7 +858,14 @@ def decide_captain_vice(
 
     captain_id = int(selected.get("element_id") or 0)
     vice, vice_reason = _select_vice(profiles, captain_id, baseline_vice_id)
-    review_challenger = _goalkeeper_tail_review(profiles, selected, classification)
+    review_challenger = _goalkeeper_tail_review(
+        profiles, selected, classification,
+        risk_posture=risk_posture,
+        risk_context_complete=risk_context_complete,
+        league_complete=league_complete,
+        rivals_complete=rivals_complete,
+        competitive_complete=competitive_complete,
+    )
     review_vice = None
     review_mini_league = None
     if review_challenger is not None:

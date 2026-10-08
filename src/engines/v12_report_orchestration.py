@@ -4362,6 +4362,21 @@ def _render_deep_visible_contract_lines(
         lines.append(
             f"VC fallback: {payload.get('vice_fallback_reason') or 'UNAVAILABLE'}."
         )
+        review = payload.get("captain_review_pair")
+        if isinstance(review, Mapping):
+            review_c = dict(review.get("captain") or {})
+            review_v = dict(review.get("vice_captain") or {})
+            lines.append(
+                "CAPTAIN REVIEW (NOT AUTO-APPLIED): "
+                f"{review_c.get('player') or 'UNAVAILABLE'} C / "
+                f"{review_v.get('player') or 'UNAVAILABLE'} VC; "
+                f"status {review.get('status') or 'PREPARE'}."
+            )
+            lines.append(
+                "Review evidence: GK tail/Q90 vs attacker; "
+                f"relative MC {review.get('relative_points_mc') or 'UNAVAILABLE'}; "
+                f"GK event calibration {review.get('gk_event_calibration') or 'UNAVAILABLE'}."
+            )
 
     elif section_id == "S09":
         lines.append("### CHIP LEDGER")

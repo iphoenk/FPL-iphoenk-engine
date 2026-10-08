@@ -1,5 +1,5 @@
 """Regression coverage for CLOSE GK captain risk without a position ban."""
-from src.engines.v12_captain_frontier import decide_captain_vice
+from src.engines.v12_captain_frontier import decide_captain_vice, _mini_league_captain_review
 
 
 def _candidate(element, name, position, pmf, *, pstart=.85, pdnp=.05, mean=None):
@@ -61,3 +61,54 @@ def test_close_keeper_with_superior_tail_is_not_artificially_penalized():
                               baseline_captain_id=1, baseline_vice_id=2)
     assert out["review_pair"] is None
     assert out["governance"]["position_neutral"] is True
+
+
+def test_review_preserves_three_scopes_rank_and_historical_baseline():
+    current = {
+        "league_scope": {"captain_pct": 1.0, "eo_pct": 12.0},
+        "rivals_scope": {"captain_pct": 0.0, "eo_pct": 11.0},
+        "competitive_scope": {"captain_pct": 0.0, "eo_pct": 11.1},
+    }
+    challenger = {
+        "league_scope": {"captain_pct": 18.0, "eo_pct": 80.0},
+        "rivals_scope": {"captain_pct": 20.0, "eo_pct": 85.0},
+        "competitive_scope": {"captain_pct": 22.2, "eo_pct": 88.9},
+    }
+    denominators = {
+        "LEAGUE": {"expected": 58, "collected": 58},
+        "RIVALS": {"expected": 57, "collected": 57},
+        "COMPETITIVE": {"expected": 9, "collected": 9},
+    }
+    result = _mini_league_captain_review(
+        current, challenger, risk_posture="ATTACK",
+        risk_context={"current_rank": 7, "league_size": 58, "leader_gap": 17},
+        risk_context_complete=True, league_complete=True,
+        rivals_complete=True, competitive_complete=True,
+        scope_denominators=denominators,
+        behavioural_baseline="HISTORICAL_SUBMITTED_PICKS_NOT_TARGET_GW_FORECAST",
+    )
+    assert result["status"] == "OBSERVED_BASELINE_COMPLETE"
+    assert result["strategy_posture"] == "ATTACK"
+    assert result["scope_comparison"]["COMPETITIVE"]["denominator"]["expected"] == 9
+    assert result["scope_comparison"]["COMPETITIVE"]["review_minus_current_captain_pct_points"] == 22.2
+    assert result["scope_comparison"]["LEAGUE"]["review_eo_pct"] == 80.0
+    assert result["scope_comparison"]["RIVALS"]["review_captain_pct"] == 20.0
+    assert result["risk_posture_evidence"]["leader_gap"] == 17
+    assert result["target_gw_captain_ownership_forecast"] == "UNAVAILABLE"
+    assert result["scope_comparison"]["COMPETITIVE"]["relative_points_expected_delta"] is None
+
+
+def test_review_missing_competitive_coverage_is_fail_soft_not_false_confident():
+    current = {"league_scope": {"captain_pct": 1, "eo_pct": 12}}
+    challenger = {"league_scope": {"captain_pct": 18, "eo_pct": 80}}
+    result = _mini_league_captain_review(
+        current, challenger, risk_posture="PROTECT",
+        risk_context={}, risk_context_complete=False,
+        league_complete=True, rivals_complete=False, competitive_complete=False,
+        scope_denominators={"LEAGUE": {"expected": 58, "collected": 58}},
+        behavioural_baseline="HISTORICAL_SUBMITTED_PICKS_NOT_TARGET_GW_FORECAST",
+    )
+    assert result["status"] == "INCOMPLETE_FAIL_SOFT"
+    assert result["mini_league_effect_on_review"].startswith("UNAVAILABLE")
+    assert result["scope_comparison"]["COMPETITIVE"]["review_eo_pct"] is None
+    assert result["joint_relative_points_mc"].startswith("UNAVAILABLE")

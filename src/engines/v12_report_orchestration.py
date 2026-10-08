@@ -4377,6 +4377,35 @@ def _render_deep_visible_contract_lines(
                 f"relative MC {review.get('relative_points_mc') or 'UNAVAILABLE'}; "
                 f"GK event calibration {review.get('gk_event_calibration') or 'UNAVAILABLE'}."
             )
+            mini_review = dict(review.get("mini_league_review") or {})
+            lines.append(
+                "MINI-LEAGUE CAPTAIN REVIEW: "
+                f"{mini_review.get('status') or 'UNAVAILABLE'}; "
+                f"posture {mini_review.get('strategy_posture') or 'UNAVAILABLE'}; "
+                f"baseline {mini_review.get('behavioural_baseline') or 'UNAVAILABLE'}."
+            )
+            context = dict(mini_review.get("risk_posture_evidence") or {})
+            lines.append(
+                "Mini-league rank/gaps: "
+                f"rank {context.get('current_rank', 'UNAVAILABLE')}/"
+                f"{context.get('league_size', 'UNAVAILABLE')}; "
+                f"leader gap {context.get('leader_gap', 'UNAVAILABLE')}; "
+                f"top3 gap {context.get('top3_gap', 'UNAVAILABLE')}; "
+                f"top5 gap {context.get('top5_gap', 'UNAVAILABLE')}."
+            )
+            for scope_name, scope in dict(mini_review.get("scope_comparison") or {}).items():
+                scope = dict(scope or {})
+                denominator = dict(scope.get("denominator") or {})
+                lines.append(
+                    f"Mini-league {scope_name}: "
+                    f"coverage {denominator.get('collected', 'UNAVAILABLE')}/"
+                    f"{denominator.get('expected', 'UNAVAILABLE')}; "
+                    f"current C% {scope.get('current_captain_pct')}; "
+                    f"review C% {scope.get('review_captain_pct')}; "
+                    f"current EO% {scope.get('current_eo_pct')}; "
+                    f"review EO% {scope.get('review_eo_pct')}; "
+                    "relative points MC UNAVAILABLE."
+                )
 
     elif section_id == "S09":
         lines.append("### CHIP LEDGER")

@@ -1,5 +1,5 @@
 """Regression coverage for CLOSE GK captain risk without a position ban."""
-from src.engines.v12_captain_frontier import decide_captain_vice, _mini_league_captain_review
+from src.engines.v12_captain_frontier import decide_captain_vice, _mini_league_captain_review, _goalkeeper_tail_review
 
 
 def _candidate(element, name, position, pmf, *, pstart=.85, pdnp=.05, mean=None):
@@ -112,3 +112,33 @@ def test_review_missing_competitive_coverage_is_fail_soft_not_false_confident():
     assert result["mini_league_effect_on_review"].startswith("UNAVAILABLE")
     assert result["scope_comparison"]["COMPETITIVE"]["review_eo_pct"] is None
     assert result["joint_relative_points_mc"].startswith("UNAVAILABLE")
+
+
+def test_complete_mini_league_posture_selects_only_among_football_viable_review_options():
+    keeper = {
+        "position": "GK", "p_ge_10": .10, "q90": 10,
+        "p_start": .82, "p_dnp": .12,
+    }
+    candidates = [keeper]
+    for name, share, expected in (("Protected", 70.0, 4.7), ("Differential", 5.0, 4.8)):
+        candidates.append({
+            "player": name, "position": "MID", "football_evidence_complete": True,
+            "p_ge_10": .20, "q90": 12, "p_start": .90, "p_dnp": .05,
+            "expected_points": expected,
+            "league_scope": {"captain_pct": share, "eo_pct": share + 20},
+            "rivals_scope": {"captain_pct": share, "eo_pct": share + 20},
+            "competitive_scope": {"captain_pct": share, "eo_pct": share + 20},
+        })
+    flags = dict(risk_context_complete=True, league_complete=True,
+                 rivals_complete=True, competitive_complete=True)
+    protect = _goalkeeper_tail_review(
+        candidates, keeper, "CLOSE", risk_posture="PROTECT", **flags)
+    attack = _goalkeeper_tail_review(
+        candidates, keeper, "CLOSE", risk_posture="ATTACK", **flags)
+    assert protect["player"] == "Protected"
+    assert attack["player"] == "Differential"
+    # Incomplete evidence: exposure cannot select, football mean leads.
+    fallback = _goalkeeper_tail_review(
+        candidates, keeper, "CLOSE", risk_posture="PROTECT",
+        **{**flags, "competitive_complete": False})
+    assert fallback["player"] == "Differential"

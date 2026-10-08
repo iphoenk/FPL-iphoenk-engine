@@ -859,7 +859,7 @@ def decide_captain_vice(
     captain_id = int(selected.get("element_id") or 0)
     vice, vice_reason = _select_vice(profiles, captain_id, baseline_vice_id)
     review_challenger = _goalkeeper_tail_review(
-        profiles, selected, classification,
+        frontier, selected, classification,
         risk_posture=risk_posture,
         risk_context_complete=risk_context_complete,
         league_complete=league_complete,

@@ -147,6 +147,6 @@ def test_runtime_key_excludes_physical_cpu_and_host_core_count():
 
 
 def test_cache_schema_bump_rejects_pre_lineage_runtime_generation():
-    assert stage2.STAGE2_DERIVED_CACHE_SCHEMA == 3
+    assert stage2.STAGE2_DERIVED_CACHE_SCHEMA == 4
     assert lineup.P17_DECISION_CACHE_SCHEMA == 3
     assert mc.MC_SIM_CACHE_SCHEMA == 3

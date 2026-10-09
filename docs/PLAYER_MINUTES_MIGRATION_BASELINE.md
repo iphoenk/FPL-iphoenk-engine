@@ -4,6 +4,8 @@ Baseline SHA: `247979ece6e6d0ebf652cf3c9c3f176d90fb6d3c`
 
 This document freezes the numerical behavior used as the migration/regression oracle for the V12-native player-minutes owner. It is documentation only and is not an authority.
 
+> Semantic repair note (2026-10-06): the historical baseline below records the pre-repair behavior. Direct mapping of Official FPL 25/50/75 availability flags into P(start)/xMins is intentionally retired. Current authority is the target-aware categorical evidence contract in `docs/INJURY_AVAILABILITY_EVIDENCE.md`; the legacy oracle mirrors that repaired rule so regression tests cannot re-introduce the defect.
+
 ## Donors
 
 - `src/models/xmins_v2.py`: hierarchical probability/minutes mathematics.

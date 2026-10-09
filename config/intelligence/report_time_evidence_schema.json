@@ -11,7 +11,10 @@
     "source_url",
     "summary"
   ],
-  "lineage_required_for_sources": ["fpl_analytics_dashboard", "allaboutfpl"],
+  "lineage_required_for_sources": [
+    "fpl_analytics_dashboard",
+    "allaboutfpl"
+  ],
   "required_lineage_fields": [
     "fetched_at",
     "freshness_state",
@@ -58,5 +61,42 @@
     "stale_or_unavailable_evidence_is_not_current": true,
     "root_family_is_required_for_external_lineage": true,
     "external_evidence_is_categorical_not_a_score": true
+  },
+  "optional_availability_fields": [
+    "availability_evidence",
+    "evidence_type",
+    "claim_domain",
+    "evidence_polarity",
+    "raw_claim",
+    "normalized_claim",
+    "injury_confirmed",
+    "injury_mechanism",
+    "body_part",
+    "withdrawn_from_squad",
+    "returned_to_club",
+    "training_status",
+    "match_status",
+    "manager_severity",
+    "manager_availability_language",
+    "club_assessment",
+    "expected_return",
+    "expected_return_source",
+    "expected_return_authority",
+    "target_gw",
+    "target_fixture_id",
+    "root_source_id",
+    "root_source_type",
+    "is_republication",
+    "no_injury_explicit",
+    "availability",
+    "explicit_target_unavailable"
+  ],
+  "availability_semantics": {
+    "evidence_layer_contract": "V12_TARGET_AWARE_AVAILABILITY_EVIDENCE_V1",
+    "raw_claim_preserved": true,
+    "free_text_medical_inference_forbidden": true,
+    "fpl_flag_is_probability": false,
+    "gw_availability_is_categorical": true,
+    "pstart_owner": "V12_PLAYER_MINUTES"
   }
 }

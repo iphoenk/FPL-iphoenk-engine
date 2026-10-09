@@ -51,22 +51,40 @@ def _availability(
     cfg: dict[str, Any],
     context: Mapping[str, Any] | None = None,
 ) -> tuple[float, str]:
-    """Official FPL authority, with explicit private P4 counterfactual override."""
+    """Return the hard operational gate, never an FPL-flag probability.
+
+    FPL 25/50/75 values are observations only. Fitness uncertainty is fed into
+    this existing P1.1 owner as normalized categorical model evidence below.
+    The only numeric override remains the explicitly-authorized P4 scenario.
+    """
     context = context or {}
     if "scenario_availability_probability_override" in context:
         if context.get("scenario_override_authorized") is not True:
-            raise RuntimeError("scenario availability override requires explicit authorization")
-        return clamp(_f(context.get("scenario_availability_probability_override")), 0.0, 1.0), "scenario_override"
-    chance = player.get("chance_of_playing_next_round")
-    if chance is not None:
-        return clamp(_f(chance) / 100.0, 0.0, 1.0), "official_chance"
-    status = str(player.get("status") or "a")
-    defaults = cfg.get("availability_defaults") or {}
-    return (
-        clamp(_f(defaults.get(status), 1.0), 0.0, 1.0),
-        f"status:{status}",
-    )
+            raise RuntimeError(
+                "scenario availability override requires explicit authorization"
+            )
+        return (
+            clamp(
+                _f(context.get("scenario_availability_probability_override")),
+                0.0,
+                1.0,
+            ),
+            "scenario_override",
+        )
 
+    evidence_state = context.get("availability_evidence_state")
+    if isinstance(evidence_state, Mapping):
+        features = dict(evidence_state.get("model_features") or {})
+        if features.get("explicit_out_for_target") is True:
+            return 0.0, "normalized_evidence:explicit_target_out"
+
+    # FPL status 's' is an operational suspension state, not an injury
+    # probability. Other Official FPL availability flags/statuses are
+    # observations and must not silently become medical/start probabilities.
+    status = str(player.get("status") or "a").strip().lower()
+    if status == "s":
+        return 0.0, "official_operational_status:suspended"
+    return 1.0, "nonprobabilistic_availability_gate"
 
 def _mixture_mean_variance(
     states: list[tuple[str, float, float, float]],
@@ -126,6 +144,38 @@ def _estimate_core(
                     _f(weights.get(name), 1.0),
                 )
             )
+
+    availability_evidence_state = (
+        dict(context.get("availability_evidence_state") or {})
+        if isinstance(context.get("availability_evidence_state"), Mapping)
+        else {}
+    )
+    availability_model_features = dict(
+        availability_evidence_state.get("model_features") or {}
+    )
+    gw_availability = str(
+        availability_evidence_state.get("gw_availability")
+        or availability_model_features.get("gw_availability")
+        or "UNKNOWN"
+    ).upper()
+    normalized_signal_map = dict(
+        cfg.get("gw_availability_start_signal") or {}
+    )
+    normalized_signal = normalized_signal_map.get(gw_availability)
+    if (
+        normalized_signal is not None
+        and gw_availability not in {"AVAILABLE", "LIKELY_AVAILABLE", "UNKNOWN", "OUT"}
+    ):
+        signals.append(
+            (
+                "normalized_availability_start_signal",
+                clamp(_f(normalized_signal), 0.01, 0.99),
+                _f(
+                    weights.get("normalized_availability_start_signal"),
+                    1.0,
+                ),
+            )
+        )
 
     weighted_logit = sum(_logit(p) * w for _, p, w in signals if w > 0)
     total_weight = sum(w for _, _, w in signals if w > 0)
@@ -543,6 +593,33 @@ def _estimate_core(
         "minutes_std": round(minutes_std, 2),
         "availability": round(availability, 4),
         "availability_source": availability_source,
+        "availability_observation": {
+            "fpl_flag": player.get("chance_of_playing_next_round"),
+            "fpl_status": player.get("status"),
+            "fpl_news": player.get("news"),
+            "gw_availability": (
+                availability_evidence_state.get("gw_availability")
+                if availability_evidence_state
+                else "UNKNOWN"
+            ),
+            "gw_availability_confidence": (
+                availability_evidence_state.get(
+                    "gw_availability_confidence"
+                )
+                if availability_evidence_state
+                else "LOW"
+            ),
+            "availability_derivation_reason": (
+                availability_evidence_state.get(
+                    "availability_derivation_reason"
+                )
+                if availability_evidence_state
+                else "NO_NORMALIZED_EVIDENCE_BOUND"
+            ),
+            "fpl_flag_is_probability": False,
+            "gw_availability_is_start_probability": False,
+            "availability_confidence_is_start_probability": False,
+        },
         "rotation_risk": round(rotation_risk, 4),
         "congestion_factor": round(congestion_factor, 4),
         "small_sample_guard": small_sample,
@@ -556,8 +633,14 @@ def _estimate_core(
             for name, prob, weight in signals
         ],
         "governance": {
-            "official_fpl_availability_is_factual_authority": True,
+            "official_fpl_flag_is_observation_not_probability": True,
+            "direct_fpl_flag_to_pstart_forbidden": True,
+            "gw_availability_is_categorical_model_evidence": True,
+            "gw_availability_confidence_not_used_as_probability": True,
+            "hard_availability_gate_is_not_medical_probability": True,
             "historical_and_role_signals_are_model_evidence": True,
+            "canonical_pstart_owner": MODEL_OWNER,
+            "second_pstart_model_created": False,
             "bench_probability_overlaps_cameo_and_dnp": True,
             "flat_start_bench_cameo_dnp_normalization_forbidden": True,
             "xmins_derived_from_start_cameo_zero_mixture": True,

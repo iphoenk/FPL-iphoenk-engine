@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from src.rules import DC_POINTS_CAP_PER_MATCH, DC_RULES, ELEMENT_TYPE_TO_POSITION
+from src.engines.v12_injury_availability import derive_gw_availability
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "v12_stageb_evidence.json"
@@ -538,135 +539,134 @@ def build_defcon_probability(
     }
 
 
-def _normalize_availability_evidence(
-    evidence: Sequence[Mapping[str, Any]],
-    *,
-    as_of: str,
-) -> list[dict[str, Any]]:
-    cfg = dict((load_config().get("availability") or {}))
-    as_of_dt = _timestamp(as_of)
-    if as_of_dt is None:
-        raise ValueError("as_of must be ISO-8601")
-    ttl_map = dict(cfg.get("default_ttl_hours") or {})
-    out = []
-    for index, raw in enumerate(evidence or ()):
-        if not isinstance(raw, Mapping):
-            continue
-        source = str(raw.get("source") or "").strip()
-        evidence_type = str(raw.get("evidence_type") or "").strip().upper()
-        stamp = _timestamp(raw.get("timestamp"))
-        confidence = _clamp(_f(raw.get("confidence"), 0.0), 0.0, 1.0)
-        ttl_hours = _optional_f(raw.get("ttl_hours"))
-        if ttl_hours is None:
-            ttl_hours = _optional_f(ttl_map.get(evidence_type))
-        expires_at = stamp + timedelta(hours=ttl_hours) if stamp and ttl_hours is not None else None
-        stale = stamp is None or (expires_at is not None and as_of_dt > expires_at)
-        availability = str(raw.get("availability") or "").strip().upper() or None
-        row = {
-            "index": index,
-            "source": source or None,
-            "timestamp": _iso(stamp),
-            "evidence_type": evidence_type or "UNKNOWN",
-            "confidence": round(confidence, 4),
-            "ttl_hours": ttl_hours,
-            "expires_at": _iso(expires_at),
-            "stale": stale,
-            "availability": availability,
-            "minutes": _optional_f(raw.get("minutes")),
-            "travel_return": bool(raw.get("travel_return")),
-            "reason": raw.get("reason"),
-            "raw_state_hint": raw.get("state_hint"),
-            "diagnosis_inferred": False,
-        }
-        out.append(row)
-    return out
-
-
 def build_availability_state(
     evidence: Sequence[Mapping[str, Any]],
     *,
     as_of: str,
+    target_gw: int | None = None,
+    target_fixture_id: Any = None,
+    evidence_cutoff_at: str | None = None,
 ) -> dict[str, Any]:
-    cfg = dict((load_config().get("availability") or {}))
-    rows = _normalize_availability_evidence(evidence, as_of=as_of)
-    active = [row for row in rows if not row["stale"]]
-    min_confirmed = _f(cfg.get("minimum_confirmed_confidence"), 0.8)
+    """Compatibility facade over the one target-aware availability resolver.
 
-    confirmed_unavailable = [
-        row for row in active
-        if row["evidence_type"] in {"OFFICIAL_STATUS", "CLUB_STATEMENT"}
-        and row["availability"] == "UNAVAILABLE"
-        and row["confidence"] >= min_confirmed
+    Stage B remains evidence/diagnostic infrastructure. The canonical
+    categorical result is gw_availability. The legacy state field is retained
+    only for older Stage-B diagnostics and is derived from the same evidence.
+    """
+    cfg = dict((load_config().get("availability") or {}))
+    resolved = derive_gw_availability(
+        evidence,
+        target_gw=target_gw,
+        target_fixture_id=target_fixture_id,
+        derived_at=as_of,
+        evidence_cutoff_at=evidence_cutoff_at or as_of,
+    )
+    active = list(resolved.get("active_evidence") or [])
+    stale = [
+        row
+        for row in (resolved.get("superseded_evidence") or [])
+        if row.get("stale") is True
     ]
-    confirmed_available = [
-        row for row in active
-        if row["evidence_type"] in {"OFFICIAL_STATUS", "CLUB_STATEMENT"}
-        and row["availability"] == "AVAILABLE"
-        and row["confidence"] >= min_confirmed
+
+    legacy_unavailable = [
+        row
+        for row in active
+        if row.get("availability_hint") in {"UNAVAILABLE", "OUT"}
+        and row.get("raw_evidence_type")
+        in {"OFFICIAL_STATUS", "CLUB_STATEMENT", "NEWS_REPORT", "ANALYST_REPORT"}
+    ]
+    legacy_available = [
+        row
+        for row in active
+        if row.get("availability_hint") == "AVAILABLE"
+        and row.get("raw_evidence_type") in {"OFFICIAL_STATUS", "CLUB_STATEMENT"}
     ]
     explicit_doubt = [
-        row for row in active
-        if row["evidence_type"] in {"OFFICIAL_STATUS", "CLUB_STATEMENT"}
-        and row["availability"] == "DOUBT"
+        row for row in active if row.get("availability_hint") == "DOUBT"
     ]
-    international = [
-        row for row in active
-        if row["evidence_type"] == "INTERNATIONAL_APPEARANCE"
-        and (row["minutes"] or 0.0) > 0.0
-    ]
-    travel = [
-        row for row in active
-        if row["evidence_type"] == "TRAVEL" and row["travel_return"]
-    ]
-    ambiguous_unavailable = [
-        row for row in active
-        if row["availability"] == "UNAVAILABLE"
-        and row not in confirmed_unavailable
-    ]
-    conflict = bool(confirmed_unavailable and confirmed_available)
+    conflict = bool(
+        (legacy_unavailable and legacy_available)
+        or int(
+            (resolved.get("observability") or {}).get(
+                "conflicting_evidence_count"
+            )
+            or 0
+        )
+        > 0
+    )
 
+    international = [
+        row
+        for row in active
+        if row.get("international") is True
+        and row.get("evidence_type") == "MATCH_APPEARANCE"
+        and float(row.get("minutes") or 0.0) > 0.0
+    ]
+    heavy_international = bool(
+        international
+        and max(float(row.get("minutes") or 0.0) for row in international)
+        >= _f(cfg.get("international_heavy_minutes_threshold"), 75.0)
+    )
+    travel = [
+        row
+        for row in active
+        if row.get("evidence_type") == "RETURNED_TO_CLUB"
+        and (
+            row.get("travel_return")
+            or row.get("returned_to_club") == "YES"
+            or row.get("raw_evidence_type") == "TRAVEL"
+        )
+    ]
+
+    gw_state = str(resolved.get("gw_availability") or "UNKNOWN")
     if conflict:
         state = "DOUBT"
         resolution = "CONFLICTING_AUTHORITATIVE_EVIDENCE"
-    elif confirmed_unavailable:
-        state = "UNAVAILABLE_CONFIRMED"
-        resolution = "CONFIRMED_UNAVAILABLE"
-    elif confirmed_available:
+    elif legacy_available:
         state = (
             "CLUB_CONFIRMED_AVAILABLE"
-            if any(row["evidence_type"] == "CLUB_STATEMENT" for row in confirmed_available)
+            if any(
+                row.get("raw_evidence_type") == "CLUB_STATEMENT"
+                for row in legacy_available
+            )
             else "FIT"
         )
         resolution = "CONFIRMED_AVAILABLE"
-    elif explicit_doubt:
+    elif gw_state == "OUT":
+        state = "UNAVAILABLE_CONFIRMED"
+        resolution = "CONFIRMED_UNAVAILABLE"
+    elif gw_state in {"DOUBT", "STRONG_DOUBT"} or explicit_doubt:
         state = "DOUBT"
-        resolution = "EXPLICIT_DOUBT"
-    elif international:
-        heavy = max(row["minutes"] or 0.0 for row in international) >= _f(
-            cfg.get("international_heavy_minutes_threshold"), 75.0
+        resolution = str(
+            resolved.get("availability_derivation_reason")
+            or "EXPLICIT_DOUBT"
         )
-        state = "INTERNATIONAL_HEAVY_MINUTES" if heavy else "INTERNATIONAL_PLAYED"
+    elif heavy_international:
+        state = "INTERNATIONAL_HEAVY_MINUTES"
+        resolution = "INTERNATIONAL_APPEARANCE"
+    elif international:
+        state = "INTERNATIONAL_PLAYED"
         resolution = "INTERNATIONAL_APPEARANCE"
     elif travel:
         state = "TRAVEL_RETURN"
         resolution = "TRAVEL_EVIDENCE"
-    elif ambiguous_unavailable:
+    elif legacy_unavailable:
         state = "UNAVAILABLE_UNKNOWN"
         resolution = "UNAVAILABILITY_WITHOUT_CONFIRMED_MEDICAL_REASON"
+    elif gw_state in {"AVAILABLE", "LIKELY_AVAILABLE"}:
+        state = "FIT"
+        resolution = str(
+            resolved.get("availability_derivation_reason")
+            or "CURRENT_REASSURING_EVIDENCE"
+        )
     else:
         state = "FIT"
         resolution = "NO_ACTIVE_ADVERSE_EVIDENCE"
 
     if state not in AVAILABILITY_STATES:
-        raise AssertionError("invalid availability state")
+        raise AssertionError("invalid availability compatibility state")
 
-    heavy_international = bool(
-        international
-        and max(row["minutes"] or 0.0 for row in international) >= _f(
-            cfg.get("international_heavy_minutes_threshold"), 75.0
-        )
-    )
-    workload_states = []
+    workload_states: list[str] = []
     congestion = 1.0
     if international:
         workload_states.append(
@@ -680,7 +680,12 @@ def build_availability_state(
         congestion = min(
             congestion,
             _clamp(
-                _f(cfg.get("international_heavy_minutes_congestion_factor"), 0.9),
+                _f(
+                    cfg.get(
+                        "international_heavy_minutes_congestion_factor"
+                    ),
+                    0.9,
+                ),
                 0.0,
                 1.0,
             ),
@@ -700,20 +705,42 @@ def build_availability_state(
         else "NONE"
     )
 
-    confidence = max((row["confidence"] for row in active), default=0.0)
+    confidence_label = str(
+        resolved.get("gw_availability_confidence") or "LOW"
+    ).upper()
+    confidence = {
+        "HIGH": 0.9,
+        "MEDIUM": 0.65,
+        "LOW": 0.4,
+    }.get(confidence_label, 0.0)
     if conflict:
         confidence = min(confidence, 0.5)
 
     return {
-        "contract": "V12_STAGEB_AVAILABILITY_STATE_V1",
+        "contract": "V12_STAGEB_AVAILABILITY_STATE_V2",
         "state": state,
         "resolution": resolution,
         "confidence": round(confidence, 4),
         "as_of": as_of,
+        "target_gw": target_gw,
+        "target_fixture_id": target_fixture_id,
+        "derived_at": resolved.get("derived_at"),
+        "evidence_cutoff_at": resolved.get("evidence_cutoff_at"),
+        "gw_availability": gw_state,
+        "gw_availability_confidence": resolved.get(
+            "gw_availability_confidence"
+        ),
+        "availability_derivation_reason": resolved.get(
+            "availability_derivation_reason"
+        ),
         "active_evidence": active,
-        "stale_evidence": [row for row in rows if row["stale"]],
+        "stale_evidence": stale,
+        "superseded_evidence": resolved.get("superseded_evidence") or [],
+        "historical_evidence": resolved.get("historical_evidence") or [],
         "conflicting_sources": conflict,
         "secondary_workload_states": workload_states,
+        "model_features": resolved.get("model_features") or {},
+        "observability": resolved.get("observability") or {},
         "xmins_context_overlay": {
             "congestion_factor": round(congestion, 6),
             "application": xmins_effect,
@@ -723,20 +750,22 @@ def build_availability_state(
             )
             or "UNSPECIFIED",
             "reason": (
-                "Stage B may use existing P1.1 congestion input for workload/travel; "
-                "it does not create a second availability owner."
+                "Stage B may use the existing P1.1 congestion input for "
+                "workload/travel; categorical availability remains evidence "
+                "and does not create a second probability owner."
             ),
         },
         "governance": {
+            **dict(resolved.get("governance") or {}),
             "news_or_event_is_not_medical_diagnosis": True,
             "unknown_unavailability_is_not_injury": True,
             "official_or_club_fact_precedes_analyst_claim": True,
             "stale_evidence_cannot_drive_active_state": True,
             "external_claim_does_not_overwrite_official_player_status": True,
             "numeric_congestion_overlay_is_model_assumption_not_fact": True,
+            "stageb_is_not_parallel_availability_engine": True,
         },
     }
-
 
 def _fact(value: Any, source: str, *, timestamp: Any = None) -> dict[str, Any]:
     return {

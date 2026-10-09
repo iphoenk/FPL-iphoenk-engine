@@ -5232,7 +5232,80 @@ def _render_deep_visible_contract_lines(
             else:
                 fallback = payload.get(display) or payload.get(display.replace(" ", "_"))
                 lines.append(f"Now: UNAVAILABLE. Next: UNAVAILABLE. TRIGGER TO ACT: UNAVAILABLE. LATEST SAFE DECISION POINT: UNAVAILABLE. COST OF WAITING: UNAVAILABLE. ABORT / REVERSAL: UNAVAILABLE.")
-        lines.append("Best alternative: " + _compact(board.get("best_alternative") or payload.get("BEST ALTERNATIVE")))
+        # Do not leak a fully materialized optimizer route as a multi-kilobyte
+        # dictionary on the mobile report. S14 retains detailed route proof;
+        # S18 projects only bounded, source-backed decision fields.
+        lines.append("### BEST ALTERNATIVE")
+        candidate = board.get("best_alternative")
+        if candidate is None:
+            candidate = payload.get("BEST ALTERNATIVE")
+        if isinstance(candidate, Mapping):
+            route = dict(candidate)
+            moves = route.get("moves") or {}
+            if not isinstance(moves, Mapping):
+                moves = {}
+
+            def _route_side(side: str) -> str:
+                members = moves.get(side)
+                if isinstance(members, Mapping):
+                    members = [members]
+                if not isinstance(members, Sequence) or isinstance(members, (str, bytes)):
+                    return "UNAVAILABLE"
+                return ", ".join(_name(member) for member in members) or "UNAVAILABLE"
+
+            def _simple_status(value: Any) -> str:
+                if isinstance(value, Mapping):
+                    value = value.get("status") or value.get("classification")
+                if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+                    return "UNAVAILABLE"
+                return _compact(value)
+
+            cost = route.get("transfer_cost") or {}
+            if not isinstance(cost, Mapping):
+                cost = {}
+            executable = board.get("best_alternative_executable")
+            if executable is None:
+                executable = route.get("executable")
+            execution_state = (
+                "YES (candidate only)" if executable is True else
+                "NO" if executable is False else "UNAVAILABLE"
+            )
+            lines.extend(_markdown_table(("Decision field", "Canonical value"), (
+                ("Route", _compact(route.get("route") or route.get("route_id"))),
+                ("Route type", _simple_status(route.get("route_kind"))),
+                ("Outgoing", _route_side("out")),
+                ("Incoming", _route_side("in")),
+                ("Executable", execution_state),
+                ("Economics", _simple_status(route.get("execution_economics_status"))),
+                ("Hit (pts)", _num(cost.get("hit"))),
+                ("1GW net delta (pts)", _num(route.get("gw1_net"))),
+                ("3GW net delta (pts)", _num(route.get("three_gw"))),
+                ("5GW net delta (pts)", _num(route.get("five_gw"))),
+                ("P(beats HOLD)", _num(route.get("p_beats_hold"))),
+                ("Robustness", _simple_status(route.get("robustness"))),
+                ("Action verdict", _simple_status(route.get("action_verdict"))),
+            )))
+            # Preserve bounded mini-league decision provenance: the existing
+            # semantic acceptance requires football EV and rank-gain utility
+            # evidence to remain visible, not buried in the original dict.
+            ml = route.get("mini_league_utility")
+            if isinstance(ml, Mapping):
+                ml_fields = (
+                    ("Ownership (%)", "ownership_pct"),
+                    ("football ev precedes leverage", "football_ev_precedes_leverage"),
+                    ("rank gain utility", "rank_gain_utility"),
+                    ("selected by football ev", "selected_by_football_ev"),
+                )
+                ml_rows = [
+                    (label, _simple_status(ml.get(key)))
+                    for label, key in ml_fields if key in ml
+                ]
+                if ml_rows:
+                    lines.append("#### MINI-LEAGUE DECISION CONTEXT")
+                    lines.extend(_markdown_table(("Evidence", "Canonical value"), ml_rows))
+            lines.append("Alternative only; governing transfer action remains in S14/S19.")
+        else:
+            lines.append("Alternative: " + _human_summary(candidate) if isinstance(candidate, (str, int, float, bool)) and candidate != "" else "Alternative: UNAVAILABLE")
 
     elif section_id == "S19":
         raw_judgement = payload.get("final_judgement")

@@ -4133,6 +4133,7 @@ def _captain_decision_surface(
         "captain_frontier": decorated_frontier,
         "captain_profiles": decorated_profiles,
         "pairwise_captain_comparison": list(decision.get("pairwise") or []),
+        "review_pair": dict(decision.get("review_pair") or {}),
         "competitive_context": dict(
             decision.get("competitive_context") or {}
         ),
@@ -4256,6 +4257,7 @@ def _final_judgement_surface(
             "player": captain.get("player"),
         },
         "captain_state": captain_surface.get("decision_state"),
+        "captain_review_pair": dict(captain_surface.get("review_pair") or {}),
         "vice": {
             "element_id": vice.get("element_id"),
             "player": vice.get("player"),

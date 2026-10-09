@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T20:48:50+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T21:02:30+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -127,3 +127,11 @@ is PREPARE, and S08/S18/S19 must label the selected pair provisional.
 This does not forbid goalkeeper captaincy: a robustly CLEAR GK can still
 LOCK. No new CaptainScore, changed P1.7, pseudo-consensus or fabricated
 relative-points estimates are introduced.
+
+## Seven-layer captain permanent CI regression gate (9 October 2026)
+
+The required V12 verification suite explicitly includes goalkeeper-tail,
+cross-position seven-layer visible-report, and distributional captain
+frontier governance tests. It rejects false CLOSE LOCK when real joint
+C/VC confidence or mini-league rank evidence is unavailable, preserves
+valid CLEAR goalkeeper captains, and checks S08/S19 consistency.

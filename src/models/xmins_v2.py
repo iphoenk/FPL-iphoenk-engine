@@ -35,18 +35,22 @@ def load_config() -> dict[str, Any]:
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 
-def _availability(player: dict[str, Any], cfg: dict[str, Any]) -> tuple[float, str]:
-    """Official FPL availability remains factual authority."""
-    chance = player.get("chance_of_playing_next_round")
-    if chance is not None:
-        return clamp(_f(chance) / 100.0, 0.0, 1.0), "official_chance"
-    status = str(player.get("status") or "a")
-    defaults = cfg.get("availability_defaults") or {}
-    return (
-        clamp(_f(defaults.get(status), 1.0), 0.0, 1.0),
-        f"status:{status}",
-    )
-
+def _availability(
+    player: dict[str, Any],
+    cfg: dict[str, Any],
+    context: dict[str, Any] | None = None,
+) -> tuple[float, str]:
+    """Legacy oracle mirrors canonical non-probabilistic availability gate."""
+    context = context or {}
+    evidence_state = context.get("availability_evidence_state")
+    if isinstance(evidence_state, dict):
+        features = dict(evidence_state.get("model_features") or {})
+        if features.get("explicit_out_for_target") is True:
+            return 0.0, "normalized_evidence:explicit_target_out"
+    status = str(player.get("status") or "a").strip().lower()
+    if status == "s":
+        return 0.0, "official_operational_status:suspended"
+    return 1.0, "nonprobabilistic_availability_gate"
 
 def _mixture_mean_variance(
     states: list[tuple[str, float, float, float]],
@@ -65,7 +69,7 @@ def estimate_xmins(
 ) -> dict[str, Any]:
     cfg = load_config()
     context = context or {}
-    availability, availability_source = _availability(player, cfg)
+    availability, availability_source = _availability(player, cfg, context)
 
     neutral = clamp(_f(cfg.get("neutral_start_prior"), 0.72), 0.01, 0.99)
     weights = cfg.get("signal_weights") or {}
@@ -106,6 +110,37 @@ def estimate_xmins(
                     _f(weights.get(name), 1.0),
                 )
             )
+
+    availability_evidence_state = (
+        dict(context.get("availability_evidence_state") or {})
+        if isinstance(context.get("availability_evidence_state"), dict)
+        else {}
+    )
+    gw_availability = str(
+        availability_evidence_state.get("gw_availability")
+        or (availability_evidence_state.get("model_features") or {}).get(
+            "gw_availability"
+        )
+        or "UNKNOWN"
+    ).upper()
+    normalized_signal = (
+        cfg.get("gw_availability_start_signal") or {}
+    ).get(gw_availability)
+    if (
+        normalized_signal is not None
+        and gw_availability
+        not in {"AVAILABLE", "LIKELY_AVAILABLE", "UNKNOWN", "OUT"}
+    ):
+        signals.append(
+            (
+                "normalized_availability_start_signal",
+                clamp(_f(normalized_signal), 0.01, 0.99),
+                _f(
+                    weights.get("normalized_availability_start_signal"),
+                    1.0,
+                ),
+            )
+        )
 
     weighted_logit = sum(_logit(p) * w for _, p, w in signals if w > 0)
     total_weight = sum(w for _, _, w in signals if w > 0)

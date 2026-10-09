@@ -749,14 +749,22 @@ jobs:
               fail("private personal prefetch is not fresh for its target occurrence")
           if manifest.get("personal_requested") is not True:
               fail("private personal scope was not requested")
-          if auth_state != "AUTH_AVAILABLE":
-              fail("authoritative personal authentication is unavailable")
           if entry_id != expected_team_id:
               fail("private personal team identity mismatch")
-          if team_gw <= 0 or team_gw != manifest_gw:
-              fail("private personal event does not match the report event")
           if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
               fail("private personal artifact must contain 15 unique canonical element IDs")
+          if auth_state == "AUTH_EXPIRED":
+              # Keep the credential failure visible while allowing the integrated
+              # report to apply its stale-snapshot contract to this last-good team.
+              # Do not publish the transient failed refresh as an authoritative update.
+              if generated > now + timedelta(minutes=2):
+                  fail("expired-auth personal artifact timestamp is in the future")
+              print("PRIVATE_PERSONAL_REFRESH=AUTH_EXPIRED_SAVED_SNAPSHOT_FALLBACK")
+              raise SystemExit(0)
+          if auth_state != "AUTH_AVAILABLE":
+              fail("authoritative personal authentication is unavailable")
+          if team_gw <= 0 or team_gw != manifest_gw:
+              fail("private personal event does not match the report event")
           if generated < slot - timedelta(minutes=15) or generated > now + timedelta(minutes=2):
               fail("private personal artifact is outside its occurrence freshness window")
           PY

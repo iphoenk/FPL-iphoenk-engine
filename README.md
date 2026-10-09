@@ -13,6 +13,7 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **V6 factual plane:** governed facts, freshness, fixtures, prices, and source evidence.
 - **Canonical V12:** xMins, probability, tactics, full-universe scanning, optimisation, Monte Carlo, and decision semantics.
 - **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
+- **Report-time web evidence:** Camoufox reads governed public browser sources as advisory evidence; Official FPL/API stays direct, and auth/paywall/CAPTCHA bypass is forbidden.
 
 Canonical FPL entry identity is repository-configured. Authenticated personal acquisition is an optional enrichment for private/current finance facts; when auth is intentionally unavailable, governed Official FPL submitted-picks or explicit owner evidence may still support Current15 identity, while auth-only finance fields remain unavailable.
 

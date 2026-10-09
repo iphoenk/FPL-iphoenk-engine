@@ -101,7 +101,10 @@ def _current_signal(
     observed = _parse_dt(signal.get("observed_at"))
     if observed is None:
         return False, None
-    age_hours = max(0.0, (now - observed).total_seconds() / 3600.0)
+    delta_seconds = (now - observed).total_seconds()
+    if delta_seconds < -300:
+        return False, delta_seconds / 3600.0
+    age_hours = max(0.0, delta_seconds / 3600.0)
     class_name = str(source.get("class") or signal.get("source_class") or "")
     freshness = ((registry.get("consensus") or {}).get("freshness_hours") or {}).get(class_name)
     if freshness is None:

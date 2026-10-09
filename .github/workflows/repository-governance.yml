@@ -280,6 +280,7 @@ jobs:
           tests/test_player_minutes_finite_state.py
           tests/test_player_events_posterior_predictive.py
           tests/test_integrated_report_runner.py
+          tests/test_stage3_upstream_diagnostics.py
           tests/test_delivery_reliability.py
           tests/test_match_mode_live_score_contract.py
           tests/test_deep_decision_content_delivery_barrier.py

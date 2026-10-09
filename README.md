@@ -21,7 +21,7 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running exactly every HH:30 Asia/Jakarta. At each occurrence it updates control issue #431 with the governed `FPL_MASTER_SLOT` title for the intended HH:00 logical slot, verifies readback, and lets existing GitHub workflows execute V6 acquisition and due-report work downstream. `v6-natural-data-ingestion.yml` remains dispatch/event driven and has no independent production cron.
+ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running every HH:30 Asia/Jakarta. Only due DEEP/PRICE checkpoints post an occurrence-bound `/fpl-master-tick` comment to issue #431; non-due hourly ticks are silent. The GitHub issue-comment orchestrator starts governed prefetch, V12 and private report publication. No independent production GitHub cron, issue-title upkeep or alternate scheduler is authoritative. PRICE remains bound to 23:30 Europe/London (DST-safe).
 
 GitHub Actions `fpl-github-clock.yml` is manual smoke only via owner `/fpl-clock-test` or workflow_dispatch. It has no schedule and no self-chain. `fpl-external-clock-fallback.yml` remains dispatch-only for explicit operational recovery and never counts as natural scheduler proof or natural acceptance.
 

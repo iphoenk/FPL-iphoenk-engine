@@ -33,6 +33,13 @@ def test_s18_best_alternative_is_bounded_readable_table():
             "p_beats_hold": 0.47,
             "robustness": {"status": "FAIL", "huge": "nested_canary"},
             "action_verdict": "WAIT",
+            "mini_league_utility": {
+                "ownership_pct": 82.0,
+                "football_ev_precedes_leverage": True,
+                "rank_gain_utility": 0.4,
+                "selected_by_football_ev": False,
+                "nested_evidence": {"raw": "nested_canary"},
+            },
             "dynamic_matchup": {"deeply_nested": {"value": "nested_canary"}},
         },
     }
@@ -51,6 +58,8 @@ def test_s18_best_alternative_is_bounded_readable_table():
         "| P(beats HOLD) | 0.47 |",
         "| Robustness | FAIL |",
         "| Action verdict | WAIT |",
+        "| football ev precedes leverage | True |",
+        "| rank gain utility | 0.4 |",
         "Alternative only; governing transfer action remains in S14/S19.",
     ):
         assert expected in visible

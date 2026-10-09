@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T11:20:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T11:55:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -19,6 +19,7 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 Stage3 upstream failure diagnostics are documented in [docs/V12_STAGE3_UPSTREAM_DIAGNOSTICS.md](docs/V12_STAGE3_UPSTREAM_DIAGNOSTICS.md); blocked Stage3 remains degraded and privacy-safe.
 
 When Stage3 is blocked upstream, the report remains explicitly `BLOCKED_UPSTREAM` and records only bounded allowlisted guard predicates plus Monte Carlo path/convergence facts. This diagnostic path never claims Stage3 execution or relaxes the 500,000-path and convergence gates.
+Optional precompute, warm-worker, and freeze telemetry is reported with explicit `NOT_APPLICABLE`, `OPTIONAL_UNAVAILABLE`, `REQUIRED_PASS`, or `REQUIRED_FAIL` semantics; missing optional telemetry never becomes a delivery failure or a false PASS.
 
 Stage2 public acceptance binds to the latest occurrence-bound `full_master` prefetch. An ad-hoc personal prefetch cannot mask the public manager-picks evidence required for acceptance.
 

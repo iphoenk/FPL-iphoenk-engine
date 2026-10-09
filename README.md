@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T19:15:42.561+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T19:18:24.699+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -39,7 +39,7 @@ Occurrence commands are exact-time only: future report slots are rejected, and p
 
 S09 chip availability is fail-closed: a missing/`UNAVAILABLE` chip ledger is **not** evidence that Bench Boost, Wildcard, Triple Captain or Free Hit remains usable. Only explicitly verified `AVAILABLE`/`UNUSED` entries appear as remaining; incomplete states are labeled unresolved without guessing. This affects presentation only, not the canonical chip decision or authenticated source authority.
 
-S18 action board keeps all six canonical decision axes and projects the best-alternative route as a bounded, two-column decision table (route, outbound/inbound names, executable status, hit, 1/3/5GW net deltas, P(beats HOLD), robustness). The full optimizer route stays intact in its original canonical evidence; no nested matchup/route dictionaries are dumped in the mobile-visible S18 presentation. Missing values remain UNAVAILABLE; this is presentation-only and does not change ACT authority or Monte Carlo.
+S18 action board keeps all six canonical decision axes and projects the best-alternative route as a bounded, two-column decision table (route, outbound/inbound names, executable status, hit, 1/3/5GW net deltas, P(beats HOLD), robustness). Mini-league evidence (football EV priority and rank-gain utility) remains visible in a small labeled subsection. The full optimizer route stays intact in its original canonical evidence; no nested matchup/route dictionaries are dumped in the mobile-visible S18 presentation. Missing values remain UNAVAILABLE; this is presentation-only and does not change ACT authority or Monte Carlo.
 
 S08 human-facing QA is state-aware: `LOCK` requires visible `Current C:` / `Current VC:` labels, while `PREPARE` and other non-locked states require `Current C baseline:` / `Current VC baseline:`. This preserves explicit provisional captain identity without weakening rendered-content acceptance.
 

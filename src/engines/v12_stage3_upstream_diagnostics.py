@@ -27,6 +27,7 @@ def blocked_stage3_payload(
         "WATCHLIST_COMPLETE",
         "WATCHLIST_MINIMUM",
         "WATCHLIST_COVERAGE_FULL",
+        "MINI_COVERAGE_FULL",
     }
     guard_failures = list(
         dict.fromkeys(

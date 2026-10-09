@@ -4379,8 +4379,10 @@ def _render_deep_visible_contract_lines(
                 "GK calibration and Competitive Window before lock."
             )
         lines.append(
-            f"Current C baseline: {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
-            f"Current VC baseline: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
+            f"{'Current C' if captain_state == 'LOCK' else 'Current C baseline'}: "
+            f"{captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
+            f"{'Current VC' if captain_state == 'LOCK' else 'Current VC baseline'}: "
+            f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
             f"state {captain_state}."
         )
         lines.append(
@@ -5256,9 +5258,11 @@ def _render_deep_visible_contract_lines(
                 "for traceability, not as an executable recommendation."
             )
         lines.append(
-            f"Captain baseline: {final_cap.get('player') or final_cap.get('name') or 'UNAVAILABLE'} "
+            f"{'Captain' if captain_state == 'LOCK' else 'Captain baseline'}: "
+            f"{final_cap.get('player') or final_cap.get('name') or 'UNAVAILABLE'} "
             f"({captain_state}); "
-            f"Vice baseline: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
+            f"{'Vice' if captain_state == 'LOCK' else 'Vice baseline'}: "
+            f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
         )
         lines.append(f"Chip: {_compact(judgement.get('chip'))}")
         lines.append(f"Mini-league posture: {judgement.get('mini_league_posture') or 'UNAVAILABLE'}")

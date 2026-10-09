@@ -4362,6 +4362,15 @@ def _render_deep_visible_contract_lines(
             + "."
         )
         captain_state = str(payload.get("decision_state") or "UNAVAILABLE").upper()
+        review = dict(payload.get("review_pair") or {})
+        review_captain = dict(review.get("captain") or {})
+        if review_captain and captain_state != "LOCK":
+            lines.append(
+                "Attacking captain review alternative: "
+                f"{review_captain.get('player') or review_captain.get('name') or 'UNAVAILABLE'}; "
+                "PROVISIONAL / NOT EXECUTABLE pending shared-world relative "
+                "points and GK event calibration."
+            )
         if captain_state != "LOCK":
             lines.append(
                 "CAPTAIN DECISION NOT LOCKED: the named C/VC below is the "
@@ -5233,6 +5242,14 @@ def _render_deep_visible_contract_lines(
             + (", ".join(f"{i}. {_name(v)}" for i, v in enumerate(bench_order, 1)) if isinstance(bench_order, Sequence) and not isinstance(bench_order, (str, bytes)) else _compact(bench_order))
         )
         captain_state = str(judgement.get("captain_state") or "UNAVAILABLE").upper()
+        review = dict(judgement.get("captain_review_pair") or {})
+        review_captain = dict(review.get("captain") or {})
+        if review_captain and captain_state != "LOCK":
+            lines.append(
+                "Captain attacking review candidate: "
+                f"{review_captain.get('player') or review_captain.get('name') or 'UNAVAILABLE'} "
+                "(PROVISIONAL; not an automatic captain swap)."
+            )
         if captain_state != "LOCK":
             lines.append(
                 "CAPTAIN NOT FINAL: S19 retains the S08 provisional C/VC "

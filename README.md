@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T20:18:33+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T20:34:14+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -100,3 +100,17 @@ PREPARE labels the displayed C/VC as provisional, not executable.
 The S19 human-facing gate rejects missing or reordered CLOSE-frontier
 evidence relative to S08. This change does not touch P1.7, MC 500k,
 universe/routes, S16B, scheduler, private publisher, or PR #809.
+
+## S19 seven-layer captain acceptance boundary (9 October 2026)
+
+The S19 judgement now exposes the owner-approved seven evidence layers:
+canonical xPts; PMF-derived P(10+)/P(15+), Q75/Q90 and multiple-return
+availability; P(blank)/P(DNP)/P(start)/xMins; variance and head-to-head
+with explicit cross-player dependence assumptions; Competitive Window plus
+actual relative-rank simulation status; C/VC fallback plus joint-simulation
+and vice-activation status; and explicit evidence-confidence status.
+Unimplemented event-joint multiple returns, covariance, or rank MC
+must show UNAVAILABLE. A canonical LOCK is not automatically proof that
+all seven layers have complete evidence. S19 must state PARTIAL_EVIDENCE
+where those inputs remain unresolved. No new CaptainScore, EO-derived
+points, position preference, substitute optimizer, or fabricated MC.

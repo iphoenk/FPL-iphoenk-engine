@@ -74,6 +74,7 @@ def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
                 if count is None:
                     count = 1
                 lines.extend(_table(table["columns"], int(count), sid=sid))
+                lines.append("")  # Keep separately rendered tables delimited.
             if sid == "S15":
                 lines.extend([
                     "Overall evidence confidence: MEDIUM-HIGH",
@@ -278,7 +279,7 @@ def test_s18_dynamic_contract_rejects_unrelated_extra_table():
     body, report = _s18_route_body(with_mini_league=False)
     body = body.replace(
         "Alternative only; governing transfer action remains in S14/S19.",
-        "| Unauthorized | Value |\n| --- | --- |\n| bad | bad |\nAlternative only; governing transfer action remains in S14/S19.",
+        "\n| Unauthorized | Value |\n| --- | --- |\n| bad | bad |\n\nAlternative only; governing transfer action remains in S14/S19.",
         1,
     )
     failures = validate_rendered_deep_presentation(body, report)

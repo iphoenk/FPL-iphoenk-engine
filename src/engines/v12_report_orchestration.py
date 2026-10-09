@@ -5285,6 +5285,24 @@ def _render_deep_visible_contract_lines(
                 ("Robustness", _simple_status(route.get("robustness"))),
                 ("Action verdict", _simple_status(route.get("action_verdict"))),
             )))
+            # Preserve bounded mini-league decision provenance: the existing
+            # semantic acceptance requires football EV and rank-gain utility
+            # evidence to remain visible, not buried in the original dict.
+            ml = route.get("mini_league_utility")
+            if isinstance(ml, Mapping):
+                ml_fields = (
+                    ("Ownership (%)", "ownership_pct"),
+                    ("football ev precedes leverage", "football_ev_precedes_leverage"),
+                    ("rank gain utility", "rank_gain_utility"),
+                    ("selected by football ev", "selected_by_football_ev"),
+                )
+                ml_rows = [
+                    (label, _simple_status(ml.get(key)))
+                    for label, key in ml_fields if key in ml
+                ]
+                if ml_rows:
+                    lines.append("#### MINI-LEAGUE DECISION CONTEXT")
+                    lines.extend(_markdown_table(("Evidence", "Canonical value"), ml_rows))
             lines.append("Alternative only; governing transfer action remains in S14/S19.")
         else:
             lines.append("Alternative: " + _human_summary(candidate) if isinstance(candidate, (str, int, float, bool)) and candidate != "" else "Alternative: UNAVAILABLE")

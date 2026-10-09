@@ -685,8 +685,11 @@ jobs:
             exit 0
           fi
           work="$RUNNER_TEMP/v6-private-acquisition"
-          rm -rf "$work"
+          saved_personal="$RUNNER_TEMP/v6-saved-private-personal"
+          refresh_status="$RUNNER_TEMP/v6-private-refresh-status.json"
+          rm -rf "$work" "$saved_personal" "$refresh_status"
           mkdir -p "$work"
+          cp -a private-reports/personal "$saved_personal"
           tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar" -C "$work"
           private_log="$RUNNER_TEMP/v6-private-personal-refresh.log"
           set +e
@@ -705,24 +708,39 @@ jobs:
             echo "PRIVATE_PERSONAL_REFRESH=FAIL (report prefetch did not complete)"
             exit "$rc"
           fi
+          V6_REFRESHED_TEAM_PATH="$work/data/v6/personal/current_team.json" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          refreshed = json.loads(Path(os.environ["V6_REFRESHED_TEAM_PATH"]).read_text())
+          state = str(refreshed.get("auth_state") or "").strip().upper()
+          if not state:
+              raise SystemExit("isolated private refresh did not produce an auth state")
+          status = {
+              "auth_state": state,
+              "generated_at": refreshed.get("generated_at"),
+          }
+          Path(os.environ["V6_REFRESH_STATUS_PATH"]).write_text(
+              json.dumps(status, sort_keys=True) + "\\n", encoding="utf-8"
+          )
+          PY
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \
             >/dev/null
-          V6_PRIVATE_WORK="$work" python - <<'PY'
+          V6_PRIVATE_WORK="$work" V6_SAVED_PRIVATE_PERSONAL="$saved_personal" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
           import json
           import os
+          import shutil
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
           root = Path(os.environ["V6_PRIVATE_WORK"])
           manifest = json.loads((root / "data/v6/report_prefetch/latest.json").read_text())
-          # Read auth state from the isolated refresh output. The public manifest
-          # intentionally strips private auth fields before artifact transfer.
-          refreshed_team = json.loads(
-              (root / "data/v6/personal/current_team.json").read_text()
-          )
-          team = json.loads(Path("private-reports/personal/current_team.json").read_text())
+          refresh_status = json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text())
+          saved_personal = Path(os.environ["V6_SAVED_PRIVATE_PERSONAL"])
+          team = json.loads((saved_personal / "current_team.json").read_text())
           def fail(message):
               raise SystemExit(message)
           def instant(value):
@@ -734,7 +752,7 @@ jobs:
           expected_team_id = int(os.environ["FPL_TEAM_ID"])
           entry_id = int(team.get("entry_id") or 0)
           auth_state = str(team.get("auth_state") or "").upper()
-          refresh_auth_state = str(refreshed_team.get("auth_state") or "").upper()
+          refresh_auth_state = str(refresh_status.get("auth_state") or "").upper()
           manifest_gw = int(manifest.get("gw") or 0)
           team_gw = int(team.get("gw") or 0)
           slot = instant(os.environ["PRIVATE_LOGICAL_SLOT"])
@@ -764,6 +782,9 @@ jobs:
               # previously saved, validated team unchanged for stale-snapshot use.
               if generated >= slot or generated > now + timedelta(minutes=2):
                   fail("saved personal snapshot is not older than the expired-auth refresh")
+              live_personal = Path("private-reports/personal")
+              shutil.rmtree(live_personal)
+              shutil.copytree(saved_personal, live_personal)
               print("PRIVATE_PERSONAL_REFRESH=AUTH_EXPIRED_SAVED_SNAPSHOT_FALLBACK")
               raise SystemExit(0)
           if auth_state != "AUTH_AVAILABLE":

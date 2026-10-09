@@ -499,9 +499,7 @@ def run_acceptance(
         team_strength=strength,
     )
 
-    prefetch_for_owned = _read_json(
-        runtime_data_root / "data/v6/report_prefetch/latest.json"
-    )
+    prefetch_for_owned, _prefetch_source = _acceptance_prefetch(runtime_data_root)
     entry_id_for_owned = int(prefetch_for_owned.get("entry_id") or 0)
     league_id_for_owned = int(
         prefetch_for_owned.get("priority_league_id") or 0

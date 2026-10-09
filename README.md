@@ -39,7 +39,9 @@ Occurrence commands are exact-time only: future report slots are rejected, and p
 
 S09 chip availability is fail-closed: a missing/`UNAVAILABLE` chip ledger is **not** evidence that Bench Boost, Wildcard, Triple Captain or Free Hit remains usable. Only explicitly verified `AVAILABLE`/`UNUSED` entries appear as remaining; incomplete states are labeled unresolved without guessing. This affects presentation only, not the canonical chip decision or authenticated source authority.
 
-S08 human-facing QA is state-aware: `LOCK` requires visible `Current C:` / `Current VC:` labels, while `PREPARE` and other non-locked states require `Current C baseline:` / `Current VC baseline:`. This preserves explicit provisional captain identity without weakening rendered-content acceptance.\n\n## Captain risk and mini-league review
+S08 human-facing QA is state-aware: `LOCK` requires visible `Current C:` / `Current VC:` labels, while `PREPARE` and other non-locked states require `Current C baseline:` / `Current VC baseline:`. This preserves explicit provisional captain identity without weakening rendered-content acceptance.
+
+## Captain risk and mini-league review
 
 For a CLOSE football frontier, a goalkeeper captain with weaker 10+ haul
 probability and Q90 than an equally secure attacking alternative is marked

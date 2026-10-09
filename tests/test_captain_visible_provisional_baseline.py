@@ -164,6 +164,11 @@ def test_s19_close_frontier_explains_all_positions_not_highest_mean_only():
     assert "Captain baseline: Defender A (PREPARE)" in body
     assert "CAPTAIN NOT FINAL" in body
     assert "EO is not expected points" in body
+    for n in range(1, 8):
+        assert f"{n}/7" in body
+    assert "rank simulation UNAVAILABLE" in body
+    assert "multiple returns UNAVAILABLE_NO_JOINT_EVENT_EVIDENCE" in body
+    assert "canonical captain decision state PREPARE" in body
 
 
 def test_s19_close_frontier_missing_evidence_is_explicit():
@@ -178,7 +183,12 @@ def test_s19_close_frontier_missing_evidence_is_explicit():
     })
     assert "P(blank) UNAVAILABLE" in body
     assert "P(10+) UNAVAILABLE" in body
+    assert "P(15+) UNAVAILABLE" in body
+    assert "Q75 UNAVAILABLE" in body
+    assert "P(DNP) UNAVAILABLE" in body
     assert "evidence INCOMPLETE" in body
+    assert "SEVEN-LAYER CAPTAIN DECISION AUDIT" in body
+    assert "PARTIAL_EVIDENCE; do not present full seven-layer validation" in body
     assert "Captain baseline: UNAVAILABLE (PREPARE)" in body
 
 
@@ -216,3 +226,48 @@ def test_s19_close_qa_rejects_missing_and_mismatched_frontier():
     reordered = dict(s19, captain_frontier=list(reversed(rows)))
     errors = failures(reordered, _visible("S19", {"final_judgement": reordered}))
     assert "S19_CAPTAIN_FRONTIER_NOT_CANONICAL" in errors
+
+
+def test_s19_seven_layer_audit_never_claims_full_when_joint_mc_missing():
+    frontier = _cross_position_frontier()
+    # Rich PMF summaries do not imply covariance, event-joint or ranks.
+    for row in frontier:
+        row["p_ge_15"] = 0.07
+        row["q75"] = 7
+        row["pmf_variance"] = 5.0
+        row["p_dnp"] = 0.04
+    body = _visible("S19", {"final_judgement": {
+        "captain_state": "LOCK",
+        "final_captain": {"player": "Midfielder B"},
+        "vice": {"player": "Forward C"},
+        "captain_frontier_classification": "CLOSE",
+        "captain_frontier": frontier,
+        "captain_pairwise": [{
+            "a_element_id": 30, "a_player": "Defender A",
+            "b_element_id": 40, "b_player": "Midfielder B",
+            "cross_player_correlation": "NOT_MODELLED_YET",
+        }],
+        "captain_shared_world_cvc": {"status": "UNAVAILABLE"},
+    }})
+    assert "P(15+) 7.0%" in body
+    assert "Var 5.00" in body
+    assert "head-to-head CANONICAL_PAIRWISE_APPROXIMATION" in body
+    assert "cross-player correlation NOT_MODELLED_YET" in body
+    assert "7/7 FINAL DECISION CONFIDENCE: PARTIAL_EVIDENCE" in body
+    assert "canonical captain decision state LOCK" in body
+
+
+def test_seven_layer_pmf_tail_is_not_hardcoded():
+    from src.engines.v12_captain_frontier import _distribution_profile
+
+    profile = _distribution_profile({
+        "element_id": 1, "player": "Forward X", "position": "FWD",
+        "point_distribution": {
+            "probabilities": {"0": 0.2, "5": 0.6, "16": 0.2},
+        },
+        "p_start": 0.9, "xmins": 80, "p_dnp": 0.05,
+    })
+    assert abs(profile["p_ge_15"] - 0.2) < 1e-9
+    assert profile["q75"] == 5.0
+    assert abs(profile["pmf_variance"] - 24.16) < 1e-9
+    assert profile["multiple_return_probability"] is None

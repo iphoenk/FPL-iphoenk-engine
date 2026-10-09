@@ -21,6 +21,11 @@ on:
         description: "Exact local HH:MM"
         required: true
         type: string
+      official_deadline:
+        description: "Official FPL deadline ISO-8601 +07:00; required for deadline checkpoints"
+        required: false
+        default: "NONE"
+        type: string
       scheduler_authority:
         description: "Governed caller identity"
         required: true
@@ -62,6 +67,13 @@ jobs:
       REQUEST_ID: fpl_master_orchestrator_${{ github.run_id }}
 
     steps:
+      - name: Checkout schedule authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
       - name: Parse and validate occurrence
         id: parse
         shell: bash
@@ -69,9 +81,13 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import os
+          import json
           import shlex
           from datetime import datetime, timedelta
+          from pathlib import Path
           from zoneinfo import ZoneInfo
+
+          policy = json.loads(Path("config/delivery/v12_delivery_schedule.json").read_text(encoding="utf-8"))
 
           tokens = shlex.split(os.environ["COMMAND"])
           if not tokens or tokens[0] != "/fpl-master-tick":
@@ -86,7 +102,7 @@ jobs:
                   raise SystemExit(f"duplicate argument: {key}")
               args[key] = value
 
-          allowed = {"report_mode", "report_slot", "checkpoint_time", "force"}
+          allowed = {"report_mode", "report_slot", "checkpoint_time", "official_deadline", "force"}
           unknown = set(args) - allowed
           if unknown:
               raise SystemExit(f"unknown arguments: {sorted(unknown)}")
@@ -115,11 +131,30 @@ jobs:
           # checks remain occurrence-bound and cannot claim pre-slot output as current.
 
           checkpoint = args.get("checkpoint_time") or dt.strftime("%H:%M")
+          official_deadline_raw = str(args.get("official_deadline") or "NONE")
+          official_deadline = None
+          if official_deadline_raw.upper() not in {"", "NONE"}:
+              official_deadline = datetime.fromisoformat(official_deadline_raw)
+              if official_deadline.tzinfo is None or int(official_deadline.utcoffset().total_seconds()) != 7 * 3600:
+                  raise SystemExit("official_deadline must use Asia/Jakarta +07:00")
+              if official_deadline.second != 0 or official_deadline.microsecond != 0:
+                  raise SystemExit("official_deadline must be exact to the minute")
+
           if checkpoint != dt.strftime("%H:%M"):
               raise SystemExit("checkpoint_time must equal report_slot local HH:MM")
 
-          if mode == "DEEP" and checkpoint not in {"04:30", "12:30", "21:30"}:
-              raise SystemExit("DEEP occurrence must be 04:30, 12:30, or 21:30 WIB")
+          deadline_checkpoint = ""
+          if mode == "DEEP" and checkpoint not in set(policy["fixed_deep_local_times"]):
+              if official_deadline is None:
+                  raise SystemExit("deadline DEEP occurrence requires official_deadline")
+              matches = []
+              for row in policy["deadline_checkpoints"]:
+                  candidate = official_deadline - timedelta(minutes=int(row["minutes_before"]))
+                  if candidate == dt and str(row["contract"]) == "DEEP":
+                      matches.append(str(row["key"]))
+              if len(matches) != 1:
+                  raise SystemExit("DEEP occurrence is not an exact governed deadline checkpoint")
+              deadline_checkpoint = matches[0]
           if mode == "PRICE":
               london = dt.astimezone(ZoneInfo("Europe/London"))
               if london.strftime("%H:%M") != "23:30":

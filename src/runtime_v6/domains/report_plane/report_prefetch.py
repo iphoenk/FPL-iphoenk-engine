@@ -451,6 +451,72 @@ def evaluate_report_prefetch_readiness(
     }
 
 
+
+def personal_refresh_fallback_eligible(
+    jobs: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> bool:
+    """Allow reports to use a last-good private snapshot after a narrow V6 personal refresh failure.
+
+    Public acquisition and publication must both have succeeded. The only
+    tolerated failed job is the isolated personal publisher, and its only
+    failed step must be the attempt-bound artifact download used by a retry.
+    Authentication expiry is handled explicitly by the publisher workflow;
+    generic refresh-step failures never qualify. Integrated report validation
+    remains responsible for exact-slot freshness and private snapshot availability.
+    """
+    if not isinstance(jobs, (list, tuple)):
+        return False
+    by_name: dict[str, dict[str, Any]] = {}
+    for item in jobs:
+        if not isinstance(item, dict):
+            return False
+        name = str(item.get("name") or "").strip()
+        if not name or name in by_name:
+            return False
+        by_name[name] = item
+
+    required_success = ("collect", "publish", "orchestration-fulfillment")
+    if any(
+        str((by_name.get(name) or {}).get("conclusion") or "").lower() != "success"
+        for name in required_success
+    ):
+        return False
+
+    private_job = by_name.get("private_personal_publish")
+    if not private_job or str(private_job.get("conclusion") or "").lower() != "failure":
+        return False
+
+    tolerated = {
+        "collect",
+        "publish",
+        "orchestration-fulfillment",
+        "route-visible-report",
+        "private_personal_publish",
+    }
+    if any(name not in tolerated for name in by_name):
+        return False
+    for name, job in by_name.items():
+        conclusion = str(job.get("conclusion") or "").lower()
+        if name == "private_personal_publish":
+            if conclusion != "failure":
+                return False
+        elif conclusion not in {"success", "skipped"}:
+            return False
+
+    failed_steps = [
+        str(step.get("name") or "").strip()
+        for step in (private_job.get("steps") or [])
+        if isinstance(step, dict)
+        and str(step.get("conclusion") or "").lower() in {
+            "failure",
+            "timed_out",
+            "cancelled",
+            "action_required",
+        }
+    ]
+    return len(failed_steps) == 1 and failed_steps[0] == "Download verified public runtime snapshot"
+
+
 _REPORT_SCOPE_GOOD_STATES = frozenset({"GREEN", "PASS", "AVAILABLE", "CURRENT"})
 _REPORT_AUTH_FAILURE_STATES = frozenset({"AUTH_EXPIRED", "AUTH_FAILED"})
 
@@ -907,12 +973,13 @@ class PrefetchService:
                         auth_state = "AUTH_ENTRY_MISMATCH"
                         control_failures.append("AUTH_ENTRY_MISMATCH")
                 else:
-                    auth_state = "DEGRADED"
+                    me_status = str(me.get("status") or "").strip().upper()
+                    auth_state = "AUTH_EXPIRED" if me_status == "AUTH_EXPIRED" else "DEGRADED"
                     source_failures.append(
                         {
                             "domain": "official_fpl_personal",
                             "endpoint_class": "me",
-                            "status": me.get("status"),
+                            "status": me_status or "FAILED",
                         }
                     )
 

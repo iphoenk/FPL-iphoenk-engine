@@ -729,6 +729,7 @@ jobs:
           expected_team_id = int(os.environ["FPL_TEAM_ID"])
           entry_id = int(team.get("entry_id") or 0)
           auth_state = str(team.get("auth_state") or "").upper()
+          refresh_auth_state = str(manifest.get("auth_state") or "").upper()
           manifest_gw = int(manifest.get("gw") or 0)
           team_gw = int(team.get("gw") or 0)
           slot = instant(os.environ["PRIVATE_LOGICAL_SLOT"])
@@ -749,14 +750,21 @@ jobs:
               fail("private personal prefetch is not fresh for its target occurrence")
           if manifest.get("personal_requested") is not True:
               fail("private personal scope was not requested")
-          if auth_state != "AUTH_AVAILABLE":
-              fail("authoritative personal authentication is unavailable")
           if entry_id != expected_team_id:
               fail("private personal team identity mismatch")
-          if team_gw <= 0 or team_gw != manifest_gw:
-              fail("private personal event does not match the report event")
           if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
               fail("private personal artifact must contain 15 unique canonical element IDs")
+          if refresh_auth_state == "AUTH_EXPIRED":
+              # The fresh run explicitly classified /me as expired. Keep the
+              # previously saved, validated team unchanged for stale-snapshot use.
+              if generated >= slot or generated > now + timedelta(minutes=2):
+                  fail("saved personal snapshot is not older than the expired-auth refresh")
+              print("PRIVATE_PERSONAL_REFRESH=AUTH_EXPIRED_SAVED_SNAPSHOT_FALLBACK")
+              raise SystemExit(0)
+          if auth_state != "AUTH_AVAILABLE":
+              fail("authoritative personal authentication is unavailable")
+          if team_gw <= 0 or team_gw != manifest_gw:
+              fail("private personal event does not match the report event")
           if generated < slot - timedelta(minutes=15) or generated > now + timedelta(minutes=2):
               fail("private personal artifact is outside its occurrence freshness window")
           PY

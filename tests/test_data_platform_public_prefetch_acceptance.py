@@ -48,3 +48,87 @@ def test_report_prefetch_health_can_be_public_green_while_auth_remains_truthfull
     assert health["auth_state"] == "AUTH_EXPIRED"
     assert health["auth_action_required"] is True
     assert health["auth_action"] == "RENEW_CREDENTIALS"
+
+
+def _job(name, conclusion, failed_step=None):
+    steps = []
+    if failed_step:
+        steps.append({"name": failed_step, "conclusion": "failure"})
+    return {"name": name, "conclusion": conclusion, "steps": steps}
+
+
+def test_generic_auth_refresh_step_failure_does_not_qualify_for_fallback():
+    from src.runtime_v6.domains.report_plane.report_prefetch import (
+        personal_refresh_fallback_eligible,
+    )
+
+    jobs = [
+        _job("collect", "success"),
+        _job("publish", "success"),
+        _job(
+            "private_personal_publish",
+            "failure",
+            "Refresh authenticated current-team state in isolated private plane",
+        ),
+        _job("orchestration-fulfillment", "success"),
+        _job("route-visible-report", "skipped"),
+    ]
+
+    assert personal_refresh_fallback_eligible(jobs) is False
+
+
+def test_artifact_retry_failure_can_use_saved_private_snapshot_only():
+    from src.runtime_v6.domains.report_plane.report_prefetch import (
+        personal_refresh_fallback_eligible,
+    )
+
+    jobs = [
+        _job("collect", "success"),
+        _job("publish", "success"),
+        _job(
+            "private_personal_publish",
+            "failure",
+            "Download verified public runtime snapshot",
+        ),
+        _job("orchestration-fulfillment", "success"),
+        _job("route-visible-report", "skipped"),
+    ]
+
+    assert personal_refresh_fallback_eligible(jobs) is True
+
+
+def test_personal_fallback_rejects_publication_or_unrelated_job_failure():
+    from src.runtime_v6.domains.report_plane.report_prefetch import (
+        personal_refresh_fallback_eligible,
+    )
+
+    auth_failure = _job(
+        "private_personal_publish",
+        "failure",
+        "Refresh authenticated current-team state in isolated private plane",
+    )
+    assert personal_refresh_fallback_eligible(
+        [_job("collect", "success"), _job("publish", "failure"), auth_failure]
+    ) is False
+    assert personal_refresh_fallback_eligible(
+        [
+            _job("collect", "success"),
+            _job("publish", "success"),
+            auth_failure,
+            _job("v12-integrated-report-runner", "failure"),
+        ]
+    ) is False
+
+
+def test_personal_fallback_rejects_unrecognized_private_publisher_failure():
+    from src.runtime_v6.domains.report_plane.report_prefetch import (
+        personal_refresh_fallback_eligible,
+    )
+
+    jobs = [
+        _job("collect", "success"),
+        _job("publish", "success"),
+        _job("private_personal_publish", "failure", "Persist private personal snapshot"),
+    ]
+
+    assert personal_refresh_fallback_eligible(jobs) is False

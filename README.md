@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-08T01:05:00Z`
+> **Last runtime/documentation sync:** `2026-10-09T00:38:59Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,11 +21,23 @@ Canonical FPL entry identity is repository-configured. Authenticated personal ac
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints.
-ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running exactly every HH:30 Asia/Jakarta. At each occurrence it updates control issue #431 with the governed `FPL_MASTER_SLOT` title for the intended HH:00 logical slot, verifies readback, and lets existing GitHub workflows execute V6 acquisition and due-report work downstream. `v6-natural-data-ingestion.yml` remains dispatch/event driven and has no independent production cron.
+ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running every HH:30 Asia/Jakarta. Only due DEEP/PRICE checkpoints post an occurrence-bound `/fpl-master-tick` comment to issue #431; non-due hourly ticks are silent. The GitHub issue-comment orchestrator starts governed prefetch, V12 and private report publication. No independent production GitHub cron, issue-title upkeep or alternate scheduler is authoritative. PRICE remains bound to 23:30 Europe/London (DST-safe).
 
 GitHub Actions `fpl-github-clock.yml` is manual smoke only via owner `/fpl-clock-test` or workflow_dispatch. It has no schedule and no self-chain. `fpl-external-clock-fallback.yml` remains dispatch-only for explicit operational recovery and never counts as natural scheduler proof or natural acceptance.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
+
+## Captain risk and mini-league review
+
+For a CLOSE football frontier, a goalkeeper captain with weaker 10+ haul
+probability and Q90 than an equally secure attacking alternative is marked
+PREPARE rather than falsely LOCKed. A review pair is shown, never automatically
+executed. LEAGUE / RIVALS / COMPETITIVE captain share and EO, denominator
+coverage, current rank/gaps and PROTECT/BALANCED/ATTACK posture are reported
+as observed historical mini-league context; they are not target-GW forecasts
+or a substitute for correlated captain/vice Monte Carlo. Missing scopes and
+unverified GK clean-sheet/conceded/saves/bonus/penalty-save calibration remain
+explicitly unavailable. S08, S18 and S19 must share the canonical C/VC.
 
 ## DEEP decision-content delivery barrier
 

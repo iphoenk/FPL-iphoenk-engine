@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .v12_integrated_report_runner import run_deep
+from .v12_stage3_upstream_diagnostics import blocked_stage3_payload
 from .v12_p6_runtime import _identity
 from .v12_scenario_package import (
     REQUIRED_DECISION_SURFACES,
@@ -298,6 +299,13 @@ def _safe_scenario_failure_diagnostic(
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         pass
 
+    runner_status = str(bundle.get("runner_status") or "UNKNOWN").upper()
+    upstream_diagnostic = (
+        blocked_stage3_payload(proof, runner_status)
+        if runner_status != "PASS"
+        else None
+    )
+
     return {
         "scenario_id": _safe_failure_token(scenario_id) or "UNKNOWN",
         "override_type": _safe_failure_token(override_type) or "UNKNOWN",
@@ -307,11 +315,16 @@ def _safe_scenario_failure_diagnostic(
         ),
         "failed_gates": failed_gates[:12],
         "failed_stages": failed_stages[:12],
-        "stage3_guard_failures": [
-            token
-            for raw in (proof.get("stage3_guard_failures") or [])
-            if (token := _safe_failure_token(raw)) is not None
-        ][:16],
+        "stage3_guard_failures": (
+            upstream_diagnostic["upstream_guard_failures"]
+            if upstream_diagnostic is not None
+            else [
+                token
+                for raw in (proof.get("stage3_guard_failures") or [])
+                if (token := _safe_failure_token(raw)) is not None
+            ][:16]
+        ),
+        "stage3_upstream_diagnostic": upstream_diagnostic,
         "execution_state": execution_state,
         "cache_state": cache_state,
         "stage2_cache_bypassed": bool(p4.get("stage2_cache_bypassed") is True),

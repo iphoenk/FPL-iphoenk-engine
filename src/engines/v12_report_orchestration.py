@@ -4361,10 +4361,18 @@ def _render_deep_visible_contract_lines(
             )
             + "."
         )
+        captain_state = str(payload.get("decision_state") or "UNAVAILABLE").upper()
+        if captain_state != "LOCK":
+            lines.append(
+                "CAPTAIN DECISION NOT LOCKED: the named C/VC below is the "
+                "canonical provisional baseline, NOT a final captain recommendation. "
+                "Review the football distribution, attacking haul tail, "
+                "GK calibration and Competitive Window before lock."
+            )
         lines.append(
-            f"Current C: {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
-            f"Current VC: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
-            f"state {payload.get('decision_state') or 'UNAVAILABLE'}."
+            f"Current C baseline: {captain.get('player') or captain.get('name') or 'UNAVAILABLE'}; "
+            f"Current VC baseline: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
+            f"state {captain_state}."
         )
         lines.append(
             f"Reason: {payload.get('reconciliation_reason') or 'No material override.'}"
@@ -5224,10 +5232,16 @@ def _render_deep_visible_contract_lines(
             f"Bench: GK {_name(judgement.get('bench_gk'))}; "
             + (", ".join(f"{i}. {_name(v)}" for i, v in enumerate(bench_order, 1)) if isinstance(bench_order, Sequence) and not isinstance(bench_order, (str, bytes)) else _compact(bench_order))
         )
+        captain_state = str(judgement.get("captain_state") or "UNAVAILABLE").upper()
+        if captain_state != "LOCK":
+            lines.append(
+                "CAPTAIN NOT FINAL: S19 retains the S08 provisional C/VC "
+                "for traceability, not as an executable recommendation."
+            )
         lines.append(
-            f"Captain: {final_cap.get('player') or final_cap.get('name') or 'UNAVAILABLE'} "
-            f"({judgement.get('captain_state') or 'UNAVAILABLE'}); "
-            f"Vice: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
+            f"Captain baseline: {final_cap.get('player') or final_cap.get('name') or 'UNAVAILABLE'} "
+            f"({captain_state}); "
+            f"Vice baseline: {vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
         )
         lines.append(f"Chip: {_compact(judgement.get('chip'))}")
         lines.append(f"Mini-league posture: {judgement.get('mini_league_posture') or 'UNAVAILABLE'}")

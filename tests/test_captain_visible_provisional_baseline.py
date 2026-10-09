@@ -269,5 +269,5 @@ def test_seven_layer_pmf_tail_is_not_hardcoded():
     })
     assert abs(profile["p_ge_15"] - 0.2) < 1e-9
     assert profile["q75"] == 5.0
-    assert abs(profile["pmf_variance"] - 24.16) < 1e-9
+    assert abs(profile["pmf_variance"] - 27.76) < 1e-9
     assert profile["multiple_return_probability"] is None

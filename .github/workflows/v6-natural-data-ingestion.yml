@@ -722,7 +722,7 @@ jobs:
               "generated_at": refreshed.get("generated_at"),
           }
           Path(os.environ["V6_REFRESH_STATUS_PATH"]).write_text(
-              json.dumps(status, sort_keys=True) + "\\n", encoding="utf-8"
+              json.dumps(status, sort_keys=True), encoding="utf-8"
           )
           PY
           python -m src.runtime_v6.domains.report_plane.private_boundary \

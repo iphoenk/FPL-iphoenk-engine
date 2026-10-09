@@ -2161,6 +2161,16 @@ def materialize_all15(
                     "recommended_or_locked_role", "UNAVAILABLE"
                 ),
                 "p_available": model.get("p_available", "UNAVAILABLE"),
+                "gw_availability": model.get(
+                    "gw_availability", "UNKNOWN"
+                ),
+                "gw_availability_confidence": model.get(
+                    "gw_availability_confidence", "LOW"
+                ),
+                "availability_derivation_reason": model.get(
+                    "availability_derivation_reason",
+                    "NO_NORMALIZED_EVIDENCE_BOUND",
+                ),
                 "p_start": model.get("p_start", "UNAVAILABLE"),
                 "p_cameo": model.get("p_cameo", "UNAVAILABLE"),
                 "p_dnp": model.get("p_dnp", "UNAVAILABLE"),
@@ -4362,50 +4372,6 @@ def _render_deep_visible_contract_lines(
         lines.append(
             f"VC fallback: {payload.get('vice_fallback_reason') or 'UNAVAILABLE'}."
         )
-        review = payload.get("captain_review_pair")
-        if isinstance(review, Mapping):
-            review_c = dict(review.get("captain") or {})
-            review_v = dict(review.get("vice_captain") or {})
-            lines.append(
-                "CAPTAIN REVIEW (NOT AUTO-APPLIED): "
-                f"{review_c.get('player') or 'UNAVAILABLE'} C / "
-                f"{review_v.get('player') or 'UNAVAILABLE'} VC; "
-                f"status {review.get('status') or 'PREPARE'}."
-            )
-            lines.append(
-                "Review evidence: GK tail/Q90 vs attacker; "
-                f"relative MC {review.get('relative_points_mc') or 'UNAVAILABLE'}; "
-                f"GK event calibration {review.get('gk_event_calibration') or 'UNAVAILABLE'}."
-            )
-            mini_review = dict(review.get("mini_league_review") or {})
-            lines.append(
-                "MINI-LEAGUE CAPTAIN REVIEW: "
-                f"{mini_review.get('status') or 'UNAVAILABLE'}; "
-                f"posture {mini_review.get('strategy_posture') or 'UNAVAILABLE'}; "
-                f"baseline {mini_review.get('behavioural_baseline') or 'UNAVAILABLE'}."
-            )
-            context = dict(mini_review.get("risk_posture_evidence") or {})
-            lines.append(
-                "Mini-league rank/gaps: "
-                f"rank {context.get('current_rank', 'UNAVAILABLE')}/"
-                f"{context.get('league_size', 'UNAVAILABLE')}; "
-                f"leader gap {context.get('leader_gap', 'UNAVAILABLE')}; "
-                f"top3 gap {context.get('top3_gap', 'UNAVAILABLE')}; "
-                f"top5 gap {context.get('top5_gap', 'UNAVAILABLE')}."
-            )
-            for scope_name, scope in dict(mini_review.get("scope_comparison") or {}).items():
-                scope = dict(scope or {})
-                denominator = dict(scope.get("denominator") or {})
-                lines.append(
-                    f"Mini-league {scope_name}: "
-                    f"coverage {denominator.get('collected', 'UNAVAILABLE')}/"
-                    f"{denominator.get('expected', 'UNAVAILABLE')}; "
-                    f"current C% {scope.get('current_captain_pct')}; "
-                    f"review C% {scope.get('review_captain_pct')}; "
-                    f"current EO% {scope.get('current_eo_pct')}; "
-                    f"review EO% {scope.get('review_eo_pct')}; "
-                    "relative points MC UNAVAILABLE."
-                )
 
     elif section_id == "S09":
         lines.append("### CHIP LEDGER")

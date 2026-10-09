@@ -459,10 +459,10 @@ def personal_refresh_fallback_eligible(
 
     Public acquisition and publication must both have succeeded. The only
     tolerated failed job is the isolated personal publisher, and its only
-    failed step must be either the authenticated current-team refresh or the
-    attempt-bound artifact download used by a retry. Integrated report
-    validation remains responsible for exact-slot freshness and private
-    snapshot availability.
+    failed step must be the attempt-bound artifact download used by a retry.
+    Authentication expiry is handled explicitly by the publisher workflow;
+    generic refresh-step failures never qualify. Integrated report validation
+    remains responsible for exact-slot freshness and private snapshot availability.
     """
     if not isinstance(jobs, (list, tuple)):
         return False
@@ -514,10 +514,7 @@ def personal_refresh_fallback_eligible(
             "action_required",
         }
     ]
-    return len(failed_steps) == 1 and failed_steps[0] in {
-        "Refresh authenticated current-team state in isolated private plane",
-        "Download verified public runtime snapshot",
-    }
+    return len(failed_steps) == 1 and failed_steps[0] == "Download verified public runtime snapshot"
 
 
 _REPORT_SCOPE_GOOD_STATES = frozenset({"GREEN", "PASS", "AVAILABLE", "CURRENT"})

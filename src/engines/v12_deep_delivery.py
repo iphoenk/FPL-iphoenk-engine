@@ -1281,6 +1281,38 @@ def validate_deep_decision_content_delivery(
             != str(s08.get("decision_state") or "").upper()
         ):
             failures.append("S19_CAPTAIN_STATE_CONTRADICTS_S08")
+        # CLOSE decisions must visibly explain the full canonical S08
+        # football frontier across eligible positions, not only a GK review.
+        s08_class = str(
+            s08.get("football_frontier_classification") or ""
+        ).upper()
+        s19_class = str(
+            judgement.get("captain_frontier_classification") or ""
+        ).upper()
+        if s08_class == "CLOSE":
+            if s19_class != s08_class:
+                failures.append("S19_CAPTAIN_FRONTIER_CLASS_MISMATCH")
+            expected = [
+                row for row in s08.get("captain_frontier") or []
+                if isinstance(row, Mapping)
+            ]
+            compared = [
+                row for row in judgement.get("captain_frontier") or []
+                if isinstance(row, Mapping)
+            ]
+            if not compared or [
+                str(row.get("element_id") or "") for row in compared
+            ] != [
+                str(row.get("element_id") or "") for row in expected
+            ]:
+                failures.append("S19_CAPTAIN_FRONTIER_NOT_CANONICAL")
+            if "CAPTAIN FRONTIER COMPARISON (CANONICAL S08;" not in upper:
+                failures.append("S19_CAPTAIN_FRONTIER_NOT_VISIBLE")
+            for row in compared:
+                player = str(row.get("player") or "").strip()
+                if player and player.upper() not in upper:
+                    failures.append("S19_CAPTAIN_FRONTIER_PLAYER_NOT_VISIBLE")
+                    break
         if "S19 CONSUMED:" not in upper or "RECONCILIATION:" not in upper:
             failures.append("S19_RECONCILIATION_NOT_VISIBLE")
 

@@ -126,3 +126,22 @@ def test_precompute_window_is_t15_to_t10():
     start, freeze_target = precompute_window(slot)
     assert start == datetime(2026, 9, 27, 12, 15, tzinfo=WIB)
     assert freeze_target == datetime(2026, 9, 27, 12, 20, tzinfo=WIB)
+
+
+def test_t24_deadline_is_a_visible_deep_occurrence():
+    deadline = datetime(2026, 10, 10, 17, 0, tzinfo=WIB)
+    t24 = datetime(2026, 10, 9, 17, 0, tzinfo=WIB)
+    got = resolve_delivery_decision(t24, official_deadline=deadline)
+    assert got.visible is True
+    assert got.deadline_checkpoint == "T-24H"
+    assert got.primary_mode == "DEADLINE:DEEP"
+    assert got.single_visible_report is True
+
+
+def test_deadline_checkpoint_and_match_are_one_report():
+    deadline = datetime(2026, 10, 10, 17, 0, tzinfo=WIB)
+    t3 = datetime(2026, 10, 10, 14, 0, tzinfo=WIB)
+    got = resolve_delivery_decision(t3, official_deadline=deadline, match_live=True)
+    assert got.deadline_checkpoint == "T-3H"
+    assert set(got.obligations) == {"MATCH", "DEADLINE:DEEP"}
+    assert got.single_visible_report is True

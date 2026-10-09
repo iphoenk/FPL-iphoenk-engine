@@ -4407,8 +4407,27 @@ def _render_deep_visible_contract_lines(
             value = next((ledger_map.get(k) for k in keys if k in ledger_map), None)
             chip_rows.append((label, _compact(value if value is not None else "UNAVAILABLE")))
         lines.extend(_markdown_table(("Chip", "Status"), chip_rows))
-        remaining = [label for label, value in chip_rows if "AVAILABLE" in str(value).upper() or "UNUSED" in str(value).upper()]
-        lines.append("Remaining: " + (", ".join(remaining) if remaining else "None / governed by ledger"))
+        # A missing chip status is UNKNOWN, not evidence of an unused chip.
+        # In particular, `UNAVAILABLE` must never satisfy a substring match
+        # for `AVAILABLE` and create a false all-chips-remaining claim.
+        normalized = [(label, str(value).strip().upper()) for label, value in chip_rows]
+        confirmed_available = [
+            label for label, value in normalized if value in {"AVAILABLE", "UNUSED"}
+        ]
+        unresolved = [
+            label for label, value in normalized
+            if value not in {"AVAILABLE", "UNUSED", "USED", "CONSUMED", "SPENT"}
+        ]
+        if unresolved:
+            suffix = (
+                "; confirmed available: " + ", ".join(confirmed_available)
+                if confirmed_available else ""
+            )
+            lines.append("Remaining: UNAVAILABLE (chip status unresolved: " + ", ".join(unresolved) + suffix + ")")
+        else:
+            lines.append("Remaining: " + (
+                ", ".join(confirmed_available) if confirmed_available else "None (verified ledger)"
+            ))
         lines.append("Free Hit: " + _compact(next((value for label, value in chip_rows if label == "Free Hit"), "UNAVAILABLE")))
         lines.append(f"Current decision: {payload.get('considered_now') if payload.get('considered_now') is not None else 'No chip action'}")
         lines.append(f"Reason: {payload.get('hold_reason') or payload.get('trigger') or 'UNAVAILABLE'}")

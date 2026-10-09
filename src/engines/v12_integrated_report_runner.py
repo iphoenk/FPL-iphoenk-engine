@@ -4139,6 +4139,8 @@ def _captain_decision_surface(
         ),
         "risk_posture": risk_posture,
         "vice_fallback_reason": decision.get("vice_reason"),
+        "shared_world_cvc": dict(decision.get("shared_world_cvc") or {}),
+        "pairwise_dependence": "CONDITIONAL_INDEPENDENCE_WHEN_NO_JOINT_PMF",
         # Compatibility-only P1.7 surface retained for existing health consumers.
         # It is no longer interpreted as proof of a football near-tie.
         "captain_safe_pool": safe_pool_ids,
@@ -4257,6 +4259,47 @@ def _final_judgement_surface(
             "player": captain.get("player"),
         },
         "captain_state": captain_surface.get("decision_state"),
+        # S19 consumes the S08 position-neutral frontier; it does not rank
+        # candidates again or create a separate captain decision authority.
+        "captain_frontier_classification": captain_surface.get(
+            "football_frontier_classification"
+        ),
+        "captain_frontier": [
+            {
+                key: row.get(key)
+                for key in (
+                    "element_id", "player", "position", "expected_points",
+                    "p_blank", "p_ge_10", "p_ge_15", "q75", "q90",
+                    "p_start", "xmins", "p_dnp", "pmf_variance",
+                    "multiple_return_probability", "football_evidence_complete",
+                )
+            }
+            for row in captain_surface.get("captain_frontier") or []
+            if isinstance(row, Mapping)
+        ],
+        "captain_tiebreak": {
+            "risk_posture": captain_surface.get("risk_posture"),
+            "tie_break_status": dict(
+                captain_surface.get("competitive_context") or {}
+            ).get("tie_break_status"),
+            "vice_fallback_reason": captain_surface.get("vice_fallback_reason"),
+            "source": "S08_CANONICAL_CAPTAIN_FRONTIER",
+        },
+        "captain_pairwise": [
+            {
+                key: row.get(key)
+                for key in (
+                    "a_element_id", "a_player", "b_element_id", "b_player",
+                    "p_a_gt_b", "p_equal", "p_a_lt_b", "method",
+                    "dependence_assumption", "cross_player_correlation",
+                )
+            }
+            for row in captain_surface.get("pairwise_captain_comparison") or []
+            if isinstance(row, Mapping)
+        ],
+        "captain_shared_world_cvc": dict(
+            captain_surface.get("shared_world_cvc") or {}
+        ),
         "captain_review_pair": dict(captain_surface.get("review_pair") or {}),
         "vice": {
             "element_id": vice.get("element_id"),

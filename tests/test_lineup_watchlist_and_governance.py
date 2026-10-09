@@ -447,6 +447,7 @@ def test_gk_can_captain_when_mean_and_distribution_clearly_dominate():
         competitive_complete=True,
     )
     assert out["classification"] == "CLEAR"
+    assert out["decision_state"] == "LOCK"  # CLEAR GK is still legal.
     assert out["captain"]["player"] == "Dominant GK"
     assert out["governance"]["position_neutral"] is True
     assert out["mini_league_override_applied"] is False
@@ -560,6 +561,12 @@ def test_close_frontier_can_be_resolved_by_protect_or_attack_posture():
     )
     assert protect["classification"] == "CLOSE"
     assert attack["classification"] == "CLOSE"
+    # Observed captain/EO exposure is insufficient to LOCK a genuinely
+    # CLOSE choice when joint relative-points and rank simulations are absent.
+    assert protect["decision_state"] == "PREPARE"
+    assert attack["decision_state"] == "PREPARE"
+    assert "CLOSE LOCK is deferred" in protect["reason"]
+    assert "CLOSE LOCK is deferred" in attack["reason"]
     assert protect["captain"]["player"] == "Protection"
     assert attack["captain"]["player"] == "Leverage"
     assert protect["competitive_context"]["relative_points_not_invented_from_eo"] is True

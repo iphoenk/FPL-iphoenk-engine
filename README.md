@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T19:55:46+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T21:02:30+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -86,3 +86,52 @@ Schedule authority: `config/delivery/v12_delivery_schedule.json`
 ## DEEP captain presentation integrity (9 October 2026)
 
 The canonical captain frontier remains distribution-first and position-neutral. When the goalkeeper captain is classified CLOSE and the decision is PREPARE, the DEEP S08 and S19 surfaces label the named C/VC as a **provisional baseline**, not a locked or executable captain recommendation. The existing attacking review challenger (when available) is explicitly displayed as an advisory candidate, with the goalkeeper-event calibration and shared-world relative-points evidence still required before lock. A genuinely LOCKed captain retains the canonical display contract. S08, S18 and S19 must remain consistent. This change does not alter P1.7, MC 500k, squad optimisation, or mini-league exposure mathematics.
+
+## S19 cross-position captain decision visibility (9 October 2026)
+
+S19 FINAL JUDGEMENT now renders the canonical S08 captain frontier for all
+eligible selected-XI positions (GK/DEF/MID/FWD), especially CLOSE decisions.
+The bounded comparison shows xPts, P(blank), P(10+), Q90, P(start), xMins
+and evidence completeness without new weights, invented probabilities,
+arbitrary xPts near-tie thresholds, or a second captain owner. Competitive
+Window posture and tie-break status are explicitly identified as secondary
+to canonical football distributions. LOCK means a canonical resolved C/VC;
+PREPARE labels the displayed C/VC as provisional, not executable.
+The S19 human-facing gate rejects missing or reordered CLOSE-frontier
+evidence relative to S08. This change does not touch P1.7, MC 500k,
+universe/routes, S16B, scheduler, private publisher, or PR #809.
+
+## S19 seven-layer captain acceptance boundary (9 October 2026)
+
+The S19 judgement now exposes the owner-approved seven evidence layers:
+canonical xPts; PMF-derived P(10+)/P(15+), Q75/Q90 and multiple-return
+availability; P(blank)/P(DNP)/P(start)/xMins; variance and head-to-head
+with explicit cross-player dependence assumptions; Competitive Window plus
+actual relative-rank simulation status; C/VC fallback plus joint-simulation
+and vice-activation status; and explicit evidence-confidence status.
+Unimplemented event-joint multiple returns, covariance, or rank MC
+must show UNAVAILABLE. A canonical LOCK is not automatically proof that
+all seven layers have complete evidence. S19 must state PARTIAL_EVIDENCE
+where those inputs remain unresolved. No new CaptainScore, EO-derived
+points, position preference, substitute optimizer, or fabricated MC.
+
+## CLOSE captain production LOCK evidence guard (9 October 2026)
+
+A CLOSE football frontier may preserve or recommend an eligible, owned
+C/VC provisionally, but observed captain/EO percentages must not certify
+the pair as LOCK. The existing canonical captain reconciler now requires
+a valid shared-world C/VC simulation with exactly 500,000 paths and an
+explicit convergence PASS; an exposure-driven switch also requires
+simulated mini-league rank consequences. Until these checks pass the state
+is PREPARE, and S08/S18/S19 must label the selected pair provisional.
+This does not forbid goalkeeper captaincy: a robustly CLEAR GK can still
+LOCK. No new CaptainScore, changed P1.7, pseudo-consensus or fabricated
+relative-points estimates are introduced.
+
+## Seven-layer captain permanent CI regression gate (9 October 2026)
+
+The required V12 verification suite explicitly includes goalkeeper-tail,
+cross-position seven-layer visible-report, and distributional captain
+frontier governance tests. It rejects false CLOSE LOCK when real joint
+C/VC confidence or mini-league rank evidence is unavailable, preserves
+valid CLEAR goalkeeper captains, and checks S08/S19 consistency.

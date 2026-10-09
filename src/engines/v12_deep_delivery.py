@@ -1308,6 +1308,12 @@ def validate_deep_decision_content_delivery(
                 failures.append("S19_CAPTAIN_FRONTIER_NOT_CANONICAL")
             if "CAPTAIN FRONTIER COMPARISON (CANONICAL S08;" not in upper:
                 failures.append("S19_CAPTAIN_FRONTIER_NOT_VISIBLE")
+            for index in range(1, 8):
+                if f"{index}/7 " not in upper:
+                    failures.append("S19_CAPTAIN_SEVEN_LAYER_AUDIT_MISSING")
+                    break
+            if "PARTIAL_EVIDENCE" not in upper and "FULL_SEVEN_LAYER_EVIDENCE_AVAILABLE" not in upper:
+                failures.append("S19_CAPTAIN_EVIDENCE_STATUS_NOT_VISIBLE")
             for row in compared:
                 player = str(row.get("player") or "").strip()
                 if player and player.upper() not in upper:

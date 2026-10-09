@@ -1694,3 +1694,71 @@ def test_s04_report_time_evidence_binding_is_live_in_core_regression():
     assert rows[1]["audience"] == "WATCHLIST / TARGETS"
     assert rows[2]["evidence_status"] == "UNVERIFIED"
     assert all(row["act_authority"] is False for row in rows)
+
+
+def test_stage2_acceptance_ignores_ad_hoc_latest_when_full_master_occurrence_exists(tmp_path):
+    from src.engines.v12_stage2_acceptance import (
+        _public_personal_and_mini_league_evidence,
+    )
+
+    entry_id = 3462711
+    league_id = 9477
+    root = tmp_path / "data/v6"
+    _write(
+        root / "report_prefetch/latest.json",
+        {
+            "report_kind": "ad_hoc",
+            "entry_id": entry_id,
+            "gw": 5,
+            "priority_league_id": None,
+            "public_core_complete": True,
+        },
+    )
+    _write(
+        root / "report_prefetch/occurrences/full_master__20261009_043000_plus_0700.json",
+        {
+            "report_kind": "full_master",
+            "generated_at": "2026-10-09T04:30:00+07:00",
+            "entry_id": entry_id,
+            "gw": 5,
+            "priority_league_id": league_id,
+            "priority_league_name": "ICON+",
+            "public_core_complete": True,
+            "public_personal_status": "AVAILABLE",
+            "mini_league_status": "AVAILABLE",
+            "public_control_failures": [],
+        },
+    )
+    _write(
+        root / f"mini_leagues/{league_id}/standings.json",
+        {
+            "complete": True,
+            "expected_manager_count": 1,
+            "collected_manager_count": 1,
+        },
+    )
+    _write(
+        root / f"mini_leagues/{league_id}/gw_5_manager_picks.json",
+        {
+            "complete": True,
+            "coverage_percent": 100.0,
+            "entries": {
+                str(entry_id): {
+                    "entry_id": entry_id,
+                    "gw": 5,
+                    "http_status": 200,
+                    "picks": [{"element_id": element} for element in range(1, 16)],
+                }
+            },
+        },
+    )
+
+    out = _public_personal_and_mini_league_evidence(
+        tmp_path,
+        current_team={"entry_id": entry_id, "gw": 5, "auth_state": "AUTH_AVAILABLE"},
+        owned=[{"element_id": element} for element in range(1, 16)],
+    )
+
+    assert out["current_public_squad_available"] is True
+    assert out["mini_league_public_available"] is True
+    assert out["prefetch_source"] == "OCCURRENCE_FULL_MASTER"

@@ -323,6 +323,35 @@ def _same_opponent_player_specific(
     )
 
 
+def _acceptance_prefetch(
+    runtime_data_root: Path,
+) -> tuple[dict[str, Any], str]:
+    """Resolve public acceptance from full_master, not a masking ad-hoc latest."""
+    latest = _read_json(runtime_data_root / "data/v6/report_prefetch/latest.json")
+    if str(latest.get("report_kind") or "").lower() == "full_master":
+        return latest, "LATEST_FULL_MASTER"
+
+    occurrence_root = runtime_data_root / "data/v6/report_prefetch/occurrences"
+    candidates: list[dict[str, Any]] = []
+    for path in sorted(occurrence_root.glob("full_master__*.json")):
+        candidate = _read_json(path)
+        if str(candidate.get("report_kind") or "").lower() != "full_master":
+            continue
+        candidates.append(candidate)
+    if not candidates:
+        return latest, "LATEST_NON_FULL_MASTER"
+    selected = max(
+        candidates,
+        key=lambda row: str(
+            row.get("target_logical_report_slot")
+            or row.get("logical_slot")
+            or row.get("generated_at")
+            or ""
+        ),
+    )
+    return selected, "OCCURRENCE_FULL_MASTER"
+
+
 def _public_personal_and_mini_league_evidence(
     runtime_data_root: Path,
     *,
@@ -336,9 +365,7 @@ def _public_personal_and_mini_league_evidence(
     FPL mini-league manager-picks surface and never requires data/v6/personal/*.
     """
     _ = current_team
-    prefetch = _read_json(
-        runtime_data_root / "data/v6/report_prefetch/latest.json"
-    )
+    prefetch, prefetch_source = _acceptance_prefetch(runtime_data_root)
     entry_id = int(prefetch.get("entry_id") or 0)
     priority_league_id = int(prefetch.get("priority_league_id") or 0)
     gw = int(prefetch.get("gw") or 0)
@@ -431,6 +458,7 @@ def _public_personal_and_mini_league_evidence(
         "authenticated_session_required": False,
         "personal_runtime_files_required": False,
         "source": "V6_PUBLISHED_OFFICIAL_FPL_PUBLIC_MINI_LEAGUE_READ_ONLY",
+        "prefetch_source": prefetch_source,
     }
 
 
@@ -471,9 +499,7 @@ def run_acceptance(
         team_strength=strength,
     )
 
-    prefetch_for_owned = _read_json(
-        runtime_data_root / "data/v6/report_prefetch/latest.json"
-    )
+    prefetch_for_owned, _prefetch_source = _acceptance_prefetch(runtime_data_root)
     entry_id_for_owned = int(prefetch_for_owned.get("entry_id") or 0)
     league_id_for_owned = int(
         prefetch_for_owned.get("priority_league_id") or 0

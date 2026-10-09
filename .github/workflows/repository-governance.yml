@@ -280,6 +280,9 @@ jobs:
           tests/test_player_minutes_finite_state.py
           tests/test_player_events_posterior_predictive.py
           tests/test_integrated_report_runner.py
+          tests/test_captain_goalkeeper_tail_review.py
+          tests/test_captain_visible_provisional_baseline.py
+          tests/test_lineup_watchlist_and_governance.py
           tests/test_stage3_upstream_diagnostics.py
           tests/test_delivery_reliability.py
           tests/test_match_mode_live_score_contract.py

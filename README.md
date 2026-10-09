@@ -86,3 +86,17 @@ Schedule authority: `config/delivery/v12_delivery_schedule.json`
 ## DEEP captain presentation integrity (9 October 2026)
 
 The canonical captain frontier remains distribution-first and position-neutral. When the goalkeeper captain is classified CLOSE and the decision is PREPARE, the DEEP S08 and S19 surfaces label the named C/VC as a **provisional baseline**, not a locked or executable captain recommendation. The existing attacking review challenger (when available) is explicitly displayed as an advisory candidate, with the goalkeeper-event calibration and shared-world relative-points evidence still required before lock. A genuinely LOCKed captain retains the canonical display contract. S08, S18 and S19 must remain consistent. This change does not alter P1.7, MC 500k, squad optimisation, or mini-league exposure mathematics.
+
+## S19 cross-position captain decision visibility (9 October 2026)
+
+S19 FINAL JUDGEMENT now renders the canonical S08 captain frontier for all
+eligible selected-XI positions (GK/DEF/MID/FWD), especially CLOSE decisions.
+The bounded comparison shows xPts, P(blank), P(10+), Q90, P(start), xMins
+and evidence completeness without new weights, invented probabilities,
+arbitrary xPts near-tie thresholds, or a second captain owner. Competitive
+Window posture and tie-break status are explicitly identified as secondary
+to canonical football distributions. LOCK means a canonical resolved C/VC;
+PREPARE labels the displayed C/VC as provisional, not executable.
+The S19 human-facing gate rejects missing or reordered CLOSE-frontier
+evidence relative to S08. This change does not touch P1.7, MC 500k,
+universe/routes, S16B, scheduler, private publisher, or PR #809.

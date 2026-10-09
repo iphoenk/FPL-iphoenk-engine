@@ -5287,7 +5287,7 @@ def _render_deep_visible_contract_lines(
             )))
             lines.append("Alternative only; governing transfer action remains in S14/S19.")
         else:
-            lines.append("Alternative: " + _simple_status(candidate) if candidate is not None else "Alternative: UNAVAILABLE")
+            lines.append("Alternative: " + _human_summary(candidate) if isinstance(candidate, (str, int, float, bool)) and candidate != "" else "Alternative: UNAVAILABLE")
 
     elif section_id == "S19":
         raw_judgement = payload.get("final_judgement")

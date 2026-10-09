@@ -16,6 +16,7 @@ from src.engines.v12_player_events import (
     project_player_fixture,
 )
 from src.engines.v12_player_minutes import estimate_xmins
+from src.engines.v12_injury_availability import derive_gw_availability
 from src.engines.v12_position_probability_components import (
     build_dynamic_matchup_vector,
     build_global_position_calibration,
@@ -47,6 +48,10 @@ def build(
     calibration_summary: Mapping[str, Any] | None = None,
     model_evidence_binding: Mapping[str, Any] | None = None,
     scenario_overrides: Mapping[str | int, Mapping[str, Any]] | None = None,
+    availability_evidence_by_player: Mapping[
+        int | str, Sequence[Mapping[str, Any]]
+    ] | None = None,
+    availability_evidence_cutoff_at: str | None = None,
 ) -> dict[str, Any]:
     cfg = load_event_config()
     published_horizons = [
@@ -206,6 +211,46 @@ def build(
             )
         )
 
+    availability_evidence_map = dict(
+        availability_evidence_by_player or {}
+    )
+    availability_state_cache: dict[int, dict[str, Any] | None] = {}
+
+    def availability_state_for(
+        element_id: int,
+        team_id: int,
+    ) -> dict[str, Any] | None:
+        if element_id in availability_state_cache:
+            return availability_state_cache[element_id]
+        claims = (
+            availability_evidence_map.get(element_id)
+            or availability_evidence_map.get(str(element_id))
+            or []
+        )
+        if not claims or not availability_evidence_cutoff_at:
+            availability_state_cache[element_id] = None
+            return None
+        target_rows = [
+            row
+            for row in matchups_by_team.get(team_id, [])
+            if int(row.get("event") or -1) == int(planning_gw)
+        ]
+        target = target_rows[0] if target_rows else None
+        target_fixture_id = (
+            target.get("fixture") or target.get("id")
+            if isinstance(target, Mapping)
+            else None
+        )
+        resolved = derive_gw_availability(
+            claims,
+            target_gw=planning_gw,
+            target_fixture_id=target_fixture_id,
+            derived_at=availability_evidence_cutoff_at,
+            evidence_cutoff_at=availability_evidence_cutoff_at,
+        )
+        availability_state_cache[element_id] = resolved
+        return resolved
+
     position_priors = cfg.get("position_priors") or {}
     players = []
     historical_used = 0
@@ -271,6 +316,9 @@ def build(
             "team_matches_played": matches_played,
             "player_match_rows": match_rows_by_player.get(element, []),
         }
+        availability_state = availability_state_for(element, team_id)
+        if availability_state is not None:
+            context["availability_evidence_state"] = availability_state
         apply_scenario_override(context, element)
         if historical:
             context.update(
@@ -343,6 +391,14 @@ def build(
                 teammate_context: dict[str, Any] = {
                     "team_matches_played": teammate_matches
                 }
+                teammate_availability_state = availability_state_for(
+                    teammate_id,
+                    team_id,
+                )
+                if teammate_availability_state is not None:
+                    teammate_context["availability_evidence_state"] = (
+                        teammate_availability_state
+                    )
                 apply_scenario_override(teammate_context, teammate_id)
                 if teammate_historical:
                     teammate_context.update(
@@ -677,6 +733,7 @@ def build(
                 "tactical_role": tactical_role,
                 "system_context": system_context,
                 "xmins": xmins,
+                "availability_evidence": availability_state,
                 "position_engine": primary_fixture_projection.get(
                     "position_engine"
                 ),
@@ -800,6 +857,11 @@ def build(
         "governance": {
             "v12_native_event_engine": True,
             "p1_1_minutes_owner": "src/engines/v12_player_minutes.py",
+            "availability_evidence_owner": (
+                "src/engines/v12_injury_availability.py"
+            ),
+            "availability_evidence_is_not_probability_model": True,
+            "fpl_flag_direct_probability_mapping": False,
             "p1_3_event_owner": "src/engines/v12_player_events.py",
             "contextual_dynamics_owner": (
                 "src/engines/v12_contextual_dynamics.py"

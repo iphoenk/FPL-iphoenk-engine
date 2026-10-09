@@ -1026,6 +1026,36 @@ def validate_delivery_bundle(bundle: Mapping[str, Any]) -> list[str]:
     return failures
 
 
+_EXPLICIT_OBSERVABILITY_STATES = frozenset({
+    "NOT_APPLICABLE",
+    "OPTIONAL_UNAVAILABLE",
+    "REQUIRED_PASS",
+    "REQUIRED_FAIL",
+})
+
+
+def normalize_observability_status(
+    value: Any,
+    *,
+    applicable: bool = True,
+    required: bool = False,
+) -> str:
+    """Normalize optional execution telemetry without changing gate authority.
+
+    These fields are observability-only. Missing optional telemetry is explicit
+    and non-blocking; required telemetry can be represented as a required
+    failure without allowing a raw UNAVAILABLE value to look like success.
+    """
+    if not applicable:
+        return "NOT_APPLICABLE"
+    raw = str(value or "").strip().upper()
+    if raw in _EXPLICIT_OBSERVABILITY_STATES:
+        return raw
+    if raw in {"", "UNAVAILABLE", "UNKNOWN", "NONE", "NULL"}:
+        return "REQUIRED_FAIL" if required else "OPTIONAL_UNAVAILABLE"
+    return raw
+
+
 def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
     """Materialize one occurrence identity and its fail-operational state path."""
     occurrence_id = str(
@@ -1079,16 +1109,20 @@ def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
             for state in states
         ],
         "precompute_observability": {
-            "PRECOMPUTE_REQUESTED": execution.get(
-                "precompute_requested", "UNAVAILABLE"
+            "PRECOMPUTE_REQUESTED": normalize_observability_status(
+                execution.get("precompute_requested"),
             ),
             "PREFETCH_TERMINAL": (
                 True
                 if runner_status == "PASS"
                 else execution.get("prefetch_terminal", False)
             ),
-            "WARM_STATUS": execution.get("warm_status", "UNAVAILABLE"),
-            "FREEZE_STATUS": execution.get("freeze_status", "UNAVAILABLE"),
+            "WARM_STATUS": normalize_observability_status(
+                execution.get("warm_status"),
+            ),
+            "FREEZE_STATUS": normalize_observability_status(
+                execution.get("freeze_status"),
+            ),
         },
         "idempotent_occurrence_identity": True,
         "duplicate_user_report_allowed": False,

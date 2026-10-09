@@ -888,3 +888,61 @@ def test_occurrence_orchestrator_does_not_reuse_pre_slot_private_latest():
     assert 'generated_at = datetime.fromisoformat(str(obj.get("generated_at") or ""))' in workflow
     assert "generated_at >= report_slot" in workflow
     assert "PRIVATE_LATEST_BEFORE_OCCURRENCE" in workflow
+
+
+@pytest.mark.parametrize(
+    ("value", "required", "expected"),
+    [
+        ("UNAVAILABLE", False, "OPTIONAL_UNAVAILABLE"),
+        (None, False, "OPTIONAL_UNAVAILABLE"),
+        ("UNAVAILABLE", True, "REQUIRED_FAIL"),
+        ("READY", False, "READY"),
+        ("NOT_APPLICABLE", False, "NOT_APPLICABLE"),
+    ],
+)
+def test_optional_observability_statuses_are_explicit(value, required, expected):
+    from src.engines.v12_delivery_reliability import normalize_observability_status
+
+    assert normalize_observability_status(value, required=required) == expected
+
+
+def test_occurrence_state_does_not_emit_raw_unavailable_observability():
+    occurrence = build_occurrence_state(
+        {
+            "occurrence_id": "PRICE|2026-09-28T05:30:00+07:00",
+            "report_mode": "PRICE",
+            "report_slot": "2026-09-28T05:30:00+07:00",
+            "delivery_status": "READY_FULL",
+            "runner_status": "PASS",
+            "execution_proof": {},
+        }
+    )
+    observability = occurrence["precompute_observability"]
+    assert observability["PRECOMPUTE_REQUESTED"] == "OPTIONAL_UNAVAILABLE"
+    assert observability["WARM_STATUS"] == "OPTIONAL_UNAVAILABLE"
+    assert observability["FREEZE_STATUS"] == "OPTIONAL_UNAVAILABLE"
+    assert "UNAVAILABLE" not in {
+        observability["PRECOMPUTE_REQUESTED"],
+        observability["WARM_STATUS"],
+        observability["FREEZE_STATUS"],
+    }
+    assert observability["PREFETCH_TERMINAL"] is True
+
+
+def test_nonblocking_optional_observability_never_changes_ready_full_state():
+    occurrence = build_occurrence_state(
+        {
+            "occurrence_id": "DEEP|2026-09-28T04:30:00+07:00",
+            "report_mode": "DEEP",
+            "report_slot": "2026-09-28T04:30:00+07:00",
+            "delivery_status": "READY_FULL",
+            "runner_status": "PASS",
+            "execution_proof": {
+                "precompute_requested": "OPTIONAL_UNAVAILABLE",
+                "warm_status": "OPTIONAL_UNAVAILABLE",
+                "freeze_status": "OPTIONAL_UNAVAILABLE",
+            },
+        }
+    )
+    assert occurrence["current_state"] == "PUBLISHED_FULL"
+    assert occurrence["delivery_status"] == "READY_FULL"

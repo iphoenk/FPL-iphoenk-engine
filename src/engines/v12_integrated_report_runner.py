@@ -32,6 +32,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
 from src.engines.v12_captain_frontier import decide_captain_vice
+from src.engines.v12_report_freshness_provenance import attach_report_provenance
 from src.engines.v12_mini_league_overlay import (
     attach_mini_league_overlay,
     build_mini_league_snapshot,
@@ -9040,6 +9041,14 @@ def run_deep(
             },
         ),
     }
+
+    sections = attach_report_provenance(
+        sections,
+        report_kind="DEEP",
+        target_gw=planning_gw,
+        report_timestamp=checkpoint_time,
+        target_fixture_ids=[],
+    )
 
     # Bind decision-critical visible sections to the exact producer payload
     # before rendering. Renderer never manufactures this metadata.

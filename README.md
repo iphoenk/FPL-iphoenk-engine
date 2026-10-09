@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-08T01:05:00Z`
+> **Last runtime/documentation sync:** `2026-10-09T00:38:59Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -26,6 +26,18 @@ ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, run
 GitHub Actions `fpl-github-clock.yml` is manual smoke only via owner `/fpl-clock-test` or workflow_dispatch. It has no schedule and no self-chain. `fpl-external-clock-fallback.yml` remains dispatch-only for explicit operational recovery and never counts as natural scheduler proof or natural acceptance.
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
+
+## Captain risk and mini-league review
+
+For a CLOSE football frontier, a goalkeeper captain with weaker 10+ haul
+probability and Q90 than an equally secure attacking alternative is marked
+PREPARE rather than falsely LOCKed. A review pair is shown, never automatically
+executed. LEAGUE / RIVALS / COMPETITIVE captain share and EO, denominator
+coverage, current rank/gaps and PROTECT/BALANCED/ATTACK posture are reported
+as observed historical mini-league context; they are not target-GW forecasts
+or a substitute for correlated captain/vice Monte Carlo. Missing scopes and
+unverified GK clean-sheet/conceded/saves/bonus/penalty-save calibration remain
+explicitly unavailable. S08, S18 and S19 must share the canonical C/VC.
 
 ## DEEP decision-content delivery barrier
 

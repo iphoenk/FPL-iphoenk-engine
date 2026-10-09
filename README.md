@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T00:38:59Z`
+> **Last runtime/documentation sync:** `2026-10-09T09:00:00Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -15,6 +15,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
 
 Canonical FPL entry identity is repository-configured. Authenticated personal acquisition is an optional enrichment for private/current finance facts; when auth is intentionally unavailable, governed Official FPL submitted-picks or explicit owner evidence may still support Current15 identity, while auth-only finance fields remain unavailable.
+
+When Stage3 is blocked upstream, the report remains explicitly `BLOCKED_UPSTREAM` and records only bounded allowlisted guard predicates plus Monte Carlo path/convergence facts. This diagnostic path never claims Stage3 execution or relaxes the 500,000-path and convergence gates.
 
 ## Reports
 

@@ -31,6 +31,20 @@ def test_s08_prepare_labels_gk_as_provisional_baseline():
     assert "Attacking captain review alternative: B.Fernandes" in body
 
 
+def test_s08_prepare_exposes_computed_priority_without_relabeling_canonical_pair():
+    body = _visible("S08", {
+        "captain": {"player": "Tzolakis"},
+        "vice_captain": {"player": "B.Fernandes"},
+        "recommended_captain": {"player": "B.Fernandes"},
+        "recommended_vice_captain": {"player": "Haaland"},
+        "decision_state": "PREPARE",
+    })
+    assert "Recommended C priority: B.Fernandes" in body
+    assert "Recommended VC priority: Haaland" in body
+    assert "Current C baseline: Tzolakis" in body
+    assert "state PREPARE" in body
+
+
 def test_s19_prepare_never_presents_gk_as_final_recommendation():
     body = _visible("S19", {
         "final_judgement": {
@@ -45,6 +59,22 @@ def test_s19_prepare_never_presents_gk_as_final_recommendation():
     assert "Captain baseline: Tzolakis (PREPARE)" in body
     assert "Vice baseline: B.Fernandes" in body
     assert "Captain attacking review candidate: B.Fernandes" in body
+
+
+def test_s19_prepare_exposes_priority_pair_as_non_executable():
+    body = _visible("S19", {
+        "final_judgement": {
+            "transfer_action": "WAIT",
+            "final_captain": {"player": "Tzolakis"},
+            "vice": {"player": "B.Fernandes"},
+            "recommended_captain": {"player": "B.Fernandes"},
+            "recommended_vice": {"player": "Haaland"},
+            "captain_state": "PREPARE",
+        }
+    })
+    assert "Recommended C priority: B.Fernandes" in body
+    assert "Recommended VC priority: Haaland" in body
+    assert "not executable" in body.lower()
 
 
 def test_locked_captain_does_not_get_provisional_warning():

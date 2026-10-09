@@ -387,6 +387,115 @@ def test_s05_binding_surfaces_europe_and_weather(monkeypatch, tmp_path):
     assert context["weather"][0]["fpl_impact"] == "LOW"
 
 
+def test_fixture_display_rows_expose_readable_identity_wib_venue_and_weather_binding():
+    fixtures = [
+        {
+            "id": 9001,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-10-03T14:00:00Z",
+            "started": False,
+            "finished": False,
+        }
+    ]
+    weather = [
+        {
+            "fixture_id": 9001,
+            "kickoff": "2026-10-03T14:00:00+00:00",
+            "condition": "NORMAL",
+            "state": "FORECAST",
+            "freshness": "FRESH",
+        }
+    ]
+
+    rows = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(), fixtures=fixtures, weather_rows=weather
+    )
+
+    assert rows == [
+        {
+            "fixture_id": 9001,
+            "match": "Arsenal vs Chelsea",
+            "home_team": "Arsenal",
+            "away_team": "Chelsea",
+            "home_away": "H",
+            "kickoff_wib": "03 Oct 2026, 21:00 WIB",
+            "fixture_status": "NOT STARTED",
+            "rest_days": "UNAVAILABLE",
+            "venue": "Emirates Stadium",
+            "venue_status": "VERIFIED",
+            "weather": "NORMAL",
+            "weather_state": "FORECAST",
+            "weather_freshness": "FRESH",
+            "weather_fixture_id": 9001,
+            "weather_kickoff": "2026-10-03T14:00:00+00:00",
+        }
+    ]
+
+
+def test_fixture_display_rows_fail_soft_for_unknown_venue_and_do_not_cross_bind_weather():
+    fixtures = [
+        {
+            "id": 9001,
+            "event": 6,
+            "team_h": 99,
+            "team_a": 2,
+            "kickoff_time": "2026-10-03T14:00:00Z",
+        },
+        {
+            "id": 9002,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-10-03T15:00:00Z",
+        },
+    ]
+    rows = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(),
+        fixtures=fixtures,
+        weather_rows=[
+            {
+                "fixture_id": 9001,
+                "kickoff": "2026-10-03T14:00:00+00:00",
+                "condition": "ADVERSE",
+            }
+        ],
+    )
+
+    assert rows[0]["match"] == "Unknown team vs Chelsea"
+    assert rows[0]["venue"] == "VENUE UNAVAILABLE"
+    assert rows[0]["venue_status"] == "UNAVAILABLE"
+    assert rows[0]["weather"] == "ADVERSE"
+    assert rows[1]["weather"] == "UNAVAILABLE"
+    assert rows[1]["weather_fixture_id"] is None
+
+
+def test_fixture_display_rows_preserve_all_ten_readable_fixture_cards(monkeypatch):
+    monkeypatch.setattr(
+        v12_s05_binding,
+        "_venue_maps",
+        lambda: ({1: {"team_name": "Arsenal", "venue": "Emirates Stadium"}}, {}),
+    )
+    fixtures = [
+        {
+            "id": 100 + index,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": f"2026-10-{index + 1:02d}T14:00:00Z",
+        }
+        for index in range(10)
+    ]
+    rows = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(), fixtures=fixtures
+    )
+    assert len(rows) == 10
+    assert all(row["match"] == "Arsenal vs Chelsea" for row in rows)
+    assert all(row["kickoff_wib"].endswith(" WIB") for row in rows)
+    assert all(row["venue"] == "Emirates Stadium" for row in rows)
+    assert all(row["fixture_id"] >= 100 for row in rows)
+
 def test_s05_weather_fetch_is_scoped_to_planning_gw(monkeypatch, tmp_path):
     captured = {}
 

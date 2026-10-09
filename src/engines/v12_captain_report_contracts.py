@@ -42,5 +42,5 @@ def validate_captain_report_contracts(sections: Mapping[str, Any]) -> dict[str, 
     degraded = (not s15b_complete) or bool(errors)
     return {"valid": not errors, "errors": errors,
             "degradation_state": "DEGRADED" if degraded else "COMPLETE",
-            "canonical_pair": available[0] if available and len(set(available)) == 1 else None,
+            "canonical_pair": available[0] if s15b_complete and available and len(set(available)) == 1 else None,
             "s15b_evidence_only": not bool(forbidden), "independent_winner": False}

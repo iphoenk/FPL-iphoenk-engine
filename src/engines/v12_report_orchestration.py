@@ -24,6 +24,7 @@ from src.engines.price_radar import (
 )
 from src.engines.visible_content_proof import canonical_mode_contract
 from src.engines.v12_competitive_window import resolve_competitive_window
+from src.engines.v12_mobile_pitch import render_s06_pitch
 from src.engines.v12_section_resolver import (
     resolve_section,
     validate_resolved_sections,
@@ -4180,9 +4181,27 @@ def _render_deep_visible_contract_lines(
 
     elif section_id == "S05":
         lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
-        fixtures = payload.get("fixtures") or []
+        fixtures = payload.get("fixtures_display") or []
         if fixtures:
-            lines.append("PL fixtures: " + _compact(fixtures))
+            lines.extend(_markdown_table(
+                ("Fixture", "Match", "Kickoff (WIB)", "Venue", "Status", "Weather"),
+                [(
+                    row.get("fixture_id"),
+                    row.get("match") or "UNAVAILABLE",
+                    row.get("kickoff_wib") or "UNAVAILABLE",
+                    (
+                        row.get("venue") or "VENUE UNAVAILABLE"
+                    ) + " (" + str(row.get("venue_status") or "UNAVAILABLE") + ")",
+                    row.get("fixture_status") or "UNAVAILABLE",
+                    (
+                        str(row.get("weather") or "UNAVAILABLE")
+                        + " / "
+                        + str(row.get("weather_state") or "UNAVAILABLE")
+                    ),
+                ) for row in fixtures if isinstance(row, Mapping)],
+            ))
+        elif payload.get("fixtures"):
+            lines.append("Fixture identity: UNAVAILABLE — official team enrichment is not bound.")
         coverage = dict(payload.get("competition_coverage") or {})
         if coverage:
             lines.append(
@@ -4208,7 +4227,22 @@ def _render_deep_visible_contract_lines(
         )
         weather = payload.get("weather")
         lines.append("### WEATHER")
-        lines.append("Weather: " + (_compact(weather) if weather else "No material weather signal."))
+        if weather:
+            weather_rows = [
+                row for row in weather if isinstance(row, Mapping)
+            ]
+            lines.extend(_markdown_table(
+                ("Fixture", "Venue", "Kickoff", "Condition", "Freshness"),
+                [(
+                    row.get("fixture_id") or "UNAVAILABLE",
+                    row.get("venue") or "VENUE UNAVAILABLE",
+                    row.get("kickoff") or row.get("kickoff_time") or "UNAVAILABLE",
+                    row.get("condition") or row.get("state") or "UNAVAILABLE",
+                    row.get("freshness") or "UNAVAILABLE",
+                ) for row in weather_rows],
+            ))
+        else:
+            lines.append("Weather: No material weather signal.")
         lines.append("Decision use: context only; no separate optimizer or news authority.")
 
     elif section_id == "S06":
@@ -4248,6 +4282,7 @@ def _render_deep_visible_contract_lines(
             f"Projection: XI base xPts={payload.get('xi_base_xpts', score.get('xpts_mean', 'UNAVAILABLE'))}; "
             f"captain-adjusted={payload.get('captain_adjusted_xpts', 'UNAVAILABLE')}."
         )
+        lines.insert(0, render_s06_pitch(payload))
         comparisons = [dict(r) for r in payload.get("formation_comparison") or [] if isinstance(r, Mapping)]
         if comparisons:
             close = sorted(
@@ -4385,6 +4420,14 @@ def _render_deep_visible_contract_lines(
             f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
             f"state {captain_state}."
         )
+        recommended_captain = dict(payload.get("recommended_captain") or {})
+        recommended_vice = dict(payload.get("recommended_vice_captain") or {})
+        if recommended_captain or recommended_vice:
+            lines.append(
+                f"Recommended C priority: {recommended_captain.get('player') or recommended_captain.get('name') or 'UNAVAILABLE'}; "
+                f"Recommended VC priority: {recommended_vice.get('player') or recommended_vice.get('name') or 'UNAVAILABLE'}; "
+                f"status {payload.get('recommendation_status') or 'PROVISIONAL_PRIORITY'} (not executable unless LOCK)."
+            )
         lines.append(
             f"Reason: {payload.get('reconciliation_reason') or 'No material override.'}"
         )
@@ -5229,6 +5272,16 @@ def _render_deep_visible_contract_lines(
                         f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}; "
                         f"frontier {cap_decision.get('frontier_classification') or 'UNAVAILABLE'}."
                     )
+                    recommended_cap = dict(cap_decision.get("recommended_captain") or {})
+                    recommended_vice = dict(cap_decision.get("recommended_vice_captain") or {})
+                    lines.append(
+                        "Priority C/VC: "
+                        f"{recommended_cap.get('player') or recommended_cap.get('name') or 'UNAVAILABLE'} / "
+                        f"{recommended_vice.get('player') or recommended_vice.get('name') or 'UNAVAILABLE'}; "
+                        f"state {cap_decision.get('decision_state') or 'UNAVAILABLE'}; "
+                        f"status {cap_decision.get('recommendation_status') or 'UNAVAILABLE'}; "
+                        "not executable unless LOCK."
+                    )
             else:
                 fallback = payload.get(display) or payload.get(display.replace(" ", "_"))
                 lines.append(f"Now: UNAVAILABLE. Next: UNAVAILABLE. TRIGGER TO ACT: UNAVAILABLE. LATEST SAFE DECISION POINT: UNAVAILABLE. COST OF WAITING: UNAVAILABLE. ABORT / REVERSAL: UNAVAILABLE.")
@@ -5493,6 +5546,14 @@ def _render_deep_visible_contract_lines(
             f"{'Vice' if captain_state == 'LOCK' else 'Vice baseline'}: "
             f"{vice.get('player') or vice.get('name') or 'UNAVAILABLE'}."
         )
+        recommended_captain = dict(judgement.get("recommended_captain") or {})
+        recommended_vice = dict(judgement.get("recommended_vice") or {})
+        if recommended_captain or recommended_vice:
+            lines.append(
+                f"Recommended C priority: {recommended_captain.get('player') or recommended_captain.get('name') or 'UNAVAILABLE'}; "
+                f"Recommended VC priority: {recommended_vice.get('player') or recommended_vice.get('name') or 'UNAVAILABLE'}; "
+                f"status {judgement.get('recommendation_status') or 'PROVISIONAL_PRIORITY'} (not executable unless LOCK)."
+            )
         lines.append(f"Chip: {_compact(judgement.get('chip'))}")
         lines.append(f"Mini-league posture: {judgement.get('mini_league_posture') or 'UNAVAILABLE'}")
         lines.append(f"Final action: {judgement.get('transfer_action') or 'UNAVAILABLE'}")

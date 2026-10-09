@@ -407,3 +407,30 @@ def test_availability_confidence_does_not_directly_change_pstart():
         },
     )
     assert low["start_probability"] == high["start_probability"]
+
+
+def test_target_binding_preserves_claim_provenance_and_cutoff():
+    out = resolve(
+        [
+            {
+                "source": "Club",
+                "source_type": "OFFICIAL_CLUB",
+                "observed_at": "2026-10-06T09:00:00Z",
+                "evidence_type": "MANAGER_QUOTE",
+                "raw_claim": "expected back after the international break",
+                "normalized_claim": "EXPECTED_RETURN_AFTER_BREAK",
+                "target_gw": 7,
+                "target_fixture_id": 7001,
+                "evidence_polarity": "REDUCES_CONCERN",
+            }
+        ],
+        target_gw=7,
+        fixture=7001,
+    )
+    assert out["target_gw"] == 7
+    assert out["target_fixture_id"] == 7001
+    assert out["derived_at"] == NOW
+    assert out["evidence_cutoff_at"] == NOW
+    claim = out["active_evidence"][0]
+    assert claim["raw_claim"] == "expected back after the international break"
+    assert claim["normalized_claim"] == "EXPECTED_RETURN_AFTER_BREAK"

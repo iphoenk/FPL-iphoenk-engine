@@ -24,6 +24,9 @@ def blocked_stage3_payload(
         "PACKAGE_SEARCH_PRESENT",
         "PACKAGE_UTILITY_PRESENT",
         "MATERIAL_MC_ROUTES_PRESENT",
+        "WATCHLIST_COMPLETE",
+        "WATCHLIST_MINIMUM",
+        "WATCHLIST_COVERAGE_FULL",
     }
     guard_failures = list(
         dict.fromkeys(

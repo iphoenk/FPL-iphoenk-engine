@@ -764,21 +764,21 @@ jobs:
           import json
           import os
           from pathlib import Path
-          payload = {
-              "contract": "V12_STAGE3_INTEGRATED_ACCEPTANCE_V1",
-              "status": "DEGRADED",
-              "reason": "BLOCKED_UPSTREAM",
-              "integrated_runner": os.environ.get("RUNNER_STATUS", "UNKNOWN"),
-              "stage3_executed": False,
-              "stage3_pass_claimed": False,
-              "mc_pass_claimed": False,
-              "engineering_closure_blocks_report": False,
-              "governance": {
-                  "qa_relaxed": False,
-                  "new_scheduler_created": False,
-                  "second_model_authority_created": False,
-              },
-          }
+          from src.engines.v12_stage3_upstream_diagnostics import blocked_stage3_payload
+
+          proof = {}
+          proof_path = Path("artifacts/v12-report/execution_proof.json")
+          try:
+              value = json.loads(proof_path.read_text(encoding="utf-8"))
+              if isinstance(value, dict):
+                  proof = value
+          except (OSError, json.JSONDecodeError):
+              pass
+
+          # The helper keeps "engineering_closure_blocks_report": False on this path.
+          payload = blocked_stage3_payload(
+              proof, os.environ.get("RUNNER_STATUS", "UNKNOWN")
+          )
           Path("artifacts/v12-report/stage3_acceptance.json").write_text(
               json.dumps(payload, indent=2, sort_keys=True) + "\n",
               encoding="utf-8",

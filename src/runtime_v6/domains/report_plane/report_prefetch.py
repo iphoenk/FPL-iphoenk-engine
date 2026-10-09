@@ -973,12 +973,13 @@ class PrefetchService:
                         auth_state = "AUTH_ENTRY_MISMATCH"
                         control_failures.append("AUTH_ENTRY_MISMATCH")
                 else:
-                    auth_state = "DEGRADED"
+                    me_status = str(me.get("status") or "").strip().upper()
+                    auth_state = "AUTH_EXPIRED" if me_status == "AUTH_EXPIRED" else "DEGRADED"
                     source_failures.append(
                         {
                             "domain": "official_fpl_personal",
                             "endpoint_class": "me",
-                            "status": me.get("status"),
+                            "status": me_status or "FAILED",
                         }
                     )
 

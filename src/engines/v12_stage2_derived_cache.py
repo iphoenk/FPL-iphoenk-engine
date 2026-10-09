@@ -23,7 +23,7 @@ from src.engines.v12_cache_runtime_identity import runtime_cache_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 STAGE2_DERIVED_CACHE_ENV = "V12_STAGE2_DERIVED_CACHE_DIR"
-STAGE2_DERIVED_CACHE_SCHEMA = 3
+STAGE2_DERIVED_CACHE_SCHEMA = 4
 
 _MODEL_DEPENDENCIES = (
     "src/models/v12_analytics_foundation.py",
@@ -31,6 +31,7 @@ _MODEL_DEPENDENCIES = (
     "src/engines/v12_contextual_dynamics.py",
     "src/engines/v12_player_events.py",
     "src/engines/v12_player_minutes.py",
+    "src/engines/v12_injury_availability.py",
     "src/engines/v12_position_probability_components.py",
     "src/engines/p0_decision_quality.py",
     "src/models/v12_stage1_analytics.py",
@@ -94,6 +95,8 @@ def stage2_derived_input_fingerprint(
     player_match_rows: Sequence[Mapping[str, Any]],
     opponent_history_rows: Sequence[Mapping[str, Any]],
     opponent_history_scope: Any,
+    availability_evidence_by_player: Mapping[Any, Any] | None = None,
+    availability_evidence_cutoff_at: str | None = None,
 ) -> str:
     """Fingerprint only deterministic public/model inputs used by P1.1/P1.3."""
     return _fingerprint(
@@ -108,6 +111,10 @@ def stage2_derived_input_fingerprint(
             "player_match_rows": list(player_match_rows),
             "opponent_history_rows": list(opponent_history_rows),
             "opponent_history_scope": opponent_history_scope,
+            "availability_evidence_by_player": dict(
+                availability_evidence_by_player or {}
+            ),
+            "availability_evidence_cutoff_at": availability_evidence_cutoff_at,
             "model_dependencies": _dependency_fingerprints(),
         }
     )
@@ -124,6 +131,8 @@ def load_or_build_stage2_projections(
     opponent_history_rows: Sequence[Mapping[str, Any]],
     opponent_history_scope: Any,
     builder: Callable[[], dict[str, Any]],
+    availability_evidence_by_player: Mapping[Any, Any] | None = None,
+    availability_evidence_cutoff_at: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Return canonical projections plus non-authoritative cache proof."""
     started = time.perf_counter()
@@ -136,6 +145,8 @@ def load_or_build_stage2_projections(
         player_match_rows=player_match_rows,
         opponent_history_rows=opponent_history_rows,
         opponent_history_scope=opponent_history_scope,
+        availability_evidence_by_player=availability_evidence_by_player,
+        availability_evidence_cutoff_at=availability_evidence_cutoff_at,
     )
     cache_root = str(os.environ.get(STAGE2_DERIVED_CACHE_ENV) or "").strip()
     proof = {
@@ -144,6 +155,7 @@ def load_or_build_stage2_projections(
         "cache_authoritative": False,
         "mathematical_owner_changed": False,
         "private_current15_in_key": False,
+        "availability_evidence_in_key": True,
         "status": "MISS",
         "cache_hit": False,
         "cache_miss": True,

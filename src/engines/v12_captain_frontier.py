@@ -16,6 +16,8 @@ P1.3B.  Candidate-specific relative-points MC is never fabricated from EO.
 from math import isfinite
 from typing import Any, Mapping, Sequence
 
+from .v12_captain_shared_world import simulate_shared_world_cvc
+
 
 EPS = 1e-12
 MODEL_OWNER = "V12_CAPTAIN_FRONTIER_RECONCILER"
@@ -858,6 +860,16 @@ def decide_captain_vice(
 
     captain_id = int(selected.get("element_id") or 0)
     vice, vice_reason = _select_vice(profiles, captain_id, baseline_vice_id)
+    shared_world_cvc = None
+    if vice is not None and any(
+        str(row.get("position") or "").upper() in {"GK", "GKP"}
+        for row in candidates
+    ):
+        shared_world_cvc = simulate_shared_world_cvc(
+            candidates,
+            captain_id=captain_id,
+            vice_captain_id=int(vice.get("element_id") or 0),
+        )
     review_challenger = _goalkeeper_tail_review(
         frontier, selected, classification,
         risk_posture=risk_posture,
@@ -938,6 +950,7 @@ def decide_captain_vice(
         "mini_league_override_applied": bool(mini_changed),
         "competitive_context": competitive,
         "vice_reason": vice_reason,
+        "shared_world_cvc": shared_world_cvc,
         "review_pair": (
             {
                 "status": "PREPARE_NOT_EXECUTABLE",
@@ -971,5 +984,8 @@ def decide_captain_vice(
             "mini_league_three_scopes_audited": True,
             "historical_picks_not_target_gw_forecast": True,
             "mc500k_mutated": False,
+            "shared_world_cvc_mc_paths": 500_000,
+            "shared_world_cvc_requires_gk_calibration": True,
+            "shared_world_cvc_no_hardcoded_winner": True,
         },
     }

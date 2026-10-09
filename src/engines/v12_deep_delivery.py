@@ -1002,12 +1002,17 @@ def validate_deep_decision_content_delivery(
             failures.append("S08_CAPTAIN_FRONTIER_NOT_VISIBLE")
         if "| PLAYER | PBLANK | PHAUL | P>=10 | Q90 |" not in upper:
             failures.append("S08_RETURN_PROFILE_NOT_VISIBLE")
+        # The renderer truthfully calls an unresolved captain a baseline;
+        # human-facing QA must require that exact label, not a locked one.
+        captain_is_locked = str(s08.get("decision_state") or "").upper() == "LOCK"
+        expected_c_label = "CURRENT C:" if captain_is_locked else "CURRENT C BASELINE:"
+        expected_vc_label = "CURRENT VC:" if captain_is_locked else "CURRENT VC BASELINE:"
         for token, failure in (
             ("FOOTBALL FRONTIER:", "S08_FRONTIER_CLASSIFICATION_NOT_VISIBLE"),
             ("FOOTBALL LEADER:", "S08_FOOTBALL_LEADER_NOT_VISIBLE"),
             ("COMPETITIVE CONTEXT:", "S08_COMPETITIVE_CONTEXT_NOT_VISIBLE"),
-            ("CURRENT C:", "S08_CURRENT_CAPTAIN_NOT_VISIBLE"),
-            ("CURRENT VC:", "S08_CURRENT_VICE_NOT_VISIBLE"),
+            (expected_c_label, "S08_CURRENT_CAPTAIN_NOT_VISIBLE"),
+            (expected_vc_label, "S08_CURRENT_VICE_NOT_VISIBLE"),
             ("VC FALLBACK:", "S08_VICE_FALLBACK_NOT_VISIBLE"),
         ):
             if token not in upper:

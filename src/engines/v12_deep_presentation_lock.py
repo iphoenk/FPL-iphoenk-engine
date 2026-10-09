@@ -317,6 +317,60 @@ def validate_rendered_deep_presentation(
         actual_tables = _rendered_tables(section_text)
         expected_tables = list(spec.get("tables") or [])
         state = state_by_sid.get(sid, "COMPLETE")
+        if sid == "S18" and state == "COMPLETE":
+            # S18 owns a bounded, canonical route summary, not an opaque
+            # multi-kilobyte best-alternative dictionary. Its first table is
+            # required when an alternative is mapped; the optional second
+            # table is required exactly when bounded mini-league facts exist.
+            # Keep exact table/column/row checks below rather than bypassing QA.
+            section_content = next(
+                (row.get("content") or {})
+                for row in (report or {}).get("sections") or []
+                if isinstance(row, Mapping)
+                and str(row.get("section_id") or "").upper() == "S18"
+            ) if any(
+                isinstance(row, Mapping)
+                and str(row.get("section_id") or "").upper() == "S18"
+                for row in (report or {}).get("sections") or []
+            ) else {}
+            board = section_content.get("action_board") or {}
+            if not isinstance(board, Mapping):
+                board = {}
+            candidate = board.get("best_alternative")
+            if candidate is None:
+                candidate = section_content.get("BEST ALTERNATIVE")
+            if isinstance(candidate, Mapping):
+                expected_tables = [{
+                    "columns": ["Decision field", "Canonical value"],
+                    "rows_exact": 13,
+                }]
+                ml = candidate.get("mini_league_utility")
+                if isinstance(ml, Mapping):
+                    ordered = (
+                        ("Ownership (%)", "ownership_pct"),
+                        ("football ev precedes leverage", "football_ev_precedes_leverage"),
+                        ("rank gain utility", "rank_gain_utility"),
+                        ("selected by football ev", "selected_by_football_ev"),
+                    )
+                    labels = [label for label, key in ordered if key in ml]
+                    if labels:
+                        expected_tables.append({
+                            "columns": ["Evidence", "Canonical value"],
+                            "rows_exact": len(labels),
+                        })
+                        if len(actual_tables) > 1 and [
+                            row[0] for row in actual_tables[1]["rows"] if row
+                        ] != labels:
+                            failures.append("S18_MINI_LEAGUE_LABELS_MISMATCH")
+                if actual_tables and [
+                    row[0] for row in actual_tables[0]["rows"] if row
+                ] != [
+                    "Route", "Route type", "Outgoing", "Incoming", "Executable",
+                    "Economics", "Hit (pts)", "1GW net delta (pts)",
+                    "3GW net delta (pts)", "5GW net delta (pts)",
+                    "P(beats HOLD)", "Robustness", "Action verdict",
+                ]:
+                    failures.append("S18_ROUTE_LABELS_MISMATCH")
         if state == "COMPLETE":
             if len(actual_tables) != len(expected_tables):
                 failures.append(

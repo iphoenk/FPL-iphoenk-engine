@@ -6,7 +6,7 @@ from src.engines.v12_deep_presentation_lock import (
     load_deep_presentation_lock,
     validate_rendered_deep_presentation,
 )
-from src.engines.v12_report_orchestration import _render_package_frontier_lines
+from src.engines.v12_report_orchestration import _render_package_frontier_lines, _render_deep_visible_contract_lines
 
 
 def _heading(sid: str) -> str:
@@ -74,6 +74,7 @@ def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
                 if count is None:
                     count = 1
                 lines.extend(_table(table["columns"], int(count), sid=sid))
+                lines.append("")  # Keep separately rendered tables delimited.
             if sid == "S15":
                 lines.extend([
                     "Overall evidence confidence: MEDIUM-HIGH",
@@ -210,3 +211,76 @@ def test_rendered_deep_schema_lock_rejects_s17_analyst_overlap():
     failures = validate_rendered_deep_presentation(body, report)
     assert "S17_ANALYST_EVIDENCE_OVERLAP=FINANCE COMPLETENESS" in failures
 
+
+
+
+def _s18_route_body(*, with_mini_league: bool = True):
+    body, report = _valid_body()
+    route = {
+        "route": "R1",
+        "route_kind": "DIRECT / 1-TRANSFER",
+        "moves": {"out": [{"name": "P1"}], "in": [{"name": "P2"}]},
+        "gw1_net": 0.1,
+        "three_gw": 0.2,
+        "five_gw": 0.3,
+        "p_beats_hold": 0.4,
+        "robustness": {"status": "PASS"},
+        "action_verdict": "WAIT",
+    }
+    if with_mini_league:
+        route["mini_league_utility"] = {
+            "ownership_pct": 31,
+            "football_ev_precedes_leverage": True,
+            "rank_gain_utility": 0.3,
+        }
+    content = {"action_board": {"axes": [], "best_alternative": route}}
+    for row in report["sections"]:
+        if row["section_id"] == "S18":
+            row["content"] = content
+            break
+    rendered, _ = _render_deep_visible_contract_lines(
+        section_id="S18", content=content, owned_ids=set(), owned_names={}
+    )
+    start = body.index("## 18. TEST")
+    end = body.index("## 19. TEST", start)
+    body = body[:start] + "\n".join(["## 18. TEST", "Status: COMPLETE", *rendered, ""]) + "\n" + body[end:]
+    return body, report
+
+
+def test_s18_dynamic_exact_table_contract_accepts_canonical_route_with_minileague():
+    body, report = _s18_route_body(with_mini_league=True)
+    assert validate_rendered_deep_presentation(body, report) == []
+    assert "| Evidence | Canonical value |" in body
+
+
+def test_s18_dynamic_exact_table_contract_accepts_route_without_minileague():
+    body, report = _s18_route_body(with_mini_league=False)
+    assert validate_rendered_deep_presentation(body, report) == []
+    assert "| Evidence | Canonical value |" not in body
+
+
+def test_s18_dynamic_contract_fails_closed_on_missing_minileague_table():
+    body, report = _s18_route_body(with_mini_league=True)
+    start = body.index("#### MINI-LEAGUE DECISION CONTEXT")
+    end = body.index("Alternative only; governing", start)
+    body = body[:start] + body[end:]
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "S18_RENDERED_TABLE_COUNT=1/2" in failures
+
+
+def test_s18_dynamic_contract_fails_closed_on_mutated_route_table_label():
+    body, report = _s18_route_body(with_mini_league=False)
+    body = body.replace("| Route | R1 |", "| Unknown | R1 |", 1)
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "S18_ROUTE_LABELS_MISMATCH" in failures
+
+
+def test_s18_dynamic_contract_rejects_unrelated_extra_table():
+    body, report = _s18_route_body(with_mini_league=False)
+    body = body.replace(
+        "Alternative only; governing transfer action remains in S14/S19.",
+        "\n| Unauthorized | Value |\n| --- | --- |\n| bad | bad |\n\nAlternative only; governing transfer action remains in S14/S19.",
+        1,
+    )
+    failures = validate_rendered_deep_presentation(body, report)
+    assert "S18_RENDERED_TABLE_COUNT=2/1" in failures

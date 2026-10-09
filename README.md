@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T20:34:14+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T20:48:50+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -114,3 +114,16 @@ must show UNAVAILABLE. A canonical LOCK is not automatically proof that
 all seven layers have complete evidence. S19 must state PARTIAL_EVIDENCE
 where those inputs remain unresolved. No new CaptainScore, EO-derived
 points, position preference, substitute optimizer, or fabricated MC.
+
+## CLOSE captain production LOCK evidence guard (9 October 2026)
+
+A CLOSE football frontier may preserve or recommend an eligible, owned
+C/VC provisionally, but observed captain/EO percentages must not certify
+the pair as LOCK. The existing canonical captain reconciler now requires
+a valid shared-world C/VC simulation with exactly 500,000 paths and an
+explicit convergence PASS; an exposure-driven switch also requires
+simulated mini-league rank consequences. Until these checks pass the state
+is PREPARE, and S08/S18/S19 must label the selected pair provisional.
+This does not forbid goalkeeper captaincy: a robustly CLEAR GK can still
+LOCK. No new CaptainScore, changed P1.7, pseudo-consensus or fabricated
+relative-points estimates are introduced.

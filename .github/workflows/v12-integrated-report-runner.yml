@@ -775,7 +775,7 @@ jobs:
           except (OSError, json.JSONDecodeError):
               pass
 
-          # The helper keeps \"engineering_closure_blocks_report\": False on this path.
+          # The helper keeps "engineering_closure_blocks_report": False on this path.
           payload = blocked_stage3_payload(
               proof, os.environ.get("RUNNER_STATUS", "UNKNOWN")
           )

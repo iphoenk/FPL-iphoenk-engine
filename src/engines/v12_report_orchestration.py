@@ -5336,6 +5336,64 @@ def _render_deep_visible_contract_lines(
             + (", ".join(f"{i}. {_name(v)}" for i, v in enumerate(bench_order, 1)) if isinstance(bench_order, Sequence) and not isinstance(bench_order, (str, bytes)) else _compact(bench_order))
         )
         captain_state = str(judgement.get("captain_state") or "UNAVAILABLE").upper()
+        frontier_class = str(
+            judgement.get("captain_frontier_classification") or "UNAVAILABLE"
+        ).upper()
+        frontier = [
+            dict(row)
+            for row in judgement.get("captain_frontier") or []
+            if isinstance(row, Mapping)
+        ]
+        tie_break = dict(judgement.get("captain_tiebreak") or {})
+
+        def _captain_value(value: Any, *, probability: bool = False) -> str:
+            # Do not turn missing/stale canonical evidence into a false zero.
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
+                return "UNAVAILABLE"
+            value = float(value)
+            if not (-1e12 < value < 1e12):
+                return "UNAVAILABLE"
+            return f"{value * 100:.1f}%" if probability else f"{value:.2f}"
+
+        lines.append(f"Captain football frontier: {frontier_class}.")
+        if frontier:
+            lines.append(
+                "Captain frontier comparison (canonical S08; all eligible "
+                "positions; no xPts-only winner):"
+            )
+            for row in frontier:
+                lines.append(
+                    "- "
+                    + str(row.get("player") or "UNAVAILABLE")
+                    + f" [{row.get('position') or 'UNAVAILABLE'}]: "
+                    + f"xPts {_captain_value(row.get('expected_points'))}; "
+                    + f"P(blank) {_captain_value(row.get('p_blank'), probability=True)}; "
+                    + f"P(10+) {_captain_value(row.get('p_ge_10'), probability=True)}; "
+                    + f"Q90 {_captain_value(row.get('q90'))}; "
+                    + f"P(start) {_captain_value(row.get('p_start'), probability=True)}; "
+                    + f"xMins {_captain_value(row.get('xmins'))}; "
+                    + (
+                        "evidence COMPLETE"
+                        if row.get("football_evidence_complete") is True
+                        else "evidence INCOMPLETE"
+                    )
+                )
+        else:
+            lines.append(
+                "Captain frontier comparison: UNAVAILABLE; "
+                "no cross-position winner inferred."
+            )
+        lines.append(
+            "Captain scenario: football distribution and availability first; "
+            "Competitive Window tie-break only for a CLOSE football frontier; "
+            f"posture {tie_break.get('risk_posture') or 'UNAVAILABLE'}; "
+            f"tie-break {tie_break.get('tie_break_status') or 'UNAVAILABLE'}; "
+            "EO is not expected points."
+        )
+        lines.append(
+            "Vice-captain fallback: "
+            + str(tie_break.get("vice_fallback_reason") or "UNAVAILABLE")
+        )
         review = dict(judgement.get("captain_review_pair") or {})
         review_captain = dict(review.get("captain") or {})
         if review_captain and captain_state != "LOCK":

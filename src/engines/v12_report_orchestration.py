@@ -5369,7 +5369,11 @@ def _render_deep_visible_contract_lines(
                     + f"xPts {_captain_value(row.get('expected_points'))}; "
                     + f"P(blank) {_captain_value(row.get('p_blank'), probability=True)}; "
                     + f"P(10+) {_captain_value(row.get('p_ge_10'), probability=True)}; "
+                    + f"P(15+) {_captain_value(row.get('p_ge_15'), probability=True)}; "
+                    + f"Q75 {_captain_value(row.get('q75'))}; "
                     + f"Q90 {_captain_value(row.get('q90'))}; "
+                    + f"Var {_captain_value(row.get('pmf_variance'))}; "
+                    + f"P(DNP) {_captain_value(row.get('p_dnp'), probability=True)}; "
                     + f"P(start) {_captain_value(row.get('p_start'), probability=True)}; "
                     + f"xMins {_captain_value(row.get('xmins'))}; "
                     + (
@@ -5393,6 +5397,81 @@ def _render_deep_visible_contract_lines(
         lines.append(
             "Vice-captain fallback: "
             + str(tie_break.get("vice_fallback_reason") or "UNAVAILABLE")
+        )
+        shared_world = dict(judgement.get("captain_shared_world_cvc") or {})
+        pairwise = [
+            dict(row)
+            for row in judgement.get("captain_pairwise") or []
+            if isinstance(row, Mapping)
+        ]
+        rank_mc = dict(shared_world.get("mini_league") or {})
+        shared_status = str(shared_world.get("status") or "UNAVAILABLE").upper()
+        rank_status = str(rank_mc.get("status") or "UNAVAILABLE").upper()
+        correlation = (
+            str(pairwise[0].get("cross_player_correlation") or "UNAVAILABLE")
+            if pairwise else "UNAVAILABLE"
+        )
+        comparison_status = (
+            "CANONICAL_PAIRWISE_APPROXIMATION" if pairwise else "UNAVAILABLE"
+        )
+        multiple_status = (
+            "AVAILABLE"
+            if frontier and all(
+                row.get("multiple_return_probability") is not None
+                for row in frontier
+            )
+            else "UNAVAILABLE_NO_JOINT_EVENT_EVIDENCE"
+        )
+        full_seven_layer_evidence = bool(
+            frontier and all(
+                row.get("football_evidence_complete") is True
+                and row.get("p_ge_15") is not None
+                and row.get("pmf_variance") is not None
+                and row.get("q75") is not None
+                for row in frontier
+            )
+            and multiple_status == "AVAILABLE"
+            and shared_status == "AVAILABLE"
+            and rank_status == "AVAILABLE"
+            and correlation not in {"UNAVAILABLE", "NOT_MODELLED_YET"}
+        )
+        lines.append("#### SEVEN-LAYER CAPTAIN DECISION AUDIT")
+        lines.append(
+            "1/7 EXPECTED POINTS: canonical xPts across all eligible "
+            "football-frontier candidates; never xPts-only captain."
+        )
+        lines.append(
+            "2/7 HAUL POTENTIAL: canonical PMF-derived P(10+), P(15+), "
+            "Q75/Q90 shown per candidate; multiple returns "
+            + multiple_status + "."
+        )
+        lines.append(
+            "3/7 DOWNSIDE / RELIABILITY: P(blank), P(DNP), P(start), "
+            "xMins shown per candidate; no missing values coerced to zero."
+        )
+        lines.append(
+            "4/7 DISTRIBUTION / UNCERTAINTY: PMF variance shown; "
+            f"head-to-head {comparison_status}; cross-player correlation "
+            f"{correlation}; shared-world C/VC {shared_status}."
+        )
+        lines.append(
+            "5/7 MINI-LEAGUE CONSEQUENCE: Competitive Window posture "
+            f"{tie_break.get('risk_posture') or 'UNAVAILABLE'}; "
+            f"tie-break {tie_break.get('tie_break_status') or 'UNAVAILABLE'}; "
+            f"rank simulation {rank_status}; no future rival picks "
+            "inferred from historical EO."
+        )
+        lines.append(
+            "6/7 CAPTAIN + VICE: shared-world pair status "
+            f"{shared_status}; vice activation "
+            f"{_captain_value(shared_world.get('vice_activation_probability'), probability=True)}; "
+            f"fallback {tie_break.get('vice_fallback_reason') or 'UNAVAILABLE'}."
+        )
+        lines.append(
+            "7/7 FINAL DECISION CONFIDENCE: "
+            + ("FULL_SEVEN_LAYER_EVIDENCE_AVAILABLE" if full_seven_layer_evidence
+               else "PARTIAL_EVIDENCE; do not present full seven-layer validation")
+            + f"; canonical captain decision state {captain_state}."
         )
         review = dict(judgement.get("captain_review_pair") or {})
         review_captain = dict(review.get("captain") or {})

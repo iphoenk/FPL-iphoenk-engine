@@ -916,13 +916,40 @@ def decide_captain_vice(
             "FOOTBALL_LEADER_RETAINED",
             "PRESERVE_FOOTBALL_LEADER_BALANCED",
         }
-        decision_state = "LOCK" if resolved and review_challenger is None else "PREPARE"
+        # A near-tie cannot be locked by observed EO or a mean-only
+        # ranking. It needs the existing joint C/VC simulation with a
+        # validated convergence gate; COMPETITIVE tie-breaks additionally
+        # need genuine simulated mini-league consequences. Unavailable
+        # covariance or rank simulation is never inferred from EO.
+        joint = dict(shared_world_cvc or {})
+        convergence = dict(joint.get("convergence") or {})
+        joint_ready = (
+            str(joint.get("status") or "").upper() == "AVAILABLE"
+            and int(joint.get("paths") or 0) == 500_000
+            and str(convergence.get("status") or "").upper() == "PASS"
+        )
+        rank_ready = (
+            not mini_changed or
+            str(dict(joint.get("mini_league") or {}).get("status") or "").upper()
+            == "AVAILABLE"
+        )
+        decision_state = (
+            "LOCK" if resolved and review_challenger is None
+            and joint_ready and rank_ready else "PREPARE"
+        )
         reason = (
             "No selected-XI candidate satisfies the threshold-free robust CLEAR "
             "rule across the full return distribution and security evidence. "
             "Mini-league context is used only as a secondary tie-break inside "
             "the football frontier when its required scopes are complete."
         )
+        if not (joint_ready and rank_ready):
+            reason += (
+                " CLOSE LOCK is deferred: joint C/VC relative-points simulation, "
+                "existing convergence PASS, or simulated mini-league consequences "
+                "are not fully verified. A provisional C/VC pair is shown; "
+                "observed EO cannot certify LOCK."
+            )
         if review_challenger is not None:
             reason += (
                 " GK captain is CLOSE with an attacking alternative having "

@@ -420,6 +420,7 @@ def test_fixture_display_rows_expose_readable_identity_wib_venue_and_weather_bin
             "home_team": "Arsenal",
             "away_team": "Chelsea",
             "home_away": "H",
+            "sides": "Arsenal HOME / Chelsea AWAY",
             "kickoff_wib": "03 Oct 2026, 21:00 WIB",
             "fixture_status": "NOT STARTED",
             "rest_days": "UNAVAILABLE",
@@ -495,6 +496,32 @@ def test_fixture_display_rows_preserve_all_ten_readable_fixture_cards(monkeypatc
     assert all(row["kickoff_wib"].endswith(" WIB") for row in rows)
     assert all(row["venue"] == "Emirates Stadium" for row in rows)
     assert all(row["fixture_id"] >= 100 for row in rows)
+
+
+def test_fixture_display_rows_render_fixture_specific_rest_gap_and_both_sides(monkeypatch):
+    monkeypatch.setattr(
+        v12_s05_binding,
+        "_venue_maps",
+        lambda: ({1: {"team_name": "Arsenal", "venue": "Emirates Stadium"}}, {}),
+    )
+    rows = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(),
+        fixtures=[{
+            "id": 300,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-10-03T14:00:00Z",
+        }],
+        workload_rows=[{
+            "team_id": 1,
+            "planning_gw_fixtures": [{
+                "fixture_id": 300,
+                "rest_from_previous_fixture_hours": 96,
+            }],
+        }],
+    )
+    assert rows[0]["sides"] == "Arsenal HOME / Chelsea AWAY"
+    assert rows[0]["rest_days"] == "4.0"
 
 def test_s05_weather_fetch_is_scoped_to_planning_gw(monkeypatch, tmp_path):
     captured = {}

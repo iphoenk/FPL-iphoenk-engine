@@ -35,6 +35,7 @@ def build_fixture_display_rows(
     bootstrap: Mapping[str, Any],
     fixtures: Sequence[Mapping[str, Any]],
     weather_rows: Sequence[Mapping[str, Any]] = (),
+    workload_rows: Sequence[Mapping[str, Any]] = (),
 ) -> list[dict[str, Any]]:
     """Project official fixture facts into readable, exact-bound S05 rows."""
     teams = {
@@ -54,6 +55,21 @@ def build_fixture_display_rows(
             **dict(raw),
             "_kickoff": kickoff,
         }
+
+    rest_hours_by_fixture: dict[int, list[float]] = {}
+    for player in workload_rows:
+        if not isinstance(player, Mapping):
+            continue
+        for item in player.get("planning_gw_fixtures") or []:
+            if not isinstance(item, Mapping) or item.get("fixture_id") is None:
+                continue
+            try:
+                fixture_id = int(item["fixture_id"])
+                hours = float(item.get("rest_from_previous_fixture_hours"))
+            except (TypeError, ValueError):
+                continue
+            if hours >= 0:
+                rest_hours_by_fixture.setdefault(fixture_id, []).append(hours)
 
     rows: list[dict[str, Any]] = []
     for raw in fixtures:
@@ -89,6 +105,10 @@ def build_fixture_display_rows(
             status = "NOT STARTED"
         rest_days = raw.get("rest_days", raw.get("days_rest"))
         if rest_days is None:
+            rest_hours = rest_hours_by_fixture.get(fixture_id) or []
+            if rest_hours:
+                rest_days = min(rest_hours) / 24.0
+        if rest_days is None:
             rest_display = "UNAVAILABLE"
         else:
             try:
@@ -109,6 +129,7 @@ def build_fixture_display_rows(
                 "home_team": home,
                 "away_team": away,
                 "home_away": "H",
+                "sides": f"{home} HOME / {away} AWAY",
                 "kickoff_wib": wib,
                 "fixture_status": status,
                 "rest_days": rest_display,

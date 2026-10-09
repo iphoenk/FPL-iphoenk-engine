@@ -96,7 +96,7 @@ def test_s05_renders_readable_fixture_cards_instead_of_raw_fixture_objects():
     body = "\n".join(lines)
     assert "Arsenal vs Leeds" in body
     assert "Emirates Stadium" in body
-    assert "| Fixture | Match | Kickoff (WIB) | Venue | Status | Weather |" in body
+    assert "| Fixture | Match | Sides | Kickoff (WIB) | Rest days | Venue | Status | Weather |" in body
     assert "{'id': 51" not in body
     assert "fixture id=51" not in body
 

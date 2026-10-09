@@ -172,6 +172,12 @@ def _distribution_profile(candidate: Mapping[str, Any]) -> dict[str, Any]:
             else _prob_ge(pmf, 12.0)
             if pmf else None
         ),
+        "p_ge_15": _prob_ge(pmf, 15.0) if pmf else None,
+        "pmf_variance": (
+            sum(prob * (points - _mean(pmf)) ** 2 for points, prob in pmf.items())
+            if pmf else None
+        ),
+        "multiple_return_probability": None,  # Requires event-level joint evidence.
         "p_haul": (
             canonical_haul
             if canonical_haul is not None

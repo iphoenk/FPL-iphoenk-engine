@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-09T11:55:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-09T14:01:02+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -22,6 +22,7 @@ When Stage3 is blocked upstream, the report remains explicitly `BLOCKED_UPSTREAM
 Optional precompute, warm-worker, and freeze telemetry is reported with explicit `NOT_APPLICABLE`, `OPTIONAL_UNAVAILABLE`, `REQUIRED_PASS`, or `REQUIRED_FAIL` semantics; missing optional telemetry never becomes a delivery failure or a false PASS.
 
 Stage2 public acceptance binds to the latest occurrence-bound `full_master` prefetch. An ad-hoc personal prefetch cannot mask the public manager-picks evidence required for acceptance.
+If authenticated personal refresh fails but the exact-occurrence public V6 snapshot is published, report delivery may continue from the existing private last-good personal snapshot. The report preserves its original GW and timestamp and marks it stale or degraded; auth-only finance fields remain unavailable. Public-core publication or validation failures still block this fallback.
 
 Injury and availability evidence is target-aware and claim-aware. Raw and normalized claims, polarity, training or appearance evidence, manager assessment, target GW or fixture, timestamps and evidence cutoff remain provenance fields; FPL 50%/75% flags are observations, never medical or start probabilities.
 

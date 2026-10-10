@@ -187,6 +187,45 @@ def evaluate_report_production_gate(
     delivery_status = str(bundle.get("delivery_status") or "").upper()
     failures: list[str] = []
 
+    if report_mode == "MATCH":
+        ids = _section_ids(bundle)
+        expected = [f"MATCH{i}" for i in range(1, 14)]
+        if ids != expected:
+            failures.append("MATCH_13_SECTION_ORDER_OR_COUNT")
+        match_sections = {row.get("section_id"): row for row in _sections(bundle)}
+        picks = ((match_sections.get("MATCH2") or {}).get("content") or {}).get("rows") or []
+        if len(picks) != 15 or len({
+            row.get("element") for row in picks if isinstance(row, Mapping)
+        }) != 15:
+            failures.append("MATCH_LOCKED_15_INVALID")
+        icon = (match_sections.get("MATCH10") or {}).get("content") or {}
+        exposure = icon.get("submitted_picks_exposure") or {}
+        if (
+            exposure.get("expected_count") != 58
+            or exposure.get("available_count") != 58
+            or not icon.get("material_player_exposure")
+        ):
+            failures.append("MATCH10_REAL_ICON_COVERAGE_UNVERIFIED")
+        fresh = (match_sections.get("MATCH13") or {}).get("content") or {}
+        if not fresh.get("generated_at") or not fresh.get("event_live"):
+            failures.append("MATCH13_FRESHNESS_EVIDENCE_MISSING")
+        if visible_body_non_empty is False:
+            failures.append("MATCH_VISIBLE_BODY_EMPTY")
+        proof = bundle.get("execution_proof") or {}
+        source = proof.get("source_evidence") or {}
+        if source.get("submitted_coverage") != 58 or source.get("auth_required") is not False:
+            failures.append("MATCH_PUBLIC_SOURCE_LINEAGE_INVALID")
+        if serving_snapshot is not None:
+            failures.extend(validate_serving_snapshot(serving_snapshot))
+        return {
+            "contract": REPORT_PRODUCTION_GATE_VERSION,
+            "status": "FAIL" if failures else "PASS",
+            "report_delivery_allowed": not failures,
+            "failures": list(dict.fromkeys(failures)),
+            "report_mode": report_mode,
+            "engineering_closure_required_for_publish": False,
+        }
+
     if report_mode != "DEEP":
         return {
             "contract": REPORT_PRODUCTION_GATE_VERSION,

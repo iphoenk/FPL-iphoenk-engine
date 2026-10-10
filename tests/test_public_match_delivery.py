@@ -134,7 +134,7 @@ def test_match_rejects_incomplete_official_15(tmp_path):
 
 def test_match_rejects_wrong_gw_or_stale_prefetch(tmp_path):
     root = _runtime(tmp_path, gw=5)
-    with pytest.raises(PublicMatchError, match="MATCH_PUBLIC_COVERAGE_INCOMPLETE"):
+    with pytest.raises(PublicMatchError, match="PUBLIC_FACT_MISSING_OR_INVALID:gw_5_manager_picks"):
         build_public_match(
             runtime_data_root=root, report_slot=SLOT,
             canonical_text=CANONICAL.read_text(encoding="utf-8"),

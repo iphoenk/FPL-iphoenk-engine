@@ -813,8 +813,28 @@ jobs:
               if saved_generated >= slot or saved_generated > now + timedelta(minutes=2):
                   fail("saved personal snapshot is not older than the expired-auth refresh")
               live_personal = Path("private-reports/personal")
+              # Preserve fresh public submitted picks before replacing the
+              # private/authenticated tree with the validated last-good
+              # fallback. Current-GW submitted picks are public authority and
+              # must remain available to MATCH delivery even when finance and
+              # authenticated state are unavailable.
+              public_submitted = live_personal / "submitted_picks.json"
+              public_submitted_payload = None
+              if public_submitted.is_file():
+                  candidate = json.loads(public_submitted.read_text(encoding="utf-8"))
+                  if (
+                      str(candidate.get("authority") or "").upper() == "OFFICIAL_FPL"
+                      and int(candidate.get("gw") or 0) == manifest_gw
+                      and len(candidate.get("picks") or []) == 15
+                  ):
+                      public_submitted_payload = candidate
               shutil.rmtree(live_personal)
               shutil.copytree(saved_personal, live_personal)
+              if public_submitted_payload is not None:
+                  public_submitted.write_text(
+                      json.dumps(public_submitted_payload, sort_keys=True, indent=2) + "\n",
+                      encoding="utf-8",
+                  )
               current = live_personal / "current_team.json"
               snapshot = json.loads(current.read_text(encoding="utf-8"))
               snapshot["auth_state"] = "AUTH_UNAVAILABLE"

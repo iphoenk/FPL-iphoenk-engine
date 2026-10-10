@@ -178,8 +178,15 @@ def main() -> int:
     parser.add_argument("--input", required=True)
     parser.add_argument("--warm-state", required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument(
+        "--report-slot",
+        default=None,
+        help="Occurrence slot to bind to the ephemeral warm state.",
+    )
     args = parser.parse_args()
     config = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    if args.report_slot:
+        config.setdefault("baseline", {})["slot"] = args.report_slot
     warm = json.loads(Path(args.warm_state).read_text(encoding="utf-8"))
     result = run_forward_mc(config, warm)
     output = Path(args.output)

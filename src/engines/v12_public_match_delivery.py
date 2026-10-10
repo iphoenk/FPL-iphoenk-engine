@@ -104,8 +104,10 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
     ids = [int(p.get("element_id") or 0) for p in picks]
     if len(ids) != 15 or len(set(ids)) != 15 or min(ids) <= 0:
         raise PublicMatchError("MATCH_OFFICIAL_SUBMITTED_15_REQUIRED")
-    if sum(int(p.get("multiplier") or 0) > 0 for p in picks) != 11:
-        raise PublicMatchError("MATCH_LOCKED_XI_NOT_11")
+    active_chip = str(own.get("active_chip") or "").lower()
+    required_scoring = 15 if active_chip in {"bboost", "bench_boost"} else 11
+    if sum(int(p.get("multiplier") or 0) > 0 for p in picks) != required_scoring:
+        raise PublicMatchError("MATCH_LOCKED_SCORING_COUNT_INVALID")
     return gw, entry, pref, members, standings, event
 
 
@@ -158,9 +160,18 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
             if key in raw:
                 fixture[key] = raw[key]
         matches.append(fixture)
+    bootstrap = _bootstrap(root, gw)
+    official_bootstrap = official.get("bootstrap") or {}
+    event_meta = next(
+        (row for row in official_bootstrap.get("events") or [] if int(row.get("id") or 0) == gw),
+        None,
+    )
+    if event_meta:
+        bootstrap["events"] = [event_meta]
     return {
-        "bootstrap": _bootstrap(root, gw),
+        "bootstrap": bootstrap,
         "phase": {"scoring_gw": gw},
+        "event_status": official.get("event_status") or {},
         "fixtures": matches,
         "picks": {
             "picks": [
@@ -173,8 +184,9 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
                 }
                 for p in picks
             ],
-            # Transfer hits are not present in V6 normalized submitted picks.
-            # Never pass an invented zero as an authenticated or Official hit.
+            "entry_history": (members["entries"][str(entry)]).get("entry_history"),
+            "automatic_subs": (members["entries"][str(entry)]).get("automatic_subs"),
+            "active_chip": (members["entries"][str(entry)]).get("active_chip"),
         },
         "event_live": {
             "elements": [
@@ -199,9 +211,10 @@ def _exposure(
     standings: dict[str, Any],
     entry: int,
     names: dict[int, str],
-    snapshot: dict[str, Any],
+    snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """League ranking requires 58 provable public hits and previous totals."""
+    snapshot = snapshot or {"bootstrap": {"elements": []}, "fixtures": []}
     points = {
         int(row["element_id"]): int(row["total_points"])
         for row in event.get("elements") or []
@@ -292,6 +305,7 @@ def _exposure(
         return {"numerator": value, "denominator": n,
                 "percentage": round(100 * value / n, 2) if n else None}
 
+    our_calculation = next((row for row in scored if row["entry_id"] == entry), {})
     our_ids = {int(p["element_id"]) for p in records[str(entry)]["picks"]}
     exposure = []
     for player in sorted(our_ids):
@@ -329,8 +343,9 @@ def _exposure(
         "current_live_points": ours.get("net_points") if ours else None,
         "current_live_overall": ours.get("live_overall_points") if ours else None,
         "leader_gap": leader_gap, "top3_gap": top3_gap, "top5_gap": top5_gap,
-        "own_gross_points": ours.get("gross_points") if ours else None,
-        "own_hit": ours.get("hit") if ours else None,
+        "own_gross_points": our_calculation.get("gross_points"),
+        "own_hit": our_calculation.get("hit"),
+        "own_calculation": our_calculation,
         "material_player_exposure": exposure,
         "competitive_rival_live_consequence": rival,
         "all_manager_live_rows": ordered if ordered else scored,
@@ -360,14 +375,6 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
     live = live_state_service.run()
     if live.get("submitted_picks_status") != "AVAILABLE" or len(live.get("players") or []) != 15:
         raise PublicMatchError("MATCH_SCORING_15_NOT_AVAILABLE")
-    # No transfer-hit authority in normalized picks, so the published score is
-    # strictly gross and provisional; never silently make it net by treating it as 0.
-    live["hit"] = None
-    live["net_points"] = None
-    if isinstance(live.get("personalized_live_score"), dict):
-        live["personalized_live_score"]["hit"] = None
-        live["personalized_live_score"]["current_net_total"] = None
-        live["personalized_live_score"]["hit_authority"] = "UNAVAILABLE"
     # All league captains must resolve through the full Official FPL player
     # universe, not only the 15 players owned by our entry.
     names = {
@@ -379,13 +386,37 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         for p in live.get("players") or []
     })
     icon = _exposure(members, event, standings, entry, names, canonical_snapshot)
+    our_calculation = dict(icon.get("own_calculation") or {})
+    live["gross_points"] = our_calculation.get("gross_points")
+    live["hit"] = our_calculation.get("hit")
+    live["net_points"] = our_calculation.get("net_points")
+    actual_factors = our_calculation.get("multipliers") or {}
+    for row in live.get("players") or []:
+        pid = int(row["element"])
+        factor = actual_factors.get(pid)
+        row["effective_multiplier"] = factor
+        if factor is not None and row.get("total_points") is not None:
+            row["effective_points"] = factor * int(row["total_points"])
+    personal = live.get("personalized_live_score")
+    if isinstance(personal, dict):
+        personal["hit"] = live["hit"]
+        personal["hit_authority"] = "OFFICIAL_PUBLIC_ENTRY_HISTORY" if live["hit"] is not None else "UNAVAILABLE"
+        personal["current_effective_total"] = live["gross_points"]
+        personal["effective_xi_points"] = live["gross_points"]
+        personal["current_net_total"] = live["net_points"]
+        personal["autosub_implications"] = {
+            **dict(personal.get("autosub_implications") or {}),
+            "status": our_calculation.get("autosub_state") or "UNAVAILABLE",
+            "official_autosub_count": our_calculation.get("official_autosub_count"),
+            "vice_takeover_provisional": our_calculation.get("vice_takeover_provisional"),
+        }
     report = materialize_match_report(
         canonical_text=CANONICAL.read_text(encoding="utf-8"),
         live_payload=live,
         icon_live=icon,
         source_freshness={
             "mini_league_submitted_picks": {"status": "AVAILABLE", "checked_at": members.get("generated_at")},
-            "live_standings": {"status": "UNVERIFIED", "checked_at": standings.get("generated_at")},
+            "live_standings": {"status": icon["live_standings_rank"]["state"], "checked_at": standings.get("generated_at")},
             "match_evidence_feed": {"status": "OFFICIAL_FPL", "checked_at": event.get("checked_at")},
         },
     )
@@ -419,26 +450,33 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         raise PublicMatchError("MATCH_13_SECTION_RENDER_CONTRACT_FAILED")
     if "## MATCH 10" not in body or "58/58" not in body or "## MATCH 13" not in body:
         raise PublicMatchError("MATCH10_OR_MATCH13_REAL_CONTENT_MISSING")
+    public_complete = icon.get("status") == "COMPLETE" and live.get("net_points") is not None
+    state = "PASS" if public_complete else "DEGRADED"
+    pending = [r for r in ("HITS", "AUTOSUB", "PROVISIONAL_LIVE_RANK") if
+               (r == "HITS" and live.get("hit") is None)
+               or (r == "AUTOSUB" and our_calculation.get("autosub_state") == "PENDING")
+               or (r == "PROVISIONAL_LIVE_RANK" and icon.get("status") != "COMPLETE")]
     proof = {
         "schema_version": 2, "runner": "V12_PUBLIC_MATCH_DELIVERY",
         "report_mode": "MATCH", "report_slot": report_slot, "planning_gw": gw,
-        "runner_status": "DEGRADED", "pre_render_qa_status": "PASS",
+        "runner_status": state, "pre_render_qa_status": "PASS",
         "post_render_qa_status": "PASS", "human_facing_qa_status": "PASS",
         "canonical_expected_section_ids": EXPECTED, "rendered_section_ids": ids,
         "public_team_id": entry, "public_league_id": int(pref["priority_league_id"]),
         "manager_coverage": n if (n := len(members["entries"])) else 0,
         "public_auth_independent": True, "authenticated_finance_claimed": False,
         "live_checked_at": event.get("checked_at"), "prefetch_identity": pref.get("report_prefetch_run_id"),
-        "unverified_scopes": ["HITS", "AUTOSUB", "PROVISIONAL_LIVE_RANK"],
+        "unverified_scopes": pending,
         "stages": [{"stage": "MATCH_PUBLIC_FACTS", "status": "PASS"},
                    {"stage": "MATCH13_RENDER", "status": "PASS"},
-                   {"stage": "LIVE_RANK", "status": "DEGRADED", "reason": "HITS_AUTOSUB_UNVERIFIED"}],
+                   {"stage": "LIVE_RANK", "status": state,
+                    "reason": None if public_complete else "OFFICIAL_PUBLIC_EVIDENCE_INCOMPLETE"}],
     }
     bundle = {
         "schema": "FPL_MASTER_V12_PUBLIC_MATCH_BUNDLE_V1",
         "report_mode": "MATCH", "report_slot": report_slot, "planning_gw": gw,
-        "runner_status": "DEGRADED", "root_failure": "HITS_AUTOSUB_LIVE_RANK_UNVERIFIED",
-        "section_manifest": [{"section_id": value, "status": "COMPLETE" if value != "MATCH10" else "DEGRADED"} for value in ids],
+        "runner_status": state, "root_failure": None if public_complete else "HITS_AUTOSUB_LIVE_RANK_UNVERIFIED",
+        "section_manifest": [{"section_id": value, "status": "COMPLETE" if value != "MATCH10" or public_complete else "DEGRADED"} for value in ids],
         "report": report, "visible_body": body, "execution_proof": proof,
         "governance": {"private_auth_required": False, "planning_xi_authority": False,
                        "live_rank_fabricated": False, "monte_carlo_modified": False},
@@ -450,7 +488,8 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         "engineering_closure_blocks_report": False,
     }), encoding="utf-8")
     write_serving_artifacts(bundle=bundle, output_dir=output_dir)
-    return {"status": "READY_DEGRADED", "report_slot": report_slot, "sections": len(ids)}
+    return {"status": "READY_FULL" if public_complete else "READY_DEGRADED",
+            "report_slot": report_slot, "sections": len(ids)}
 
 
 def main() -> int:

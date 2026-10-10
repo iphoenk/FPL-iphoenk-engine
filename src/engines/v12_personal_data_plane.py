@@ -222,10 +222,10 @@ def collect_personal_evidence_candidates(
 ) -> list[dict[str, Any]]:
     """Assemble inputs while keeping V12 selection semantics external.
 
-    Owner submitted picks live in the private plane. Legacy public submitted
-    picks are read only when legacy compatibility is explicitly enabled, and
-    only when their GW is strictly before the planning GW unless disclosure
-    enforcement is explicitly disabled.
+    Owner submitted picks live in the private plane after the boundary split.
+    Current-GW submitted picks remain public Official FPL facts and may identify
+    the submitted XI/bench without authorizing private finance fields. Older
+    submitted picks remain disclosure-limited unless enforcement is disabled.
     """
     candidates: list[dict[str, Any]] = []
 
@@ -260,7 +260,10 @@ def collect_personal_evidence_candidates(
                 private_submitted_gw = int(private_submitted.get("gw") or 0)
             except (TypeError, ValueError):
                 private_submitted_gw = 0
-            disclosed = 0 < private_submitted_gw < int(planning_gw)
+            # Current-GW submitted picks are public Official FPL facts. They
+            # may identify the submitted XI/bench without authorizing finance
+            # fields, which remain unavailable until authenticated evidence exists.
+            disclosed = 0 < private_submitted_gw <= int(planning_gw)
             if (not enforce_public_disclosure) or disclosed:
                 candidates.append(
                     {

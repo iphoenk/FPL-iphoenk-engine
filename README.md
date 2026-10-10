@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T19:38:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T20:34:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -144,3 +144,6 @@ valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
 
 
 **GW6 P1.4 3-4-3 MC closure (10 Oct 2026):** The private DEEP what-if step now materializes the exact P1.7 3-4-3 winner per GW with the unchanged canonical bench-order and captain/vice evaluator. Correlated P1.4 runs 500,000 paired worlds for optimized HOLD, DCL→Barry, DCL→Gonzalo and three explicitly fixed 3-4-3 lineups; captain challenger remains optional. Output is a private `gw6-forward-mc.json` attached to the DEEP occurrence, not a bank/FT/transfer authorization. Tests exercise route-specific outcomes and fail-closed formation completeness. Personal finance and hits remain unavailable pending authenticated V6 evidence.
+
+
+Public Official FPL submitted picks, live data, and mini-league evidence are independent from authenticated personal enrichment. When private authentication is expired, public MATCH delivery continues with explicit unavailable finance fields; authenticated bank, free transfers, purchase prices, and selling values are never derived from public data.

@@ -2034,3 +2034,21 @@ def test_s04_delivery_barrier_rejects_rumor_as_fact_and_model_mutation():
     )
     assert "S04_RUMOR_PRESENTED_AS_FACT=1" in failures
     assert "S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION" in failures
+
+
+def test_current_public_submitted_picks_are_valid_without_private_finance():
+    picks = [{"element_id": i} for i in range(1, 16)]
+    resolved = select_personal_evidence(
+        [{
+            "source": "PRIVATE:personal/submitted_picks.json",
+            "source_class": "OFFICIAL_SUBMITTED_PICKS",
+            "payload": {"gw": 6, "generated_at": "2026-10-10T12:20:00+00:00", "picks": picks},
+            "observed_at": "2026-10-10T12:20:00+00:00",
+            "gw": 6,
+            "auth_state": "PUBLIC_OFFICIAL",
+        }],
+        planning_gw=6,
+    )
+    assert resolved["resolution_status"] == "CURRENT_VALID"
+    assert resolved["finance_allowed"] is False
+    assert resolved["source_class"] == "OFFICIAL_SUBMITTED_PICKS"

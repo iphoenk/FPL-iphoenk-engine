@@ -299,16 +299,24 @@ jobs:
 
           from src.runtime_v6.domains.report_plane.report_prefetch import (
               personal_refresh_fallback_eligible,
+              public_report_continuation_eligible,
           )
 
           payload = json.loads(os.environ["PREFETCH_JOBS_JSON"])
-          eligible = personal_refresh_fallback_eligible(payload.get("jobs") or [])
+          jobs = payload.get("jobs") or []
+          fallback = personal_refresh_fallback_eligible(jobs)
+          public_continuation = public_report_continuation_eligible(jobs)
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"eligible={'true' if eligible else 'false'}\n")
-          if eligible:
+              output.write(f"eligible={'true' if fallback else 'false'}\n")
+              output.write(
+                  f"public_continuation={'true' if public_continuation else 'false'}\n"
+              )
+          if fallback:
               print("Using published public facts and the existing private last-good personal snapshot.")
+          elif public_continuation:
+              print("Using published public facts; private authentication remains degraded.")
           else:
-              print("V6 failure is outside the safe saved-personal fallback.")
+              print("V6 failure is outside the safe saved-personal fallback and public continuation gate.")
           PY
 
       - name: Dispatch and bind exact integrated report

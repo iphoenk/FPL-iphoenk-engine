@@ -1162,7 +1162,10 @@ class PrefetchService:
                             manager_ids=manager_ids,
                             deadline_passed=bool(deadline_passed),
                             workers=int(self.config.get("rival_picks_max_workers", 8)),
-                            force=force,
+                            # Submitted XI is immutable after deadline; Official
+                            # GW history, hits, captain correction and automatic
+                            # substitutions are NOT. Refresh all rivals for MATCH.
+                            force=force or report_kind == "match_mode",
                             cache_enabled=bool(self.config.get("submitted_picks_cache_enabled", True)),
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)

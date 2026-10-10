@@ -57,9 +57,10 @@ def _job(name, conclusion, failed_step=None):
     return {"name": name, "conclusion": conclusion, "steps": steps}
 
 
-def test_generic_auth_refresh_step_failure_does_not_qualify_for_fallback():
+def test_auth_refresh_failure_allows_public_report_continuation_but_not_private_fallback():
     from src.runtime_v6.domains.report_plane.report_prefetch import (
         personal_refresh_fallback_eligible,
+        public_report_continuation_eligible,
     )
 
     jobs = [
@@ -75,6 +76,7 @@ def test_generic_auth_refresh_step_failure_does_not_qualify_for_fallback():
     ]
 
     assert personal_refresh_fallback_eligible(jobs) is False
+    assert public_report_continuation_eligible(jobs) is True
 
 
 def test_artifact_retry_failure_can_use_saved_private_snapshot_only():

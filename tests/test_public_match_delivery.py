@@ -104,3 +104,11 @@ def test_match_public_fail_closed_on_missing_manager_picks(tmp_path: Path) -> No
     file.write_text(json.dumps(payload))
     with pytest.raises(PublicMatchError, match="MATCH_PUBLIC_58_OR_LIVE_INCOMPLETE"):
         _validated_inputs(tmp_path, SLOT)
+
+
+def test_match_serving_retains_complete_public_sections() -> None:
+    from src.engines.v12_delivery_reliability import _serving_project_content
+
+    sample = {"submitted_picks_exposure": {"available_count": 58, "expected_count": 58}, "material_player_exposure": [{"player": "Bruno", "eo": {"numerator": 72, "denominator": 58}}]}
+    assert _serving_project_content("MATCH10", sample) == sample
+    assert _serving_project_content("MATCH13", {"event_live": "AVAILABLE"}) == {"event_live": "AVAILABLE"}

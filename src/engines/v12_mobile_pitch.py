@@ -41,7 +41,7 @@ def render_s06_formation_frontier(content: Mapping[str, Any]) -> str:
         ) for row in rows
     )
     observed = {str(row.get("formation")) for row in rows}
-    absent = [name for name in ("5-4-1", "4-4-2", "3-5-2", "5-3-2", "3-4-3") if name not in observed]
+    absent = [name for name in ("3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1") if name not in observed]
     note = "Missing in canonical CURRENT15: " + escape(", ".join(absent)) if absent else ""
     return (
         '<div style="background:#10252b;color:#fff;border-radius:12px;padding:10px;margin-top:8px">'

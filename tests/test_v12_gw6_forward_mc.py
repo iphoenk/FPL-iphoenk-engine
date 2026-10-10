@@ -112,3 +112,35 @@ def test_incomplete_p17_starting_xi_fails():
 
     with pytest.raises(WhatIfMCError, match="completeness"):
         run_forward_mc(cfg, warm, optimizer=incomplete, simulator=_simulation)
+
+
+def test_cvc_pair_is_correlated_route_when_both_start():
+    cfg, warm = _inputs()
+    # Inject Bruno and Haaland into a legal synthetic CURRENT15.
+    cfg["owned"][1]["element_id"] = 426
+    cfg["owned"][2]["element_id"] = 411
+    warm["owned"][1]["element_id"] = 426
+    warm["owned"][2]["element_id"] = 411
+    warm["projections"]["players"].extend([{"element": 426}, {"element": 411}])
+
+    def four_route_sim(projections, routes, **kwargs):
+        assert kwargs["actual_paths"] == 500_000
+        assert len(routes) == 4
+        challenger = next(
+            route for route in routes
+            if route["route_id"] == "BRUNO_C_HAALAND_VC"
+        )
+        assert challenger["classification"] == "CAPTAIN_REVIEW_NOT_LOCK"
+        assert challenger["per_gw"][0]["captain"] == 426
+        assert challenger["per_gw"][0]["vice_captain"] == 411
+        return {
+            "execution_state": "EXECUTED",
+            "canonical_pass": True,
+            "actual_paths": 500_000,
+            "output_fingerprint": "FAKE_TEST_ONLY",
+            "metrics": {r["route_id"]: {"1": {}} for r in routes},
+        }
+
+    out = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=four_route_sim)
+    assert "BRUNO_C_HAALAND_VC" in out["mc_route_metrics"]
+    assert out["decision_authority"] == "WHAT_IF_ONLY_NOT_EXECUTABLE"

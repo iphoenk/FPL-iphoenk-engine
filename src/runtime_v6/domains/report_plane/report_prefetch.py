@@ -517,6 +517,61 @@ def personal_refresh_fallback_eligible(
     return len(failed_steps) == 1 and failed_steps[0] == "Download verified public runtime snapshot"
 
 
+def public_report_continuation_eligible(
+    jobs: list[dict[str, Any]] | tuple[dict[str, Any], ...],
+) -> bool:
+    """Allow public report delivery when only authenticated enrichment failed.
+
+    This gate does not authorize a private fallback and never promotes stale
+    personal finance data. It only proves that public collection, publication,
+    and orchestration succeeded while the isolated auth refresh failed at its
+    designated boundary.
+    """
+    if not isinstance(jobs, (list, tuple)):
+        return False
+    by_name: dict[str, dict[str, Any]] = {}
+    for item in jobs:
+        if not isinstance(item, dict):
+            return False
+        name = str(item.get("name") or "").strip()
+        if not name or name in by_name:
+            return False
+        by_name[name] = item
+
+    for required in ("collect", "publish", "orchestration-fulfillment"):
+        if str((by_name.get(required) or {}).get("conclusion") or "").lower() != "success":
+            return False
+    private_job = by_name.get("private_personal_publish")
+    if not private_job or str(private_job.get("conclusion") or "").lower() != "failure":
+        return False
+    tolerated = {
+        "collect",
+        "publish",
+        "orchestration-fulfillment",
+        "private_personal_publish",
+        "route-visible-report",
+    }
+    if any(name not in tolerated for name in by_name):
+        return False
+    for name, job in by_name.items():
+        conclusion = str(job.get("conclusion") or "").lower()
+        if name == "private_personal_publish":
+            if conclusion != "failure":
+                return False
+        elif conclusion not in {"success", "skipped"}:
+            return False
+    failed_steps = [
+        str(step.get("name") or "").strip()
+        for step in (private_job.get("steps") or [])
+        if isinstance(step, dict)
+        and str(step.get("conclusion") or "").lower()
+        in {"failure", "timed_out", "cancelled", "action_required"}
+    ]
+    return failed_steps == [
+        "Refresh authenticated current-team state in isolated private plane"
+    ]
+
+
 _REPORT_SCOPE_GOOD_STATES = frozenset({"GREEN", "PASS", "AVAILABLE", "CURRENT"})
 _REPORT_AUTH_FAILURE_STATES = frozenset({"AUTH_EXPIRED", "AUTH_FAILED"})
 

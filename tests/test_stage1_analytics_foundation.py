@@ -2066,3 +2066,97 @@ def test_stagec_external_claim_input_filters_stale_without_network(tmp_path):
     assert out["stale_claim_count"] == 1
     assert out["claims"][0]["player"] == "Current"
 
+
+
+def test_stagec_official_denominator_and_missing_player_are_not_silent(monkeypatch):
+    import src.models.v12_stagec_universe_scanner as stagec
+
+    monkeypatch.setattr(
+        stagec,
+        "build_multiwindow_form_snapshot",
+        lambda rows, season=None: {"players": {}},
+    )
+    monkeypatch.setattr(
+        stagec,
+        "prepare_stagec_projection_copy",
+        lambda projections, **kwargs: deepcopy(projections),
+    )
+    bootstrap = {
+        "elements": [
+            {"id": 9601, "element_type": 1, "now_cost": 45},
+            {"id": 9602, "element_type": 2, "now_cost": 50},
+            {"id": 9603, "element_type": 3, "now_cost": 65},
+            {"id": 9604, "element_type": 4, "now_cost": 85},
+        ]
+    }
+    projections = {"players": [
+        _stagec_projection(9601, position="GK"),
+        _stagec_projection(9602, position="DEF"),
+        _stagec_projection(9603, position="MID"),
+        _stagec_projection(9604, position="FWD"),
+    ]}
+    pristine = deepcopy(projections)
+    bridge = stagec.build_stagec_from_canonical_inputs(
+        projections=projections, bootstrap=bootstrap, match_rows=[],
+    )
+    scan = bridge["scan"]
+    assert scan["official_universe_count"] == 4
+    assert scan["official_eligible_count"] == 4
+    assert scan["scanned_count"] == 4
+    assert scan["official_coverage_state"] == "COMPLETE"
+    assert scan["governance"]["full_universe_scanned"] is True
+    assert all(scan["position_counts"][pos]["scanned"] == 1 for pos in ("GK", "DEF", "MID", "FWD"))
+    assert projections == pristine
+
+    missing = stagec.build_stagec_from_canonical_inputs(
+        projections={"players": projections["players"][:-1]},
+        bootstrap=bootstrap, match_rows=[],
+    )["scan"]
+    assert missing["official_coverage_state"] == "DEGRADED"
+    assert missing["official_universe_missing_count"] == 1
+    assert missing["official_eligible_missing_count"] == 1
+    assert "PROJECTION_MISSING_ELIGIBLE_ELEMENTS" in missing["coverage_reason_codes"]
+    assert missing["governance"]["full_universe_scanned"] is False
+
+    duplicated = stagec.build_stagec_from_canonical_inputs(
+        projections={"players": projections["players"] + [projections["players"][0]]},
+        bootstrap=bootstrap, match_rows=[],
+    )["scan"]
+    assert duplicated["official_coverage_state"] == "DEGRADED"
+    assert duplicated["duplicate_element_ids"] == [9601]
+
+
+def test_stagec_screening_reason_codes_preserve_unflagged_full_universe():
+    scan = build_universe_scan(
+        projections={"players": [
+            _stagec_projection(9701, position="GK"),
+            _stagec_projection(9702, position="DEF"),
+            _stagec_projection(9703, position="MID"),
+            _stagec_projection(9704, position="FWD"),
+        ]},
+        multiwindow_snapshot={"players": {}},
+    )
+    assert scan["full_universe_count"] == scan["scanned_count"] == 4
+    assert scan["scanner_coverage_state"] == "COMPLETE"
+    assert scan["multiwindow_unavailable_count"] == 4
+    assert scan["screening_reason_counts"]["MULTIWINDOW_UNAVAILABLE"] == 4
+    assert scan["screening_reason_counts"]["LOW_SAMPLE_CONFIDENCE"] == 4
+    assert scan["signal_counts"]["HIDDEN_GEM"] == 0
+    assert scan["governance"]["final_v12_ranking_unchanged"] is True
+
+
+def test_stagec_env_override_validated_against_config(monkeypatch):
+    import pytest
+    from src.engines.v12_integrated_report_runner import _stagec_scanner_enabled
+    from src.models.v12_stagec_universe_scanner import load_config
+
+    monkeypatch.delenv("V12_STAGEC_SCANNER_ENABLED", raising=False)
+    assert load_config()["feature_default_enabled"] is True
+    assert _stagec_scanner_enabled() is True
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "false")
+    assert _stagec_scanner_enabled() is False
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "true")
+    assert _stagec_scanner_enabled() is True
+    monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "invalid")
+    with pytest.raises(ValueError, match="invalid V12_STAGEC"):
+        _stagec_scanner_enabled()

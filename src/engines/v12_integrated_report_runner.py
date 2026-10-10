@@ -9608,6 +9608,9 @@ def main() -> int:
             canonical_text=CANONICAL_PATH.read_text(encoding="utf-8"),
         )
         write_serving_artifacts(bundle=bundle, output_dir=Path(args.output_dir))
+        (Path(args.output_dir) / "report_body.md").write_text(
+            str(bundle["visible_body"]), encoding="utf-8"
+        )
         # MATCH is a public evidence delivery, not a DEEP optimizer/MC run.
         # Keep Stage3 explicitly not applicable rather than asserting PASS.
         (Path(args.output_dir) / "stage3_acceptance.json").write_text(

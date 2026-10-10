@@ -46,3 +46,32 @@ def test_no_double_addition_of_same_root_observation():
         first, report_slot="2026-10-10T12:30:00+07:00", target_gw=6
     )
     assert len(first["signals"]) == len(second["signals"])
+
+def test_reported_manager_claims_are_active_single_roots_not_discarded():
+    from src.engines.v12_injury_availability import (
+        build_availability_evidence_by_player, derive_gw_availability
+    )
+    slot = "2026-10-10T10:04:00+07:00"
+    payload = merge_gw6_deadline_team_news(
+        {}, report_slot=slot, target_gw=6
+    )
+    bootstrap = {"elements": [
+        {"id": 165, "web_name": "João Pedro", "first_name": "João", "second_name": "Pedro", "status": "a"},
+        {"id": 1234, "web_name": "Konsa", "first_name": "Ezri", "second_name": "Konsa", "status": "a"},
+    ]}
+    claims = build_availability_evidence_by_player(
+        bootstrap, payload, report_timestamp=slot, target_gw=6
+    )
+    assert 165 in claims and 1234 in claims
+    joao = derive_gw_availability(
+        claims[165], target_gw=6, derived_at=slot, evidence_cutoff_at=slot
+    )
+    konsa = derive_gw_availability(
+        claims[1234], target_gw=6, derived_at=slot, evidence_cutoff_at=slot
+    )
+    assert joao["gw_availability"] == "LIKELY_AVAILABLE"
+    assert konsa["gw_availability"] == "DOUBT"
+    assert len(joao["active_evidence"]) >= 1
+    assert len(konsa["active_evidence"]) >= 1
+    assert all(row["source_authority"] == "TIER_C_SPECIALIST" for row in joao["active_evidence"])
+    assert not joao["model_features"]["explicit_out_for_target"]

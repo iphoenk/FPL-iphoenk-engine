@@ -60,7 +60,7 @@ def build_matrix(config: Mapping[str, Any]) -> dict[str, Any]:
     for forward in (346, 249, 569):
         for midfielder in (426, 427):
             for attacking_mid in (68, 12):
-                exits = (31, 305, 258, 233) if attacking_mid == 12 else (31,)
+                exits = (31, 305, 258, 233, 449) if attacking_mid == 12 else (31, 449)
                 for replacement_def in exits:
                     changes: dict[int, int] = {}
                     for old, new in (
@@ -147,13 +147,13 @@ def build_matrix(config: Mapping[str, Any]) -> dict[str, Any]:
                         }
                         matrix.append(row)
 
-    if len(combinations) != 30 or len(matrix) != 240:
+    if len(combinations) != 42 or len(matrix) != 336:
         raise AssertionError("scenario grid coverage changed")
     admissible = [
         case for case in combinations
         if case["status"] == "STRUCTURAL_PASS_FINANCE_UNVERIFIED"
     ]
-    assert len(admissible) == 15, "structural+illustrative feasibility changed"
+    assert len(admissible) == 19, "structural+illustrative feasibility changed"
     return {
         "contract": "GW6_OWNER_TRANSFER_MATRIX_RESULTS_V1",
         "authority": "WHAT_IF_ONLY_NO_PRODUCTION_DECISION",

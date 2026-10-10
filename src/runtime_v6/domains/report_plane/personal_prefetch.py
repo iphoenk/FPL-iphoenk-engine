@@ -163,6 +163,27 @@ def _normalise_auth_state(raw_state: str, auth_lineage: list[dict[str, Any] | No
     return "AUTH_INVALID"
 
 
+def normalise_authenticated_free_transfers(transfers: dict[str, Any] | None) -> tuple[int | None, str]:
+    """Read remaining transfers only from authenticated Official FPL fields.
+
+    FPL's `transfers.limit` is the allowance for this GW, while `made`
+    counts transfers used in this GW. Never infer either from public picks,
+    chips, previous GW, or the fixture calendar. Null limit means unlimited
+    transfers (for example a chip), not an integer FT balance.
+    """
+    if not isinstance(transfers, dict):
+        return None, "NOT_SUPPORTED"
+    explicit = transfers.get("free_transfers")
+    if type(explicit) is int and 0 <= explicit <= 5:
+        return explicit, "OFFICIAL_EXPLICIT"
+    if "limit" in transfers and transfers["limit"] is None:
+        return None, "UNLIMITED"
+    limit, made = transfers.get("limit"), transfers.get("made")
+    if type(limit) is int and 0 <= limit <= 5 and type(made) is int and made >= 0:
+        return max(0, limit - made), "AUTHENTICATED_LIMIT_MINUS_MADE"
+    return None, "NOT_SUPPORTED"
+
+
 def normalise_team(
     *,
     entry_id: int,
@@ -210,6 +231,11 @@ def normalise_team(
 
     transfers = (my_team_payload or {}).get("transfers") if isinstance(my_team_payload, dict) else None
     transfers = transfers if isinstance(transfers, dict) else {}
+    free_transfers, free_transfers_source = (
+        normalise_authenticated_free_transfers(transfers)
+        if authenticated_state == "AUTH_AVAILABLE"
+        else (None, "NOT_SUPPORTED")
+    )
 
     raw_chips = (my_team_payload or {}).get("chips") if isinstance(my_team_payload, dict) else None
     chips = None
@@ -237,7 +263,8 @@ def normalise_team(
         if authenticated_state == "AUTH_AVAILABLE" and isinstance(auth_picks, list)
         else "SUBMITTED_PICKS_ONLY",
         "bank": transfers.get("bank"),
-        "free_transfers": transfers.get("free_transfers"),
+        "free_transfers": free_transfers,
+        "free_transfers_source": free_transfers_source,
         "transfers_made": transfers.get("made"),
         "hit_cost": transfers.get("cost"),
         "chips": chips,
@@ -245,7 +272,11 @@ def normalise_team(
         "availability": {
             "authenticated_state": authenticated_state,
             "bank": "AVAILABLE" if "bank" in transfers else "UNAVAILABLE",
-            "free_transfers": "AVAILABLE" if "free_transfers" in transfers else "NOT_SUPPORTED",
+            "free_transfers": (
+                "AVAILABLE" if free_transfers is not None
+                else "UNLIMITED" if free_transfers_source == "UNLIMITED"
+                else "NOT_SUPPORTED"
+            ),
             "purchase_price": "AVAILABLE"
             if players and all(item["purchase_price"] is not None for item in players)
             else "UNAVAILABLE",
@@ -264,7 +295,10 @@ def normalise_team(
             "data_only": True,
             "auth_bypass_used": False,
             "finance_is_upstream_fact_only": True,
-            "free_transfers_are_not_derived": True,
+            "free_transfers_are_not_derived": free_transfers_source != "AUTHENTICATED_LIMIT_MINUS_MADE",
+            "free_transfers_from_authenticated_limit_made_only": (
+                free_transfers_source == "AUTHENTICATED_LIMIT_MINUS_MADE"
+            ),
             "squad_value_aggregates_not_authored": True,
         },
     }

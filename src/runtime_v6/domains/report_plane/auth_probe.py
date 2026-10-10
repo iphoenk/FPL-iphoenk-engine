@@ -15,7 +15,10 @@ from pathlib import Path
 from typing import Any
 
 from src.runtime_v6.domains.acquisition.official_fpl_client import OfficialFPLClient
-from src.runtime_v6.domains.report_plane.personal_prefetch import verified_auth_entry
+from src.runtime_v6.domains.report_plane.personal_prefetch import (
+    normalise_authenticated_free_transfers,
+    verified_auth_entry,
+)
 
 
 def _http(result: dict[str, Any] | None) -> int | None:
@@ -94,6 +97,7 @@ def probe(client: Any, expected_entry_id: int, *, environ: dict[str, str] | None
         "selling_prices_15_valid": False,
         "purchase_prices_15_valid": False,
         "free_transfers_field_available": False,
+        "free_transfers_normalizable": False,
     }
     result.update(_jwt_claims_health(result["auth_mode"], environ))
     if config != "CONFIGURED" or not getattr(client, "auth_available", False):
@@ -134,6 +138,8 @@ def probe(client: Any, expected_entry_id: int, *, environ: dict[str, str] | None
     transfers = payload.get("transfers") if isinstance(payload.get("transfers"), dict) else {}
     result["bank_available"] = isinstance(transfers.get("bank"), int)
     result["free_transfers_field_available"] = isinstance(transfers.get("free_transfers"), int)
+    remaining_ft, _ = normalise_authenticated_free_transfers(transfers)
+    result["free_transfers_normalizable"] = remaining_ft is not None
     result["probe_state"] = "AUTH_AVAILABLE" if result["private_squad_15_valid"] else "AUTH_TEAM_INVALID_PAYLOAD"
     return result
 

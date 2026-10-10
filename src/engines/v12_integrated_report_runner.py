@@ -7362,6 +7362,11 @@ def run_deep(
         runtime_data_root / "data/report_time_evidence.json",
         {},
     ) or {}
+    # Single, expiring owner-reviewed GW6 supplement; V6 facts are unchanged.
+    from src.engines.v12_deadline_team_news import merge_gw6_deadline_team_news
+    report_time_evidence = merge_gw6_deadline_team_news(
+        report_time_evidence, report_slot=report_slot, target_gw=planning_gw
+    )
     availability_evidence_by_player = build_availability_evidence_by_player(
         bootstrap,
         report_time_evidence,

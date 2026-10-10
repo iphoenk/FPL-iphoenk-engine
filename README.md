@@ -151,3 +151,7 @@ Public Official FPL submitted picks, live data, and mini-league evidence are ind
 ### P0 MATCH public-first recovery (10 October 2026)
 
 MATCH reports use immutable current-GW Official FPL submitted picks (15/15) and current Official FPL live player points; an expired private credential cannot override the locked team. The governed V6 exact match-mode prefetch binds ICON+ league 9477 manager and picks coverage. MATCH1..MATCH13 have their own delivery catalog rather than DEEP sections. The public bridge emits truthful READY_DEGRADED and withholds provisional live rank or net score until transfer hits, automatic substitutions and league tie-break rules are verified. Authenticated bank, free transfers, buying and selling prices remain unavailable when FPL auth is expired. This P0 continuity repair is not evidence of FULL GREEN until CI, live acceptance and private report receipt are verified.
+
+### MATCH public-first recovery
+
+MATCH1-MATCH13 use current-GW Official FPL submitted picks and event-live information from the V6 data plane. Expired personal authentication does not override the submitted team or suppress the public matchday report. League coverage and source freshness are independently verified. When net scoring, autosubs or provisional rank are not verified, the report remains READY_DEGRADED rather than claiming full live acceptance.

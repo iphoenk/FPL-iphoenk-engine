@@ -324,3 +324,29 @@ def test_history_acquisition_uses_previous_gw_official_total(tmp_path):
     assert record["entry_history"]["event_transfers_cost"] == 4
     assert record["record_digest"]
     assert metrics["cache_misses"] == 1
+
+
+def test_captain_dnp_official_autosub_does_not_double_captain_incoming():
+    entry = _entry(subs=[{"element_out": 2, "element_in": 12}], hit=4)
+    points = {i: i for i in range(1, 16)}
+    points[2] = 0
+    result = score_entry(
+        entry, points,
+        player_teams={2: 1}, finished_teams={1}, live_minutes={2: 0, 4: 90},
+    )
+    assert result["multipliers"][2] == 0
+    assert result["multipliers"][12] == 1
+    assert result["multipliers"][4] == 2
+    assert result["vice_takeover_provisional"] is True
+    # Official may already publish post-autosub multipliers: do not
+    # promote the vice twice in that representation.
+    entry["picks"][1]["multiplier"] = 0
+    entry["picks"][11]["multiplier"] = 1
+    entry["picks"][3]["multiplier"] = 2
+    already = score_entry(
+        entry, points,
+        player_teams={2: 1}, finished_teams={1}, live_minutes={2: 0, 4: 90},
+    )
+    assert already["multipliers"][4] == 2
+    assert already["multipliers"][12] == 1
+    assert already["vice_takeover_provisional"] is False

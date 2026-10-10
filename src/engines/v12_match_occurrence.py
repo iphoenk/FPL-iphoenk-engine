@@ -42,7 +42,13 @@ def build_public_match(
     canonical_text: str,
 ) -> dict[str, Any]:
     root = runtime_data_root / "data" / "v6"
-    pf = _load(root / "report_prefetch" / "latest.json")
+    # Exact occurrence file is authority. A later DEEP/PRICE run may overwrite
+    # the convenience latest pointer before MATCH is dispatched.
+    slot_token = (
+        report_slot.replace(":", "").replace("+", "_plus_")
+        .replace("-", "").replace("T", "_")
+    )
+    pf = _load(root / "report_prefetch" / "occurrences" / f"match_mode__{slot_token}.json")
     # Never promote a prior or future scope into an exact MATCH occurrence.
     if (
         pf.get("report_kind") != "match_mode"

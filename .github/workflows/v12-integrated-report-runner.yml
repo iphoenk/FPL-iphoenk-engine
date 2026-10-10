@@ -624,8 +624,16 @@ jobs:
             export V12_STAGE_PROFILE_DIR="artifacts/v12-report/stage-profiles"
           fi
           set +e
-          python -m src.engines.v12_integrated_report_runner "${args[@]}" \
-            >"$private_log" 2>&1
+          if [ "$REPORT_MODE" = "MATCH" ]; then
+            # MATCH is public-first and never requires AUTH_AVAILABLE or DEEP MC.
+            python -m src.engines.v12_public_match_delivery \
+              --runtime-data-root "../runtime-data" \
+              --report-slot "$REPORT_SLOT" \
+              --output-dir "artifacts/v12-report" >"$private_log" 2>&1
+          else
+            python -m src.engines.v12_integrated_report_runner "${args[@]}" \
+              >"$private_log" 2>&1
+          fi
           runner_status=$?
           set -e
           unset V12_STAGE_PROFILE_DIR || true

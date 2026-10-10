@@ -3,7 +3,7 @@ from __future__ import annotations
 """Private, exact P1.7 transfer what-if evaluator.
 
 Inputs: P1.1/P1.3/P1.6 canonical projection warm state from SAME occurrence
-and complete 240-row deterministic legality manifest. Does not call the
+and complete deterministic legality manifest. Does not call the
 production publisher, alter CURRENT15, or fabricate scenario P1.4 simulations.
 The separate 500K scenario MC remains REQUIRED but NOT_EXECUTED until supported.
 """
@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from src.engines.v12_transfer_matrix import INPUT_PATH, build_matrix
+from src.engines.v12_transfer_matrix import INPUT_PATH, _hall_candidate, build_matrix
 
 
 class TransferMatrixEvaluationError(RuntimeError):
@@ -44,6 +44,7 @@ def evaluate_private_matrix(
         raise TransferMatrixEvaluationError("missing canonical projections")
     required_ids = set(owned)
     required_ids.update(int(row["element_id"]) for row in config["candidates"])
+    required_ids.add(int(_hall_candidate()["element_id"]))
     projection_ids = {
         int(row.get("element") or row.get("id") or 0)
         for row in projections.get("players") or []

@@ -3,7 +3,7 @@
   "target_gw": 6,
   "observed_at": "2026-10-10T09:46:00+07:00",
   "expires_at": "2026-10-10T17:00:00+07:00",
-  "provenance": "Owner-provided FPL Telegram roundup, crosschecked to FFScout Oct 8-9 team-news pages; secondary and root-deduplicated, not direct club primary source",
+  "provenance": "Owner-provided FPL Telegram roundup, crosschecked to FFScout Oct 8-9 team-news pages; secondary and root-deduplicated, not direct club primary source; each manager claim appears once in local payload, never as a duplicate republication without a primary row",
   "authority": "SECONDARY_ADVISORY_NO_INDEPENDENT_PSTART",
   "never_apply_to_future_gws": true,
   "club_summaries": [
@@ -172,9 +172,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SUNDERLAND_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -200,9 +201,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SUNDERLAND_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -228,9 +230,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SUNDERLAND_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "RETURN_SOON"
+        "manager_availability_language": "RETURN_SOON",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -256,9 +259,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -284,9 +288,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -312,9 +317,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -340,9 +346,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -368,9 +375,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -396,9 +404,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -424,9 +433,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -452,9 +462,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -480,9 +491,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -508,9 +520,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NEWCASTLE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -536,9 +549,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -564,9 +578,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -592,9 +607,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -620,9 +636,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -648,9 +665,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -676,9 +694,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -704,9 +723,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_COVENTRY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "BANNED"
+        "manager_availability_language": "BANNED",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -732,9 +752,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LEEDS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -760,9 +781,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LEEDS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -788,9 +810,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LEEDS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -816,9 +839,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LEEDS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -844,9 +868,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LEEDS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -872,9 +897,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -900,9 +926,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -928,9 +955,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -956,9 +984,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -984,9 +1013,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1012,9 +1042,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1040,9 +1071,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BOURNEMOUTH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1068,9 +1100,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_FULHAM_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1096,9 +1129,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_FULHAM_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1124,9 +1158,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_FULHAM_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1152,9 +1187,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_CITY_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1180,9 +1216,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1208,9 +1245,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1236,9 +1274,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1264,9 +1303,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1292,9 +1332,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1320,9 +1361,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1348,9 +1390,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1376,9 +1419,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1404,9 +1448,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1432,9 +1477,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRIGHTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1460,9 +1506,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1488,9 +1535,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "LATE"
+        "manager_availability_language": "LATE",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1516,9 +1564,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "LATE"
+        "manager_availability_language": "LATE",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1544,9 +1593,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1572,9 +1622,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1600,9 +1651,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ARSENAL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1628,9 +1680,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CHELSEA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1656,9 +1709,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CHELSEA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1684,9 +1738,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CHELSEA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1712,9 +1767,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CHELSEA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1740,9 +1796,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CHELSEA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1768,9 +1825,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LIVERPOOL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1796,9 +1854,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LIVERPOOL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1824,9 +1883,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_LIVERPOOL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1852,9 +1912,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1880,9 +1941,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1908,9 +1970,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1936,9 +1999,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1964,9 +2028,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -1992,9 +2057,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_MANCHESTER_UNITED_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2020,9 +2086,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "RETURN_SOON"
+        "manager_availability_language": "RETURN_SOON",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2048,9 +2115,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "RETURN_SOON"
+        "manager_availability_language": "RETURN_SOON",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2076,9 +2144,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "RETURN_SOON"
+        "manager_availability_language": "RETURN_SOON",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2104,9 +2173,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2132,9 +2202,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2160,9 +2231,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2188,9 +2260,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_BRENTFORD_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2216,9 +2289,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_EVERTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "LATE"
+        "manager_availability_language": "LATE",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2244,9 +2318,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_EVERTON_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2272,9 +2347,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2300,9 +2376,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2328,9 +2405,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2356,9 +2434,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2384,9 +2463,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "BANNED"
+        "manager_availability_language": "BANNED",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2412,9 +2492,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_CRYSTAL_PALACE_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2440,9 +2521,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2468,9 +2550,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2496,9 +2579,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2524,9 +2608,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2552,9 +2637,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2580,9 +2666,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2608,9 +2695,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2636,9 +2724,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_SPURS_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2664,9 +2753,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2692,9 +2782,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2720,9 +2811,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2748,9 +2840,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2776,9 +2869,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2804,9 +2898,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2832,9 +2927,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2860,9 +2956,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2888,9 +2985,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_HULL_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "UNCLEAR"
+        "manager_availability_language": "UNCLEAR",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2916,9 +3014,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2944,9 +3043,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -2972,9 +3072,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3000,9 +3101,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3028,9 +3130,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3056,9 +3159,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3084,9 +3188,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3112,9 +3217,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "READY"
+        "manager_availability_language": "READY",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3140,9 +3246,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_ASTON_VILLA_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3168,9 +3275,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_IPSWICH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "TRAINING"
+        "manager_availability_language": "TRAINING",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3196,9 +3304,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_IPSWICH_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "BANNED"
+        "manager_availability_language": "BANNED",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3224,9 +3333,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NOTTINGHAM_FOREST_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3252,9 +3362,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NOTTINGHAM_FOREST_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "OUT"
+        "manager_availability_language": "OUT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3280,9 +3391,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NOTTINGHAM_FOREST_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "DOUBT"
+        "manager_availability_language": "DOUBT",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     },
     {
@@ -3308,9 +3420,10 @@
         "injury_confirmed": "UNKNOWN",
         "root_source_id": "PRESS_CONFERENCE_NOTTINGHAM_FOREST_GW6",
         "root_source_type": "PRESS_CONFERENCE_REPORTED_BY_FFSCOUT",
-        "is_republication": true,
+        "is_republication": false,
         "explicit_target_unavailable": false,
-        "manager_availability_language": "RETURN_SOON"
+        "manager_availability_language": "RETURN_SOON",
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
       }
     }
   ]

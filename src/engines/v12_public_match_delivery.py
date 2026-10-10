@@ -283,6 +283,7 @@ def _exposure(
         and len(scored) == n
         and all(row.get("net_points") is not None
                 and row.get("previous_overall_points") is not None
+                and row.get("baseline_verified") is True
                 and row.get("autosub_state") != "PENDING"
                 for row in scored)
     )

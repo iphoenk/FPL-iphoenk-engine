@@ -1,0 +1,287 @@
+{
+  "contract": "GW6_OWNER_REQUEST_TRANSFER_FORMATION_MATRIX_V1",
+  "as_of": "2026-10-10T10:36:34+07:00",
+  "target_gw": 6,
+  "authority": "NON_AUTHORITATIVE_WHAT_IF_STRUCTURAL_ONLY",
+  "finance_status": "PERSONAL_AUTH_UNAVAILABLE",
+  "bank_authoritative": null,
+  "free_transfers_authoritative": null,
+  "illustrative_bank_tenths": 2,
+  "illustrative_bank_source": "historical GW6 private visible report, NOT current authenticated budget",
+  "price_source": {
+    "path": "runtime-data-v6/data/v6/current/official_price_predictor.json",
+    "sha": "af7146d58d2e965259f290fde517502455e4b85d",
+    "checked_at": "2026-10-10T03:04:43.908145+00:00",
+    "field": "data.players[].now_cost"
+  },
+  "sell_source": {
+    "path": "fpl-reports-private/personal/current_team.json",
+    "sha": "3567d922e6971d81d72daf5a9c24932ee526e21e",
+    "generated_at": "2026-10-09T01:39:39.345032+00:00",
+    "auth_state": "AUTH_UNAVAILABLE",
+    "field": "players[].selling_price",
+    "authoritative": false
+  },
+  "baseline": {
+    "slot": "2026-10-10T10:04:00+07:00",
+    "run_id": 38020425182,
+    "mc_paths": 500000,
+    "mc_convergence": "PASS",
+    "baseline_only": true,
+    "canonical_formations": [
+      [
+        "5-4-1",
+        55.016
+      ],
+      [
+        "4-4-2",
+        54.972
+      ],
+      [
+        "5-3-2",
+        54.953
+      ],
+      [
+        "4-5-1",
+        54.726
+      ],
+      [
+        "3-5-2",
+        54.658
+      ],
+      [
+        "3-4-3",
+        53.671
+      ],
+      [
+        "4-3-3",
+        53.631
+      ],
+      [
+        "5-2-3",
+        53.589
+      ]
+    ]
+  },
+  "owned": [
+    {
+      "element_id": 572,
+      "name": "Tzolakis",
+      "element_type": 1,
+      "team_id": 11,
+      "now_cost": 47,
+      "sell_value_stale": 46
+    },
+    {
+      "element_id": 115,
+      "name": "De Cuyper",
+      "element_type": 2,
+      "team_id": 5,
+      "now_cost": 50,
+      "sell_value_stale": 47
+    },
+    {
+      "element_id": 8,
+      "name": "Calafiori",
+      "element_type": 2,
+      "team_id": 1,
+      "now_cost": 59,
+      "sell_value_stale": 57
+    },
+    {
+      "element_id": 391,
+      "name": "Gvardiol",
+      "element_type": 2,
+      "team_id": 15,
+      "now_cost": 57,
+      "sell_value_stale": 56
+    },
+    {
+      "element_id": 426,
+      "name": "B.Fernandes",
+      "element_type": 3,
+      "team_id": 16,
+      "now_cost": 119,
+      "sell_value_stale": 119
+    },
+    {
+      "element_id": 68,
+      "name": "Tavernier",
+      "element_type": 3,
+      "team_id": 3,
+      "now_cost": 61,
+      "sell_value_stale": 60
+    },
+    {
+      "element_id": 40,
+      "name": "Rogers",
+      "element_type": 3,
+      "team_id": 6,
+      "now_cost": 78,
+      "sell_value_stale": 76
+    },
+    {
+      "element_id": 15,
+      "name": "Ødegaard",
+      "element_type": 3,
+      "team_id": 1,
+      "now_cost": 68,
+      "sell_value_stale": 66
+    },
+    {
+      "element_id": 124,
+      "name": "Groß",
+      "element_type": 3,
+      "team_id": 5,
+      "now_cost": 59,
+      "sell_value_stale": 58
+    },
+    {
+      "element_id": 411,
+      "name": "Haaland",
+      "element_type": 4,
+      "team_id": 15,
+      "now_cost": 156,
+      "sell_value_stale": 155
+    },
+    {
+      "element_id": 346,
+      "name": "Calvert-Lewin",
+      "element_type": 4,
+      "team_id": 13,
+      "now_cost": 60,
+      "sell_value_stale": 60
+    },
+    {
+      "element_id": 109,
+      "name": "Verbruggen",
+      "element_type": 1,
+      "team_id": 5,
+      "now_cost": 45,
+      "sell_value_stale": 45
+    },
+    {
+      "element_id": 31,
+      "name": "Konsa",
+      "element_type": 2,
+      "team_id": 1,
+      "now_cost": 46,
+      "sell_value_stale": 45
+    },
+    {
+      "element_id": 165,
+      "name": "João Pedro",
+      "element_type": 4,
+      "team_id": 6,
+      "now_cost": 77,
+      "sell_value_stale": 76
+    },
+    {
+      "element_id": 279,
+      "name": "Ajayi",
+      "element_type": 2,
+      "team_id": 11,
+      "now_cost": 42,
+      "sell_value_stale": 41
+    }
+  ],
+  "candidates": [
+    {
+      "element_id": 12,
+      "name": "Saka",
+      "element_type": 3,
+      "team_id": 1,
+      "now_cost": 96
+    },
+    {
+      "element_id": 427,
+      "name": "Mbeumo",
+      "element_type": 3,
+      "team_id": 16,
+      "now_cost": 79
+    },
+    {
+      "element_id": 249,
+      "name": "Barry",
+      "element_type": 4,
+      "team_id": 9,
+      "now_cost": 57
+    },
+    {
+      "element_id": 569,
+      "name": "Gonzalo",
+      "element_type": 4,
+      "team_id": 10,
+      "now_cost": 61
+    },
+    {
+      "element_id": 305,
+      "name": "Davis",
+      "element_type": 2,
+      "team_id": 12,
+      "now_cost": 40
+    },
+    {
+      "element_id": 258,
+      "name": "Castagne",
+      "element_type": 2,
+      "team_id": 10,
+      "now_cost": 45
+    },
+    {
+      "element_id": 233,
+      "name": "Mykolenko",
+      "element_type": 2,
+      "team_id": 9,
+      "now_cost": 46
+    }
+  ],
+  "swaps": {
+    "FWD": {
+      "346": [
+        346,
+        249,
+        569
+      ]
+    },
+    "BRUNO": {
+      "426": [
+        426,
+        427
+      ]
+    },
+    "TAVERNIER": {
+      "68": [
+        68,
+        12
+      ]
+    },
+    "KONSA": {
+      "31": [
+        31,
+        305,
+        258,
+        233
+      ]
+    }
+  },
+  "rules": {
+    "positions": {
+      "1": 2,
+      "2": 5,
+      "3": 5,
+      "4": 3
+    },
+    "max_same_team": 3,
+    "formation_count": 8
+  },
+  "governance": {
+    "never_publish_what_if_as_current15": true,
+    "never_reuse_baseline_mc_for_swaps": true,
+    "never_infer_free_transfers_or_hit": true,
+    "never_treat_stale_finance_as_authoritative": true,
+    "monte_carlo_required_per_material_scenario": 500000,
+    "p17_unchanged": true,
+    "full_universe_routes_unchanged": true
+  }
+}

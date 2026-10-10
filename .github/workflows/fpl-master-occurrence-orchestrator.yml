@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       report_mode:
-        description: "DEEP or PRICE"
+        description: "DEEP, PRICE, or MATCH"
         required: true
         type: string
       report_slot:
@@ -102,7 +102,7 @@ jobs:
                   raise SystemExit(f"duplicate argument: {key}")
               args[key] = value
 
-          allowed = {"report_mode", "report_slot", "checkpoint_time", "official_deadline", "force"}
+          allowed = {"report_mode", "report_slot", "checkpoint_time", "official_deadline", "force", "reason"}
           unknown = set(args) - allowed
           if unknown:
               raise SystemExit(f"unknown arguments: {sorted(unknown)}")
@@ -110,10 +110,14 @@ jobs:
           if force not in {"true", "false"}:
               raise SystemExit("force must be true or false")
 
+          # reason is audit metadata, never a scheduler proof or a bypass.
+          reason = str(args.get("reason") or "")
+          if reason and (len(reason) > 128 or not all(c.isalnum() or c in "._:-" for c in reason)):
+              raise SystemExit("reason must be bounded audit metadata")
           mode = str(args.get("report_mode") or "").upper()
           slot = str(args.get("report_slot") or "")
-          if mode not in {"DEEP", "PRICE"}:
-              raise SystemExit("report_mode must be DEEP or PRICE")
+          if mode not in {"DEEP", "PRICE", "MATCH"}:
+              raise SystemExit("report_mode must be DEEP, PRICE, or MATCH")
           if not slot:
               raise SystemExit("report_slot is required")
 
@@ -160,9 +164,9 @@ jobs:
               if london.strftime("%H:%M") != "23:30":
                   raise SystemExit("PRICE occurrence must bind to 23:30 Europe/London")
 
-          report_kind = "full_master" if mode == "DEEP" else "05:30_price"
+          report_kind = {"DEEP": "full_master", "PRICE": "05:30_price", "MATCH": "match_mode"}[mode]
           occurrence_id = f"{mode}|{slot}"
-          serving_file = "deep.json" if mode == "DEEP" else "price.json"
+          serving_file = {"DEEP": "deep.json", "PRICE": "price.json", "MATCH": "match.json"}[mode]
 
           out = os.environ["GITHUB_OUTPUT"]
           with open(out, "a", encoding="utf-8") as fh:
@@ -390,11 +394,11 @@ jobs:
               "/repos/iphoenk/fpl-reports-private/contents/latest/delivery_status.json?ref=main" \
               --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/delivery-status.json"
           else
-            # PRICE has its own exact-serving digest. Never reuse the
-            # previous DEEP latest/delivery_status.json for PRICE verification.
+            # PRICE and MATCH have independent exact-slot serving digests.
+            # Never read the older DEEP delivery_status.json as authority.
             GH_TOKEN="$FPL_PRIVATE_REPORTS_TOKEN" gh api \
-              "/repos/iphoenk/fpl-reports-private/contents/latest/price.json?ref=main" \
-              --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/latest-price.json"
+              "/repos/iphoenk/fpl-reports-private/contents/latest/${SERVING_FILE}?ref=main" \
+              --jq '.content' | tr -d '\n' | base64 -d > "$RUNNER_TEMP/latest-mode.json"
           fi
 
           read -r history_dir body_name < <(
@@ -469,8 +473,8 @@ jobs:
           if os.environ["REPORT_MODE"] == "DEEP":
               delivery = json.loads((root / "delivery-status.json").read_text(encoding="utf-8"))
           else:
-              # PRICE is not a DEEP delivery snapshot. Its publisher digest
-              # is the exact serving authority for mode/slot/QA/terminality.
+              # PRICE/MATCH are not DEEP delivery snapshots. Their exact
+              # serving digests govern mode, slot, QA, and terminality.
               delivery = {}
           mode = os.environ["REPORT_MODE"]
           slot = os.environ["REPORT_SLOT"]
@@ -485,10 +489,10 @@ jobs:
               root_failure = str(delivery.get("root_failure") or "").strip().upper()
               delivery_status = str(delivery.get("delivery_status") or "").strip().upper()
           else:
-              latest_price = json.loads(
-                  (root / "latest-price.json").read_text(encoding="utf-8")
+              latest_mode = json.loads(
+                  (root / "latest-mode.json").read_text(encoding="utf-8")
               )
-              latest_sha = str(latest_price.get("canonical_body_sha256") or "")
+              latest_sha = str(latest_mode.get("canonical_body_sha256") or "")
               root_failure = ""
               delivery_status = str(
                   serving.get("delivery_status")
@@ -517,10 +521,10 @@ jobs:
               receipt.get("private_delivery_status") == "PASS"
               and (
                   (
-                      mode == "PRICE"
-                      and latest_price.get("report_mode") == "PRICE"
-                      and latest_price.get("report_slot") == slot
-                      and latest_price.get("occurrence_id") == occurrence_id
+                      mode in {"PRICE", "MATCH"}
+                      and latest_mode.get("report_mode") == mode
+                      and latest_mode.get("report_slot") == slot
+                      and latest_mode.get("occurrence_id") == occurrence_id
                       and latest_sha == body_sha
                   )
                   or (
@@ -533,9 +537,9 @@ jobs:
               latest_sha == body_sha
               if mode == "DEEP"
               else (
-                  latest_price.get("report_mode") == "PRICE"
-                  and latest_price.get("report_slot") == slot
-                  and latest_price.get("occurrence_id") == occurrence_id
+                  latest_mode.get("report_mode") == mode
+                  and latest_mode.get("report_slot") == slot
+                  and latest_mode.get("occurrence_id") == occurrence_id
                   and latest_sha == expected_sha
               )
           )
@@ -559,7 +563,7 @@ jobs:
                   "exists": (
                       bool(latest_body)
                       if mode == "DEEP"
-                      else bool(latest_price)
+                      else bool(latest_mode)
                   ),
                   "advanced": latest_advanced,
                   "body_sha256": latest_sha,

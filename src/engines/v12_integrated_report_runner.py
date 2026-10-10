@@ -3330,19 +3330,20 @@ def _mini_league_deep_detail(
         our_total_i = None
 
     rank_battle: list[dict[str, Any]] = []
-    for row in ordered:
+    # Show the first ten managers by standings order, NOT rank <= 10:
+    # Official FPL league_rank can contain ties and skip rank numbers.
+    top10_count = min(10, int(context.get("manager_count") or len(standing_ids)))
+    for standing_position, row in enumerate(ordered[:top10_count], start=1):
         try:
             rank = int(row.get("league_rank") or 0)
             total = int(row.get("league_total") or 0)
         except (TypeError, ValueError):
             continue
-        if rank <= min(
-            10,
-            int(context.get("manager_count") or len(standing_ids)),
-        ):
+        if rank > 0:
             rank_battle.append(
                 {
                     "entry_id": row.get("entry_id"),
+                    "standing_position": standing_position,
                     "rank": rank,
                     "manager": (
                         row.get("manager_name")

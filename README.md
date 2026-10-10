@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T05:28:21+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T05:57:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -46,7 +46,7 @@ S06 mobile pitch displays the entire already-calculated **CURRENT15** P1.7 forma
 **DEEP** is the full planning report, **PRICE** handles price/timing, **DEADLINE / FINAL** is the final pre-deadline checkpoint, and **MATCH** covers post-deadline and matchday monitoring.
 
 Primary schedule: **DEEP 04:30 / 12:30 / 21:30 Asia/Jakarta** and **PRICE 23:30 Europe/London**. Deadline and Matchday use governed checkpoints. T-24 through T-3 bind to the official deadline and emit one occurrence-bound DEEP report; T-2 through T-5 remain delta/final overlays.
-ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running every HH:30 Asia/Jakarta. Only due DEEP/PRICE checkpoints post an occurrence-bound `/fpl-master-tick` comment to issue #431; non-due hourly ticks are silent. The GitHub issue-comment orchestrator starts governed prefetch, V12 and private report publication. No independent production GitHub cron, issue-title upkeep or alternate scheduler is authoritative. PRICE remains bound to 23:30 Europe/London (DST-safe).
+ChatGPT automation `FPL Master Monitor V12` is the sole recurring scheduler, running every HH:30 Asia/Jakarta. At each genuine natural occurrence, its **first production-side effect** is the governed update of issue #431 TITLE with the exact hourly logical slot, followed by title readback. This triggers the V6 core via `event=issues`; report-prefetch cannot substitute for scheduler health. For due DEEP/PRICE or verified live MATCH checkpoints, the same master may post exactly one occurrence-bound `/fpl-master-tick` comment on #431 after verifying no existing exact-slot command/receipt. The downstream GitHub issue-comment orchestrator runs report prefetch, V12, QA and private publication, but cannot prove user-visible native delivery on its own. No independent GitHub clock/cron, ad-hoc replay, or alternate scheduler is authoritative. PRICE remains bound to 23:30 Europe/London (DST-safe).
 
 Occurrence commands are exact-time only: future report slots are rejected, and private serving state created before its claimed occurrence cannot satisfy idempotent reuse.
 
@@ -157,3 +157,7 @@ valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
 
 
 Public Official FPL submitted picks, live data, and mini-league evidence are independent from authenticated personal enrichment. When private authentication is expired, public MATCH delivery continues with explicit unavailable finance fields; authenticated bank, free transfers, purchase prices, and selling values are never derived from public data.
+
+### P0 public-first natural delivery repair (2026-10-11T05:57:00+07:00)
+
+PR #957 isolates the known live command parser failure: audited `reason` metadata is bounded and `MATCH` routes to governed `match_mode` with exact `latest/match.json` verification. Canonical MATCH terminality remains fail-closed on publication, body hash, QA and private receipt; private personal authentication is **not** a public-report prerequisite. In S15B, Official FPL can assign tied league ranks, so Top 10 displays exact first-ten standings positions while retaining actual rank values and rejects missing/duplicate entries. No QA relaxations, MC/universe reductions or alternate scheduler are permitted. Controlled CI, generated Markdown and private latest **do not** prove natural ChatGPT delivery; require genuine scheduler title mutation, exact issue command, orchestration, same-slot prefetch and rendered native user-visible evidence. Historical missing slots remain missing.

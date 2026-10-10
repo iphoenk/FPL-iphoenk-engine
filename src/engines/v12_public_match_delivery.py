@@ -71,13 +71,22 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
     standings = _read(base / "standings.json")
     event = _read(base / "live_state.json")
     entries = members.get("entries") or {}
+    expected = int(pref.get("expected_manager_count") or members.get("expected_manager_count") or 0)
+    valid_entries = all(
+        len(record.get("picks") or []) == 15
+        and len({int(p.get("element_id") or 0) for p in record.get("picks") or []}) == 15
+        for record in entries.values()
+    )
     if (
-        members.get("gw") != gw
+        expected < 1
+        or (gw == 6 and league == 9477 and expected != 58)
+        or members.get("gw") != gw
         or members.get("complete") is not True
-        or int(members.get("expected_manager_count") or 0) != 58
-        or int(members.get("submitted_picks_available_count") or 0) != 58
-        or len(entries) != 58
-        or len(standings.get("managers") or []) != 58
+        or int(members.get("expected_manager_count") or 0) != expected
+        or int(members.get("submitted_picks_available_count") or 0) != expected
+        or len(entries) != expected
+        or len(standings.get("managers") or []) != expected
+        or not valid_entries
         or event.get("gw") != gw
         or event.get("status") != "AVAILABLE"
         or event.get("authority") != "OFFICIAL_FPL"
@@ -285,6 +294,30 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
             "match_evidence_feed": {"status": "OFFICIAL_FPL", "checked_at": event.get("checked_at")},
         },
     )
+    teams_by_id = {
+        int(team["id"]): str(team.get("name") or team["id"])
+        for team in canonical_snapshot["bootstrap"]["teams"]
+        if team.get("id") is not None
+    }
+    fixtures = []
+    for fixture in canonical_snapshot["fixtures"]:
+        home = teams_by_id.get(int(fixture.get("team_h") or 0), "UNKNOWN")
+        away = teams_by_id.get(int(fixture.get("team_a") or 0), "UNKNOWN")
+        h_score, a_score = fixture.get("team_h_score"), fixture.get("team_a_score")
+        score_display = (
+            f"{h_score}-{a_score}" if isinstance(h_score, int) and isinstance(a_score, int)
+            else "UNAVAILABLE"
+        )
+        status = "FT" if fixture.get("finished") is True else (
+            "LIVE" if fixture.get("started") is True else "NOT_STARTED"
+        )
+        fixtures.append({
+            "fixture": f"{home} vs {away}", "score": score_display,
+            "status": status, "kickoff": fixture.get("kickoff_time"),
+        })
+    for section in report.get("sections") or []:
+        if section.get("section_id") == "MATCH1":
+            section.setdefault("content", {})["fixture_rows"] = fixtures
     body = render_match_text(report)
     ids = [row.get("section_id") for row in report.get("sections") or []]
     if ids != EXPECTED or body.count("## MATCH ") != 13 or validate_match_presentation_lock():

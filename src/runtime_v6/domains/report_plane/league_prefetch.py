@@ -120,6 +120,7 @@ def _record_from_result(entry_id: int, gw: int, result: dict[str, Any]) -> dict[
         "active_chip": normal.get("active_chip"),
         "entry_history": normal.get("entry_history"),
         "automatic_subs": normal.get("automatic_subs"),
+        "official_raw": result.get("payload") if result.get("status") == "LIVE" else None,
         "picks": normal.get("picks", []),
         "lineage": normal.get("lineage"),
     }
@@ -319,6 +320,8 @@ def live_state(result: dict[str, Any], gw: int) -> tuple[dict[int, int] | None, 
                 "minutes": stats.get("minutes"),
                 "bonus": stats.get("bonus"),
                 "bps": stats.get("bps"),
+                "stats": stats,
+                "explain": item.get("explain"),
             }
         )
     return points, {

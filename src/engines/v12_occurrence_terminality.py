@@ -68,7 +68,7 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(degradation, Mapping):
         degradation = {}
 
-    if mode not in {"DEEP", "PRICE"}:
+    if mode not in {"DEEP", "PRICE", "MATCH"}:
         _add(failures, "REPORT_MODE_INVALID")
     if not requested_slot or serving.get("report_slot") != requested_slot:
         _add(failures, "EXACT_SLOT_MISMATCH")

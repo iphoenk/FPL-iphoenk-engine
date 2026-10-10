@@ -46,6 +46,10 @@ def score_entry(
     # multipliers have NOT yet incorporated their impact.
     factors = {i: integer(p.get("multiplier")) for i, p in zip(ids, picks)}
     official_substitutions = substitutions if isinstance(substitutions, list) else None
+    captain = next(p for p in picks if p.get("captain") is True)
+    vice = next(p for p in picks if p.get("vice_captain") is True)
+    c_id, v_id = captain["element_id"], vice["element_id"]
+    captain_subbed_out = False
     subs_applied = 0
     if official_substitutions:
         for substitution in official_substitutions:
@@ -56,8 +60,11 @@ def score_entry(
             if outgoing not in factors or incoming not in factors:
                 return {"status": "UNAVAILABLE", "reason": "OFFICIAL_AUTOSUB_NOT_IN_PICKS"}
             if factors[outgoing] > 0 and factors[incoming] == 0:
-                factors[incoming] = factors[outgoing]
+                # A substituted captain does not transfer the captain bonus
+                # to the incoming bench player. Vice captain inherits it.
+                factors[incoming] = 1 if outgoing == c_id else factors[outgoing]
                 factors[outgoing] = 0
+                captain_subbed_out = captain_subbed_out or outgoing == c_id
                 subs_applied += 1
             elif factors[outgoing] == 0 and factors[incoming] > 0:
                 pass  # Official already updated multipliers.
@@ -69,12 +76,11 @@ def score_entry(
     teams = player_teams or {}
     minutes = live_minutes or {}
     finished = finished_teams or set()
-    captain = next(p for p in picks if p.get("captain") is True)
-    vice = next(p for p in picks if p.get("vice_captain") is True)
-    c_id, v_id = captain["element_id"], vice["element_id"]
     c_dnp = teams.get(c_id) in finished and minutes.get(c_id) == 0
     v_appeared = minutes.get(v_id, 0) > 0
-    vice_pending = bool(c_dnp and v_appeared and factors[c_id] > 0 and factors[v_id] == 1)
+    vice_pending = bool(c_dnp and v_appeared and
+                        (factors[c_id] > 0 or captain_subbed_out) and
+                        factors[v_id] == 1)
     # The official post-processing may already have altered multipliers.
     # In that case, preserve the Official state without a second promotion.
     if vice_pending:

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T10:36:34+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T11:07:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -139,4 +139,4 @@ C/VC confidence or mini-league rank evidence is unavailable, preserves
 valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
 
 
-**GW6 what-if transfer / formation matrix (10 Oct 2026):** `python -m src.engines.v12_transfer_matrix --output artifacts/gw6_transfer_matrix.json` enumerates 30 roster combinations and all 8 P1.7 formations (240 rows). Saka requires freeing an Arsenal slot first; options are Konsa→Davis/Castagne/Mykolenko. Price facts bind to the 10 Oct V6 predictor; cached selling prices and illustrative £0.2m bank are **not authenticated**, and free transfers/hits are UNKNOWN. Only the no-transfer baseline has verified 500K P1.4 MC; every what-if has xPts null and MC NOT_EXECUTED until a separate canonical evaluation. This never updates CURRENT15, P1.7, MC engine, or production reports.
+**GW6 what-if transfer / formation matrix (10 Oct 2026):** `python -m src.engines.v12_transfer_matrix --output artifacts/gw6_transfer_matrix.json` enumerates 42 roster combinations, including **Konsa→Lewis Hall** with/without Tavernier→Saka and Bruno→Mbeumo, over all eight P1.7 legal formations (**336 rows**); previous Davis/Castagne/Mykolenko alternatives remain for comparison. Hall's Newcastle identity and £5.3m price come from public V6 predictor (addendum `config/intelligence/gw6_hall_candidate.json`). Hall frees an Arsenal slot when Saka enters. With illustrative stale-value £0.2m bank, Bruno→Mbeumo + Tavernier→Saka + Konsa→Hall is indicatively £0.2m short; DCL→Barry changes that to +£0.1m, whereas DCL→Gonzalo changes it to -£0.3m. Private bank, selling price, free transfers and hits are **not authenticated**. Only the no-transfer baseline has verified 500K P1.4 MC. All what-ifs require distinct canonical P1.7 and 500K MC before action. No CURRENT15, P1.7, MC engine, scheduler, or private delivery mutation.

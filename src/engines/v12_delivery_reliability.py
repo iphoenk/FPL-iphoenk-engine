@@ -1627,6 +1627,11 @@ def _serving_project_content(
     raw_content: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     """Allowlist only presentation-required fields for one client section."""
+    if section_id in {f"MATCH{i}" for i in range(1, 14)}:
+        # MATCH is already produced by the strict public-only locked
+        # materializer; stripping these keys would erase MATCH10 and MATCH13
+        # from the latest structured client serving snapshot.
+        return deepcopy(dict(raw_content or {}))
     keys = _SERVING_SECTION_KEYS.get(section_id, ())
     content = _serving_pick(
         raw_content,

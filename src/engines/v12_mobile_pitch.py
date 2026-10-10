@@ -22,6 +22,38 @@ def _identity(value: Any) -> str:
     return str(value or "")
 
 
+def render_s06_formation_frontier(content: Mapping[str, Any]) -> str:
+    """Expose every already-calculated canonical formation (no new analytics)."""
+    rows = [
+        dict(row) for row in content.get("formation_comparison") or []
+        if isinstance(row, Mapping)
+        and isinstance(row.get("expected_fpl_points_with_captain_vice"), (int, float))
+    ]
+    rows.sort(key=lambda row: row["expected_fpl_points_with_captain_vice"], reverse=True)
+    if not rows:
+        return '<p>Formation comparison: UNAVAILABLE (no canonical P1.7 routes)</p>'
+    best = float(rows[0]["expected_fpl_points_with_captain_vice"])
+    body = "".join(
+        '<tr><td>%s</td><td>%.3f</td><td>%+.3f</td></tr>' % (
+            escape(str(row.get("formation") or "UNAVAILABLE")),
+            float(row["expected_fpl_points_with_captain_vice"]),
+            float(row["expected_fpl_points_with_captain_vice"]) - best,
+        ) for row in rows
+    )
+    observed = {str(row.get("formation")) for row in rows}
+    absent = [name for name in ("3-4-3", "3-5-2", "4-3-3", "4-4-2", "4-5-1", "5-2-3", "5-3-2", "5-4-1") if name not in observed]
+    note = "Missing in canonical CURRENT15: " + escape(", ".join(absent)) if absent else ""
+    return (
+        '<div style="background:#10252b;color:#fff;border-radius:12px;padding:10px;margin-top:8px">'
+        '<strong>All CURRENT15 formation winners (exact P1.7)</strong>'
+        '<table style="width:100%%"><thead><tr><th>Formation</th><th>XI+C/VC xPts</th>'
+        '<th>Gap</th></tr></thead><tbody>%s</tbody></table><p>%s</p>'
+        '<p>DCL keep / DCL to Barry / DCL to Gonzalo require separate '
+        'legality, prices, transfer hits, and canonical 500K Monte Carlo. '
+        'Not yet simulated here.</p></div>' % (body, note)
+    )
+
+
 def render_s06_pitch(content: Mapping[str, Any]) -> str:
     """Return an accessible, mobile-first pitch and separate bench card."""
     xi = [row for row in content.get("starting_xi") or [] if isinstance(row, Mapping)]
@@ -109,6 +141,7 @@ def render_s06_pitch(content: Mapping[str, Any]) -> str:
         '<div class="s06-field-markings"><span class="s06-center-line"></span><span class="s06-center-circle"></span>%s</div>'
         '</div>'
         '<div class="s06-bench-card"><strong>Bench · autosub order</strong>%s</div>'
+        '%s'
         '</section>'
-        % (formation, base, adjusted, "".join(layers), bench_rows)
+        % (formation, base, adjusted, "".join(layers), bench_rows, render_s06_formation_frontier(content))
     )

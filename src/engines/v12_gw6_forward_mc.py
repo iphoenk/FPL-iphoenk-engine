@@ -50,13 +50,30 @@ def run_forward_mc(
     *,
     optimizer: Callable[..., dict[str, Any]] | None = None,
     simulator: Callable[..., dict[str, Any]] | None = None,
+    requested_report_slot: str | None = None,
 ) -> dict[str, Any]:
     if warm.get("schema") != "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1":
         raise WhatIfMCError("private canonical warm state required")
     gw = int(config.get("target_gw") or 0)
     if gw != 6 or int(warm.get("planning_gw") or 0) != gw:
         raise WhatIfMCError("GW6 model and warm evidence mismatch")
-    slot = str((config.get("baseline") or {}).get("slot") or "")
+    # The config baseline is an immutable historical reference, NOT the current
+    # report occurrence. An explicit newer slot is allowed only if identical to
+    # the private model's warm state and bound to Asia/Jakarta +07:00.
+    baseline_slot = str((config.get("baseline") or {}).get("slot") or "")
+    slot = str(requested_report_slot or baseline_slot)
+    from datetime import datetime
+    try:
+        observed = datetime.fromisoformat(slot)
+        baseline_time = datetime.fromisoformat(baseline_slot)
+    except ValueError as exc:
+        raise WhatIfMCError("invalid requested occurrence timestamp") from exc
+    if (
+        observed.utcoffset() is None
+        or int(observed.utcoffset().total_seconds()) != 7 * 3600
+        or observed < baseline_time
+    ):
+        raise WhatIfMCError("requested report slot lacks valid Jakarta identity")
     if slot != str(warm.get("report_slot") or ""):
         raise WhatIfMCError("same-occurrence model warm slot required")
     owned = [int(row["element_id"]) for row in config.get("owned") or []]
@@ -177,11 +194,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
     parser.add_argument("--warm-state", required=True)
+    parser.add_argument(
+        "--report-slot", default=None,
+        help="Explicit same-occurrence WIB slot; matches private warm state",
+    )
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     config = json.loads(Path(args.input).read_text(encoding="utf-8"))
     warm = json.loads(Path(args.warm_state).read_text(encoding="utf-8"))
-    result = run_forward_mc(config, warm)
+    result = run_forward_mc(config, warm, requested_report_slot=args.report_slot)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(

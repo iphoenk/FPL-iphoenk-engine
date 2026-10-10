@@ -484,7 +484,7 @@ def test_match_rejects_wrong_gw_or_stale_prefetch(tmp_path):
             runtime_data_root=root, report_slot=SLOT,
             canonical_text=CANONICAL.read_text(encoding="utf-8"),
         )
-    with pytest.raises(PublicMatchError, match="MATCH_PREFETCH_EXACT_PUBLIC_SCOPE_NOT_READY"):
+    with pytest.raises(PublicMatchError, match="PUBLIC_FACT_MISSING_OR_INVALID:match_mode__20261010_205900"):
         build_public_match(
             runtime_data_root=root, report_slot="2026-10-10T20:59:00+07:00",
             canonical_text=CANONICAL.read_text(encoding="utf-8"),

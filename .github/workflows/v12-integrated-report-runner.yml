@@ -667,7 +667,9 @@ jobs:
           assert result["status"] == "PASS"
           assert result["mc_paths_each_route"] == 500_000
           assert set(result["scenarios"]) >= {"HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO"}
-          assert len(result["mc_route_metrics"]) >= 3
+          assert {"HOLD_343", "DCL_TO_BARRY_343", "DCL_TO_GONZALO_343"} <= set(result["mc_route_metrics"])
+          assert result["mc_fixed_formation"] == "3-4-3"
+          assert len(result["mc_route_metrics"]) >= 6
           print(json.dumps({
               "status": result["status"],
               "scenarios": sorted(result["scenarios"]),

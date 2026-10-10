@@ -39,9 +39,21 @@ def _optimizer(projections, ids, *, planning_gw):
         "captain": xi[0], "vice_captain": xi[1],
         "formation": "5-4-1",
         "formation_comparison": [
-            {"formation": f, "expected_fpl_points_with_captain_vice": 55.0}
+            {"formation": f, "element_ids": ids[:11], "expected_fpl_points_with_captain_vice": 55.0}
             for f in FORMATIONS
         ],
+    }
+
+
+def _fake_343(lineup, row, gw):
+    """Unit-only P1.7 materializer. Does not run production football math."""
+    ids = list(row["element_ids"])
+    remaining = [p["element"] for p in lineup["starting_xi"] + lineup["bench"]["order"] + [lineup["bench"]["gk"]] if p["element"] not in ids]
+    assert len(remaining) == 4
+    return {
+        "gw": gw, "starting_xi": ids,
+        "bench_order": remaining[:3], "bench_gk": remaining[3],
+        "captain": ids[0], "vice_captain": ids[1],
     }
 
 
@@ -49,7 +61,8 @@ def _simulation(projections, routes, **kwargs):
     assert kwargs["actual_paths"] == 500_000
     assert kwargs["canonical"] is True
     assert kwargs["horizons"] == (1, 3, 5)
-    assert len(routes) == 3
+    assert len(routes) == 6
+    assert {r["route_id"] for r in routes} == {"HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO", "HOLD_343", "DCL_TO_BARRY_343", "DCL_TO_GONZALO_343"}
     for route in routes:
         assert [x["gw"] for x in route["per_gw"]] == [6, 7, 8, 9, 10]
         assert len(route["per_gw"][0]["starting_xi"]) == 11
@@ -62,9 +75,11 @@ def _simulation(projections, routes, **kwargs):
 
 def test_three_striker_scenarios_use_p17_and_mc_500k():
     cfg, warm = _inputs()
-    result = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation)
+    result = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation, formation_materializer=_fake_343)
     assert set(result["scenarios"]) == {"HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO"}
     assert result["mc_paths_each_route"] == 500_000
+    assert result["mc_fixed_formation"] == "3-4-3"
+    assert set(result["mc_fixed_formation_route_ids"]) == {"HOLD_343", "DCL_TO_BARRY_343", "DCL_TO_GONZALO_343"}
     assert result["finance"].startswith("UNAVAILABLE")
     assert result["private_publisher_called"] is False
 
@@ -73,14 +88,14 @@ def test_owner_current15_identity_must_match():
     cfg, warm = _inputs()
     warm["owned"][0]["element_id"] = 999
     with pytest.raises(WhatIfMCError, match="owned CURRENT15"):
-        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation)
+        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation, formation_materializer=_fake_343)
 
 
 def test_same_occurrence_required():
     cfg, warm = _inputs()
     warm["report_slot"] = "2026-10-09T12:30:00+07:00"
     with pytest.raises(WhatIfMCError, match="same-occurrence"):
-        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation)
+        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation, formation_materializer=_fake_343)
 
 
 def test_mc_convergence_cannot_be_faked():
@@ -92,13 +107,13 @@ def test_mc_convergence_cannot_be_faked():
         return result
 
     with pytest.raises(WhatIfMCError, match="did not PASS"):
-        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=failed)
+        run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=failed, formation_materializer=_fake_343)
 
 
 def test_projection_binding_required():
     cfg, warm = _inputs()
     warm["projections"]["model_evidence_binding"] = {}
-    result = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation)
+    result = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=_simulation, formation_materializer=_fake_343)
     assert result["status"] == "PASS"
     assert result["mc_output_fingerprint"]
 
@@ -112,7 +127,7 @@ def test_incomplete_p17_starting_xi_fails():
         return lineup
 
     with pytest.raises(WhatIfMCError, match="completeness"):
-        run_forward_mc(cfg, warm, optimizer=incomplete, simulator=_simulation)
+        run_forward_mc(cfg, warm, optimizer=incomplete, simulator=_simulation, formation_materializer=_fake_343)
 
 
 def test_cvc_pair_is_correlated_route_when_both_start():
@@ -126,7 +141,7 @@ def test_cvc_pair_is_correlated_route_when_both_start():
 
     def four_route_sim(projections, routes, **kwargs):
         assert kwargs["actual_paths"] == 500_000
-        assert len(routes) == 4
+        assert len(routes) == 7
         challenger = next(
             route for route in routes
             if route["route_id"] == "BRUNO_C_HAALAND_VC"
@@ -157,7 +172,7 @@ def test_cvc_pair_is_correlated_route_when_both_start():
         return lineup
 
     out = run_forward_mc(
-        cfg, warm, optimizer=attacker_start_optimizer, simulator=four_route_sim
+        cfg, warm, optimizer=attacker_start_optimizer, simulator=four_route_sim, formation_materializer=_fake_343
     )
     assert "BRUNO_C_HAALAND_VC" in out["mc_route_metrics"]
     assert out["decision_authority"] == "WHAT_IF_ONLY_NOT_EXECUTABLE"

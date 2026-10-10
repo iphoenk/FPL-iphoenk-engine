@@ -44,12 +44,86 @@ def _lineup_route(lineup: Mapping[str, Any], gw: int) -> dict[str, Any]:
     }
 
 
+def _forced_343_route(
+    lineup: Mapping[str, Any],
+    gw: int,
+    *,
+    materializer: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Re-materialize the exact P1.7 best 3-4-3, including bench and C/VC.
+
+    A compact formation comparison is NOT an MC lineup. Use the unchanged
+    P1.7 route evaluator to recover all first-XI, bench and captain semantics.
+    """
+    matches = [
+        row for row in lineup.get("formation_comparison") or []
+        if row.get("formation") == "3-4-3"
+    ]
+    if len(matches) != 1:
+        raise WhatIfMCError("P1.7 3-4-3 winner missing or duplicated")
+    summary = matches[0]
+    ids = {int(value) for value in summary.get("element_ids") or []}
+    if len(ids) != 11:
+        raise WhatIfMCError("P1.7 3-4-3 XI identity incomplete")
+
+    if materializer is not None:
+        route = materializer(lineup, summary, gw)
+    else:
+        # Import only the EXISTING canonical owner. Never approximate
+        # autosub priority, C/VC, or replace its ranking mathematics.
+        from src.engines.v12_lineup_optimizer import _lineup_route
+        players = list(lineup.get("squad_rows") or [])
+        indices = [
+            i for i, row in enumerate(players)
+            if int(row.get("element") or 0) in ids
+        ]
+        if len(players) != 15 or len(indices) != 11:
+            raise WhatIfMCError("P1.7 3-4-3 squad surface incomplete")
+        full = _lineup_route(players, indices, compact=False)
+        if full.get("formation") != "3-4-3":
+            raise WhatIfMCError("P1.7 3-4-3 route materialization mismatch")
+        expected = summary.get("expected_fpl_points_with_captain_vice")
+        actual = full.get("expected_fpl_points_with_captain_vice")
+        if (
+            expected is None or actual is None
+            or abs(float(expected) - float(actual)) > 1e-5
+        ):
+            raise WhatIfMCError("P1.7 3-4-3 exact numerical winner drift")
+        bench = full.get("bench") or {}
+        cvc = full.get("captain_vice") or {}
+        route = {
+            "gw": int(gw),
+            "starting_xi": [int(x["element"]) for x in full["starters"]],
+            "bench_order": [int(x) for x in bench.get("order") or []],
+            "bench_gk": int((bench.get("reserve_gk") or {}).get("element") or 0),
+            "captain": int(cvc.get("captain_element") or 0),
+            "vice_captain": int(cvc.get("vice_element") or 0),
+        }
+
+    xi = [int(x) for x in route.get("starting_xi") or []]
+    order = [int(x) for x in route.get("bench_order") or []]
+    gk = int(route.get("bench_gk") or 0)
+    captain = int(route.get("captain") or 0)
+    vice = int(route.get("vice_captain") or 0)
+    if len(xi) != 11 or len(order) != 3 or set(xi) != ids:
+        raise WhatIfMCError("3-4-3 MC route differs from P1.7 formation XI")
+    if len(set(xi + order + [gk])) != 15:
+        raise WhatIfMCError("3-4-3 MC route loses XI/bench partition")
+    if captain not in xi or vice not in xi or captain == vice:
+        raise WhatIfMCError("3-4-3 MC captain/vice illegal")
+    return {
+        "gw": int(gw), "starting_xi": xi, "bench_order": order,
+        "bench_gk": gk, "captain": captain, "vice_captain": vice,
+    }
+
+
 def run_forward_mc(
     config: Mapping[str, Any],
     warm: Mapping[str, Any],
     *,
     optimizer: Callable[..., dict[str, Any]] | None = None,
     simulator: Callable[..., dict[str, Any]] | None = None,
+    formation_materializer: Callable[..., dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     if warm.get("schema") != "FPL_MASTER_V12_PRIVATE_WARM_STATE_V1":
         raise WhatIfMCError("private canonical warm state required")
@@ -80,12 +154,17 @@ def run_forward_mc(
 
     definitions: list[dict[str, Any]] = []
     p17_rows = {}
+    forced_343: dict[str, list[dict[str, Any]]] = {}
     for forward, route_id in zip(FORWARDS, ("HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO")):
         ids = [forward if x == FORWARDS[0] else x for x in owned]
         per_gw = []
+        forced_343[route_id] = []
         for offset in range(5):
             lineup = optimizer(projections, sorted(ids), planning_gw=gw + offset)
             per_gw.append(_lineup_route(lineup, gw + offset))
+            forced_343[route_id].append(_forced_343_route(
+                lineup, gw + offset, materializer=formation_materializer,
+            ))
             if offset == 0:
                 rows = [dict(x) for x in lineup.get("formation_comparison") or []]
                 if len(rows) != 8 or len({x.get("formation") for x in rows}) != 8:
@@ -103,6 +182,25 @@ def run_forward_mc(
             "execution_cost_points": 0.0,
             "execution_cost_status": "HOLD_ZERO" if forward == FORWARDS[0] else "UNAVAILABLE_NOT_APPLIED",
             "decision_net_supported": forward == FORWARDS[0],
+        })
+
+    # Explicit formation-fixed MC routes: do not reuse the MC result of an
+    # optimized XI for the distinct P1.7 3-4-3 winner.
+    for route_id in ("HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO"):
+        is_hold = route_id == "HOLD"
+        definitions.append({
+            "route_id": route_id + "_343",
+            "classification": (
+                "FORMATION_343_WHAT_IF" if is_hold
+                else "FORWARD_SWAP_FORMATION_343_WHAT_IF"
+            ),
+            "per_gw": forced_343[route_id],
+            "execution_cost_points": 0.0,
+            "execution_cost_status": (
+                "FORMATION_CHANGE_ZERO" if is_hold
+                else "UNAVAILABLE_NOT_APPLIED"
+            ),
+            "decision_net_supported": is_hold,
         })
 
     # Paired event-world captain challenger on the SAME P1.7 HOLD lineup.
@@ -171,6 +269,8 @@ def run_forward_mc(
         "mc_paths_each_route": MC_PATHS,
         "mc_seed": seed,
         "mc_output_fingerprint": mc.get("output_fingerprint"),
+        "mc_fixed_formation": "3-4-3",
+        "mc_fixed_formation_route_ids": ["HOLD_343", "DCL_TO_BARRY_343", "DCL_TO_GONZALO_343"],
         "mc_route_metrics": {
             route["route_id"]: metrics[route["route_id"]]
             for route in definitions

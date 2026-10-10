@@ -129,6 +129,14 @@ def build_stagec_report_surface(
     return {
         "contract": "V12_STAGEC_DEEP_SUBSECTIONS_V1",
         "full_universe_count": scan.get("full_universe_count"),
+        "official_universe_count": scan.get("official_universe_count"),
+        "official_eligible_count": scan.get("official_eligible_count"),
+        "scanned_count": scan.get("scanned_count"),
+        "official_coverage_state": scan.get("official_coverage_state", "UNVERIFIED"),
+        "official_coverage_ratio": scan.get("official_coverage_ratio"),
+        "coverage_reason_codes": list(scan.get("coverage_reason_codes") or []),
+        "position_counts": dict(scan.get("position_counts") or {}),
+        "screening_reason_counts": dict(scan.get("screening_reason_counts") or {}),
         "material_candidate_count": scan.get("material_candidate_count"),
         "render_limit_per_section": limit,
         "subsections": surface,
@@ -190,7 +198,10 @@ def render_stagec_deep_lines(surface: Mapping[str, Any] | None) -> list[str]:
         "### STAGE C — UNIVERSE-WIDE ANALYTICS",
         (
             "Coverage: "
-            f"{payload.get('full_universe_count', 'UNAVAILABLE')} players scanned | "
+            f"official {payload.get('official_universe_count', 'UNAVAILABLE')} | "
+            f"eligible {payload.get('official_eligible_count', 'UNAVAILABLE')} | "
+            f"scanned {payload.get('scanned_count', payload.get('full_universe_count', 'UNAVAILABLE'))} | "
+            f"coverage {payload.get('official_coverage_state', 'UNVERIFIED')} | "
             f"material {payload.get('material_candidate_count', 'UNAVAILABLE')} | "
             f"render cap {payload.get('render_limit_per_section', 'UNAVAILABLE')}/subsection"
         ),

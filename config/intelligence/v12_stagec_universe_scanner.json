@@ -1,6 +1,6 @@
 {
   "contract": "V12_STAGEC_UNIVERSE_SCANNER_V1",
-  "feature_default_enabled": false,
+  "feature_default_enabled": true,
   "material_render_limit_per_section": 5,
   "minimum_sample_confidence": 0.45,
   "signal_thresholds": {

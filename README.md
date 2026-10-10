@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T05:07:19+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T05:28:21+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -30,6 +30,11 @@ If authenticated personal refresh fails but the exact-occurrence public V6 snaps
 Injury and availability evidence is target-aware and claim-aware. Raw and normalized claims, polarity, training or appearance evidence, manager assessment, target GW or fixture, timestamps and evidence cutoff remain provenance fields; FPL 50%/75% flags are observations, never medical or start probabilities.
 
 Captain distributions now have an optional calibrated goalkeeper event layer and one shared-world C/VC simulation of exactly 500,000 paths. Missing goalkeeper calibration remains explicitly unavailable; no captain winner or goalkeeper event probability is hardcoded.
+
+
+### Stage C full-universe scanner (11 Oct 2026)
+
+Stage C is enabled for canonical DEEP candidate discovery by the `feature_default_enabled` configuration default; `V12_STAGEC_SCANNER_ENABLED=0` is the deliberate emergency override. The Stage A multiwindow / Stage B shadow / Stage C pipeline scans the full projection input, reconciles unique projection IDs against Official FPL `bootstrap.elements`, and records the Official denominator, eligible denominator, missing/duplicate/unrecognized IDs, position coverage and screening reason codes. Missing or partial evidence is reported as `DEGRADED` rather than claiming full universe coverage. The scanner contributes bounded, provenance-aware candidate intelligence under S04 and route context, not a second Watchlist20 score, transfer authority, P1.7, or Monte Carlo engine. An actual production PASS still requires an occurrence-bound DEEP execution proof, 20-row S11, canonical 500K Monte Carlo, private delivery receipt and matching latest pointer; passing CI is not that proof.
 
 ## Reports
 

@@ -76,11 +76,17 @@ def select_personal_evidence(
         )
         authenticated = auth_state == "AUTH_AVAILABLE"
         previous_gw = gw is not None and gw < planning_gw
+        public_submitted_current = bool(
+            source_class == "OFFICIAL_SUBMITTED_PICKS"
+            and auth_state == "PUBLIC_OFFICIAL"
+            and gw == planning_gw
+        )
         current_semantic = bool(
             exact15
             and (
                 user_current
                 or authenticated
+                or public_submitted_current
             )
         )
         normalized.append({

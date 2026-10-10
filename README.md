@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T20:47:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T21:16:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -30,6 +30,9 @@ Injury and availability evidence is target-aware and claim-aware. Raw and normal
 Captain distributions now have an optional calibrated goalkeeper event layer and one shared-world C/VC simulation of exactly 500,000 paths. Missing goalkeeper calibration remains explicitly unavailable; no captain winner or goalkeeper event probability is hardcoded.
 
 ## Reports
+
+MATCH public-first recovery: the canonical V12 runner previously accepted DEEP/PRICE only and rejected governed MATCH requests before creating report artifacts. An isolated MATCH adapter now consumes exact-occurrence Official FPL V6 submitted picks (11 XI, 4 bench), GW live points, all 58 ICON+ managers, and displays the 13 locked MATCH sections including fixture scores, MATCH10 exposure and MATCH13 source status. Auth-only bank/FT/purchase/selling values remain unavailable on AUTH_EXPIRED; provisional gross scores are explicitly not verified net league ranks until transfer hit/autosub authority is complete. No private session, P1.7, MC 500K, chip ledger, or scheduler behavior changes.
+
 
 S06 mobile pitch displays the entire already-calculated **CURRENT15** P1.7 formation frontier (including 3-4-3 where a legal canonical row exists), not only two leading routes. Formation xPts remain unchanged. Missing rows are explicitly labelled unavailable. DCL→Barry and DCL→Gonzalo are roster-transfer scenarios **not computed** by the S06 presentation change; each still requires validated finance, legality, canonical lineup optimization and full 500K MC before any recommendation. GW6 team news from 20 clubs and 113 player signals is ingested as bounded secondary evidence via the existing P1.1 adapter. V6 facts and P1.7 decision ownership are unchanged.
 

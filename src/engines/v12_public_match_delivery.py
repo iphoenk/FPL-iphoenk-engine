@@ -10,7 +10,7 @@ private current-team state, optimizer XI, or new Monte Carlo path are consulted.
 import argparse
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -64,7 +64,7 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
     league = int(pref.get("priority_league_id") or 0)
     if gw < 1 or entry < 1 or league < 1:
         raise PublicMatchError("MATCH_PUBLIC_IDENTITY_INCOMPLETE")
-    if _instant(pref.get("generated_at")) < _instant(slot) - __import__("datetime").timedelta(minutes=35):
+    if _instant(pref.get("generated_at")) < _instant(slot) - timedelta(minutes=35):
         raise PublicMatchError("MATCH_PREFETCH_STALE")
     base = public / "mini_leagues" / str(league)
     members = _read(base / f"gw_{gw}_manager_picks.json")
@@ -79,7 +79,6 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
     )
     if (
         expected < 1
-        or (gw == 6 and league == 9477 and expected != 58)
         or members.get("gw") != gw
         or members.get("complete") is not True
         or int(members.get("expected_manager_count") or 0) != expected
@@ -92,7 +91,7 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
         or event.get("authority") != "OFFICIAL_FPL"
     ):
         raise PublicMatchError("MATCH_PUBLIC_58_OR_LIVE_INCOMPLETE")
-    if _instant(event.get("checked_at")) < _instant(slot) - __import__("datetime").timedelta(minutes=35):
+    if _instant(event.get("checked_at")) < _instant(slot) - timedelta(minutes=35):
         raise PublicMatchError("MATCH_LIVE_STALE")
     own = entries.get(str(entry)) or {}
     picks = list(own.get("picks") or [])

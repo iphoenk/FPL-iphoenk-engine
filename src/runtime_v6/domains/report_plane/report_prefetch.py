@@ -28,6 +28,7 @@ from .prefetch_contract import (
     DEFAULT_CONFIG,
     DEFAULT_OUTPUT,
     REPORT_KINDS,
+    SCHEMA_VERSION,
     PrefetchContractError,
     artifact_meta,
     bootstrap_index,

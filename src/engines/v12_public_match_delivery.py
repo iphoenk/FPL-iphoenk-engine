@@ -141,7 +141,7 @@ def _bootstrap(root: Path, gw: int) -> dict[str, Any]:
     }
 
 
-def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any], event: dict[str, Any], slot: str) -> dict[str, Any]:
     picks = (members["entries"][str(entry)]).get("picks") or []
     fixtures = _read(root / "data/v6/normalized/canonical_fixtures.json").get("fixtures") or []
     official = _read(root / "data/v6/current/official_fpl.json").get("official") or {}
@@ -149,8 +149,16 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
         int(row.get("id")): row for row in official.get("fixtures") or []
         if isinstance(row, dict) and row.get("id") is not None
     }
+    match_path = root / f"data/v6/report_prefetch/official_match_gw_{gw}.json"
+    fresh_match = _read(match_path) if match_path.is_file() else {}
+    match_api_fresh = (
+        fresh_match.get("status") == "AVAILABLE"
+        and fresh_match.get("gw") == gw
+        and bool(fresh_match.get("fixtures"))
+        and _instant(fresh_match["generated_at"]) >= _instant(slot) - timedelta(minutes=35)
+    ) if fresh_match else False
     matches = []
-    for row in fixtures:
+    for row in ([] if match_api_fresh else fixtures):
         if int(row.get("event") or 0) != gw:
             continue
         fixture = dict(row)
@@ -160,9 +168,13 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
             if key in raw:
                 fixture[key] = raw[key]
         matches.append(fixture)
+    if match_api_fresh:
+        matches = [dict(row) for row in fresh_match["fixtures"]
+                   if int(row.get("event") or 0) == gw]
     bootstrap = _bootstrap(root, gw)
     official_bootstrap = official.get("bootstrap") or {}
-    event_meta = next(
+    event_meta = fresh_match.get("event_meta") if match_api_fresh else None
+    event_meta = event_meta or next(
         (row for row in official_bootstrap.get("events") or [] if int(row.get("id") or 0) == gw),
         None,
     )
@@ -171,7 +183,8 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
     return {
         "bootstrap": bootstrap,
         "phase": {"scoring_gw": gw},
-        "event_status": official.get("event_status") or {},
+        "event_status": fresh_match.get("event_status") if match_api_fresh else official.get("event_status") or {},
+        "match_api_fresh": match_api_fresh,
         "fixtures": matches,
         "picks": {
             "picks": [
@@ -366,7 +379,7 @@ def _exposure(
 def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str, Any]:
     gw, entry, pref, members, standings, event = _validated_inputs(runtime_data_root, report_slot)
     output_dir.mkdir(parents=True, exist_ok=True)
-    canonical_snapshot = _official_snapshot(runtime_data_root, gw, entry, members, event)
+    canonical_snapshot = _official_snapshot(runtime_data_root, gw, entry, members, event, report_slot)
     input_file = output_dir / ".match-public-input.json"
     input_file.write_text(json.dumps(canonical_snapshot), encoding="utf-8")
     live_state_service.OFFICIAL = input_file
@@ -450,12 +463,17 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         raise PublicMatchError("MATCH_13_SECTION_RENDER_CONTRACT_FAILED")
     if "## MATCH 10" not in body or "58/58" not in body or "## MATCH 13" not in body:
         raise PublicMatchError("MATCH10_OR_MATCH13_REAL_CONTENT_MISSING")
-    public_complete = icon.get("status") == "COMPLETE" and live.get("net_points") is not None
+    public_complete = (
+        icon.get("status") == "COMPLETE"
+        and live.get("net_points") is not None
+        and canonical_snapshot.get("match_api_fresh") is True
+    )
     state = "PASS" if public_complete else "DEGRADED"
     pending = [r for r in ("HITS", "AUTOSUB", "PROVISIONAL_LIVE_RANK") if
                (r == "HITS" and live.get("hit") is None)
                or (r == "AUTOSUB" and our_calculation.get("autosub_state") == "PENDING")
-               or (r == "PROVISIONAL_LIVE_RANK" and icon.get("status") != "COMPLETE")]
+               or (r == "PROVISIONAL_LIVE_RANK" and (icon.get("status") != "COMPLETE"
+                                                    or not canonical_snapshot.get("match_api_fresh")))]
     proof = {
         "schema_version": 2, "runner": "V12_PUBLIC_MATCH_DELIVERY",
         "report_mode": "MATCH", "report_slot": report_slot, "planning_gw": gw,
@@ -466,6 +484,7 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         "manager_coverage": n if (n := len(members["entries"])) else 0,
         "public_auth_independent": True, "authenticated_finance_claimed": False,
         "live_checked_at": event.get("checked_at"), "prefetch_identity": pref.get("report_prefetch_run_id"),
+        "official_match_api_fresh": canonical_snapshot.get("match_api_fresh"),
         "unverified_scopes": pending,
         "stages": [{"stage": "MATCH_PUBLIC_FACTS", "status": "PASS"},
                    {"stage": "MATCH13_RENDER", "status": "PASS"},

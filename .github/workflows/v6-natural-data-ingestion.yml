@@ -740,6 +740,14 @@ jobs:
           )
           PY
           fi
+          # Safe classification only: never print token, cookie or private payload.
+          V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          status = json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text())
+          print("PRIVATE_PERSONAL_REFRESH_AUTH_STATE=" + str(status.get("auth_state") or "UNAVAILABLE"))
+          PY
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \
@@ -755,7 +763,9 @@ jobs:
           manifest = json.loads((root / "data/v6/report_prefetch/latest.json").read_text())
           refresh_status = json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text())
           saved_personal = Path(os.environ["V6_SAVED_PRIVATE_PERSONAL"])
-          team = json.loads((saved_personal / "current_team.json").read_text())
+          # private_boundary moves the freshly fetched personal artifact here.
+          # Saved snapshot is fallback only, never auth validator input.
+          team = json.loads((Path("private-reports/personal") / "current_team.json").read_text())
           def fail(message):
               raise SystemExit(message)
           def instant(value):

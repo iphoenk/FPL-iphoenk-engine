@@ -16,6 +16,18 @@ from typing import Any, Mapping
 
 ROOT = Path(__file__).resolve().parents[2]
 INPUT_PATH = ROOT / "config/intelligence/gw6_owner_transfer_matrix.json"
+HALL_ADDENDUM_PATH = ROOT / "config/intelligence/gw6_hall_candidate.json"
+
+
+def _hall_candidate() -> dict[str, Any]:
+    payload = json.loads(HALL_ADDENDUM_PATH.read_text(encoding="utf-8"))
+    if payload.get("contract") != "GW6_OWNER_HALL_PRICE_ADDENDUM_V1":
+        raise ValueError("invalid public Hall addendum contract")
+    player = dict(payload["player"])
+    if (int(player["element_id"]), int(player["element_type"]), int(player["team_id"])) != (449, 2, 17):
+        raise ValueError("Hall candidate identity mismatch")
+    return player
+
 
 
 def _players_by_id(items: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -45,6 +57,8 @@ def build_matrix(config: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("unexpected transfer matrix contract")
     owned = _players_by_id(list(config["owned"]))
     candidates = _players_by_id(list(config["candidates"]))
+    hall = _hall_candidate()
+    candidates[int(hall["element_id"])] = hall
     lookup = {**owned, **candidates}
     if len(owned) != 15:
         raise ValueError("exact 15 owned players required")

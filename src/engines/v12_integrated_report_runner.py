@@ -134,10 +134,16 @@ SUPPORTED_MODES = {"DEEP", "PRICE"}
 
 
 def _stagec_scanner_enabled() -> bool:
+    # A single declared default, with a deliberate emergency override.
+    from src.models.v12_stagec_universe_scanner import load_config
+
     raw = os.getenv("V12_STAGEC_SCANNER_ENABLED")
     if raw is None:
-        return True
-    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+        return load_config().get("feature_default_enabled") is True
+    normalized = str(raw).strip().lower()
+    if normalized not in {"1", "true", "yes", "on", "0", "false", "no", "off"}:
+        raise ValueError("invalid V12_STAGEC_SCANNER_ENABLED override")
+    return normalized in {"1", "true", "yes", "on"}
 
 
 class IntegratedRunnerError(RuntimeError):
@@ -8318,7 +8324,8 @@ def run_deep(
         "state": "DISABLED",
         "claims": [],
     }
-    if _stagec_scanner_enabled():
+    stagec_runtime_enabled = _stagec_scanner_enabled()
+    if stagec_runtime_enabled:
         from src.engines.v12_stagec_reporting import (
             build_stagec_report_surface,
         )
@@ -8337,6 +8344,17 @@ def run_deep(
             season=str((foundation or {}).get("season") or "") or None,
         )
         stagec_scan = dict(stagec_bundle.get("scan") or {})
+        stagec_coverage_pass = stagec_scan.get("official_coverage_state") == "COMPLETE"
+        ledger.append({
+            "stage": "STAGEC_UNIVERSE_SCAN",
+            "status": "PASS" if stagec_coverage_pass else "DEGRADED",
+            "required": False,
+            "official_universe_count": stagec_scan.get("official_universe_count"),
+            "official_eligible_count": stagec_scan.get("official_eligible_count"),
+            "scanned_count": stagec_scan.get("scanned_count"),
+            "coverage_reason_codes": list(stagec_scan.get("coverage_reason_codes") or []),
+            "candidate_generation_only": True,
+        })
         stagec_external_input = load_external_claims_input(as_of=report_slot)
         stagec_external = build_external_challenge_layer(
             stagec_external_input.get("claims") or [],
@@ -9394,6 +9412,29 @@ def run_deep(
         "stage3_guard_failures": list(stage3_guard_failures),
         "stage3_action": operational_action,
         "stage3_required_stages": sorted(stage3_required_stage_names),
+        "stagec_universe": {
+            "enabled": stagec_runtime_enabled,
+            "status": (
+                "PASS" if stagec_runtime_enabled
+                and stagec_scan.get("official_coverage_state") == "COMPLETE"
+                else "DEGRADED" if stagec_runtime_enabled else "DISABLED"
+            ),
+            "official_universe_count": stagec_scan.get("official_universe_count"),
+            "official_eligible_count": stagec_scan.get("official_eligible_count"),
+            "scanned_count": stagec_scan.get("scanned_count"),
+            "unique_scanned_count": stagec_scan.get("unique_scanned_count"),
+            "official_coverage_ratio": stagec_scan.get("official_coverage_ratio"),
+            "official_coverage_state": stagec_scan.get("official_coverage_state"),
+            "coverage_reason_codes": list(stagec_scan.get("coverage_reason_codes") or []),
+            "screening_reason_counts": dict(stagec_scan.get("screening_reason_counts") or {}),
+            "position_counts": dict(stagec_scan.get("position_counts") or {}),
+            "signal_counts": dict(stagec_scan.get("signal_counts") or {}),
+            "material_candidate_count": stagec_scan.get("material_candidate_count"),
+            "hidden_gem_count": stagec_scan.get("hidden_gem_count"),
+            "candidate_generation_only": True,
+            "canonical_projection_mutated": False,
+            "optimizer_decision_owner": False,
+        },
         "stage2_derived_cache": deepcopy(stage2_cache_proof),
         "p4_scenario_override": {
             "applied": bool(scenario_overrides),

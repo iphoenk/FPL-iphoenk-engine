@@ -708,7 +708,21 @@ jobs:
             echo "PRIVATE_PERSONAL_REFRESH=FAIL (report prefetch did not complete)"
             exit "$rc"
           fi
-          V6_REFRESHED_TEAM_PATH="$work/data/v6/personal/current_team.json" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
+          refreshed_team="$work/data/v6/personal/current_team.json"
+          if [[ ! -s "$refreshed_team" ]]; then
+            # A bearer-token refresh can terminate without a personal artifact
+            # when FPL rejects or expires the credential. Preserve the public
+            # occurrence and use only the previously validated private snapshot.
+            # The snapshot remains explicitly unauthenticated/stale for finance
+            # and chip authority; it must never be promoted to AUTH_AVAILABLE.
+            mkdir -p "$work/data/v6/personal"
+            cp "$saved_personal/current_team.json" "$refreshed_team"
+            cat >"$refresh_status" <<'JSON'
+{"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"SAVED_VALIDATED_SNAPSHOT"}
+JSON
+            echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK"
+          else
+          V6_REFRESHED_TEAM_PATH="$refreshed_team" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
           import json
           import os
           from pathlib import Path
@@ -725,6 +739,7 @@ jobs:
               json.dumps(status, sort_keys=True), encoding="utf-8"
           )
           PY
+          fi
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \
@@ -777,15 +792,36 @@ jobs:
               fail("private personal team identity mismatch")
           if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
               fail("private personal artifact must contain 15 unique canonical element IDs")
-          if refresh_auth_state == "AUTH_EXPIRED":
-              # The fresh run explicitly classified /me as expired. Keep the
-              # previously saved, validated team unchanged for stale-snapshot use.
+          if refresh_auth_state in {"AUTH_EXPIRED", "AUTH_UNAVAILABLE"}:
+              # The fresh run did not produce authenticated personal evidence.
+              # Keep the previously saved, validated team unchanged for
+              # stale-snapshot use and retain degraded auth semantics.
               if generated >= slot or generated > now + timedelta(minutes=2):
                   fail("saved personal snapshot is not older than the expired-auth refresh")
               live_personal = Path("private-reports/personal")
               shutil.rmtree(live_personal)
               shutil.copytree(saved_personal, live_personal)
-              print("PRIVATE_PERSONAL_REFRESH=AUTH_EXPIRED_SAVED_SNAPSHOT_FALLBACK")
+              current = live_personal / "current_team.json"
+              snapshot = json.loads(current.read_text(encoding="utf-8"))
+              snapshot["auth_state"] = "AUTH_UNAVAILABLE"
+              availability = dict(snapshot.get("availability") or {})
+              availability.update({
+                  "authenticated_state": "AUTH_UNAVAILABLE",
+                  "bank": "UNAVAILABLE",
+                  "chips": "UNAVAILABLE",
+                  "purchase_price": "UNAVAILABLE",
+                  "selling_price": "UNAVAILABLE",
+              })
+              snapshot["availability"] = availability
+              snapshot["bank"] = None
+              snapshot["chips"] = []
+              snapshot["governance"] = {
+                  **dict(snapshot.get("governance") or {}),
+                  "auth_bypass_used": True,
+                  "stale_snapshot_fallback": True,
+              }
+              current.write_text(json.dumps(snapshot, sort_keys=True), encoding="utf-8")
+              print("PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK")
               raise SystemExit(0)
           if auth_state != "AUTH_AVAILABLE":
               fail("authoritative personal authentication is unavailable")

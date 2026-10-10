@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T20:47:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T21:37:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -147,3 +147,7 @@ valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
 
 
 Public Official FPL submitted picks, live data, and mini-league evidence are independent from authenticated personal enrichment. When private authentication is expired, public MATCH delivery continues with explicit unavailable finance fields; authenticated bank, free transfers, purchase prices, and selling values are never derived from public data.
+
+### P0 MATCH public-first recovery (10 October 2026)
+
+MATCH reports use immutable current-GW Official FPL submitted picks (15/15) and current Official FPL live player points; an expired private credential cannot override the locked team. The governed V6 exact match-mode prefetch binds ICON+ league 9477 manager and picks coverage. MATCH1..MATCH13 have their own delivery catalog rather than DEEP sections. The public bridge emits truthful READY_DEGRADED and withholds provisional live rank or net score until transfer hits, automatic substitutions and league tie-break rules are verified. Authenticated bank, free transfers, buying and selling prices remain unavailable when FPL auth is expired. This P0 continuity repair is not evidence of FULL GREEN until CI, live acceptance and private report receipt are verified.

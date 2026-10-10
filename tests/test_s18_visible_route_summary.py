@@ -81,3 +81,23 @@ def test_s18_missing_route_fields_are_not_invented():
     assert "| Incoming | UNAVAILABLE |" in visible
     assert "| 1GW net delta (pts) | UNAVAILABLE |" in visible
     assert "| Executable | UNAVAILABLE |" in visible
+
+
+def test_s18_captain_surface_distinguishes_canonical_and_provisional_priority():
+    visible = _render({
+        "axes": [{"axis": "CAPTAIN", "NOW": "PREPARE", "NEXT": "verify"}],
+        "captain_decision": {
+            "captain": {"player": "Tzolakis"},
+            "vice_captain": {"player": "Bruno Fernandes"},
+            "recommended_captain": {"player": "Bruno Fernandes"},
+            "recommended_vice_captain": {"player": "Erling Haaland"},
+            "decision_state": "PREPARE",
+            "recommendation_status": "PROVISIONAL_PRIORITY",
+            "frontier_classification": "CLOSE",
+        },
+        "best_alternative": None,
+    })
+    assert "Canonical C/VC: Tzolakis / Bruno Fernandes" in visible
+    assert "Priority C/VC: Bruno Fernandes / Erling Haaland" in visible
+    assert "state PREPARE" in visible
+    assert "not executable unless LOCK" in visible

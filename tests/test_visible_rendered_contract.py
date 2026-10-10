@@ -57,3 +57,74 @@ def test_match_scout_nested_values_are_not_python_repr():
     body = "\n".join(_render_match_scout_lines([{"fixture_id": 1, "result": {"state": "DRAW"}}]))
     assert "RESULT: state=DRAW" in body
     assert "{'state'" not in body
+
+
+def test_s05_renders_readable_fixture_cards_instead_of_raw_fixture_objects():
+    from src.engines.v12_report_orchestration import _render_deep_visible_contract_lines
+
+    lines, _ = _render_deep_visible_contract_lines(
+        section_id="S05",
+        content={
+            "gw_topology": "NORMAL_GW",
+            "fixtures_display": [
+                {
+                    "fixture_id": 51,
+                    "match": "Arsenal vs Leeds",
+                    "home_team": "Arsenal",
+                    "away_team": "Leeds",
+                    "home_away": "H",
+                    "kickoff_wib": "10 Oct 2026, 18:30 WIB",
+                    "fixture_status": "NOT STARTED",
+                    "rest_days": "UNAVAILABLE",
+                    "venue": "Emirates Stadium",
+                    "venue_status": "VERIFIED",
+                    "weather": "LOW",
+                    "weather_state": "FORECAST",
+                    "weather_freshness": "FRESH",
+                    "weather_fixture_id": 51,
+                    "weather_kickoff": "2026-10-10T11:30:00+00:00",
+                }
+            ],
+            "fixtures": [{"id": 51, "team_h": 1, "team_a": 13}],
+            "competition_coverage": {},
+            "player_workload": [],
+            "weather": [],
+        },
+        owned_ids=set(),
+        owned_names={},
+    )
+    body = "\n".join(lines)
+    assert "Arsenal vs Leeds" in body
+    assert "Emirates Stadium" in body
+    assert "| Fixture | Match | Sides | Kickoff (WIB) | Rest days | Venue | Status | Weather |" in body
+    assert "{'id': 51" not in body
+    assert "fixture id=51" not in body
+
+
+def test_s06_requires_canonical_pitch_and_separate_bench_surface():
+    from src.engines.v12_report_orchestration import _render_deep_visible_contract_lines
+
+    xi = [
+        {"name": "FWD One", "position": "FWD"},
+        {"name": "MID One", "position": "MID", "is_captain": True},
+        {"name": "MID Two", "position": "MID", "is_vice_captain": True},
+        {"name": "DEF One", "position": "DEF"},
+        {"name": "GK One", "position": "GK"},
+    ]
+    lines, _ = _render_deep_visible_contract_lines(
+        section_id="S06",
+        content={
+            "formation": "1-1-2-1",
+            "starting_xi": xi,
+            "bench": {"bench_gk": {"name": "GK Bench"}, "outfield_autosub_priority": [{"name": "Bench 1"}]},
+            "xi_base_xpts": 50.0,
+            "captain_adjusted_xpts": 55.0,
+        },
+        owned_ids=set(),
+        owned_names={},
+    )
+    body = "\n".join(lines)
+    assert "s06-pitch" in body
+    assert "GK Bench" in body
+    assert "Bench 1" in body
+    assert "captain-adjusted xPts" in body

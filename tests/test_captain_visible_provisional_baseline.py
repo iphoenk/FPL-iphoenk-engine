@@ -31,6 +31,52 @@ def test_s08_prepare_labels_gk_as_provisional_baseline():
     assert "Attacking captain review alternative: B.Fernandes" in body
 
 
+def test_s08_prepare_exposes_computed_priority_without_relabeling_canonical_pair():
+    body = _visible("S08", {
+        "captain": {"player": "Tzolakis"},
+        "vice_captain": {"player": "B.Fernandes"},
+        "recommended_captain": {"player": "B.Fernandes"},
+        "recommended_vice_captain": {"player": "Haaland"},
+        "decision_state": "PREPARE",
+    })
+    assert "Recommended C priority: B.Fernandes" in body
+    assert "Recommended VC priority: Haaland" in body
+    assert "Current C baseline: Tzolakis" in body
+    assert "state PREPARE" in body
+
+
+def test_s08_provisional_vice_uses_review_pair_not_highest_forward_fallback(monkeypatch):
+    from src.engines import v12_integrated_report_runner as runner
+
+    rows = [
+        {"element_id": 1, "player": "Bruno Fernandes", "position": "MID", "expected_points": 6.0},
+        {"element_id": 2, "player": "Erling Haaland", "position": "FWD", "expected_points": 7.0},
+        {"element_id": 3, "player": "Other Forward", "position": "FWD", "expected_points": 8.0},
+        {"element_id": 4, "player": "Tzolakis", "position": "GK", "expected_points": 5.0},
+    ]
+    monkeypatch_decision = {
+        "decision_state": "PREPARE", "classification": "CLOSE",
+        "captain": rows[3], "vice_captain": rows[0], "football_leader": rows[3],
+        "profiles": rows, "frontier": rows,
+        "review_pair": {"captain": rows[0], "vice_captain": rows[1]},
+    }
+    monkeypatch.setattr(runner, "decide_captain_vice", lambda *args, **kwargs: monkeypatch_decision)
+    surface = runner._captain_decision_surface(
+        owned=rows,
+        lineup={
+            "starting_xi": rows,
+            "captain": rows[3],
+            "vice_captain": rows[0],
+        },
+        lineup_state="COMPLETE",
+        mini_detail={},
+        projections={},
+    )
+    assert surface["recommended_captain"]["player"] == "Bruno Fernandes"
+    assert surface["recommended_vice_captain"]["player"] == "Erling Haaland"
+    assert surface["recommendation_status"] == "PROVISIONAL_PRIORITY"
+
+
 def test_s19_prepare_never_presents_gk_as_final_recommendation():
     body = _visible("S19", {
         "final_judgement": {
@@ -45,6 +91,22 @@ def test_s19_prepare_never_presents_gk_as_final_recommendation():
     assert "Captain baseline: Tzolakis (PREPARE)" in body
     assert "Vice baseline: B.Fernandes" in body
     assert "Captain attacking review candidate: B.Fernandes" in body
+
+
+def test_s19_prepare_exposes_priority_pair_as_non_executable():
+    body = _visible("S19", {
+        "final_judgement": {
+            "transfer_action": "WAIT",
+            "final_captain": {"player": "Tzolakis"},
+            "vice": {"player": "B.Fernandes"},
+            "recommended_captain": {"player": "B.Fernandes"},
+            "recommended_vice": {"player": "Haaland"},
+            "captain_state": "PREPARE",
+        }
+    })
+    assert "Recommended C priority: B.Fernandes" in body
+    assert "Recommended VC priority: Haaland" in body
+    assert "not executable" in body.lower()
 
 
 def test_locked_captain_does_not_get_provisional_warning():

@@ -96,7 +96,10 @@ from src.engines.v12_tactical_role import attach_tactical_role_scores
 from src.engines.v12_stage2_derived_cache import (
     load_or_build_stage2_projections,
 )
-from src.engines.v12_s05_binding import build_report_time_s05_inputs
+from src.engines.v12_s05_binding import (
+    build_fixture_display_rows,
+    build_report_time_s05_inputs,
+)
 from src.engines.v12_s16b_lifecycle import (
     resolve_s16b_context,
     state_after_occurrence,
@@ -4124,6 +4127,21 @@ def _captain_decision_surface(
             "candidate is allowed outside the football frontier."
         )
 
+    review_pair = dict(decision.get("review_pair") or {})
+    review_captain = dict(review_pair.get("captain") or {})
+    recommended_captain = (
+        review_captain
+        if decision_state == "PREPARE" and review_captain
+        else dict(captain)
+    )
+    recommended_captain_id = _surface_element(recommended_captain)
+    review_vice = dict(review_pair.get("vice_captain") or {})
+    recommended_vice = (
+        review_vice
+        if decision_state == "PREPARE" and review_pair and review_vice
+        else dict(vice)
+    )
+
     return {
         "decision_state": decision_state,
         "captain": captain,
@@ -4133,7 +4151,12 @@ def _captain_decision_surface(
         "captain_frontier": decorated_frontier,
         "captain_profiles": decorated_profiles,
         "pairwise_captain_comparison": list(decision.get("pairwise") or []),
-        "review_pair": dict(decision.get("review_pair") or {}),
+        "review_pair": review_pair,
+        "recommended_captain": decorate(recommended_captain),
+        "recommended_vice_captain": decorate(recommended_vice),
+        "recommendation_status": (
+            "EXECUTABLE_LOCK" if decision_state == "LOCK" else "PROVISIONAL_PRIORITY"
+        ),
         "competitive_context": dict(
             decision.get("competitive_context") or {}
         ),
@@ -4258,6 +4281,15 @@ def _final_judgement_surface(
             "element_id": captain.get("element_id"),
             "player": captain.get("player"),
         },
+        "recommended_captain": {
+            "element_id": (captain_surface.get("recommended_captain") or {}).get("element_id"),
+            "player": (captain_surface.get("recommended_captain") or {}).get("player"),
+        },
+        "recommended_vice": {
+            "element_id": (captain_surface.get("recommended_vice_captain") or {}).get("element_id"),
+            "player": (captain_surface.get("recommended_vice_captain") or {}).get("player"),
+        },
+        "recommendation_status": captain_surface.get("recommendation_status"),
         "captain_state": captain_surface.get("decision_state"),
         # S19 consumes the S08 position-neutral frontier; it does not rank
         # candidates again or create a separate captain decision authority.
@@ -6114,6 +6146,10 @@ def refresh_price_only_state(
     action_board["captain_decision"] = {
         "captain": dict(captain_surface.get("captain") or {}),
         "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "recommended_captain": dict(captain_surface.get("recommended_captain") or {}),
+        "recommended_vice_captain": dict(captain_surface.get("recommended_vice_captain") or {}),
+        "decision_state": captain_surface.get("decision_state"),
+        "recommendation_status": captain_surface.get("recommendation_status"),
         "football_leader": dict(captain_surface.get("football_leader") or {}),
         "frontier_classification": captain_surface.get(
             "football_frontier_classification"
@@ -6817,6 +6853,10 @@ def refresh_mini_league_only_state(
     action_board["captain_decision"] = {
         "captain": dict(captain_surface.get("captain") or {}),
         "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "recommended_captain": dict(captain_surface.get("recommended_captain") or {}),
+        "recommended_vice_captain": dict(captain_surface.get("recommended_vice_captain") or {}),
+        "decision_state": captain_surface.get("decision_state"),
+        "recommendation_status": captain_surface.get("recommendation_status"),
         "football_leader": dict(captain_surface.get("football_leader") or {}),
         "frontier_classification": captain_surface.get(
             "football_frontier_classification"
@@ -7759,6 +7799,12 @@ def run_deep(
             "weather_forecast_horizon_hours"
         ),
     )
+    calendar_context["fixtures_display"] = build_fixture_display_rows(
+        bootstrap=bootstrap,
+        fixtures=fixtures or [],
+        weather_rows=s05_inputs.get("weather_rows") or [],
+        workload_rows=calendar_context.get("player_workload") or [],
+    )
     calendar_context["competition_coverage"].update(
         {
             "club_schedule_status": (
@@ -8583,6 +8629,10 @@ def run_deep(
     action_board["captain_decision"] = {
         "captain": dict(captain_surface.get("captain") or {}),
         "vice_captain": dict(captain_surface.get("vice_captain") or {}),
+        "recommended_captain": dict(captain_surface.get("recommended_captain") or {}),
+        "recommended_vice_captain": dict(captain_surface.get("recommended_vice_captain") or {}),
+        "decision_state": captain_surface.get("decision_state"),
+        "recommendation_status": captain_surface.get("recommendation_status"),
         "football_leader": dict(captain_surface.get("football_leader") or {}),
         "frontier_classification": captain_surface.get(
             "football_frontier_classification"

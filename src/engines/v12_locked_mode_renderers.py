@@ -139,6 +139,15 @@ def render_match_locked_text(report: Mapping[str, Any]) -> str:
                 ),
                 "Weather: MATCH CURRENT",
             ])
+            fixtures = [
+                dict(row) for row in content.get("fixture_rows") or []
+                if isinstance(row, Mapping)
+            ]
+            if fixtures:
+                lines.extend(_table(
+                    ("Home vs Away", "Score", "Status", "Kickoff"),
+                    [(r.get("fixture"), r.get("score"), r.get("status"), r.get("kickoff")) for r in fixtures],
+                ))
         elif sid == "MATCH2":
             rows=[dict(r) for r in content.get("rows") or [] if isinstance(r, Mapping)]
             lines.extend(_table(

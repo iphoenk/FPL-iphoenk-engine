@@ -1627,6 +1627,11 @@ def _serving_project_content(
     raw_content: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     """Allowlist only presentation-required fields for one client section."""
+    if section_id in {f"MATCH{i}" for i in range(1, 14)}:
+        # MATCH is already produced by the strict public-only locked
+        # materializer; stripping these keys would erase MATCH10 and MATCH13
+        # from the latest structured client serving snapshot.
+        return deepcopy(dict(raw_content or {}))
     keys = _SERVING_SECTION_KEYS.get(section_id, ())
     content = _serving_pick(
         raw_content,
@@ -1808,12 +1813,15 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     if str(snapshot.get("delivery_status") or "") not in DELIVERY_STATES:
         failures.append("INVALID_DELIVERY_STATUS")
     sections = snapshot.get("sections")
-    expected_ids = [
-        section_id
-        for section_id, _ in canonical_deep_sections(
-            s16b_due=snapshot.get("s16b_due") is True
-        )
-    ]
+    if str(snapshot.get("report_mode") or "").upper() == "MATCH":
+        expected_ids = [f"MATCH{i}" for i in range(1, 14)]
+    else:
+        expected_ids = [
+            section_id
+            for section_id, _ in canonical_deep_sections(
+                s16b_due=snapshot.get("s16b_due") is True
+            )
+        ]
     if not isinstance(sections, Mapping) or list(sections) != expected_ids:
         failures.append("SERVING_SECTION_ORDER_OR_COUNT")
     if not str(snapshot.get("decision") or "").strip():

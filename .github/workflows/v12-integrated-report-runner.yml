@@ -403,11 +403,16 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           PROFILE_MODE: ${{ needs.parse.outputs.profile_mode }}
-          PROD_PRIVATE_CACHE_KEY: ${{ needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
+          REPORT_MODE: ${{ needs.parse.outputs.report_mode }}
+          PROD_PRIVATE_CACHE_KEY: ${{ needs.parse.outputs.report_mode != 'MATCH' && needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$PROFILE_MODE" == "COLD" ]]; then
+          if [[ "$REPORT_MODE" == "MATCH" ]]; then
+            # Public matchday never depends on a private decryption key.
+            echo "profile=SECURE_NO_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
+            echo "MATCH PUBLIC: private decision-cache bypass"
+          elif [[ "$PROFILE_MODE" == "COLD" ]]; then
             echo "profile=SECURE_NO_PERSONAL_CACHE" >> "$GITHUB_OUTPUT"
             if [[ -n "$PROD_PRIVATE_CACHE_KEY" ]]; then
               echo "controlled COLD run unexpectedly received production decrypt key" >&2
@@ -588,7 +593,7 @@ jobs:
           V12_P17_DECISION_CACHE_DIR: .cache/v12-p17
           V12_MC_SIM_CACHE_DIR: .cache/v12-mc
           V12_PRIVATE_CACHE_PROFILE: ${{ steps.private-cache-profile.outputs.profile }}
-          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
+          FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ needs.parse.outputs.report_mode != 'MATCH' && needs.parse.outputs.profile_mode != 'COLD' && (github.event_name == 'issue_comment' || github.ref_name == 'main') && secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 || '' }}
         run: |
           private_input_root="../private-reports"
           if [ -f ../acceptance-private-input/personal/current_team.json ]; then
@@ -624,8 +629,16 @@ jobs:
             export V12_STAGE_PROFILE_DIR="artifacts/v12-report/stage-profiles"
           fi
           set +e
-          python -m src.engines.v12_integrated_report_runner "${args[@]}" \
-            >"$private_log" 2>&1
+          if [ "$REPORT_MODE" = "MATCH" ]; then
+            # MATCH is public-first and never requires AUTH_AVAILABLE or DEEP MC.
+            python -m src.engines.v12_public_match_delivery \
+              --runtime-data-root "../runtime-data" \
+              --report-slot "$REPORT_SLOT" \
+              --output-dir "artifacts/v12-report" >"$private_log" 2>&1
+          else
+            python -m src.engines.v12_integrated_report_runner "${args[@]}" \
+              >"$private_log" 2>&1
+          fi
           runner_status=$?
           set -e
           unset V12_STAGE_PROFILE_DIR || true

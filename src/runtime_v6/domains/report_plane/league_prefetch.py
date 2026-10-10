@@ -120,6 +120,9 @@ def _record_from_result(entry_id: int, gw: int, result: dict[str, Any]) -> dict[
         "active_chip": normal.get("active_chip"),
         "entry_history": normal.get("entry_history"),
         "automatic_subs": normal.get("automatic_subs"),
+        "previous_overall_points": None,
+        "previous_overall_authority": None,
+        "history_lineage": None,
         "official_raw": result.get("payload") if result.get("status") == "LIVE" else None,
         "picks": normal.get("picks", []),
         "lineage": normal.get("lineage"),
@@ -153,6 +156,7 @@ def acquire_manager_picks(
     workers: int,
     force: bool,
     cache_enabled: bool,
+    include_previous_history: bool = False,
 ) -> tuple[dict[str, Any], dict[str, int]]:
     previous = (read_json(previous_path) or {}) if cache_enabled else {}
     previous_entries = previous.get("entries") if isinstance(previous.get("entries"), dict) else {}
@@ -178,7 +182,31 @@ def acquire_manager_picks(
             misses.append(entry_id)
 
     def fetch(entry_id: int) -> tuple[int, dict[str, Any]]:
-        return entry_id, _record_from_result(entry_id, gw, client.submitted_picks(entry_id, gw))
+        record = _record_from_result(entry_id, gw, client.submitted_picks(entry_id, gw))
+        if not include_previous_history or record["status"] != "AVAILABLE":
+            return entry_id, record
+        # Only the previous GW's Official cumulative total establishes an
+        # unambiguous pre-GW baseline. Never subtract current hit twice.
+        if gw == 1:
+            record["previous_overall_points"] = 0
+            record["previous_overall_authority"] = "OFFICIAL_NEW_SEASON_START"
+        else:
+            fetch_history = getattr(client, "entry_history", None)
+            history_result = fetch_history(entry_id) if callable(fetch_history) else {}
+            record["history_lineage"] = lineage(history_result, gw=gw - 1, entry_id=entry_id)
+            if history_result.get("status") == "LIVE":
+                rows = (history_result.get("payload") or {}).get("current") or []
+                prior = next(
+                    (row for row in rows if isinstance(row, dict)
+                     and row.get("event") == gw - 1
+                     and isinstance(row.get("total_points"), int)),
+                    None,
+                )
+                if prior is not None:
+                    record["previous_overall_points"] = prior["total_points"]
+                    record["previous_overall_authority"] = "OFFICIAL_PREVIOUS_GW_HISTORY"
+        record["record_digest"] = digest({k: v for k, v in record.items() if k != "record_digest"})
+        return entry_id, record
 
     used_workers = 0
     if misses:

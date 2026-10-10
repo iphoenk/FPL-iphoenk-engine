@@ -118,6 +118,8 @@ def _record_from_result(entry_id: int, gw: int, result: dict[str, Any]) -> dict[
         "http_status": (normal.get("lineage") or {}).get("http_status"),
         "payload_digest": (normal.get("lineage") or {}).get("payload_digest"),
         "active_chip": normal.get("active_chip"),
+        "entry_history": normal.get("entry_history"),
+        "automatic_subs": normal.get("automatic_subs"),
         "picks": normal.get("picks", []),
         "lineage": normal.get("lineage"),
     }

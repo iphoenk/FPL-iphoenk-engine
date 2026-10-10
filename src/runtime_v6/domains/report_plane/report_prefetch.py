@@ -1210,6 +1210,7 @@ class PrefetchService:
                             # substitutions are NOT. Refresh all rivals for MATCH.
                             force=force or report_kind == "match_mode",
                             cache_enabled=bool(self.config.get("submitted_picks_cache_enabled", True)),
+                            include_previous_history=report_kind == "match_mode",
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, picks_relative))

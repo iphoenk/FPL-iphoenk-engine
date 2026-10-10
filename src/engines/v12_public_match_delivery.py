@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from src.engines import live_state_service
+from src.engines.v12_official_public_scoring import score_entry, rank_live
 from src.engines.v12_delivery_reliability import write_serving_artifacts
 from src.engines.v12_report_orchestration import (
     materialize_match_report,
@@ -192,74 +193,158 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
     }
 
 
-def _exposure(members: dict[str, Any], event: dict[str, Any], standings: dict[str, Any], entry: int, names: dict[int, str]) -> dict[str, Any]:
-    score = {int(row["element_id"]): int(row.get("total_points") or 0) for row in event.get("elements") or []}
-    counts: dict[int, dict[str, int]] = defaultdict(lambda: {"owned": 0, "starter": 0, "captain": 0, "vice": 0, "eo": 0})
-    gross_by_entry: dict[int, int] = {}
-    captain_by_entry: dict[int, str] = {}
-    for key, record in (members.get("entries") or {}).items():
+def _exposure(
+    members: dict[str, Any],
+    event: dict[str, Any],
+    standings: dict[str, Any],
+    entry: int,
+    names: dict[int, str],
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """League ranking requires 58 provable public hits and previous totals."""
+    points = {
+        int(row["element_id"]): int(row["total_points"])
+        for row in event.get("elements") or []
+        if isinstance(row.get("total_points"), int)
+    }
+    minutes = {
+        int(row["element_id"]): int(row["minutes"])
+        for row in event.get("elements") or []
+        if isinstance(row.get("minutes"), int)
+    }
+    player_teams = {
+        int(p["id"]): int(p["team"])
+        for p in snapshot["bootstrap"]["elements"]
+        if p.get("team") is not None
+    }
+    finished_teams = set()
+    for fixture in snapshot.get("fixtures") or []:
+        if fixture.get("finished") is True:
+            for side in ("team_h", "team_a"):
+                if fixture.get(side) is not None:
+                    finished_teams.add(int(fixture[side]))
+    static = {int(r["entry_id"]): r for r in standings.get("managers") or []}
+    records = members.get("entries") or {}
+    n = len(records)
+    counts: dict[int, dict[str, int]] = defaultdict(
+        lambda: {"owned": 0, "starter": 0, "bench": 0, "captain": 0, "vice": 0, "eo": 0}
+    )
+    scored = []
+    captains: dict[int, str] = {}
+    for key, record in records.items():
         eid = int(key)
-        gross = 0
-        for pick in record.get("picks") or []:
-            player = int(pick["element_id"])
-            multiplier = int(pick.get("multiplier") or 0)
-            counts[player]["owned"] += 1
-            counts[player]["starter"] += int(multiplier > 0)
-            counts[player]["captain"] += int(pick.get("captain") is True)
-            counts[player]["vice"] += int(pick.get("vice_captain") is True)
-            counts[player]["eo"] += multiplier
-            gross += score.get(player, 0) * multiplier
-            if pick.get("captain") is True:
-                captain_by_entry[eid] = names.get(player, str(player))
-        gross_by_entry[eid] = gross
-    n = len(members.get("entries") or {})
-    def stat(value: int) -> dict[str, Any]:
-        return {"numerator": value, "denominator": n, "percentage": round(value * 100 / n, 2)}
-    rows = []
-    own_ids = {int(p["element_id"]) for p in members["entries"][str(entry)]["picks"]}
-    for player in sorted(own_ids):
-        c = counts[player]
-        rows.append({
-            "player": names.get(player, str(player)),
-            "denominator": n,
-            **{field: stat(c[field]) for field in ("owned", "starter", "captain", "vice", "eo")},
-            "live_consequence": f"{score.get(player, 0)} raw pts; EO {round(c['eo'] * 100 / n, 1)}%",
-        })
-    static = {int(row.get("entry_id")): row for row in standings.get("managers") or []}
+        calc = score_entry(
+            record, points, published_standing=static.get(eid),
+            player_teams=player_teams, finished_teams=finished_teams,
+            live_minutes=minutes,
+        )
+        scored.append({"entry_id": eid, **calc})
+        if calc.get("status") == "UNAVAILABLE":
+            continue
+        for p in record.get("picks") or []:
+            pid = int(p["element_id"])
+            multiplier = int((calc.get("multipliers") or {}).get(pid, 0))
+            counts[pid]["owned"] += 1
+            counts[pid]["starter"] += int(multiplier > 0)
+            counts[pid]["bench"] += int(multiplier == 0)
+            counts[pid]["captain"] += int(p.get("captain") is True)
+            counts[pid]["vice"] += int(p.get("vice_captain") is True)
+            counts[pid]["eo"] += multiplier
+            if p.get("captain") is True:
+                captains[eid] = names.get(pid, str(pid))
+    complete_points = (
+        n == len(static)
+        and len(scored) == n
+        and all(row.get("net_points") is not None
+                and row.get("previous_overall_points") is not None
+                and row.get("autosub_state") != "PENDING"
+                for row in scored)
+    )
+    ordered = rank_live(scored) if complete_points else []
+    by_entry = {r["entry_id"]: r for r in ordered}
+    ours = by_entry.get(entry)
     own_static = static.get(entry) or {}
-    own_rank = int(own_static.get("league_rank") or 0)
+    own_static_rank = own_static.get("league_rank")
     rival = []
     for eid, row in static.items():
-        r = int(row.get("league_rank") or 0)
-        if eid == entry or not (max(1, own_rank - 9) <= r <= own_rank + 5):
+        if eid == entry:
             continue
+        calc = by_entry.get(eid) or {}
         rival.append({
-            "rank": r,
+            "entry_id": eid,
+            "rank": calc.get("live_rank"),
+            "published_rank": row.get("league_rank"),
             "manager": row.get("manager_name") or row.get("team_name"),
-            "live_points": f"{gross_by_entry.get(eid, 0)} gross (hit/autosub pending)",
-            "gap": "UNVERIFIED",
-            "captain": captain_by_entry.get(eid, "UNAVAILABLE"),
-            "key_threat": "Pending official score finalization",
-            "key_shield": "UNVERIFIED",
+            "live_points": calc.get("net_points"),
+            "live_overall": calc.get("live_overall_points"),
+            "gap": (calc.get("live_overall_points") - ours["live_overall_points"])
+                if ours and calc.get("live_overall_points") is not None else None,
+            "captain": captains.get(eid, "UNAVAILABLE"),
+            "key_threat": "Provisional FPL scoring" if ordered else "Insufficient public net scoring evidence",
+            "key_shield": "Pending fixture corrections" if ordered else "UNAVAILABLE",
+            "tied_position_provisional": calc.get("tie_unresolved"),
         })
-    rival.sort(key=lambda r: r["rank"])
+    rival.sort(key=lambda row: (
+        row.get("rank") if row.get("rank") is not None else 9999,
+        int(row["entry_id"]),
+    ))
+    def stat(value: int) -> dict[str, Any]:
+        return {"numerator": value, "denominator": n,
+                "percentage": round(100 * value / n, 2) if n else None}
+
+    our_ids = {int(p["element_id"]) for p in records[str(entry)]["picks"]}
+    exposure = []
+    for player in sorted(our_ids):
+        cnt = counts[player]
+        exposure.append({
+            "player": names.get(player, str(player)), "denominator": n,
+            **{field: stat(cnt[field]) for field in ("owned", "starter", "bench", "captain", "vice", "eo")},
+            "live_consequence": f"{points.get(player, 'UNAVAILABLE')} raw pts; EO {round(100 * cnt['eo'] / n, 1)}%" if n else "UNAVAILABLE",
+        })
+    leader = ordered[0] if ordered else None
+    by_rank = {r["live_rank"]: r for r in ordered if r.get("live_rank") is not None}
+    leader_gap = (leader["live_overall_points"] - ours["live_overall_points"]) if leader and ours else None
+    top3_gap = (by_rank.get(3, ordered[min(2, len(ordered) - 1)])["live_overall_points"] - ours["live_overall_points"]) if ordered and ours else None
+    top5_gap = (by_rank.get(5, ordered[min(4, len(ordered) - 1)])["live_overall_points"] - ours["live_overall_points"]) if ordered and ours else None
+    unresolved = sorted([
+        {"entry_id": r["entry_id"], "reason": r.get("reason") or
+         ("MISSING_HIT_OR_BASELINE" if r.get("hit") is None or r.get("previous_overall_points") is None else "AUTOSUB_PENDING")}
+        for r in scored
+        if r.get("net_points") is None or r.get("previous_overall_points") is None
+        or r.get("autosub_state") == "PENDING"
+    ], key=lambda r: r["entry_id"])
     return {
-        "status": "DEGRADED",
+        "status": "COMPLETE" if ordered else "DEGRADED",
         "league_name": standings.get("league_name") or "ICON+ League",
-        "expected_manager_count": n,
-        "collected_manager_count": n,
+        "expected_manager_count": n, "collected_manager_count": len(scored),
         "submitted_picks_exposure": {"state": "COMPLETE", "expected_count": n, "available_count": n},
-        "live_standings_rank": {"state": "UNAVAILABLE", "reason": "OFFICIAL_STATIC_STANDINGS_NOT_LIVE; HIT_AUTOSUB_UNVERIFIED"},
-        "user_summary": {"rank": None, "live_points": None},
-        "current_live_rank": None,
-        "current_live_points": None,
-        "material_player_exposure": rows,
+        "live_standings_rank": {
+            "state": "PROVISIONAL" if ordered else "UNAVAILABLE",
+            "reason": "OFFICIAL_PUBLIC_GW_SCORING_PROVISIONAL_TIE_BREAK_PENDING" if ordered else "INCOMPLETE_HIT_AUTOSUB_BASELINE_EVIDENCE",
+            "expected_count": n, "available_count": len(ordered),
+        },
+        "user_summary": {"rank": ours.get("live_rank") if ours else None,
+                         "live_points": ours.get("net_points") if ours else None},
+        "current_live_rank": ours.get("live_rank") if ours else None,
+        "current_live_points": ours.get("net_points") if ours else None,
+        "current_live_overall": ours.get("live_overall_points") if ours else None,
+        "leader_gap": leader_gap, "top3_gap": top3_gap, "top5_gap": top5_gap,
+        "own_gross_points": ours.get("gross_points") if ours else None,
+        "own_hit": ours.get("hit") if ours else None,
+        "material_player_exposure": exposure,
         "competitive_rival_live_consequence": rival,
-        "league_raw_gross_points": gross_by_entry,
-        "rival_live_points": {"state": "PROVISIONAL_GROSS_ONLY"},
-        "eo": {"state": "COMPLETE", "denominator": n, "definition": "sum of submitted scoring multipliers / managers"},
-        "live_rank_not_fabricated": True,
-        "own_static_rank": own_rank,
+        "all_manager_live_rows": ordered if ordered else scored,
+        "unresolved_manager_evidence": unresolved,
+        "league_raw_gross_points": {str(r["entry_id"]): r.get("gross_points") for r in scored},
+        "rival_live_points": {"state": "PROVISIONAL_NET" if ordered else "UNAVAILABLE"},
+        "eo": {"state": "COMPLETE" if len(scored) == n else "UNAVAILABLE",
+               "denominator": n, "definition": "sum of Official submitted scoring multipliers / all managers"},
+        "live_rank_not_fabricated": True, "own_static_rank": own_static_rank,
+        "published_versus_calculated": {
+            "published_rank": own_static_rank,
+            "calculated_rank": ours.get("live_rank") if ours else None,
+            "calculated_rank_provisional": bool(ordered),
+        },
     }
 
 
@@ -293,7 +378,7 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         int(p["element"]): str(p.get("name") or names.get(int(p["element"]), p["element"]))
         for p in live.get("players") or []
     })
-    icon = _exposure(members, event, standings, entry, names)
+    icon = _exposure(members, event, standings, entry, names, canonical_snapshot)
     report = materialize_match_report(
         canonical_text=CANONICAL.read_text(encoding="utf-8"),
         live_payload=live,

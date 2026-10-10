@@ -105,6 +105,23 @@ def run_forward_mc(
             "decision_net_supported": forward == FORWARDS[0],
         })
 
+    # Paired event-world captain challenger on the SAME P1.7 HOLD lineup.
+    # Only compare if both attacking players are legally in the first XI;
+    # this does not change canonical S06/S08/S18/S19 or make a captain LOCK.
+    if {426, 411}.issubset(set(definitions[0]["per_gw"][0]["starting_xi"])):
+        cvc_per_gw = [dict(row) for row in definitions[0]["per_gw"]]
+        for row in cvc_per_gw:
+            if {426, 411}.issubset(set(row["starting_xi"])):
+                row["captain"], row["vice_captain"] = 426, 411
+        definitions.append({
+            "route_id": "BRUNO_C_HAALAND_VC",
+            "classification": "CAPTAIN_REVIEW_NOT_LOCK",
+            "per_gw": cvc_per_gw,
+            "execution_cost_points": 0.0,
+            "execution_cost_status": "CAPTAIN_CHANGE_ZERO",
+            "decision_net_supported": True,
+        })
+
     projection_binding = str(
         (projections.get("model_evidence_binding") or {}).get("output_fingerprint") or ""
     )

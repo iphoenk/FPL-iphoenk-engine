@@ -255,3 +255,72 @@ def test_public_normalizer_preserves_scoring_evidence():
     assert result["entry_history"]["event_transfers_cost"] == 8
     assert result["automatic_subs"][0]["element_in"] == 12
     assert len(result["picks"]) == 15
+
+
+def test_verified_previous_gw_total_prevents_hit_baseline_double_count():
+    entry = _entry(hit=4)
+    entry["previous_overall_points"] = 307
+    entry["previous_overall_authority"] = "OFFICIAL_PREVIOUS_GW_HISTORY"
+    result = score_entry(entry, {i: i for i in range(1, 16)})
+    assert result["gross_points"] == 68
+    assert result["net_points"] == 64
+    assert result["previous_overall_points"] == 307
+    assert result["live_overall_points"] == 371
+    assert result["baseline_verified"] is True
+    unverified = score_entry(_entry(hit=4), {i: i for i in range(1, 16)})
+    assert unverified["baseline_verified"] is False
+
+
+def test_ownership_not_lost_when_official_live_points_are_incomplete(tmp_path):
+    _fixture(tmp_path)
+    _, entry, _, members, standings, live = _validated_inputs(tmp_path, SLOT)
+    # A missing element invalidates an individual score, not an Official pick.
+    live["elements"] = live["elements"][:-1]
+    icon = _exposure(members, live, standings, entry, {i: f"Player {i}" for i in range(1, 16)})
+    row = next(r for r in icon["material_player_exposure"] if r["player"] == "Player 15")
+    assert row["owned"]["numerator"] == 58
+    assert icon["live_standings_rank"]["state"] == "UNAVAILABLE"
+
+
+def test_history_acquisition_uses_previous_gw_official_total(tmp_path):
+    from src.runtime_v6.domains.report_plane.league_prefetch import acquire_manager_picks
+
+    class OfficialFake:
+        def submitted_picks(self, entry_id, gw):
+            return {
+                "status": "LIVE", "checked_at": CHECKED, "http_status": 200,
+                "payload_digest": "submitted-digest",
+                "payload": {
+                    "active_chip": None,
+                    "automatic_subs": [],
+                    "entry_history": {"event": gw, "points": 18, "total_points": 225,
+                                      "event_transfers_cost": 4},
+                    "picks": [
+                        {"element": p["element_id"], "position": p["squad_position"],
+                         "multiplier": p["multiplier"], "is_captain": p["captain"],
+                         "is_vice_captain": p["vice_captain"]}
+                        for p in _entry()["picks"]
+                    ],
+                },
+            }
+
+        def entry_history(self, entry_id):
+            return {
+                "status": "LIVE", "checked_at": CHECKED, "http_status": 200,
+                "payload_digest": "history-digest",
+                "payload": {"current": [{"event": 5, "total_points": 211},
+                                         {"event": 6, "total_points": 225}]},
+            }
+
+    artifact, metrics = acquire_manager_picks(
+        OfficialFake(), previous_path=tmp_path / "missing.json",
+        season="2026-27", league_id=9477, gw=6,
+        manager_ids=[3462711], deadline_passed=True, workers=1,
+        force=True, cache_enabled=False, include_previous_history=True,
+    )
+    record = artifact["entries"]["3462711"]
+    assert record["previous_overall_points"] == 211
+    assert record["previous_overall_authority"] == "OFFICIAL_PREVIOUS_GW_HISTORY"
+    assert record["entry_history"]["event_transfers_cost"] == 4
+    assert record["record_digest"]
+    assert metrics["cache_misses"] == 1

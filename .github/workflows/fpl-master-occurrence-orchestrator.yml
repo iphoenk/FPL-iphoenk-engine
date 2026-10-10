@@ -313,7 +313,7 @@ jobs:
 
       - name: Dispatch and bind exact integrated report
         id: report
-        if: always() && steps.guard.outputs.skip != 'true' && (steps.prefetch.outcome == 'success' || steps.personal_fallback.outputs.eligible == 'true')
+        if: always() && steps.guard.outputs.skip != 'true' && (steps.prefetch.outcome == 'success' || steps.personal_fallback.outputs.eligible == 'true' || steps.personal_fallback.outputs.public_continuation == 'true')
         env:
           REPORT_MODE: ${{ steps.parse.outputs.report_mode }}
           REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}

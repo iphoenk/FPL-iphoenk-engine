@@ -4762,7 +4762,9 @@ def _render_deep_visible_contract_lines(
         )
         context = dict(payload.get("current_league_context") or {})
         rank_battle = [dict(r) for r in payload.get("rank_battle") or [] if isinstance(r, Mapping)]
-        top10_row = next((r for r in rank_battle if int(r.get("rank") or 0) == 10), {})
+        # The 10th standings position is distinct from official rank 10
+        # when managers tie on points.
+        top10_row = next((r for r in rank_battle if r.get("standing_position") == 10), {})
         top10_gap = context.get("points_to_top_10")
         if top10_gap is None and top10_row and context.get("our_total_points") is not None:
             try:

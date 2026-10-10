@@ -139,3 +139,28 @@ def test_personal_or_privacy_boundary_never_degrades_to_ready():
         evidence[key] = True
         result = classify_occurrence(evidence)
         assert result["terminality"] == "FAILED_VERIFY"
+
+
+def test_match_exact_public_serving_is_ready_full_without_private_personal_auth():
+    evidence = _evidence()
+    evidence["report_mode"] = "MATCH"
+    evidence["occurrence_id"] = f"MATCH|{SLOT}"
+    evidence["serving"]["report_mode"] = "MATCH"
+    evidence["stage3"]["validation"] = "NOT_APPLICABLE"
+    evidence["historical"]["path"] = "reports/2026-27/gw_6/occurrence/report_body.md"
+    # Finance/auth is not a public publication prerequisite.
+    result = classify_occurrence(evidence)
+    assert result["terminality"] == "READY_FULL"
+    assert result["failures"] == []
+
+
+def test_match_still_rejects_missing_publication_or_digest():
+    evidence = _evidence()
+    evidence["report_mode"] = "MATCH"
+    evidence["occurrence_id"] = f"MATCH|{SLOT}"
+    evidence["serving"]["report_mode"] = "MATCH"
+    evidence["stage3"]["validation"] = "NOT_APPLICABLE"
+    evidence["latest"]["advanced"] = False
+    result = classify_occurrence(evidence)
+    assert result["terminality"] == "FAILED_VERIFY"
+    assert "LATEST_ADVANCEMENT_INVALID" in result["failures"]

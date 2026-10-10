@@ -289,7 +289,7 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
     ids = [row.get("section_id") for row in report.get("sections") or []]
     if ids != EXPECTED or body.count("## MATCH ") != 13 or validate_match_presentation_lock():
         raise PublicMatchError("MATCH_13_SECTION_RENDER_CONTRACT_FAILED")
-    if "MATCH10" not in body or "58/58" not in body or "MATCH13" not in body:
+    if "## MATCH 10" not in body or "58/58" not in body or "## MATCH 13" not in body:
         raise PublicMatchError("MATCH10_OR_MATCH13_REAL_CONTENT_MISSING")
     proof = {
         "schema_version": 2, "runner": "V12_PUBLIC_MATCH_DELIVERY",

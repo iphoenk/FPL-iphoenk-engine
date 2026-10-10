@@ -89,6 +89,8 @@ def normalise_submitted_picks(
             "status": "UNAVAILABLE",
             "generated_at": iso(utc_now()),
             "active_chip": None,
+            "entry_history": None,
+            "automatic_subs": None,
             "picks": [],
             "lineage": lineage(result, origin=origin, gw=gw, entry_id=entry_id),
             "authority": "OFFICIAL_FPL",
@@ -117,6 +119,10 @@ def normalise_submitted_picks(
         "status": "AVAILABLE",
         "generated_at": iso(utc_now()),
         "active_chip": payload.get("active_chip"),
+        # Preserve the Official per-GW financial/scoring fields without
+        # confusing them with authenticated pre-deadline team finance.
+        "entry_history": dict(payload["entry_history"]) if isinstance(payload.get("entry_history"), dict) else None,
+        "automatic_subs": list(payload["automatic_subs"]) if isinstance(payload.get("automatic_subs"), list) else None,
         "picks": picks,
         "lineage": lineage(result, origin=origin, gw=gw, entry_id=entry_id),
         "authority": "OFFICIAL_FPL",

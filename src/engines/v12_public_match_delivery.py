@@ -283,10 +283,16 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         live["personalized_live_score"]["hit"] = None
         live["personalized_live_score"]["current_net_total"] = None
         live["personalized_live_score"]["hit_authority"] = "UNAVAILABLE"
+    # All league captains must resolve through the full Official FPL player
+    # universe, not only the 15 players owned by our entry.
     names = {
-        int(p["element"]): str(p.get("name") or p["element"])
-        for p in live.get("players") or []
+        int(p["id"]): str(p.get("web_name") or p["id"])
+        for p in canonical_snapshot["bootstrap"]["elements"]
     }
+    names.update({
+        int(p["element"]): str(p.get("name") or names.get(int(p["element"]), p["element"]))
+        for p in live.get("players") or []
+    })
     icon = _exposure(members, event, standings, entry, names)
     report = materialize_match_report(
         canonical_text=CANONICAL.read_text(encoding="utf-8"),

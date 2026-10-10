@@ -599,14 +599,39 @@ def build_universe_scan(
     ]
     candidates: list[dict[str, Any]] = []
     unavailable_form = 0
+    invalid_element_count = 0
+    invalid_position_count = 0
+    seen_elements: set[int] = set()
+    duplicate_element_ids: set[int] = set()
     for player in projection_rows:
         element = _i(player.get("element") or player.get("id"))
         if element is None or element <= 0:
+            invalid_element_count += 1
             continue
+        if element in seen_elements:
+            duplicate_element_ids.add(element)
+        seen_elements.add(element)
+        if _position(player) not in POSITIONS.values():
+            invalid_position_count += 1
         form = dict(form_map.get(str(element)) or {})
-        if not form or str(form.get("status") or "") not in {"AVAILABLE", "NO_APPEARANCES"}:
+        form_available = bool(form) and str(form.get("status") or "") in {
+            "AVAILABLE", "NO_APPEARANCES",
+        }
+        if not form_available:
             unavailable_form += 1
         candidate = _candidate(player, form, cfg=cfg)
+        reason_codes: list[str] = []
+        if not form_available:
+            reason_codes.append("MULTIWINDOW_UNAVAILABLE")
+        if candidate["sample_confidence"] < float(cfg.get("minimum_sample_confidence", 0.45)):
+            reason_codes.append("LOW_SAMPLE_CONFIDENCE")
+        if any(candidate["xmins"].get(key) is None for key in ("expected_minutes", "p_start")):
+            reason_codes.append("MINUTES_PROVENANCE_MISSING")
+        if _position(player) not in POSITIONS.values():
+            reason_codes.append("POSITION_UNRECOGNISED")
+        if not candidate["material"]:
+            reason_codes.append("NO_MATERIAL_STAGEC_SIGNAL")
+        candidate["screening_reason_codes"] = reason_codes
         candidates.append(candidate)
 
     candidates.sort(
@@ -635,6 +660,26 @@ def build_universe_scan(
         )
     }
     counts["HIDDEN_GEM"] = len(hidden)
+    by_position = {
+        position: {
+            "scanned": sum(row.get("position") == position for row in candidates),
+            "material": sum(row.get("position") == position for row in material),
+        }
+        for position in ("GK", "DEF", "MID", "FWD")
+    }
+    reason_code_counts = {
+        reason: sum(reason in row.get("screening_reason_codes", []) for row in candidates)
+        for reason in sorted({
+            code
+            for row in candidates
+            for code in row.get("screening_reason_codes", [])
+        })
+    }
+    structurally_complete = (
+        len(candidates) == len(projection_rows)
+        and not duplicate_element_ids
+        and invalid_position_count == 0
+    )
 
     feed = [
         {
@@ -656,11 +701,22 @@ def build_universe_scan(
         "material_candidate_count": len(material),
         "hidden_gem_count": len(hidden),
         "multiwindow_unavailable_count": unavailable_form,
+        "invalid_element_count": invalid_element_count,
+        "invalid_position_count": invalid_position_count,
+        "duplicate_element_ids": sorted(duplicate_element_ids),
+        "unique_scanned_count": len(seen_elements),
+        "scanner_coverage_ratio": (
+            round(len(seen_elements) / len(projection_rows), 6)
+            if projection_rows else 0.0
+        ),
+        "scanner_coverage_state": "COMPLETE" if structurally_complete else "DEGRADED",
+        "position_counts": by_position,
+        "screening_reason_counts": reason_code_counts,
         "signal_counts": counts,
         "material_candidates": material,
         "evaluation_feed": feed,
         "governance": {
-            "full_universe_scanned": True,
+            "full_universe_scanned": structurally_complete,
             "internal_material_score_is_candidate_generation_only": True,
             "final_v12_ranking_unchanged": True,
             "transfer_horizons": [1, 2, 3, 5],
@@ -696,6 +752,61 @@ def build_stagec_from_canonical_inputs(
         projections=candidate_projection,
         multiwindow_snapshot=multiwindow,
     )
+    official_rows = [
+        row for row in bootstrap.get("elements") or []
+        if isinstance(row, Mapping)
+    ]
+    official_ids = {
+        element for row in official_rows
+        if (element := _i(row.get("id"))) is not None and element > 0
+    }
+    eligible_ids = {
+        int(row["id"]) for row in official_rows
+        if _i(row.get("id")) in official_ids
+        and _i(row.get("element_type")) in POSITIONS
+        and (_f(row.get("now_cost")) or 0.0) > 0
+    }
+    projected_ids = {
+        int(row.get("element") or row.get("id"))
+        for row in projections.get("players") or []
+        if isinstance(row, Mapping)
+        and _i(row.get("element") or row.get("id")) is not None
+        and _i(row.get("element") or row.get("id")) > 0
+    }
+    missing_ids = sorted(official_ids - projected_ids)
+    missing_eligible_ids = sorted(eligible_ids - projected_ids)
+    unexpected_ids = sorted(projected_ids - official_ids)
+    official_complete = (
+        bool(official_ids)
+        and not missing_ids
+        and not unexpected_ids
+        and len(official_rows) == len(official_ids)
+        and scan["scanner_coverage_state"] == "COMPLETE"
+        and scan["unique_scanned_count"] == len(official_ids)
+    )
+    scan["official_universe_count"] = len(official_rows)
+    scan["official_eligible_count"] = len(eligible_ids)
+    scan["official_eligible_missing_count"] = len(missing_eligible_ids)
+    scan["official_universe_missing_count"] = len(missing_ids)
+    scan["unexpected_projection_count"] = len(unexpected_ids)
+    scan["official_coverage_state"] = "COMPLETE" if official_complete else "DEGRADED"
+    scan["official_coverage_ratio"] = (
+        round((len(official_ids) - len(missing_ids)) / len(official_ids), 6)
+        if official_ids else 0.0
+    )
+    scan["coverage_reason_codes"] = [
+        reason for reason, triggered in (
+            ("OFFICIAL_BOOTSTRAP_EMPTY", not official_ids),
+            ("OFFICIAL_BOOTSTRAP_DUPLICATES", len(official_rows) != len(official_ids)),
+            ("PROJECTION_MISSING_OFFICIAL_ELEMENTS", bool(missing_ids)),
+            ("PROJECTION_MISSING_ELIGIBLE_ELEMENTS", bool(missing_eligible_ids)),
+            ("PROJECTION_UNKNOWN_ELEMENTS", bool(unexpected_ids)),
+            ("PROJECTION_STRUCTURALLY_INCOMPLETE", scan["scanner_coverage_state"] != "COMPLETE"),
+        )
+        if triggered
+    ]
+    scan["governance"]["full_universe_scanned"] = official_complete
+    scan["governance"]["canonical_projection_unchanged"] = True
     return {
         "contract": "V12_STAGEC_CANONICAL_INPUT_BRIDGE_V1",
         "scan": scan,

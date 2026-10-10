@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T10:11:46+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T10:36:34+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -137,3 +137,6 @@ cross-position seven-layer visible-report, and distributional captain
 frontier governance tests. It rejects false CLOSE LOCK when real joint
 C/VC confidence or mini-league rank evidence is unavailable, preserves
 valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
+
+
+**GW6 what-if transfer / formation matrix (10 Oct 2026):** `python -m src.engines.v12_transfer_matrix --output artifacts/gw6_transfer_matrix.json` enumerates 30 roster combinations and all 8 P1.7 formations (240 rows). Saka requires freeing an Arsenal slot first; options are Konsa→Davis/Castagne/Mykolenko. Price facts bind to the 10 Oct V6 predictor; cached selling prices and illustrative £0.2m bank are **not authenticated**, and free transfers/hits are UNKNOWN. Only the no-transfer baseline has verified 500K P1.4 MC; every what-if has xPts null and MC NOT_EXECUTED until a separate canonical evaluation. This never updates CURRENT15, P1.7, MC engine, or production reports.

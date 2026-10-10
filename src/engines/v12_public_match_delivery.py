@@ -265,11 +265,11 @@ def _exposure(
             live_minutes=minutes,
         )
         scored.append({"entry_id": eid, **calc})
-        if calc.get("status") == "UNAVAILABLE":
-            continue
+        # Ownership and captaincy are Official submitted-pick facts even
+        # when a particular manager's live scoring cannot be calculated.
         for p in record.get("picks") or []:
             pid = int(p["element_id"])
-            multiplier = int((calc.get("multipliers") or {}).get(pid, 0))
+            multiplier = int((calc.get("multipliers") or {}).get(pid, p.get("multiplier") or 0))
             counts[pid]["owned"] += 1
             counts[pid]["starter"] += int(multiplier > 0)
             counts[pid]["bench"] += int(multiplier == 0)

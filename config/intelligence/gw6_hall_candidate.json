@@ -1,0 +1,18 @@
+{
+  "contract": "GW6_OWNER_HALL_PRICE_ADDENDUM_V1",
+  "source_path": "runtime-data-v6/data/v6/current/official_price_predictor.json",
+  "checked_at": "2026-10-10T04:03:33.879594+00:00",
+  "player": {
+    "element_id": 449,
+    "name": "Hall",
+    "element_type": 2,
+    "team_id": 17,
+    "now_cost": 53
+  },
+  "provenance": "Public FPL market field data.players[].now_cost; not a personal authenticated transfer price",
+  "governance": {
+    "private_finance_not_included": true,
+    "official_current15_not_changed": true,
+    "requires_historical_stale_sale_label": true
+  }
+}

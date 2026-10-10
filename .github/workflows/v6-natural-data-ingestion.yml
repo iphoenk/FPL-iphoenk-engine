@@ -803,10 +803,14 @@ jobs:
           if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
               fail("private personal artifact must contain 15 unique canonical element IDs")
           if refresh_auth_state in {"AUTH_EXPIRED", "AUTH_UNAVAILABLE"}:
-              # The fresh run did not produce authenticated personal evidence.
-              # Keep the previously saved, validated team unchanged for
-              # stale-snapshot use and retain degraded auth semantics.
-              if generated >= slot or generated > now + timedelta(minutes=2):
+              # The fresh artifact records the failed authentication attempt at
+              # the current slot. Its generated_at must not be used to judge the
+              # age of the last-good fallback snapshot.
+              saved_snapshot = json.loads(
+                  (saved_personal / "current_team.json").read_text(encoding="utf-8")
+              )
+              saved_generated = instant(saved_snapshot.get("generated_at"))
+              if saved_generated >= slot or saved_generated > now + timedelta(minutes=2):
                   fail("saved personal snapshot is not older than the expired-auth refresh")
               live_personal = Path("private-reports/personal")
               shutil.rmtree(live_personal)

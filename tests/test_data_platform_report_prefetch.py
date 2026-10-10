@@ -422,7 +422,7 @@ def test_personal_auth_unavailable_degrades_without_guessing(tmp_path):
     assert team["players"][0]["purchase_price"] is None
 
 
-def test_match_mode_reuses_rival_cache_but_refreshes_live(tmp_path):
+def test_match_mode_refetches_rival_scoring_history_and_live(tmp_path):
     first_client = FakeClient()
     first = PrefetchService(config=config(), output_root=tmp_path, client=first_client, now=NOW)
     first.run(report_kind="full_master", logical_slot=SLOT)
@@ -437,9 +437,12 @@ def test_match_mode_reuses_rival_cache_but_refreshes_live(tmp_path):
     )
     manifest = second.run(report_kind="match_mode", logical_slot="2026-09-05T07:40:00+07:00")
     rival_calls = [c for c in second_client.calls if c.startswith("picks:4000001")]
-    assert rival_calls == []
+    # Submitted XI is immutable after deadline, but official transfer-hit,
+    # automatic-substitution and GW history evidence can change during MATCH.
+    assert rival_calls == ["picks:4000001:3"]
     assert "live:3" in second_client.calls
-    assert manifest["telemetry"]["cache_hits"] == 2
+    assert manifest["telemetry"]["cache_hits"] == 0
+    assert manifest["telemetry"]["cache_misses"] == 2
     assert manifest["live_status"] == "AVAILABLE"
 
 

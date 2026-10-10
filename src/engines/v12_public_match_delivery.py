@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from src.engines import live_state_service
+from src.engines.v12_official_public_scoring import score_entry, rank_live
 from src.engines.v12_delivery_reliability import write_serving_artifacts
 from src.engines.v12_report_orchestration import (
     materialize_match_report,
@@ -103,8 +104,10 @@ def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], 
     ids = [int(p.get("element_id") or 0) for p in picks]
     if len(ids) != 15 or len(set(ids)) != 15 or min(ids) <= 0:
         raise PublicMatchError("MATCH_OFFICIAL_SUBMITTED_15_REQUIRED")
-    if sum(int(p.get("multiplier") or 0) > 0 for p in picks) != 11:
-        raise PublicMatchError("MATCH_LOCKED_XI_NOT_11")
+    active_chip = str(own.get("active_chip") or "").lower()
+    required_scoring = 15 if active_chip in {"bboost", "bench_boost"} else 11
+    if sum(int(p.get("multiplier") or 0) > 0 for p in picks) != required_scoring:
+        raise PublicMatchError("MATCH_LOCKED_SCORING_COUNT_INVALID")
     return gw, entry, pref, members, standings, event
 
 
@@ -138,7 +141,7 @@ def _bootstrap(root: Path, gw: int) -> dict[str, Any]:
     }
 
 
-def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
+def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any], event: dict[str, Any], slot: str) -> dict[str, Any]:
     picks = (members["entries"][str(entry)]).get("picks") or []
     fixtures = _read(root / "data/v6/normalized/canonical_fixtures.json").get("fixtures") or []
     official = _read(root / "data/v6/current/official_fpl.json").get("official") or {}
@@ -146,8 +149,16 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
         int(row.get("id")): row for row in official.get("fixtures") or []
         if isinstance(row, dict) and row.get("id") is not None
     }
+    match_path = root / f"data/v6/report_prefetch/official_match_gw_{gw}.json"
+    fresh_match = _read(match_path) if match_path.is_file() else {}
+    match_api_fresh = (
+        fresh_match.get("status") == "AVAILABLE"
+        and fresh_match.get("gw") == gw
+        and bool(fresh_match.get("fixtures"))
+        and _instant(fresh_match["generated_at"]) >= _instant(slot) - timedelta(minutes=35)
+    ) if fresh_match else False
     matches = []
-    for row in fixtures:
+    for row in ([] if match_api_fresh else fixtures):
         if int(row.get("event") or 0) != gw:
             continue
         fixture = dict(row)
@@ -157,9 +168,23 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
             if key in raw:
                 fixture[key] = raw[key]
         matches.append(fixture)
+    if match_api_fresh:
+        matches = [dict(row) for row in fresh_match["fixtures"]
+                   if int(row.get("event") or 0) == gw]
+    bootstrap = _bootstrap(root, gw)
+    official_bootstrap = official.get("bootstrap") or {}
+    event_meta = fresh_match.get("event_meta") if match_api_fresh else None
+    event_meta = event_meta or next(
+        (row for row in official_bootstrap.get("events") or [] if int(row.get("id") or 0) == gw),
+        None,
+    )
+    if event_meta:
+        bootstrap["events"] = [event_meta]
     return {
-        "bootstrap": _bootstrap(root, gw),
+        "bootstrap": bootstrap,
         "phase": {"scoring_gw": gw},
+        "event_status": fresh_match.get("event_status") if match_api_fresh else official.get("event_status") or {},
+        "match_api_fresh": match_api_fresh,
         "fixtures": matches,
         "picks": {
             "picks": [
@@ -172,8 +197,9 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
                 }
                 for p in picks
             ],
-            # Transfer hits are not present in V6 normalized submitted picks.
-            # Never pass an invented zero as an authenticated or Official hit.
+            "entry_history": (members["entries"][str(entry)]).get("entry_history"),
+            "automatic_subs": (members["entries"][str(entry)]).get("automatic_subs"),
+            "active_chip": (members["entries"][str(entry)]).get("active_chip"),
         },
         "event_live": {
             "elements": [
@@ -192,81 +218,169 @@ def _official_snapshot(root: Path, gw: int, entry: int, members: dict[str, Any],
     }
 
 
-def _exposure(members: dict[str, Any], event: dict[str, Any], standings: dict[str, Any], entry: int, names: dict[int, str]) -> dict[str, Any]:
-    score = {int(row["element_id"]): int(row.get("total_points") or 0) for row in event.get("elements") or []}
-    counts: dict[int, dict[str, int]] = defaultdict(lambda: {"owned": 0, "starter": 0, "captain": 0, "vice": 0, "eo": 0})
-    gross_by_entry: dict[int, int] = {}
-    captain_by_entry: dict[int, str] = {}
-    for key, record in (members.get("entries") or {}).items():
+def _exposure(
+    members: dict[str, Any],
+    event: dict[str, Any],
+    standings: dict[str, Any],
+    entry: int,
+    names: dict[int, str],
+    snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """League ranking requires 58 provable public hits and previous totals."""
+    snapshot = snapshot or {"bootstrap": {"elements": []}, "fixtures": []}
+    points = {
+        int(row["element_id"]): int(row["total_points"])
+        for row in event.get("elements") or []
+        if isinstance(row.get("total_points"), int)
+    }
+    minutes = {
+        int(row["element_id"]): int(row["minutes"])
+        for row in event.get("elements") or []
+        if isinstance(row.get("minutes"), int)
+    }
+    player_teams = {
+        int(p["id"]): int(p["team"])
+        for p in snapshot["bootstrap"]["elements"]
+        if p.get("team") is not None
+    }
+    finished_teams = set()
+    for fixture in snapshot.get("fixtures") or []:
+        if fixture.get("finished") is True:
+            for side in ("team_h", "team_a"):
+                if fixture.get(side) is not None:
+                    finished_teams.add(int(fixture[side]))
+    static = {int(r["entry_id"]): r for r in standings.get("managers") or []}
+    records = members.get("entries") or {}
+    n = len(records)
+    counts: dict[int, dict[str, int]] = defaultdict(
+        lambda: {"owned": 0, "starter": 0, "bench": 0, "captain": 0, "vice": 0, "eo": 0}
+    )
+    scored = []
+    captains: dict[int, str] = {}
+    for key, record in records.items():
         eid = int(key)
-        gross = 0
-        for pick in record.get("picks") or []:
-            player = int(pick["element_id"])
-            multiplier = int(pick.get("multiplier") or 0)
-            counts[player]["owned"] += 1
-            counts[player]["starter"] += int(multiplier > 0)
-            counts[player]["captain"] += int(pick.get("captain") is True)
-            counts[player]["vice"] += int(pick.get("vice_captain") is True)
-            counts[player]["eo"] += multiplier
-            gross += score.get(player, 0) * multiplier
-            if pick.get("captain") is True:
-                captain_by_entry[eid] = names.get(player, str(player))
-        gross_by_entry[eid] = gross
-    n = len(members.get("entries") or {})
-    def stat(value: int) -> dict[str, Any]:
-        return {"numerator": value, "denominator": n, "percentage": round(value * 100 / n, 2)}
-    rows = []
-    own_ids = {int(p["element_id"]) for p in members["entries"][str(entry)]["picks"]}
-    for player in sorted(own_ids):
-        c = counts[player]
-        rows.append({
-            "player": names.get(player, str(player)),
-            "denominator": n,
-            **{field: stat(c[field]) for field in ("owned", "starter", "captain", "vice", "eo")},
-            "live_consequence": f"{score.get(player, 0)} raw pts; EO {round(c['eo'] * 100 / n, 1)}%",
-        })
-    static = {int(row.get("entry_id")): row for row in standings.get("managers") or []}
+        calc = score_entry(
+            record, points, published_standing=static.get(eid),
+            player_teams=player_teams, finished_teams=finished_teams,
+            live_minutes=minutes,
+        )
+        scored.append({"entry_id": eid, **calc})
+        # Ownership and captaincy are Official submitted-pick facts even
+        # when a particular manager's live scoring cannot be calculated.
+        for p in record.get("picks") or []:
+            pid = int(p["element_id"])
+            multiplier = int((calc.get("multipliers") or {}).get(pid, p.get("multiplier") or 0))
+            counts[pid]["owned"] += 1
+            counts[pid]["starter"] += int(multiplier > 0)
+            counts[pid]["bench"] += int(multiplier == 0)
+            counts[pid]["captain"] += int(p.get("captain") is True)
+            counts[pid]["vice"] += int(p.get("vice_captain") is True)
+            counts[pid]["eo"] += multiplier
+            if p.get("captain") is True:
+                captains[eid] = names.get(pid, str(pid))
+    complete_points = (
+        n == len(static)
+        and len(scored) == n
+        and all(row.get("net_points") is not None
+                and row.get("previous_overall_points") is not None
+                and row.get("baseline_verified") is True
+                and row.get("autosub_state") != "PENDING"
+                for row in scored)
+    )
+    ordered = rank_live(scored) if complete_points else []
+    by_entry = {r["entry_id"]: r for r in ordered}
+    ours = by_entry.get(entry)
     own_static = static.get(entry) or {}
-    own_rank = int(own_static.get("league_rank") or 0)
+    own_static_rank = own_static.get("league_rank")
     rival = []
     for eid, row in static.items():
-        r = int(row.get("league_rank") or 0)
-        if eid == entry or not (max(1, own_rank - 9) <= r <= own_rank + 5):
+        if eid == entry:
             continue
+        calc = by_entry.get(eid) or {}
         rival.append({
-            "rank": r,
+            "entry_id": eid,
+            "rank": calc.get("live_rank"),
+            "published_rank": row.get("league_rank"),
             "manager": row.get("manager_name") or row.get("team_name"),
-            "live_points": f"{gross_by_entry.get(eid, 0)} gross (hit/autosub pending)",
-            "gap": "UNVERIFIED",
-            "captain": captain_by_entry.get(eid, "UNAVAILABLE"),
-            "key_threat": "Pending official score finalization",
-            "key_shield": "UNVERIFIED",
+            "live_points": calc.get("net_points"),
+            "live_overall": calc.get("live_overall_points"),
+            "gap": (calc.get("live_overall_points") - ours["live_overall_points"])
+                if ours and calc.get("live_overall_points") is not None else None,
+            "captain": captains.get(eid, "UNAVAILABLE"),
+            "key_threat": "Provisional FPL scoring" if ordered else "Insufficient public net scoring evidence",
+            "key_shield": "Pending fixture corrections" if ordered else "UNAVAILABLE",
+            "tied_position_provisional": calc.get("tie_unresolved"),
         })
-    rival.sort(key=lambda r: r["rank"])
+    rival.sort(key=lambda row: (
+        row.get("rank") if row.get("rank") is not None else 9999,
+        int(row["entry_id"]),
+    ))
+    def stat(value: int) -> dict[str, Any]:
+        return {"numerator": value, "denominator": n,
+                "percentage": round(100 * value / n, 2) if n else None}
+
+    our_calculation = next((row for row in scored if row["entry_id"] == entry), {})
+    our_ids = {int(p["element_id"]) for p in records[str(entry)]["picks"]}
+    exposure = []
+    for player in sorted(our_ids):
+        cnt = counts[player]
+        exposure.append({
+            "player": names.get(player, str(player)), "denominator": n,
+            **{field: stat(cnt[field]) for field in ("owned", "starter", "bench", "captain", "vice", "eo")},
+            "live_consequence": f"{points.get(player, 'UNAVAILABLE')} raw pts; EO {round(100 * cnt['eo'] / n, 1)}%" if n else "UNAVAILABLE",
+        })
+    leader = ordered[0] if ordered else None
+    by_rank = {r["live_rank"]: r for r in ordered if r.get("live_rank") is not None}
+    leader_gap = (leader["live_overall_points"] - ours["live_overall_points"]) if leader and ours else None
+    top3_gap = (by_rank.get(3, ordered[min(2, len(ordered) - 1)])["live_overall_points"] - ours["live_overall_points"]) if ordered and ours else None
+    top5_gap = (by_rank.get(5, ordered[min(4, len(ordered) - 1)])["live_overall_points"] - ours["live_overall_points"]) if ordered and ours else None
+    unresolved = sorted([
+        {"entry_id": r["entry_id"], "reason": r.get("reason") or
+         ("MISSING_HIT_OR_BASELINE" if r.get("hit") is None or r.get("previous_overall_points") is None else "AUTOSUB_PENDING")}
+        for r in scored
+        if r.get("net_points") is None or r.get("previous_overall_points") is None
+        or r.get("autosub_state") == "PENDING"
+    ], key=lambda r: r["entry_id"])
     return {
-        "status": "DEGRADED",
+        "status": "COMPLETE" if ordered else "DEGRADED",
         "league_name": standings.get("league_name") or "ICON+ League",
-        "expected_manager_count": n,
-        "collected_manager_count": n,
+        "expected_manager_count": n, "collected_manager_count": len(scored),
         "submitted_picks_exposure": {"state": "COMPLETE", "expected_count": n, "available_count": n},
-        "live_standings_rank": {"state": "UNAVAILABLE", "reason": "OFFICIAL_STATIC_STANDINGS_NOT_LIVE; HIT_AUTOSUB_UNVERIFIED"},
-        "user_summary": {"rank": None, "live_points": None},
-        "current_live_rank": None,
-        "current_live_points": None,
-        "material_player_exposure": rows,
+        "live_standings_rank": {
+            "state": "PROVISIONAL" if ordered else "UNAVAILABLE",
+            "reason": "OFFICIAL_PUBLIC_GW_SCORING_PROVISIONAL_TIE_BREAK_PENDING" if ordered else "INCOMPLETE_HIT_AUTOSUB_BASELINE_EVIDENCE",
+            "expected_count": n, "available_count": len(ordered),
+        },
+        "user_summary": {"rank": ours.get("live_rank") if ours else None,
+                         "live_points": ours.get("net_points") if ours else None},
+        "current_live_rank": ours.get("live_rank") if ours else None,
+        "current_live_points": ours.get("net_points") if ours else None,
+        "current_live_overall": ours.get("live_overall_points") if ours else None,
+        "leader_gap": leader_gap, "top3_gap": top3_gap, "top5_gap": top5_gap,
+        "own_gross_points": our_calculation.get("gross_points"),
+        "own_hit": our_calculation.get("hit"),
+        "own_calculation": our_calculation,
+        "material_player_exposure": exposure,
         "competitive_rival_live_consequence": rival,
-        "league_raw_gross_points": gross_by_entry,
-        "rival_live_points": {"state": "PROVISIONAL_GROSS_ONLY"},
-        "eo": {"state": "COMPLETE", "denominator": n, "definition": "sum of submitted scoring multipliers / managers"},
-        "live_rank_not_fabricated": True,
-        "own_static_rank": own_rank,
+        "all_manager_live_rows": ordered if ordered else scored,
+        "unresolved_manager_evidence": unresolved,
+        "league_raw_gross_points": {str(r["entry_id"]): r.get("gross_points") for r in scored},
+        "rival_live_points": {"state": "PROVISIONAL_NET" if ordered else "UNAVAILABLE"},
+        "eo": {"state": "COMPLETE" if len(scored) == n else "UNAVAILABLE",
+               "denominator": n, "definition": "sum of Official submitted scoring multipliers / all managers"},
+        "live_rank_not_fabricated": True, "own_static_rank": own_static_rank,
+        "published_versus_calculated": {
+            "published_rank": own_static_rank,
+            "calculated_rank": ours.get("live_rank") if ours else None,
+            "calculated_rank_provisional": bool(ordered),
+        },
     }
 
 
 def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str, Any]:
     gw, entry, pref, members, standings, event = _validated_inputs(runtime_data_root, report_slot)
     output_dir.mkdir(parents=True, exist_ok=True)
-    canonical_snapshot = _official_snapshot(runtime_data_root, gw, entry, members, event)
+    canonical_snapshot = _official_snapshot(runtime_data_root, gw, entry, members, event, report_slot)
     input_file = output_dir / ".match-public-input.json"
     input_file.write_text(json.dumps(canonical_snapshot), encoding="utf-8")
     live_state_service.OFFICIAL = input_file
@@ -275,26 +389,48 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
     live = live_state_service.run()
     if live.get("submitted_picks_status") != "AVAILABLE" or len(live.get("players") or []) != 15:
         raise PublicMatchError("MATCH_SCORING_15_NOT_AVAILABLE")
-    # No transfer-hit authority in normalized picks, so the published score is
-    # strictly gross and provisional; never silently make it net by treating it as 0.
-    live["hit"] = None
-    live["net_points"] = None
-    if isinstance(live.get("personalized_live_score"), dict):
-        live["personalized_live_score"]["hit"] = None
-        live["personalized_live_score"]["current_net_total"] = None
-        live["personalized_live_score"]["hit_authority"] = "UNAVAILABLE"
+    # All league captains must resolve through the full Official FPL player
+    # universe, not only the 15 players owned by our entry.
     names = {
-        int(p["element"]): str(p.get("name") or p["element"])
-        for p in live.get("players") or []
+        int(p["id"]): str(p.get("web_name") or p["id"])
+        for p in canonical_snapshot["bootstrap"]["elements"]
     }
-    icon = _exposure(members, event, standings, entry, names)
+    names.update({
+        int(p["element"]): str(p.get("name") or names.get(int(p["element"]), p["element"]))
+        for p in live.get("players") or []
+    })
+    icon = _exposure(members, event, standings, entry, names, canonical_snapshot)
+    our_calculation = dict(icon.get("own_calculation") or {})
+    live["gross_points"] = our_calculation.get("gross_points")
+    live["hit"] = our_calculation.get("hit")
+    live["net_points"] = our_calculation.get("net_points")
+    actual_factors = our_calculation.get("multipliers") or {}
+    for row in live.get("players") or []:
+        pid = int(row["element"])
+        factor = actual_factors.get(pid)
+        row["effective_multiplier"] = factor
+        if factor is not None and row.get("total_points") is not None:
+            row["effective_points"] = factor * int(row["total_points"])
+    personal = live.get("personalized_live_score")
+    if isinstance(personal, dict):
+        personal["hit"] = live["hit"]
+        personal["hit_authority"] = "OFFICIAL_PUBLIC_ENTRY_HISTORY" if live["hit"] is not None else "UNAVAILABLE"
+        personal["current_effective_total"] = live["gross_points"]
+        personal["effective_xi_points"] = live["gross_points"]
+        personal["current_net_total"] = live["net_points"]
+        personal["autosub_implications"] = {
+            **dict(personal.get("autosub_implications") or {}),
+            "status": our_calculation.get("autosub_state") or "UNAVAILABLE",
+            "official_autosub_count": our_calculation.get("official_autosub_count"),
+            "vice_takeover_provisional": our_calculation.get("vice_takeover_provisional"),
+        }
     report = materialize_match_report(
         canonical_text=CANONICAL.read_text(encoding="utf-8"),
         live_payload=live,
         icon_live=icon,
         source_freshness={
             "mini_league_submitted_picks": {"status": "AVAILABLE", "checked_at": members.get("generated_at")},
-            "live_standings": {"status": "UNVERIFIED", "checked_at": standings.get("generated_at")},
+            "live_standings": {"status": icon["live_standings_rank"]["state"], "checked_at": standings.get("generated_at")},
             "match_evidence_feed": {"status": "OFFICIAL_FPL", "checked_at": event.get("checked_at")},
         },
     )
@@ -328,26 +464,39 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         raise PublicMatchError("MATCH_13_SECTION_RENDER_CONTRACT_FAILED")
     if "## MATCH 10" not in body or "58/58" not in body or "## MATCH 13" not in body:
         raise PublicMatchError("MATCH10_OR_MATCH13_REAL_CONTENT_MISSING")
+    public_complete = (
+        icon.get("status") == "COMPLETE"
+        and live.get("net_points") is not None
+        and canonical_snapshot.get("match_api_fresh") is True
+    )
+    state = "PASS" if public_complete else "DEGRADED"
+    pending = [r for r in ("HITS", "AUTOSUB", "PROVISIONAL_LIVE_RANK") if
+               (r == "HITS" and live.get("hit") is None)
+               or (r == "AUTOSUB" and our_calculation.get("autosub_state") == "PENDING")
+               or (r == "PROVISIONAL_LIVE_RANK" and (icon.get("status") != "COMPLETE"
+                                                    or not canonical_snapshot.get("match_api_fresh")))]
     proof = {
         "schema_version": 2, "runner": "V12_PUBLIC_MATCH_DELIVERY",
         "report_mode": "MATCH", "report_slot": report_slot, "planning_gw": gw,
-        "runner_status": "DEGRADED", "pre_render_qa_status": "PASS",
+        "runner_status": state, "pre_render_qa_status": "PASS",
         "post_render_qa_status": "PASS", "human_facing_qa_status": "PASS",
         "canonical_expected_section_ids": EXPECTED, "rendered_section_ids": ids,
         "public_team_id": entry, "public_league_id": int(pref["priority_league_id"]),
         "manager_coverage": n if (n := len(members["entries"])) else 0,
         "public_auth_independent": True, "authenticated_finance_claimed": False,
         "live_checked_at": event.get("checked_at"), "prefetch_identity": pref.get("report_prefetch_run_id"),
-        "unverified_scopes": ["HITS", "AUTOSUB", "PROVISIONAL_LIVE_RANK"],
+        "official_match_api_fresh": canonical_snapshot.get("match_api_fresh"),
+        "unverified_scopes": pending,
         "stages": [{"stage": "MATCH_PUBLIC_FACTS", "status": "PASS"},
                    {"stage": "MATCH13_RENDER", "status": "PASS"},
-                   {"stage": "LIVE_RANK", "status": "DEGRADED", "reason": "HITS_AUTOSUB_UNVERIFIED"}],
+                   {"stage": "LIVE_RANK", "status": state,
+                    "reason": None if public_complete else "OFFICIAL_PUBLIC_EVIDENCE_INCOMPLETE"}],
     }
     bundle = {
         "schema": "FPL_MASTER_V12_PUBLIC_MATCH_BUNDLE_V1",
         "report_mode": "MATCH", "report_slot": report_slot, "planning_gw": gw,
-        "runner_status": "DEGRADED", "root_failure": "HITS_AUTOSUB_LIVE_RANK_UNVERIFIED",
-        "section_manifest": [{"section_id": value, "status": "COMPLETE" if value != "MATCH10" else "DEGRADED"} for value in ids],
+        "runner_status": state, "root_failure": None if public_complete else "HITS_AUTOSUB_LIVE_RANK_UNVERIFIED",
+        "section_manifest": [{"section_id": value, "status": "COMPLETE" if value != "MATCH10" or public_complete else "DEGRADED"} for value in ids],
         "report": report, "visible_body": body, "execution_proof": proof,
         "governance": {"private_auth_required": False, "planning_xi_authority": False,
                        "live_rank_fabricated": False, "monte_carlo_modified": False},
@@ -359,7 +508,8 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         "engineering_closure_blocks_report": False,
     }), encoding="utf-8")
     write_serving_artifacts(bundle=bundle, output_dir=output_dir)
-    return {"status": "READY_DEGRADED", "report_slot": report_slot, "sections": len(ids)}
+    return {"status": "READY_FULL" if public_complete else "READY_DEGRADED",
+            "report_slot": report_slot, "sections": len(ids)}
 
 
 def main() -> int:

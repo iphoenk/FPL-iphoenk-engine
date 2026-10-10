@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T21:16:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T22:18:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -31,7 +31,7 @@ Captain distributions now have an optional calibrated goalkeeper event layer and
 
 ## Reports
 
-MATCH public-first recovery: the canonical V12 runner previously accepted DEEP/PRICE only and rejected governed MATCH requests before creating report artifacts. An isolated MATCH adapter now consumes exact-occurrence Official FPL V6 submitted picks (11 XI, 4 bench), GW live points, all 58 ICON+ managers, and displays the 13 locked MATCH sections including fixture scores, MATCH10 exposure and MATCH13 source status. Auth-only bank/FT/purchase/selling values remain unavailable on AUTH_EXPIRED; provisional gross scores are explicitly not verified net league ranks until transfer hit/autosub authority is complete. No private session, P1.7, MC 500K, chip ledger, or scheduler behavior changes.
+Official Public API MATCH adoption (#954) extends V6 per-entry GW facts with Official transfer hit, automatic substitutions, raw submitted picks, verified previous-GW cumulative totals (58 manager histories), fresh fixture/score and event-status snapshots, with source lineage. V12 produces provisional net/live ranks only from verified evidence, never promotes static standings to live, and remains independent of private /me and /my-team authentication. [Endpoint inventory and remaining proof requirements](docs/official_public_api_inventory.md). The production FULL GREEN acceptance still requires a verified exact-occurrence prefetch, 58/58 hit/baseline coverage, 13/13 rendered sections and delivery receipt.\n\nMATCH public-first recovery: the canonical V12 runner previously accepted DEEP/PRICE only and rejected governed MATCH requests before creating report artifacts. An isolated MATCH adapter now consumes exact-occurrence Official FPL V6 submitted picks (11 XI, 4 bench), GW live points, all 58 ICON+ managers, and displays the 13 locked MATCH sections including fixture scores, MATCH10 exposure and MATCH13 source status. Auth-only bank/FT/purchase/selling values remain unavailable on AUTH_EXPIRED; provisional gross scores are explicitly not verified net league ranks until transfer hit/autosub authority is complete. No private session, P1.7, MC 500K, chip ledger, or scheduler behavior changes.
 
 
 S06 mobile pitch displays the entire already-calculated **CURRENT15** P1.7 formation frontier (including 3-4-3 where a legal canonical row exists), not only two leading routes. Formation xPts remain unchanged. Missing rows are explicitly labelled unavailable. DCL→Barry and DCL→Gonzalo are roster-transfer scenarios **not computed** by the S06 presentation change; each still requires validated finance, legality, canonical lineup optimization and full 500K MC before any recommendation. GW6 team news from 20 clubs and 113 player signals is ingested as bounded secondary evidence via the existing P1.1 adapter. V6 facts and P1.7 decision ownership are unchanged.

@@ -28,6 +28,7 @@ from .prefetch_contract import (
     DEFAULT_CONFIG,
     DEFAULT_OUTPUT,
     REPORT_KINDS,
+    SCHEMA_VERSION,
     PrefetchContractError,
     artifact_meta,
     bootstrap_index,
@@ -874,6 +875,48 @@ class PrefetchService:
                     }
                 )
 
+        # Independent public MATCH fixture/status refresh: do not reuse a
+        # stale core Official snapshot or depend on authenticated /my-team.
+        if report_kind == "match_mode" and client is not None and gw is not None:
+            fixtures_method = getattr(client, "fixtures", None)
+            status_method = getattr(client, "event_status", None)
+            fixture_result = fixtures_method(gw) if callable(fixtures_method) else {}
+            event_status_result = status_method() if callable(status_method) else {}
+            fixture_payload = fixture_result.get("payload")
+            status_payload = event_status_result.get("payload")
+            if (
+                fixture_result.get("status") == "LIVE"
+                and isinstance(fixture_payload, list)
+                and event_status_result.get("status") == "LIVE"
+                and isinstance(status_payload, dict)
+            ):
+                match_relative = f"report_prefetch/official_match_gw_{gw}.json"
+                write_json(self.output_root / match_relative, {
+                    "schema_version": SCHEMA_VERSION,
+                    "gw": gw, "status": "AVAILABLE",
+                    "generated_at": generated_at,
+                    "fixtures": fixture_payload,
+                    "event_status": status_payload,
+                    "event_meta": next(
+                        (row for row in bootstrap_payload.get("events") or []
+                         if int(row.get("id") or 0) == gw), None,
+                    ),
+                    "lineage": {
+                        "fixtures": lineage(fixture_result, gw=gw),
+                        "event_status": lineage(event_status_result, gw=gw),
+                    },
+                    "authority": "OFFICIAL_FPL",
+                }, secrets=secrets)
+                artifacts.append(artifact_meta(self.output_root, match_relative))
+            else:
+                advisory_source_failures.append({
+                    "domain": "official_match_freshness",
+                    "endpoint_class": "fixtures_and_event_status",
+                    "status": "UNAVAILABLE",
+                    "fixtures_status": fixture_result.get("status"),
+                    "event_status_status": event_status_result.get("status"),
+                })
+
         set_piece_notes_status = "NOT_REQUESTED"
         set_piece_notes_checked_at = None
         if set_piece_notes_requested and client is not None:
@@ -1162,8 +1205,12 @@ class PrefetchService:
                             manager_ids=manager_ids,
                             deadline_passed=bool(deadline_passed),
                             workers=int(self.config.get("rival_picks_max_workers", 8)),
-                            force=force,
+                            # Submitted XI is immutable after deadline; Official
+                            # GW history, hits, captain correction and automatic
+                            # substitutions are NOT. Refresh all rivals for MATCH.
+                            force=force or report_kind == "match_mode",
                             cache_enabled=bool(self.config.get("submitted_picks_cache_enabled", True)),
+                            include_previous_history=report_kind == "match_mode",
                         )
                         write_json(self.output_root / picks_relative, manager_picks, secrets=secrets)
                         artifacts.append(artifact_meta(self.output_root, picks_relative))

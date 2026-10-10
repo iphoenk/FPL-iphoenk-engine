@@ -3243,8 +3243,10 @@ def materialize_match_report(
     bonus = dict(live.get("bonus_bps") or {})
     generated_at = live.get("generated_at")
 
-    xi_rows = [row for row in players if int(row.get("multiplier") or 0) > 0]
-    bench_rows = [row for row in players if int(row.get("multiplier") or 0) == 0]
+    # Submitted lineup remains 11 starters + 4 bench even when Bench Boost
+    # gives positive scoring multipliers to all 15 submitted players.
+    xi_rows = [row for row in players if 1 <= int(row.get("pick_position") or 0) <= 11]
+    bench_rows = [row for row in players if 12 <= int(row.get("pick_position") or 0) <= 15]
     if len(xi_rows) != 11 or len(bench_rows) != 4:
         raise ReportOrchestrationError(
             f"MATCH locked submitted picks require XI=11 and bench=4, got {len(xi_rows)}/{len(bench_rows)}"

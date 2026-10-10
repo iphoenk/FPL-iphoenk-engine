@@ -287,6 +287,24 @@ class OfficialFPLClient:
     def event_live(self, gw: int) -> dict[str, Any]:
         return self._request("event_live", f"event/{int(gw)}/live/")
 
+    def fixtures(self, gw: int | None = None) -> dict[str, Any]:
+        return self._request(
+            "fixtures", "fixtures/",
+            params={"event": int(gw)} if gw is not None else None,
+        )
+
+    def event_status(self) -> dict[str, Any]:
+        return self._request("event_status", "event-status/")
+
+    def entry_history(self, entry_id: int) -> dict[str, Any]:
+        return self._request("entry_history", f"entry/{int(entry_id)}/history/")
+
+    def entry_transfers(self, entry_id: int) -> dict[str, Any]:
+        return self._request("entry_transfers", f"entry/{int(entry_id)}/transfers/")
+
+    def element_summary(self, player_id: int) -> dict[str, Any]:
+        return self._request("element_summary", f"element-summary/{int(player_id)}/")
+
     def set_piece_notes(self) -> dict[str, Any]:
         return self._request("set_piece_notes", "team/set-piece-notes/")
 

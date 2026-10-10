@@ -149,3 +149,204 @@ def test_match_exact_occurrence_survives_latest_pointer_advance(tmp_path: Path) 
     latest.write_text(json.dumps({"report_kind": "full_master", "target_logical_report_slot": "2026-10-10T21:30:00+07:00"}))
     _, _, pref, _, _, _ = _validated_inputs(tmp_path, SLOT)
     assert pref["report_kind"] == "match_mode"
+
+
+from src.engines.v12_official_public_scoring import rank_live, score_entry
+from src.runtime_v6.domains.report_plane.personal_prefetch import normalise_submitted_picks
+
+
+def _entry(*, chip=None, hit=0, subs=None):
+    return {
+        "active_chip": chip, "automatic_subs": subs,
+        "entry_history": {"event": 6, "points": 20, "total_points": 320, "event_transfers_cost": hit},
+        "picks": [
+            {"element_id": i, "squad_position": i,
+             "multiplier": 2 if i == 2 else (1 if i <= 11 or chip == "bboost" else 0),
+             "captain": i == 2, "vice_captain": i == 4}
+            for i in range(1, 16)
+        ],
+    }
+
+
+def test_official_public_hit_and_previous_overall():
+    result = score_entry(_entry(hit=4), {i: i for i in range(1, 16)})
+    assert result["gross_points"] == 68
+    assert result["hit"] == 4
+    assert result["net_points"] == 64
+    assert result["previous_overall_points"] == 300
+    assert result["live_overall_points"] == 364
+
+
+def test_unknown_hit_is_not_invented_zero():
+    entry = _entry()
+    entry.pop("entry_history")
+    result = score_entry(entry, {i: i for i in range(1, 16)})
+    assert result["gross_points"] == 68
+    assert result["hit"] is None
+    assert result["net_points"] is None
+    assert result["live_overall_points"] is None
+
+
+def test_official_autosub_applied_once():
+    entry = _entry(subs=[{"element_out": 3, "element_in": 12}], hit=8)
+    result = score_entry(entry, {i: i for i in range(1, 16)})
+    assert result["gross_points"] == 77
+    assert result["net_points"] == 69
+    assert result["calculated_autosub_applied"] == 1
+    assert result["autosub_state"] == "OFFICIAL_APPLIED"
+    entry["picks"][2]["multiplier"] = 0
+    entry["picks"][11]["multiplier"] = 1
+    already = score_entry(entry, {i: i for i in range(1, 16)})
+    assert already["gross_points"] == 77
+    assert already["calculated_autosub_applied"] == 0
+
+
+def test_pending_dnp_does_not_finalize_autosub():
+    result = score_entry(
+        _entry(subs=None), {i: i for i in range(1, 16)},
+        player_teams={3: 1}, finished_teams={1}, live_minutes={3: 0},
+    )
+    assert result["autosub_state"] == "PENDING"
+    assert result["status"] == "PROVISIONAL"
+
+
+def test_triple_captain_bench_boost_and_vice():
+    triple = _entry(chip="3xc")
+    triple["picks"][1]["multiplier"] = 3
+    assert score_entry(triple, {i: i for i in range(1, 16)})["gross_points"] == 70
+    boost = _entry(chip="bboost")
+    assert score_entry(boost, {i: i for i in range(1, 16)})["gross_points"] == 122
+    vice = score_entry(
+        _entry(), {i: i for i in range(1, 16)},
+        player_teams={2: 1}, finished_teams={1}, live_minutes={2: 0, 4: 90},
+    )
+    assert vice["vice_takeover_provisional"] is True
+    assert vice["multipliers"][2] == 0
+    assert vice["multipliers"][4] == 2
+
+
+def test_rank_ties_provisional_without_inventing_transfer_order():
+    rows = [
+        {"entry_id": 10, "live_overall_points": 410},
+        {"entry_id": 20, "live_overall_points": 408},
+        {"entry_id": 30, "live_overall_points": 410},
+    ]
+    ranked = rank_live(rows)
+    assert [r["entry_id"] for r in ranked] == [10, 30, 20]
+    assert [r["live_rank"] for r in ranked] == [1, 1, 3]
+    assert ranked[0]["tie_unresolved"] and ranked[1]["tie_unresolved"]
+
+
+def test_public_normalizer_preserves_scoring_evidence():
+    response = {
+        "status": "LIVE", "checked_at": "2026-10-10T10:00:00Z",
+        "http_status": 200, "payload_digest": "fixture",
+        "payload": {
+            "active_chip": None,
+            "entry_history": {"event": 6, "event_transfers_cost": 8, "total_points": 333, "points": 20},
+            "automatic_subs": [{"element_out": 3, "element_in": 12}],
+            "picks": [{"element": p["element_id"], "position": p["squad_position"],
+                       "multiplier": p["multiplier"], "is_captain": p["captain"],
+                       "is_vice_captain": p["vice_captain"]}
+                      for p in _entry()["picks"]],
+        },
+    }
+    result = normalise_submitted_picks(3462711, 6, response)
+    assert result["entry_history"]["event_transfers_cost"] == 8
+    assert result["automatic_subs"][0]["element_in"] == 12
+    assert len(result["picks"]) == 15
+
+
+def test_verified_previous_gw_total_prevents_hit_baseline_double_count():
+    entry = _entry(hit=4)
+    entry["previous_overall_points"] = 307
+    entry["previous_overall_authority"] = "OFFICIAL_PREVIOUS_GW_HISTORY"
+    result = score_entry(entry, {i: i for i in range(1, 16)})
+    assert result["gross_points"] == 68
+    assert result["net_points"] == 64
+    assert result["previous_overall_points"] == 307
+    assert result["live_overall_points"] == 371
+    assert result["baseline_verified"] is True
+    unverified = score_entry(_entry(hit=4), {i: i for i in range(1, 16)})
+    assert unverified["baseline_verified"] is False
+
+
+def test_ownership_not_lost_when_official_live_points_are_incomplete(tmp_path):
+    _fixture(tmp_path)
+    _, entry, _, members, standings, live = _validated_inputs(tmp_path, SLOT)
+    # A missing element invalidates an individual score, not an Official pick.
+    live["elements"] = live["elements"][:-1]
+    icon = _exposure(members, live, standings, entry, {i: f"Player {i}" for i in range(1, 16)})
+    row = next(r for r in icon["material_player_exposure"] if r["player"] == "Player 15")
+    assert row["owned"]["numerator"] == 58
+    assert icon["live_standings_rank"]["state"] == "UNAVAILABLE"
+
+
+def test_history_acquisition_uses_previous_gw_official_total(tmp_path):
+    from src.runtime_v6.domains.report_plane.league_prefetch import acquire_manager_picks
+
+    class OfficialFake:
+        def submitted_picks(self, entry_id, gw):
+            return {
+                "status": "LIVE", "checked_at": CHECKED, "http_status": 200,
+                "payload_digest": "submitted-digest",
+                "payload": {
+                    "active_chip": None,
+                    "automatic_subs": [],
+                    "entry_history": {"event": gw, "points": 18, "total_points": 225,
+                                      "event_transfers_cost": 4},
+                    "picks": [
+                        {"element": p["element_id"], "position": p["squad_position"],
+                         "multiplier": p["multiplier"], "is_captain": p["captain"],
+                         "is_vice_captain": p["vice_captain"]}
+                        for p in _entry()["picks"]
+                    ],
+                },
+            }
+
+        def entry_history(self, entry_id):
+            return {
+                "status": "LIVE", "checked_at": CHECKED, "http_status": 200,
+                "payload_digest": "history-digest",
+                "payload": {"current": [{"event": 5, "total_points": 211},
+                                         {"event": 6, "total_points": 225}]},
+            }
+
+    artifact, metrics = acquire_manager_picks(
+        OfficialFake(), previous_path=tmp_path / "missing.json",
+        season="2026-27", league_id=9477, gw=6,
+        manager_ids=[3462711], deadline_passed=True, workers=1,
+        force=True, cache_enabled=False, include_previous_history=True,
+    )
+    record = artifact["entries"]["3462711"]
+    assert record["previous_overall_points"] == 211
+    assert record["previous_overall_authority"] == "OFFICIAL_PREVIOUS_GW_HISTORY"
+    assert record["entry_history"]["event_transfers_cost"] == 4
+    assert record["record_digest"]
+    assert metrics["cache_misses"] == 1
+
+
+def test_captain_dnp_official_autosub_does_not_double_captain_incoming():
+    entry = _entry(subs=[{"element_out": 2, "element_in": 12}], hit=4)
+    points = {i: i for i in range(1, 16)}
+    points[2] = 0
+    result = score_entry(
+        entry, points,
+        player_teams={2: 1}, finished_teams={1}, live_minutes={2: 0, 4: 90},
+    )
+    assert result["multipliers"][2] == 0
+    assert result["multipliers"][12] == 1
+    assert result["multipliers"][4] == 2
+    assert result["vice_takeover_provisional"] is True
+    # Official may already publish post-autosub multipliers: do not
+    # promote the vice twice in that representation.
+    entry["picks"][1]["multiplier"] = 0
+    entry["picks"][11]["multiplier"] = 1
+    entry["picks"][3]["multiplier"] = 2
+    already = score_entry(
+        entry, points,
+        player_teams={2: 1}, finished_teams={1}, live_minutes={2: 0, 4: 90},
+    )
+    assert already["multipliers"][4] == 2
+    assert already["multipliers"][12] == 1
+    assert already["vice_takeover_provisional"] is False

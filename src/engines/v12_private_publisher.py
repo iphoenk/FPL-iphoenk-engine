@@ -79,6 +79,7 @@ _OPTIONAL_SERVING_FILES = (
     "delivery_status.json",
     "delivery_state.json",
     "presentation_qa.json",
+    "gw6-forward-mc.json",
 )
 _REPORT_FIRST_SERVING_FILES = (
     "serving_report.json",
@@ -426,7 +427,12 @@ def publish_private_output(
         )
 
     privacy_findings: dict[str, list[int]] = {}
-    for name in ("report_body.md", "serving_report.md", "serving_report.json"):
+    for name in (
+        "report_body.md",
+        "serving_report.md",
+        "serving_report.json",
+        "gw6-forward-mc.json",
+    ):
         path = canonical_dir / name
         if not path.is_file():
             continue
@@ -589,6 +595,7 @@ def publish_private_output(
             "delivery_status.json": "delivery_status.json",
             "delivery_state.json": "delivery_state.json",
             "presentation_qa.json": "presentation_qa.json",
+            "gw6-forward-mc.json": "gw6-forward-mc.json",
         }
         for source_name, latest_name in serving_map.items():
             source = canonical_dir / source_name

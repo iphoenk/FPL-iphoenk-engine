@@ -601,6 +601,7 @@ jobs:
             --require-private-personal
             --report-mode "$REPORT_MODE"
             --report-slot "$REPORT_SLOT"
+            --warm-state-out "artifacts/v12-report/gw6-warm-state.json"
             --output-dir "artifacts/v12-report"
           )
           if [ -n "$CHECKPOINT_TIME" ]; then
@@ -638,6 +639,42 @@ jobs:
           python -m src.engines.v12_delivery_security scan-log --path "$private_log"
           grep -E '^\[(V12_STAGE|V12_STAGE2_CACHE|P1_2B_PERF)\]' "$private_log" || true
           exit "$runner_status"
+
+      - name: Execute GW6 forward canonical 500K what-if MC
+        if: success() && needs.parse.outputs.report_mode == 'DEEP'
+        working-directory: app
+        env:
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+        run: |
+          set -euo pipefail
+          warm="artifacts/v12-report/gw6-warm-state.json"
+          test -s "$warm"
+          planning_gw="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["planning_gw"])' "$warm")"
+          if [ "$planning_gw" != "6" ]; then
+            echo "GW6 forward MC not applicable for planning_gw=$planning_gw"
+            exit 0
+          fi
+          python -m src.engines.v12_gw6_forward_mc \
+            --input config/intelligence/gw6_owner_transfer_matrix.json \
+            --warm-state "$warm" \
+            --report-slot "$REPORT_SLOT" \
+            --output artifacts/v12-report/gw6-forward-mc.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path("artifacts/v12-report/gw6-forward-mc.json").read_text())
+          assert result["status"] == "PASS"
+          assert result["mc_paths_each_route"] == 500_000
+          assert set(result["scenarios"]) >= {"HOLD", "DCL_TO_BARRY", "DCL_TO_GONZALO"}
+          assert len(result["mc_route_metrics"]) >= 3
+          print(json.dumps({
+              "status": result["status"],
+              "scenarios": sorted(result["scenarios"]),
+              "mc_paths_each_route": result["mc_paths_each_route"],
+              "mc_output_fingerprint": result["mc_output_fingerprint"],
+          }, sort_keys=True))
+          PY
 
       - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
         if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'

@@ -1193,13 +1193,30 @@ def validate_deep_decision_content_delivery(
                         f"S15B_COMPETITIVE_RIVAL_DETAIL_MISSING={index}:{key}"
                     )
 
-        top10 = [
-            int(row.get("rank") or 0)
-            for row in s15b.get("rank_battle") or []
+        # League ranks may tie, and therefore need not be 1..10. Require
+        # ten distinct standings members in positional order while preserving
+        # their actual Official FPL ranks, including legitimate ties.
+        top10_rows = [
+            row for row in s15b.get("rank_battle") or []
             if isinstance(row, Mapping)
         ]
+        top10_positions = [
+            row.get("standing_position") for row in top10_rows
+        ]
+        top10_ranks = [
+            int(row.get("rank") or 0) for row in top10_rows
+        ]
+        top10_ids = [
+            row.get("entry_id") for row in top10_rows
+        ]
         expected_top10 = list(range(1, min(10, league_expected) + 1))
-        if top10 != expected_top10:
+        if (
+            top10_positions != expected_top10
+            or any(rank <= 0 for rank in top10_ranks)
+            or top10_ranks != sorted(top10_ranks)
+            or any(not entry_id for entry_id in top10_ids)
+            or len(set(top10_ids)) != len(top10_ids)
+        ):
             failures.append("S15B_TOP10_MILESTONE_INVALID")
 
         for index, row in enumerate(

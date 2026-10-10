@@ -46,7 +46,7 @@ def render_s06_formation_frontier(content: Mapping[str, Any]) -> str:
     return (
         '<div style="background:#10252b;color:#fff;border-radius:12px;padding:10px;margin-top:8px">'
         '<strong>All CURRENT15 formation winners (exact P1.7)</strong>'
-        '<table style="width:100%"><thead><tr><th>Formation</th><th>XI+C/VC xPts</th>'
+        '<table style="width:100%%"><thead><tr><th>Formation</th><th>XI+C/VC xPts</th>'
         '<th>Gap</th></tr></thead><tbody>%s</tbody></table><p>%s</p>'
         '<p>DCL keep / DCL to Barry / DCL to Gonzalo require separate '
         'legality, prices, transfer hits, and canonical 500K Monte Carlo. '

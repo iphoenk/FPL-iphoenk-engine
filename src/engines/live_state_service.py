@@ -383,11 +383,13 @@ def run() -> dict:
 
         if multiplier > 0:
             effective_xi_points += effective_points
+        if pick_position <= 11 and multiplier > 0:
             if match_status == "FT" and int(stats.get("minutes") or 0) == 0:
                 potential_autosub_out.append(player.get("web_name") or str(element))
-        else:
+        if pick_position > 11:
+            # Under Bench Boost, all 15 picks score, but four remain bench.
             bench_points += raw_points
-            if raw_points > 0:
+            if raw_points > 0 and multiplier == 0:
                 bench_candidates.append(player.get("web_name") or str(element))
         provisional_bonus_total += int(stats.get("bonus") or 0)
         if pick.get("is_captain"):

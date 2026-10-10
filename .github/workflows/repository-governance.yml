@@ -286,6 +286,7 @@ jobs:
           tests/test_stage3_upstream_diagnostics.py
           tests/test_delivery_reliability.py
           tests/test_match_mode_live_score_contract.py
+          tests/test_public_match_delivery.py
           tests/test_deep_decision_content_delivery_barrier.py
           tests/test_s18_visible_route_summary.py
           tests/test_deep_rendered_schema_lock.py

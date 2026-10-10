@@ -130,7 +130,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
 STATE_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_STATE_V12.json"
 
-SUPPORTED_MODES = {"DEEP", "PRICE"}
+SUPPORTED_MODES = {"DEEP", "PRICE", "MATCH"}
 
 
 def _stagec_scanner_enabled() -> bool:
@@ -9600,7 +9600,27 @@ def main() -> int:
             raise IntegratedRunnerError("P4 scenario override file must be a JSON object")
         scenario_overrides = raw_overrides
 
-    if mode == "PRICE":
+    if mode == "MATCH":
+        from src.engines.v12_match_occurrence import build_public_match
+        bundle = build_public_match(
+            runtime_data_root=Path(args.runtime_data_root),
+            report_slot=args.report_slot,
+            canonical_text=CANONICAL_PATH.read_text(encoding="utf-8"),
+        )
+        write_serving_artifacts(bundle=bundle, output_dir=Path(args.output_dir))
+        # MATCH is a public evidence delivery, not a DEEP optimizer/MC run.
+        # Keep Stage3 explicitly not applicable rather than asserting PASS.
+        (Path(args.output_dir) / "stage3_acceptance.json").write_text(
+            json.dumps({
+                "contract": "V12_STAGE3_INTEGRATED_ACCEPTANCE_V1",
+                "status": "NOT_APPLICABLE",
+                "report_mode": "MATCH",
+                "stage3_executed": False,
+                "stage3_pass_claimed": False,
+                "public_report_continuation": True,
+            }, indent=2) + "\n", encoding="utf-8",
+        )
+    elif mode == "PRICE":
         bundle = run_price_occurrence(
             runtime_data_root=Path(args.runtime_data_root),
             private_data_root=(

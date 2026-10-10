@@ -52,7 +52,12 @@ def _instant(value: Any) -> datetime:
 
 def _validated_inputs(root: Path, slot: str) -> tuple[int, int, dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     public = root / "data/v6"
-    pref = _read(public / "report_prefetch/latest.json")
+    # A new DEEP/PRICE prefetch may advance latest.json between the MATCH
+    # acquisition and rendering. The exact stored occurrence owns the facts.
+    _instant(slot)
+    token = slot.replace(":", "").replace("+", "_plus_").replace("-", "").replace("T", "_")
+    occurrence = public / "report_prefetch/occurrences" / f"match_mode__{token}.json"
+    pref = _read(occurrence if occurrence.is_file() else public / "report_prefetch/latest.json")
     if pref.get("report_kind") != "match_mode" or pref.get("target_logical_report_slot") != slot:
         raise PublicMatchError("MATCH_PREFETCH_OCCURRENCE_MISMATCH")
     if pref.get("public_core_complete") is not True:

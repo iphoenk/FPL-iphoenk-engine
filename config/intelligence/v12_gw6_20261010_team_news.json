@@ -1536,7 +1536,7 @@
       "source_id": "ffscout_gw6_team_news",
       "source_class": "SECONDARY_AVAILABILITY",
       "topic": "INJURY_AVAILABILITY",
-      "subject": "Ezri Konsa",
+      "subject": "Konsa",
       "stance": "INJURY_RISK",
       "observed_at": "2026-10-10T09:46:00+07:00",
       "source_url": "https://www.fantasyfootballscout.co.uk/2026/10/09/fpl-gameweek-6-team-news-fridays-live-injury-updates-3",
@@ -1558,7 +1558,8 @@
         "is_republication": false,
         "explicit_target_unavailable": false,
         "manager_availability_language": "LATE",
-        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM"
+        "root_claim_origin": "MANAGER_PRESS_CONFERENCE_SINGLE_CLAIM",
+        "raw_player_name": "Ezri Konsa"
       }
     },
     {

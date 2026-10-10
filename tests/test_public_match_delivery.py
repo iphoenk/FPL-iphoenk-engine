@@ -137,3 +137,15 @@ def test_match_full_13_section_synthetic_smoke(tmp_path: Path) -> None:
     assert serving["sections"]["MATCH13"]["content"]["submitted_picks"] == "AVAILABLE"
     assert "Alpha vs Beta" in (output / "serving_report.md").read_text()
     assert "2-1" in (output / "serving_report.md").read_text()
+
+
+def test_match_exact_occurrence_survives_latest_pointer_advance(tmp_path: Path) -> None:
+    _fixture(tmp_path)
+    root = tmp_path / "data/v6"
+    latest = root / "report_prefetch/latest.json"
+    bound = root / "report_prefetch/occurrences/match_mode__20261010_205700_plus_0700.json"
+    bound.parent.mkdir(parents=True, exist_ok=True)
+    bound.write_text(latest.read_text())
+    latest.write_text(json.dumps({"report_kind": "full_master", "target_logical_report_slot": "2026-10-10T21:30:00+07:00"}))
+    _, _, pref, _, _, _ = _validated_inputs(tmp_path, SLOT)
+    assert pref["report_kind"] == "match_mode"

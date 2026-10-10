@@ -421,7 +421,7 @@ def run() -> dict:
             **stats,
         }
         detail.append(player_row)
-        if multiplier == 0:
+        if pick_position > 11:
             bench_entry = {
                 "element": element,
                 "name": player.get("web_name"),
@@ -485,7 +485,8 @@ def run() -> dict:
         "final_consequence": "PENDING_OFFICIAL_FINALIZATION",
     }
 
-    hit = int((picks.get("entry_history") or {}).get("event_transfers_cost") or 0)
+    public_hit = (picks.get("entry_history") or {}).get("event_transfers_cost")
+    hit = public_hit if isinstance(public_hit, int) and not isinstance(public_hit, bool) else None
     complete = len(detail) == 15 and len({row["element"] for row in detail}) == 15
     if active and not complete:
         raise RuntimeError(f"Match Mode publication blocked: ALL15 submitted-pick coverage required, got {len(detail)}/15")
@@ -505,7 +506,7 @@ def run() -> dict:
         "bonus_lifecycle_state": bonus_lifecycle["lifecycle_state"],
         "hit": hit,
         "current_effective_total": effective_xi_points,
-        "current_net_total": effective_xi_points - hit,
+        "current_net_total": effective_xi_points - hit if hit is not None else None,
         "autosub_implications": {
             "status": "PROVISIONAL",
             "potential_out": potential_autosub_out,
@@ -539,7 +540,7 @@ def run() -> dict:
         "coverage": {"owned": len(detail), "expected_owned": 15, "complete": complete},
         "gross_points": effective_xi_points,
         "hit": hit,
-        "net_points": effective_xi_points - hit,
+        "net_points": effective_xi_points - hit if hit is not None else None,
         "players": detail,
         "personalized_live_score": personalized,
         "bench_presentation": {

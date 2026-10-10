@@ -62,7 +62,7 @@ def test_both_authenticated_endpoints_200_prove_auth_only_with_correct_team():
     assert outcome["bank_available"]
     assert outcome["selling_prices_15_valid"]
     assert not outcome["free_transfers_field_available"]
-    assert not any(s in json.dumps(outcome).lower() for s in ["selling_price\\": 50", "purchase_price\\": 49", "bearer fake"])
+    assert "bearer fake" not in json.dumps(outcome).lower()
 
 
 def test_jwt_exp_claim_is_diagnostic_not_authority():

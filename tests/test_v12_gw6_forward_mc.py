@@ -141,6 +141,22 @@ def test_cvc_pair_is_correlated_route_when_both_start():
             "metrics": {r["route_id"]: {"1": {}} for r in routes},
         }
 
-    out = run_forward_mc(cfg, warm, optimizer=_optimizer, simulator=four_route_sim)
+    def attacker_start_optimizer(projections, ids, *, planning_gw):
+        lineup = _optimizer(projections, ids, planning_gw=planning_gw)
+        if {426, 411}.issubset(set(ids)):
+            starting = [426, 411] + [x for x in ids if x not in {426, 411}][:9]
+            bench = [x for x in ids if x not in starting]
+            lineup["starting_xi"] = [{"element": x} for x in starting]
+            lineup["bench"] = {
+                "order": [{"element": x} for x in bench[:3]],
+                "gk": {"element": bench[3]},
+            }
+            lineup["captain"] = {"element": starting[0]}
+            lineup["vice_captain"] = {"element": starting[1]}
+        return lineup
+
+    out = run_forward_mc(
+        cfg, warm, optimizer=attacker_start_optimizer, simulator=four_route_sim
+    )
     assert "BRUNO_C_HAALAND_VC" in out["mc_route_metrics"]
     assert out["decision_authority"] == "WHAT_IF_ONLY_NOT_EXECUTABLE"

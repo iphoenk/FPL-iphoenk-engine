@@ -718,8 +718,8 @@ jobs:
             mkdir -p "$work/data/v6/personal"
             cp "$saved_personal/current_team.json" "$refreshed_team"
             cat >"$refresh_status" <<'JSON'
-{"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"SAVED_VALIDATED_SNAPSHOT"}
-JSON
+          {"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"SAVED_VALIDATED_SNAPSHOT"}
+          JSON
             echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK"
           else
           V6_REFRESHED_TEAM_PATH="$refreshed_team" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'

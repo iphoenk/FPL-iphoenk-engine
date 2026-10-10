@@ -160,3 +160,35 @@ def test_cvc_pair_is_correlated_route_when_both_start():
     )
     assert "BRUNO_C_HAALAND_VC" in out["mc_route_metrics"]
     assert out["decision_authority"] == "WHAT_IF_ONLY_NOT_EXECUTABLE"
+
+
+def test_current_report_slot_is_explicit_and_private_bound():
+    cfg, warm = _inputs()
+    current = "2026-10-10T12:13:00+07:00"
+    warm["report_slot"] = current
+    result = run_forward_mc(
+        cfg, warm, requested_report_slot=current,
+        optimizer=_optimizer, simulator=_simulation,
+    )
+    assert result["report_slot"] == current
+    assert result["mc_paths_each_route"] == 500_000
+
+
+def test_reject_mismatched_dynamic_warm_slot():
+    cfg, warm = _inputs()
+    with pytest.raises(WhatIfMCError, match="same-occurrence"):
+        run_forward_mc(
+            cfg, warm, requested_report_slot="2026-10-10T12:13:00+07:00",
+            optimizer=_optimizer, simulator=_simulation,
+        )
+
+
+def test_reject_prebaseline_dynamic_slot():
+    cfg, warm = _inputs()
+    old = "2026-10-10T09:00:00+07:00"
+    warm["report_slot"] = old
+    with pytest.raises(WhatIfMCError, match="valid Jakarta"):
+        run_forward_mc(
+            cfg, warm, requested_report_slot=old,
+            optimizer=_optimizer, simulator=_simulation,
+        )

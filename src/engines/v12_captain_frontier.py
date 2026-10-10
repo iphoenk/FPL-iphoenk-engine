@@ -552,6 +552,8 @@ def _select_vice(
     profiles: Sequence[Mapping[str, Any]],
     captain_id: int,
     baseline_vice_id: int | None,
+    *,
+    prefer_attacking_when_security_tied: bool = False,
 ) -> tuple[Mapping[str, Any] | None, str]:
     legal = [row for row in profiles if row.get("element_id") != captain_id]
     if not legal:
@@ -571,6 +573,40 @@ def _select_vice(
             legal[0],
         )
         return baseline, "P1_7_VICE_FALLBACK_DISTRIBUTIONAL_SAFETY_INCOMPLETE"
+
+    if prefer_attacking_when_security_tied:
+        goalkeepers = [
+            row for row in complete
+            if str(row.get("position") or "").upper() in {"GK", "GKP"}
+        ]
+        attackers = [
+            row for row in complete
+            if str(row.get("position") or "").upper() not in {"GK", "GKP"}
+        ]
+        if goalkeepers and attackers:
+            goalkeeper = min(
+                goalkeepers,
+                key=lambda row: (
+                    _f(row.get("p_dnp")) if _f(row.get("p_dnp")) is not None else 1.0,
+                    -(_f(row.get("p_start")) or 0.0),
+                    -(_f(row.get("xmins")) or 0.0),
+                ),
+            )
+            gk_security = (
+                _f(goalkeeper.get("p_dnp")) if _f(goalkeeper.get("p_dnp")) is not None else 1.0,
+                _f(goalkeeper.get("p_start")) or 0.0,
+                _f(goalkeeper.get("xmins")) or 0.0,
+            )
+            tied_attackers = [
+                row for row in attackers
+                if (
+                    (_f(row.get("p_dnp")) if _f(row.get("p_dnp")) is not None else 1.0) <= gk_security[0]
+                    and (_f(row.get("p_start")) or 0.0) >= gk_security[1]
+                    and (_f(row.get("xmins")) or 0.0) >= gk_security[2]
+                )
+            ]
+            if tied_attackers:
+                complete = tied_attackers
 
     selected = min(
         complete,
@@ -888,7 +924,10 @@ def decide_captain_vice(
     review_mini_league = None
     if review_challenger is not None:
         review_vice, _ = _select_vice(
-            profiles, int(review_challenger["element_id"]), baseline_vice_id
+            profiles,
+            int(review_challenger["element_id"]),
+            baseline_vice_id,
+            prefer_attacking_when_security_tied=True,
         )
         review_mini_league = _mini_league_captain_review(
             selected, review_challenger,

@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T11:07:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-10T05:13:30Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -140,3 +140,5 @@ valid CLEAR goalkeeper captains, and checks S08/S19 consistency.
 
 
 **GW6 what-if transfer / formation matrix (10 Oct 2026):** `python -m src.engines.v12_transfer_matrix --output artifacts/gw6_transfer_matrix.json` enumerates 42 roster combinations, including **Konsa→Lewis Hall** with/without Tavernier→Saka and Bruno→Mbeumo, over all eight P1.7 legal formations (**336 rows**); previous Davis/Castagne/Mykolenko alternatives remain for comparison. Hall's Newcastle identity and £5.3m price come from public V6 predictor (addendum `config/intelligence/gw6_hall_candidate.json`). Hall frees an Arsenal slot when Saka enters. With illustrative stale-value £0.2m bank, Bruno→Mbeumo + Tavernier→Saka + Konsa→Hall is indicatively £0.2m short; DCL→Barry changes that to +£0.1m, whereas DCL→Gonzalo changes it to -£0.3m. Private bank, selling price, free transfers and hits are **not authenticated**. Only the no-transfer baseline has verified 500K P1.4 MC. All what-ifs require distinct canonical P1.7 and 500K MC before action. No CURRENT15, P1.7, MC engine, scheduler, or private delivery mutation.
+
+**Captain review note (10 Oct 2026):** the provisional goalkeeper-tail review prefers an attacking vice only when canonical DNP, start, and xMins evidence is no worse than the goalkeeper; otherwise it preserves the goalkeeper fallback. This remains `PREPARE`, never an executable `LOCK`.

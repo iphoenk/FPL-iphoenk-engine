@@ -633,7 +633,7 @@ def publish_private_output(
         "runtime_sha": str(runtime_sha),
         "private_delivery_status": "PASS",
         "privacy_validation_status": "PASS",
-        "report_prod_status": "REPORT GREEN",
+        "report_prod_status": ("REPORT GREEN" if delivery_status in {"READY_FULL", ""} else "REPORT DEGRADED"),
         "report_production_gate": report_gate.get("contract"),
         "engineering_closure_status": stage3_status,
         "engineering_closure_blocks_report": False,

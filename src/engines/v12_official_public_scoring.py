@@ -99,8 +99,17 @@ def score_entry(
     # published beginning-of-GW baseline, not an authenticated budget.
     history_total = integer(history.get("total_points"))
     history_gw = integer(history.get("points"))
-    previous = history_total - history_gw if history_total is not None and history_gw is not None else None
-    baseline_source = "OFFICIAL_ENTRY_GW_HISTORY" if previous is not None else None
+    previous = integer(record.get("previous_overall_points"))
+    baseline_source = (
+        str(record.get("previous_overall_authority"))
+        if previous is not None and record.get("previous_overall_authority")
+        else None
+    )
+    # Historic compatibility diagnostic only: GW-current entry_history may
+    # already include hit deductions; difference is not a verified baseline.
+    if previous is None and history_total is not None and history_gw is not None:
+        previous = history_total - history_gw
+        baseline_source = "UNVERIFIED_CURRENT_GW_DIFFERENCE"
     standing = published_standing or {}
     if previous is None:
         standing_total = integer(standing.get("league_total"))
@@ -118,6 +127,7 @@ def score_entry(
         "previous_overall_points": previous,
         "live_overall_points": overall,
         "baseline_source": baseline_source,
+        "baseline_verified": baseline_source in {"OFFICIAL_PREVIOUS_GW_HISTORY", "OFFICIAL_NEW_SEASON_START"},
         "autosub_state": "PENDING" if pending else ("OFFICIAL_APPLIED" if official_substitutions else "NO_OFFICIAL_AUTOSUB"),
         "official_autosub_count": len(official_substitutions) if official_substitutions is not None else None,
         "calculated_autosub_applied": subs_applied,

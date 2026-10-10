@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-10T22:18:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T05:07:19+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -13,6 +13,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **V6 factual plane:** governed facts, freshness, fixtures, prices, and source evidence.
 - **Canonical V12:** xMins, probability, tactics, full-universe scanning, optimisation, Monte Carlo, and decision semantics.
 - **Private delivery:** manager-specific squad state, scenarios, mini-league context, decisions, and full reports.
+
+A guarded private FPL auth diagnostic is available via the owner-only `/fpl-auth-probe` command on issue #431. It checks `/me`, the configured entry identity, then `/my-team`, and prints only redacted HTTP statuses and availability flags. An unverified JWT expiry claim does not prove accepted authorization. No credential, private payload, or finance amount is logged or published; `AUTH_AVAILABLE` requires verified HTTP 200 for both endpoints and 15 distinct players. Public MATCH remains independent of this probe.
 
 Canonical FPL entry identity is repository-configured. Authenticated personal acquisition is an optional enrichment for private/current finance facts; when auth is intentionally unavailable, governed Official FPL submitted-picks or explicit owner evidence may still support Current15 identity, while auth-only finance fields remain unavailable.
 

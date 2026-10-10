@@ -112,3 +112,28 @@ def test_match_serving_retains_complete_public_sections() -> None:
     sample = {"submitted_picks_exposure": {"available_count": 58, "expected_count": 58}, "material_player_exposure": [{"player": "Bruno", "eo": {"numerator": 72, "denominator": 58}}]}
     assert _serving_project_content("MATCH10", sample) == sample
     assert _serving_project_content("MATCH13", {"event_live": "AVAILABLE"}) == {"event_live": "AVAILABLE"}
+
+
+def test_match_full_13_section_synthetic_smoke(tmp_path: Path) -> None:
+    from src.engines.v12_public_match_delivery import run
+
+    _fixture(tmp_path)
+    root = tmp_path / "data/v6"
+    players = []
+    for i in range(1, 16):
+        pos = 1 if i in {1, 15} else 2 if i in {2, 3, 4, 5, 6} else 3 if i <= 11 else 4
+        players.append({"official_fpl_element_id": i, "web_name": f"P{i}", "team_id": 1 if i <= 8 else 2, "element_type": pos})
+    _write(root, "normalized/canonical_players.json", {"players": players})
+    _write(root, "normalized/canonical_teams.json", {"teams": [{"official_fpl_team_id": 1, "name": "Alpha"}, {"official_fpl_team_id": 2, "name": "Beta"}]})
+    _write(root, "normalized/canonical_fixtures.json", {"fixtures": [{"official_fpl_fixture_id": 101, "event": 6, "team_h": 1, "team_a": 2, "started": True, "finished": False, "kickoff_time": "2026-10-10T12:00:00Z"}]})
+    _write(root, "current/official_fpl.json", {"official": {"fixtures": [{"id": 101, "team_h_score": 2, "team_a_score": 1}]}})
+    output = tmp_path / "out"
+    result = run(tmp_path, SLOT, output)
+    assert result["sections"] == 13
+    assert result["status"] == "READY_DEGRADED"
+    serving = json.loads((output / "serving_report.json").read_text())
+    assert list(serving["sections"]) == [f"MATCH{i}" for i in range(1, 14)]
+    assert serving["sections"]["MATCH10"]["content"]["submitted_picks_exposure"]["available_count"] == 58
+    assert serving["sections"]["MATCH13"]["content"]["submitted_picks"] == "AVAILABLE"
+    assert "Alpha vs Beta" in (output / "serving_report.md").read_text()
+    assert "2-1" in (output / "serving_report.md").read_text()

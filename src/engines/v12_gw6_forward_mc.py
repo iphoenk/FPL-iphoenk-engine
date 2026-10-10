@@ -126,6 +126,14 @@ def run_forward_mc(
         (projections.get("model_evidence_binding") or {}).get("output_fingerprint") or ""
     )
     if not projection_binding:
+        # The canonical full-universe projection contract predates the optional
+        # top-level evidence wrapper. Bind the what-if run to the exact
+        # same-occurrence payload bytes rather than inventing a second model
+        # evidence source or mutating P1.1/P1.3 output.
+        projection_binding = hashlib.sha256(
+            json.dumps(projections, sort_keys=True, separators=(",", ":"), default=str).encode()
+        ).hexdigest()
+    if not projection_binding:
         raise WhatIfMCError("canonical projection model evidence missing")
     route_digest = hashlib.sha256(
         json.dumps(definitions, sort_keys=True).encode()

@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T17:43:06+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T18:05:20+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **P1 MC route lineage + captain variance binding (11 Oct 2026, PR #979):** production DEEP 17:49 exposed the remaining projection-only S14 gaps: the canonical 500K convergence checkpoint was present but its simulated route/comparator identity was discarded by Stage3's bounded report surface. S14 now carries `selected_route_id`, `route_ids` and `convergence_route_id` for strict final-checkpoint identity checks, without confusing the MC reference route with Stage3 HOLD or best challenger. S08 displays the existing canonical `pmf_variance` rather than a missing `variance` alias. Two synthetic regressions are added to the required governance suite (reviewed total: 1356 tests). Neither probability model, MC 500K kernel, P1.7, price prediction, V6, authentication, scheduler, nor joint captain simulation was changed. Deployment/controlled and natural/native acceptance remain independent.
 
 - **P1 additive section QA alignment (11 Oct 2026, PR #978):** controlled DEEP 38132292100 proved post-render QA was rejecting correct new S02/S08/S10 evidence tables under the old 1/2/1 schema. S02's second table is an audit of the same 15 players, not 15 additional owners. Exact DEEP schema now requires 2/3/2 tables with 15/5/15 evidence rows, and the downstream visible-body checker counts the primary S02 roster once while rejecting mismatched audit identities. This preserves fail-closed QA, canonical MC500K/P1.7, private authority and natural scheduler. Production and native acceptance remain separate.
 

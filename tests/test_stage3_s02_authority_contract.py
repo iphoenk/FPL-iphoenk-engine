@@ -5,7 +5,10 @@ from copy import deepcopy
 import pytest
 
 from src.engines.v12_deep_delivery import select_personal_evidence
-from src.engines.v12_stage3_acceptance import _verified_s02_public_fallback
+from src.engines.v12_stage3_acceptance import (
+    _verified_s02_public_fallback,
+    _verified_s05_pl_fixtures,
+)
 
 
 SLOT = "2026-10-11T07:44:00+07:00"
@@ -240,3 +243,54 @@ def test_no_candidate_cannot_fabricate_ownership():
     assert result["resolution_status"] == "UNAVAILABLE"
     assert result["rows"] == []
     assert result["finance_allowed"] is False
+
+
+def test_s05_valid_official_fixtures_and_missing_non_pl_source_are_distinct():
+    fixtures = [
+        {"id": 7001, "event": 7, "team_h": 1, "team_a": 2,
+         "kickoff_time": "2026-10-18T12:00:00Z"},
+        {"id": 7002, "event": 7, "team_h": 3, "team_a": 4,
+         "kickoff_time": "2026-10-18T14:00:00Z"},
+    ]
+    section = {
+        "state": "DEGRADED",
+        "degradation_reason": "verified non-PL schedule source not bound",
+        "content": {
+            "fixtures": deepcopy(fixtures),
+            "competition_coverage": {
+                "official_pl": True,
+                "verified_non_pl_schedule_bound": False,
+                "verified_non_pl_event_count": 0,
+            },
+        },
+    }
+    catalog = {"official": {"fixtures": fixtures}}
+    assert _verified_s05_pl_fixtures(section, catalog, planning_gw=7) == []
+
+    section["content"]["fixtures"][0]["team_a"] = 99
+    assert "S05_PL_FIXTURE_OFFICIAL_MISMATCH" in _verified_s05_pl_fixtures(
+        section, catalog, planning_gw=7
+    )
+    section["content"]["fixtures"] = []
+    assert "S05_PL_FIXTURES_MISSING" in _verified_s05_pl_fixtures(
+        section, catalog, planning_gw=7
+    )
+
+
+def test_s05_fabricated_official_complete_flag_does_not_replace_fixture_catalog():
+    section = {
+        "content": {
+            "fixtures": [
+                {"id": 99, "event": 7, "team_h": 1, "team_a": 3,
+                 "kickoff_time": "2026-10-18T12:00:00Z"},
+            ],
+            "competition_coverage": {"official_pl": True},
+        }
+    }
+    expected = {"official": {"fixtures": [
+        {"id": 98, "event": 7, "team_h": 1, "team_a": 3,
+         "kickoff_time": "2026-10-18T12:00:00Z"},
+    ]}}
+    assert "S05_PL_FIXTURE_OFFICIAL_MISMATCH" in _verified_s05_pl_fixtures(
+        section, expected, planning_gw=7
+    )

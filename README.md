@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T21:06:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T04:50:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -207,3 +207,8 @@ PR #957 isolates the known live command parser failure: audited `reason` metadat
 
 - **Stage3 temporal-integrity and OIDC store diagnostics (11 Oct 2026):** an explicit DEEP Stage3 `acceptance_class=INTEGRITY_FAIL` is now forbidden to publish as `READY_FULL` (including `S02_OBSERVATION_TIMESTAMP_INVALID` on an after-slot retry). Independent engineering-only Stage3 closure remains advisory under report-first. Owner-only auth diagnostic `STORE_HEALTH` reads encrypted credential phase/version and coarse expiry metadata without making a refresh request, writing secrets or pretending natural success. Keep natural/receipt/MC500K/P1.7 untouched and use this read-only gate before any possibly destructive re-enrollment.
 - **OIDC STORE_HEALTH connected-control command (11 Oct 2026):** control issue #431 accepts the exact owner-only comment `/fpl-auth-probe STORE_HEALTH` as an alias for the existing read-only `STORE_HEALTH` diagnostic. It checks only encrypted-store metadata; it never issues an OIDC grant, refreshes credentials, writes the store, exposes tokens, or counts as natural scheduler proof.
+
+
+### P0 Official fixture lifecycle classification (12 October 2026)
+
+MATCH now distinguishes Official FPL `LIVE`, `PROVISIONAL_90`, `FINAL`, `NOT_STARTED`, and fail-closed `UNKNOWN` states using lifecycle fields. A postponed fixture remains `NOT_STARTED` with an explicit `POSTPONED` substate. Finality is never inferred from minute 90 alone, and future-dated official snapshots are rejected before MATCH rendering.

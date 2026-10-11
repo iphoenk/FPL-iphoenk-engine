@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from src.engines.base_state import bootstrap_maps, expanded_live
@@ -13,19 +13,83 @@ OUT = DATA / "live.json"
 MATCH_MODE_CONTRACT = "MATCH_MODE_LIVE_SCORE_V1"
 
 
-def _team_match_status(fixtures: list[dict[str, Any]], team_id: int | None, scoring_gw: int | None) -> str:
+def snapshot_timestamp_not_future(value: Any, *, now: datetime | None = None) -> bool:
+    """Reject future-dated official snapshots before they enter MATCH."""
+    if value in (None, ""):
+        return True
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc) <= current.astimezone(timezone.utc)
+
+
+FIXTURE_STATES = frozenset({
+    "NOT_STARTED", "LIVE", "PROVISIONAL_90", "FINAL", "UNKNOWN",
+})
+
+
+def classify_fixture_state(row: dict[str, Any]) -> dict[str, str]:
+    """Classify one Official FPL fixture without inferring finality from minutes."""
+    started = row.get("started")
+    finished = row.get("finished")
+    provisional = row.get("finished_provisional")
+    kickoff = row.get("kickoff_time")
+    event = row.get("event")
+    if not isinstance(started, bool) or not isinstance(finished, bool):
+        return {"state": "UNKNOWN", "substate": "INSUFFICIENT_OFFICIAL_LIFECYCLE"}
+    if finished:
+        return {"state": "FINAL", "substate": "OFFICIAL_FINISHED"}
+    if provisional is True and started is True:
+        return {"state": "PROVISIONAL_90", "substate": "OFFICIAL_FINISHED_PROVISIONAL"}
+    if provisional is True:
+        return {"state": "UNKNOWN", "substate": "CONFLICTING_PROVISIONAL_FLAGS"}
+    if started:
+        return {"state": "LIVE", "substate": "IN_PROGRESS"}
+    postponed = kickoff in (None, "") and event in (None, "")
+    return {
+        "state": "NOT_STARTED",
+        "substate": "POSTPONED" if postponed else "SCHEDULED",
+    }
+
+
+def _team_match_state(
+    fixtures: list[dict[str, Any]],
+    team_id: int | None,
+    scoring_gw: int | None,
+) -> dict[str, str]:
     if team_id is None or scoring_gw is None:
-        return "NOT_STARTED"
+        return {"state": "UNKNOWN", "substate": "TEAM_OR_GW_UNAVAILABLE"}
     team_fixtures = [
         row for row in fixtures
         if int(row.get("event") or -1) == int(scoring_gw)
         and team_id in {int(row.get("team_h") or -1), int(row.get("team_a") or -1)}
     ]
-    if any(row.get("started") is True and row.get("finished") is not True for row in team_fixtures):
-        return "LIVE"
-    if team_fixtures and all(row.get("finished") is True for row in team_fixtures):
-        return "FT"
-    return "NOT_STARTED"
+    if not team_fixtures:
+        return {"state": "UNKNOWN", "substate": "TEAM_FIXTURE_NOT_FOUND"}
+    states = [classify_fixture_state(row) for row in team_fixtures]
+    names = [item["state"] for item in states]
+    if "UNKNOWN" in names:
+        return {"state": "UNKNOWN", "substate": "CONFLICTING_OR_INSUFFICIENT_FIXTURE_EVIDENCE"}
+    if "LIVE" in names:
+        return {"state": "LIVE", "substate": "AT_LEAST_ONE_FIXTURE_LIVE"}
+    if "PROVISIONAL_90" in names:
+        return {"state": "PROVISIONAL_90", "substate": "AT_LEAST_ONE_FIXTURE_PROVISIONAL"}
+    if all(value == "FINAL" for value in names):
+        return {"state": "FINAL", "substate": "ALL_FIXTURES_OFFICIALLY_FINISHED"}
+    if all(value == "NOT_STARTED" for value in names):
+        substate = "POSTPONED" if all(item["substate"] == "POSTPONED" for item in states) else "SCHEDULED"
+        return {"state": "NOT_STARTED", "substate": substate}
+    return {"state": "UNKNOWN", "substate": "MIXED_UNRESOLVED_FIXTURE_STATES"}
+
+
+def _team_match_status(fixtures: list[dict[str, Any]], team_id: int | None, scoring_gw: int | None) -> str:
+    return _team_match_state(fixtures, team_id, scoring_gw)["state"]
 
 
 def classify_scoring_gw_lifecycle(
@@ -297,6 +361,9 @@ def _empty_payload(
 
 def run() -> dict:
     official = read_json(OFFICIAL, {})
+    for label, value in (("official_snapshot", official.get("generated_at")), ("event_live", (official.get("event_live") or {}).get("generated_at"))):
+        if value and not snapshot_timestamp_not_future(value):
+            raise RuntimeError(f"{label} snapshot timestamp is future-dated")
     bootstrap = official.get("bootstrap") or {}
     if not bootstrap:
         raise RuntimeError("official_snapshot missing bootstrap")
@@ -353,7 +420,7 @@ def run() -> dict:
     effective_xi_points = 0
     bench_points = 0
     provisional_bonus_total = 0
-    status_counts = {"FT": 0, "LIVE": 0, "NOT_STARTED": 0}
+    status_counts = {"FINAL": 0, "LIVE": 0, "PROVISIONAL_90": 0, "NOT_STARTED": 0, "UNKNOWN": 0}
     captain_raw = 0
     captain_effective = 0
     potential_autosub_out: list[str] = []
@@ -373,7 +440,8 @@ def run() -> dict:
         effective_points = raw_points * multiplier if multiplier > 0 else 0
         pick_position = int(pick.get("position") or 0)
         bench_order = pick_position - 11 if pick_position > 11 else None
-        match_status = _team_match_status(fixtures, team_id, scoring_gw)
+        match_state = _team_match_state(fixtures, team_id, scoring_gw)
+        match_status = match_state["state"]
         status_counts[match_status] += 1
         predicted = predictions.get(element) or {}
         predicted_xpts = predicted.get("xpts")
@@ -384,7 +452,7 @@ def run() -> dict:
         if multiplier > 0:
             effective_xi_points += effective_points
         if pick_position <= 11 and multiplier > 0:
-            if match_status == "FT" and int(stats.get("minutes") or 0) == 0:
+            if match_status == "FINAL" and int(stats.get("minutes") or 0) == 0:
                 potential_autosub_out.append(player.get("web_name") or str(element))
         if pick_position > 11:
             # Under Bench Boost, all 15 picks score, but four remain bench.
@@ -447,7 +515,7 @@ def run() -> dict:
         if int(row.get("minutes") or 0) > 0:
             return "APPEARED"
         fixture_status = str(row.get("fixture_status") or "").upper()
-        if fixture_status == "FT":
+        if fixture_status == "FINAL":
             return "DNP_CONFIRMED"
         if fixture_status == "LIVE":
             return "DNP_POSSIBLE_LIVE"
@@ -499,8 +567,11 @@ def run() -> dict:
         "bench_points": bench_points,
         "captain_raw_points": captain_raw,
         "captain_effective_contribution": captain_effective,
-        "players_ft": status_counts["FT"],
+        "players_ft": status_counts["FINAL"],
+        "players_final": status_counts["FINAL"],
         "players_live": status_counts["LIVE"],
+        "players_provisional_90": status_counts["PROVISIONAL_90"],
+        "players_unknown": status_counts["UNKNOWN"],
         "players_not_started": status_counts["NOT_STARTED"],
         "provisional_bonus_total": provisional_bonus_total,
         "bonus_total": provisional_bonus_total,

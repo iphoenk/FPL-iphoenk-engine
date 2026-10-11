@@ -159,7 +159,7 @@ def test_match_mode_uses_fixture_state_not_phase_flag_for_activation(tmp_path, m
     snapshot = _snapshot(live=False)
     result = _run(tmp_path, monkeypatch, snapshot)
     assert result["match_mode_active"] is False
-    assert {row["fixture_status"] for row in result["players"]} == {"FT"}
+    assert {row["fixture_status"] for row in result["players"]} == {"FINAL"}
     assert result["status"] == "POST_ALL_MATCH"
     assert result["lifecycle"]["primary_mode"] == "POST_ALL_MATCH"
 

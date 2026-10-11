@@ -6,23 +6,25 @@ boundary, not proof of unattended or supported renewable access.
 ## Grounded facts
 
 - On 2026-10-11 07:35 WIB the owner-only iOS Shortcut observed one
-  \`oidc.user:\` browser record with a nonempty \`refresh_token\`.
+  `oidc.user:` browser record with a nonempty `refresh_token`.
   No token value was sent to the repository or a conversation.
-- Current V6 \`OfficialFPLClient\` supports protected bearer/session inputs,
+- Current V6 `OfficialFPLClient` supports protected bearer/session inputs,
   not managed refresh-token rotation. Current private publisher/probe reads
-  \`FPL_ACCESS_TOKEN\` and \`FPL_SESSION_B64\` from environment secrets.
-- Legacy \`src/sources/official_auth.py\` has a refresh helper which only returns
-  \`access_token\`. **It is not the rotating production implementation.**
-- Community tools propose the PingFederate authority
-  \`https://account.premierleague.com/as\`, but that does NOT prove the official
-  issuer, current client registration, refresh policy, token lifetime or
-  browser/server coexistence. Official discovery retrieval was unsuccessful.
+  `FPL_ACCESS_TOKEN` and `FPL_SESSION_B64` from environment secrets.
+- Legacy `src/sources/official_auth.py` has a refresh helper which only returns
+  `access_token`. **It is not the rotating production implementation.**
+- Premier League official public OpenID discovery returned HTTP 200 in
+  GitHub Actions run 38099542251 (2026-10-11 07:46 WIB). It advertised issuer
+  `https://account.premierleague.com/as`, token endpoint
+  `https://account.premierleague.com/as/token`, and `refresh_token` grant.
+  This verifies provider metadata, NOT the FPL browser client configuration,
+  rotation policy, refresh lifetime or browser/server coexistence.
 - The provider's own PingFederate documentation says rotation, token reuse
   protection and grace windows depend on client/server configuration.
 
 ## Enforced state-machine contracts
 
-The staged \`rotating_oidc.py\` provides fail-closed logic for an owner-approved
+The staged `rotating_oidc.py` provides fail-closed logic for an owner-approved
 and independently audited implementation. No calls are connected to production
 until a durable encrypted backend and provider contract are verified.
 
@@ -75,7 +77,7 @@ environment controls once the backend is verified.
 
 After BOOTSTRAP_READY has been independently demonstrated:
 1. Open logged-in Fantasy Premier League in Safari.
-2. Use the existing \`Run FPL\` Shortcut only on the Premier League webpage;
+2. Use the existing `Run FPL` Shortcut only on the Premier League webpage;
    independently verify that it uses the page's own origin.
 3. Copy the OIDC credential locally in Shortcuts without a screenshot or
    sharing sheet destination. Do not return its value to ChatGPT or a report.

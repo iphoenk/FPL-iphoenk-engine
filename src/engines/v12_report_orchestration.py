@@ -4209,6 +4209,45 @@ def _render_deep_visible_contract_lines(
                 (r.get("p_start_evidence") or {}).get("model_probability_agrees", "UNAVAILABLE"),
             ) for r in rows],
         ))
+        # Audit low-resolution start evidence without recomputing probabilities.
+        # Equal P(start) can be legitimate; do not fabricate distinct estimates.
+        finite_pstarts = []
+        for r in rows:
+            try:
+                value = float(r.get("p_start"))
+                if 0.0 <= value <= 1.0 and isfinite(value):
+                    finite_pstarts.append(round(value, 4))
+            except (TypeError, ValueError):
+                pass
+        if len(rows) >= 10 and len(finite_pstarts) == len(rows):
+            counts = {value: finite_pstarts.count(value) for value in set(finite_pstarts)}
+            common_probability, common_count = max(counts.items(), key=lambda item: item[1])
+            if common_count >= max(10, (7 * len(rows) + 9) // 10):
+                common_rows = [
+                    r for r in rows
+                    if round(float(r["p_start"]), 4) == common_probability
+                ]
+                extra_signal_names = {
+                    "prior_start_probability",
+                    "role_start_probability",
+                    "manager_start_probability",
+                    "normalized_availability_start_signal",
+                }
+                without_extra = sum(
+                    not extra_signal_names.intersection(
+                        str(name) for name in
+                        (r.get("p_start_evidence") or {}).get("signals") or []
+                    )
+                    for r in common_rows
+                )
+                lines.append(
+                    "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION; "
+                    f"{common_count}/{len(rows)} players share P(start)={common_probability:.4f}; "
+                    f"{without_extra}/{common_count} shared rows lack supplementary "
+                    "historical/role/manager/normalized-availability start signals; "
+                    "published equality does NOT prove equal individual starting odds. "
+                    "Canonical probabilities remain unchanged pending grounded evidence."
+                )
         authority = dict(payload.get("current15_authority") or {})
         if str(authority.get("source_class") or "").upper() == "OFFICIAL_SUBMITTED_PICKS":
             lines.append(

@@ -2266,6 +2266,17 @@ def _stage3_visible_package_surface(
             "actual_paths": monte_carlo.get("actual_paths"),
             "seed": monte_carlo.get("seed"),
             "horizons": monte_carlo.get("horizons"),
+            # P1.4 final checkpoint is keyed to this simulation route (not
+            # Stage3's governing HOLD or the display best challenger).
+            "selected_route_id": monte_carlo.get("selected_route_id"),
+            "route_ids": monte_carlo.get("route_ids"),
+            "package_integration": {
+                "convergence_route_id": (
+                    (monte_carlo.get("package_integration") or {}).get(
+                        "convergence_route_id"
+                    )
+                ),
+            },
             "convergence_evidence": monte_carlo.get(
                 "convergence_evidence"
             ),

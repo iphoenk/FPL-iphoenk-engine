@@ -171,6 +171,56 @@ def _verified_s02_public_fallback(
     return failures
 
 
+def _verified_s05_pl_fixtures(
+    section: Mapping[str, Any],
+    official_payload: Mapping[str, Any],
+    *,
+    planning_gw: int,
+) -> list[str]:
+    """Cross-check degraded S05 PL rows against canonical Official V6 catalog."""
+    failures: list[str] = []
+    catalog = ((official_payload.get("official") or {}).get("fixtures") or [])
+    official = [
+        dict(row) for row in catalog
+        if isinstance(row, Mapping) and row.get("event") == planning_gw
+    ]
+    rendered = [
+        dict(row) for row in ((section.get("content") or {}).get("fixtures") or [])
+        if isinstance(row, Mapping)
+    ]
+
+    def normalize(rows: list[dict[str, Any]]) -> dict[int, tuple[int, int, int, str]]:
+        output = {}
+        for row in rows:
+            try:
+                fixture = int(row["id"])
+                home = int(row["team_h"])
+                away = int(row["team_a"])
+                event = int(row["event"])
+            except (TypeError, ValueError, KeyError):
+                failures.append("S05_PL_FIXTURE_IDENTITY_INVALID")
+                continue
+            if fixture <= 0 or home <= 0 or away <= 0 or home == away:
+                failures.append("S05_PL_FIXTURE_IDENTITY_INVALID")
+            if fixture in output:
+                failures.append("S05_PL_FIXTURE_DUPLICATE")
+            output[fixture] = (home, away, event, str(row.get("kickoff_time") or ""))
+        return output
+
+    expected = normalize(official)
+    actual = normalize(rendered)
+    if not official or not rendered:
+        failures.append("S05_PL_FIXTURES_MISSING")
+    if len(expected) != len(official) or len(actual) != len(rendered):
+        failures.append("S05_PL_FIXTURE_CARDINALITY_INVALID")
+    if actual != expected or any(row[2] != planning_gw for row in actual.values()):
+        failures.append("S05_PL_FIXTURE_OFFICIAL_MISMATCH")
+    coverage = dict((section.get("content") or {}).get("competition_coverage") or {})
+    if coverage.get("official_pl") is not True:
+        failures.append("S05_PL_AUTHORITY_NOT_COMPLETE")
+    return sorted(set(failures))
+
+
 def _truthful_source_degraded_sections(
     sections: Mapping[str, Mapping[str, Any]],
 ) -> tuple[set[str], list[str]]:
@@ -387,6 +437,17 @@ def validate(
         _truthful_source_degraded_sections(sections)
     )
     failures.extend(degradation_failures)
+    if "S05" in degraded:
+        try:
+            official_catalog = _read(
+                runtime_data_root / "data/v6/current/official_fpl.json"
+            )
+        except (OSError, ValueError, json.JSONDecodeError):
+            official_catalog = {}
+        failures.extend(_verified_s05_pl_fixtures(
+            sections["S05"], official_catalog,
+            planning_gw=int(bundle.get("planning_gw") or 0),
+        ))
     # Public submitted picks are a valid identity fallback only when the
     # separately published Official FPL source agrees with every owned ID.
     # A generic DEGRADED S02, or a stale /my-team response, cannot pass.

@@ -1520,6 +1520,37 @@ def _package_candidate_rows(
     return rows
 
 
+def _verified_official_chip_ledger(chips: Any) -> dict[str, str]:
+    """Normalize explicit Official FPL chip states; never infer unused from absence.
+
+    Auth gating occurs upstream in _private_finance_context. A malformed or
+    duplicated chip is UNAVAILABLE, never treated as remaining.
+    """
+    if isinstance(chips, Mapping):
+        return dict(chips)
+    ledger = {"BB": "UNAVAILABLE", "WC": "UNAVAILABLE", "TC": "UNAVAILABLE", "FH": "UNAVAILABLE"}
+    if not isinstance(chips, list):
+        return ledger
+    aliases = {
+        "bboost": "BB", "bench_boost": "BB", "3xc": "TC",
+        "triple_captain": "TC", "wildcard": "WC", "freehit": "FH", "free_hit": "FH",
+    }
+    seen: set[str] = set()
+    for raw in chips:
+        if not isinstance(raw, Mapping):
+            continue
+        key = aliases.get(str(raw.get("name") or "").lower())
+        if key is None:
+            continue
+        if key in seen:
+            ledger[key] = "UNAVAILABLE"
+            continue
+        seen.add(key)
+        status = str(raw.get("status_for_entry") or "").lower()
+        ledger[key] = {"played": "USED", "available": "AVAILABLE"}.get(status, "UNAVAILABLE")
+    return ledger
+
+
 def _private_finance_context(
     personal_resolution: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -1839,7 +1870,7 @@ def _route_execution_economics_state(
         return {"status": "NOT_APPLICABLE", "executable": True}
     available = bool(
         _execution_finance_available(finance)
-        and str(route_economics_status or "").upper() == "COMPLETE"
+        and str(route_economics_status or "").upper() in {"PASS", "COMPLETE"}
     )
     return {
         "status": "AVAILABLE" if available else "DEGRADED",
@@ -8903,7 +8934,7 @@ def run_deep(
             "COMPLETE" if chip_available else "DEGRADED",
             {
                 "chip": chip_state if chip_available else "UNAVAILABLE",
-                "chip_ledger": chip_state if chip_available else "UNAVAILABLE",
+                "chip_ledger": _verified_official_chip_ledger(chip_state) if chip_available else "UNAVAILABLE",
                 "chip_ledger_authority": "PRIVATE_PERSONAL_PLANE" if chip_available else "UNAVAILABLE",
                 "remaining_chip_set_required": True,
                 "free_hit_optimization_required_when_fh_only": True,

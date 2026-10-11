@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T10:21:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T12:07:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **P0 Stage3/OUR15 provenance (11 Oct 2026):** public submitted picks are an explicitly stale, non-financial identity fallback, never editable authenticated CURRENT15. Exact team/GW and live /me + /my-team lineage must be bound before private finance is authoritative; Stage3 only accepts S02 degraded after cross-checking 15 distinct submitted IDs, position counts, XI/bench, C/VC, Official provenance and occurrence timestamp. Wrong identity/fixture facts still fail closed. Natural, native visual and full-green production remain independent acceptance gates. See [Stage3 diagnostics](docs/V12_STAGE3_UPSTREAM_DIAGNOSTICS.md).
 
 - **GW7 owner what-if MC:** PR #963 tests four paired 500K routes (HOLD, Mbeumo only with assumed 1 FT, Mbeumo + Palmer with -4, and Mbeumo + Saka with -4), using P1.7/P1.4 unchanged, and keeping the full result private. Future mini-league top-3 probability is not modelled; GW6 rival ownership is descriptive, not a probabilistic rank claim.
 

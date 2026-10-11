@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T14:57:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T15:26:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -192,3 +192,4 @@ Public Official FPL submitted picks, live data, and mini-league evidence are ind
 PR #957 isolates the known live command parser failure: audited `reason` metadata is bounded and `MATCH` routes to governed `match_mode` with exact `latest/match.json` verification. Canonical MATCH terminality remains fail-closed on publication, body hash, QA and private receipt; private personal authentication is **not** a public-report prerequisite. In S15B, Official FPL can assign tied league ranks, so Top 10 displays exact first-ten standings positions while retaining actual rank values and rejects missing/duplicate entries. No QA relaxations, MC/universe reductions or alternate scheduler are permitted. Controlled CI, generated Markdown and private latest **do not** prove natural ChatGPT delivery; require genuine scheduler title mutation, exact issue command, orchestration, same-slot prefetch and rendered native user-visible evidence. Historical missing slots remain missing.
 
 - **Stage3 temporal-integrity and OIDC store diagnostics (11 Oct 2026):** an explicit DEEP Stage3 `acceptance_class=INTEGRITY_FAIL` is now forbidden to publish as `READY_FULL` (including `S02_OBSERVATION_TIMESTAMP_INVALID` on an after-slot retry). Independent engineering-only Stage3 closure remains advisory under report-first. Owner-only auth diagnostic `STORE_HEALTH` reads encrypted credential phase/version and coarse expiry metadata without making a refresh request, writing secrets or pretending natural success. Keep natural/receipt/MC500K/P1.7 untouched and use this read-only gate before any possibly destructive re-enrollment.
+- **OIDC STORE_HEALTH connected-control command (11 Oct 2026):** control issue #431 accepts the exact owner-only comment `/fpl-auth-probe STORE_HEALTH` as an alias for the existing read-only `STORE_HEALTH` diagnostic. It checks only encrypted-store metadata; it never issues an OIDC grant, refreshes credentials, writes the store, exposes tokens, or counts as natural scheduler proof.

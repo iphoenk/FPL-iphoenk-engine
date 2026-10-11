@@ -220,7 +220,7 @@ def _competition_rows(
                         else "UNKNOWN"
                     ),
                     "verified_source": "ESPN_PUBLIC_COMPETITION_SCHEDULE",
-                    "source_url": source_url,
+                    "source_url": event.get("_retrieval_url") or source_url,
                     "source_native_event_id": event.get("id"),
                     "source_status": (
                         ((contest.get("status") or {}).get("type") or {}).get(
@@ -243,23 +243,63 @@ def _fetch_one(
 ) -> tuple[str, dict[str, Any], str]:
     slug = str(competition_cfg["slug"])
     base = str(provider["base_url"]).rstrip("/")
-    params = {
-        "dates": f"{start_date}-{end_date}",
-        "limit": "1000",
-    }
     url = f"{base}/{slug}/scoreboard"
-    response = requests.get(
-        url,
-        params=params,
-        timeout=float(provider.get("request_timeout_seconds") or 6),
-        headers={"User-Agent": "FPL-V12-Report-Time/1.0"},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if not isinstance(payload, dict):
-        raise ValueError("competition schedule response is not an object")
-    source_url = getattr(response, "url", None) or f"{url}?{urlencode(params)}"
-    return slug, payload, str(source_url)
+
+    # ESPN retired YYYYMMDD-YYYYMMDD on 2026-09-18 (HTTP 400). Query
+    # individual calendar months and filter strictly by floor/ceiling in
+    # _competition_rows. Do not interpret a failed month as no fixtures.
+    start = datetime.strptime(start_date, "%Y%m%d").date()
+    end = datetime.strptime(end_date, "%Y%m%d").date()
+    if end < start:
+        raise ValueError("competition schedule end precedes start")
+    month = start.replace(day=1)
+    last_month = end.replace(day=1)
+    events_by_id: dict[str, dict[str, Any]] = {}
+    month_tokens: list[str] = []
+    first_source_url = ""
+    while month <= last_month:
+        token = month.strftime("%Y%m")
+        params = {"dates": token, "limit": "1000"}
+        # Use requests' default User-Agent; browser-style UA strings may be
+        # refused by the ESPN edge. No credentials are required or sent.
+        response = requests.get(
+            url,
+            params=params,
+            timeout=float(provider.get("request_timeout_seconds") or 6),
+        )
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict) or not isinstance(payload.get("events"), list):
+            raise ValueError("competition schedule response missing events array")
+        source_url = str(
+            getattr(response, "url", None) or f"{url}?{urlencode(params)}"
+        )
+        if not first_source_url:
+            first_source_url = source_url
+        month_tokens.append(token)
+        for index, raw in enumerate(payload["events"]):
+            if not isinstance(raw, Mapping):
+                continue
+            event_id = raw.get("id")
+            # Native event IDs identify duplicates across monthly responses.
+            key = (
+                f"id:{event_id}"
+                if event_id is not None
+                else f"month:{token}:row:{index}"
+            )
+            events_by_id[key] = {**dict(raw), "_retrieval_url": source_url}
+        if month.month == 12:
+            month = month.replace(year=month.year + 1, month=1)
+        else:
+            month = month.replace(month=month.month + 1)
+    return slug, {
+        "events": list(events_by_id.values()),
+        "_retrieval": {
+            "query_granularity": "MONTH",
+            "month_tokens": month_tokens,
+            "merged_native_event_count": len(events_by_id),
+        },
+    }, first_source_url
 
 
 def collect_verified_non_pl_schedule(
@@ -332,6 +372,12 @@ def collect_verified_non_pl_schedule(
                             "slug": slug,
                             "status": "PASS",
                             "matched_pl_team_events": len(current_rows),
+                            "query_granularity": (
+                                (payload.get("_retrieval") or {}).get("query_granularity")
+                            ),
+                            "queried_months": (
+                                (payload.get("_retrieval") or {}).get("month_tokens") or []
+                            ),
                         }
                     )
                 except Exception as exc:

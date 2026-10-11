@@ -145,7 +145,9 @@ def _verified_s02_public_fallback(
     check(
         observed is not None and generated is not None and slot is not None
         and abs((observed - generated).total_seconds()) <= 5
-        and generated <= slot,
+        # The report_slot is logical. Governed acquisition can complete a few
+        # minutes after it, without becoming future-dated or cross-occurrence.
+        and generated <= slot + timedelta(minutes=15),
         "OBSERVATION_TIMESTAMP_INVALID",
     )
     check(

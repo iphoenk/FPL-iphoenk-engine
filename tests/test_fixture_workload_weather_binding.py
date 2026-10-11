@@ -488,10 +488,21 @@ def test_fixture_display_rows_preserve_all_ten_readable_fixture_cards(monkeypatc
         }
         for index in range(10)
     ]
+    # Keep all ten target-GW rows, even when the Official FPL fixture
+    # collection includes other GWs and rows with no event attribution.
+    fixtures.extend([
+        {"id": 999, "event": 7, "team_h": 1, "team_a": 2, "kickoff_time": "2026-10-18T14:00:00Z"},
+        {"id": 998, "event": None, "team_h": 1, "team_a": 2, "kickoff_time": "2026-10-20T14:00:00Z"},
+    ])
     rows = v12_s05_binding.build_fixture_display_rows(
-        bootstrap=_bootstrap(), fixtures=fixtures
+        bootstrap=_bootstrap(), fixtures=fixtures, planning_gw=6
     )
     assert len(rows) == 10
+    assert {row["fixture_id"] for row in rows} == set(range(100, 110))
+    gw7 = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(), fixtures=fixtures, planning_gw=7
+    )
+    assert [row["fixture_id"] for row in gw7] == [999]
     assert all(row["match"] == "Arsenal vs Chelsea" for row in rows)
     assert all(row["kickoff_wib"].endswith(" WIB") for row in rows)
     assert all(row["venue"] == "Emirates Stadium" for row in rows)

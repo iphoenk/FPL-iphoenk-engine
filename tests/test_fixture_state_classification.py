@@ -82,8 +82,10 @@ def test_eight_provisional_and_one_live_are_not_nine_live():
     assert states.count("LIVE") == 1
 
 
-def test_fixture_classification_does_not_accept_future_snapshot_time():
+def test_future_snapshot_timestamp_is_rejected():
     from datetime import datetime, timezone
-    now = datetime.now(timezone.utc)
-    snapshot = datetime.fromisoformat("2026-10-12T00:00:00+00:00")
-    assert snapshot <= now or snapshot.year < now.year
+    from src.engines.live_state_service import snapshot_timestamp_not_future
+    now = datetime(2026, 10, 12, 4, 0, tzinfo=timezone.utc)
+    assert snapshot_timestamp_not_future("2026-10-12T03:59:59+00:00", now=now)
+    assert not snapshot_timestamp_not_future("2026-10-12T04:00:01+00:00", now=now)
+    assert not snapshot_timestamp_not_future("not-a-timestamp", now=now)

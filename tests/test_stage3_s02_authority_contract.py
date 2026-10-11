@@ -194,6 +194,25 @@ def test_current_authenticated_gw7_with_live_lineage_authorizes_finance():
     assert result["stale"] is False
 
 
+def test_official_next_gw_authorizes_editable_squad_without_relabelling_scoring_gw():
+    candidate = _auth_candidate(gw=6)
+    candidate["payload"]["editable_planning_gw"] = 7
+    result = _select([_public_candidate(), candidate])
+    assert result["source_class"] == "AUTHENTICATED_CURRENT_TEAM"
+    assert result["finance_allowed"] is True
+    assert result["gw"] == 7
+    assert result["source_scoring_gw"] == 6
+
+
+def test_next_gw_override_without_live_me_and_my_team_stays_unbound():
+    candidate = _auth_candidate(gw=6)
+    candidate["payload"]["editable_planning_gw"] = 7
+    candidate["payload"]["lineage"]["authenticated"].pop()
+    result = _select([_public_candidate(), candidate])
+    assert result["source_class"] == "OFFICIAL_SUBMITTED_PICKS"
+    assert result["finance_allowed"] is False
+
+
 def test_http200_but_previous_gw_falls_back_to_public_with_private_finance_blocked():
     result = _select([_public_candidate(), _auth_candidate(gw=6)])
     assert result["source_class"] == "OFFICIAL_SUBMITTED_PICKS"

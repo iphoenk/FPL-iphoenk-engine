@@ -35,6 +35,7 @@ def select_personal_evidence(
     candidates: Sequence[Mapping[str, Any]],
     *,
     planning_gw: int,
+    expected_entry_id: int | None = None,
 ) -> dict[str, Any]:
     """Select freshest semantically valid personal evidence.
 
@@ -74,13 +75,23 @@ def select_personal_evidence(
             and raw.get("applicable_planning_gw") == planning_gw
             and raw.get("explicit_confirmation") is True
         )
-        authenticated = auth_state == "AUTH_AVAILABLE"
-        previous_gw = gw is not None and gw < planning_gw
-        public_submitted_current = bool(
-            source_class == "OFFICIAL_SUBMITTED_PICKS"
-            and auth_state == "PUBLIC_OFFICIAL"
+        # HTTP/session availability is not current-GW ownership authority.
+        # In particular, a successful /my-team fetch labelled with the
+        # previous GW must not upgrade submitted picks or private finances.
+        authenticated = bool(
+            source_class == "AUTHENTICATED_CURRENT_TEAM"
+            and auth_state == "AUTH_AVAILABLE"
             and gw == planning_gw
+            and ts is not None
+            and (
+                expected_entry_id is None
+                or str(payload.get("entry_id") or "") == str(expected_entry_id)
+            )
         )
+        previous_gw = gw is not None and gw < planning_gw
+        # Submitted picks remain a public identity snapshot even when the
+        # same GW is current; they never mean editable authenticated CURRENT15.
+        public_submitted_current = False
         current_semantic = bool(
             exact15
             and (
@@ -128,7 +139,20 @@ def select_personal_evidence(
             "candidate_count": len(normalized),
         }
 
-    identity_fallbacks = [row for row in normalized if row["exact15"]]
+    identity_fallbacks = [
+        row for row in normalized
+        if row["exact15"] and (
+            row["source_class"] != "OFFICIAL_SUBMITTED_PICKS"
+            or (
+                row["auth_state"] == "PUBLIC_OFFICIAL"
+                and (
+                    expected_entry_id is None
+                    or str(row["payload"].get("entry_id") or "")
+                    == str(expected_entry_id)
+                )
+            )
+        )
+    ]
     if not identity_fallbacks:
         return {
             "resolution_status": "UNAVAILABLE",
@@ -141,8 +165,8 @@ def select_personal_evidence(
     selected = max(
         identity_fallbacks,
         key=lambda row: (
-            row["timestamp"].timestamp() if row["timestamp"] else float("-inf"),
             1 if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" else 0,
+            row["timestamp"].timestamp() if row["timestamp"] else float("-inf"),
             -row["index"],
         ),
     )

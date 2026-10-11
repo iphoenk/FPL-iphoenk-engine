@@ -1,11 +1,13 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T08:08:07+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T10:03:59+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
 
+
+- **OIDC controlled-first-grant gate (11 Oct 2026):** after encrypted iPhone enrollment, owner may choose `CONTROLLED_ONCE` in existing V6 auth probe to test a single official refresh without enabling rotating auth for natural jobs. Possible Safari session collision must be understood; live grant, persistent rotation, /me identity, subsequent reuse and natural V12 delivery are separately verified. Restored hard cross-CPU governance proof from direct 3-model PASS run 38101198457 (not waived). [Security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 
 - **OIDC rotating auth P0 (11 Oct 2026):** official discovery verified; initial fail-closed rotation core merged in #959. Follow-on opt-in V6 integration adds encrypted private Git CAS secret state and owner-only GitHub Actions enrollment, with key protected as an environment secret. This does not enable real refresh until the owner supplies credentials and explicitly verifies the client policy. See [OIDC security and iPhone steps](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 

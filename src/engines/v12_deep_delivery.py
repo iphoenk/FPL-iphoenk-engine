@@ -36,6 +36,7 @@ def select_personal_evidence(
     *,
     planning_gw: int,
     expected_entry_id: int | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """Select freshest semantically valid personal evidence.
 
@@ -78,11 +79,25 @@ def select_personal_evidence(
         # HTTP/session availability is not current-GW ownership authority.
         # In particular, a successful /my-team fetch labelled with the
         # previous GW must not upgrade submitted picks or private finances.
+        lineage = dict(payload.get("lineage") or {})
+        authenticated_calls = [
+            dict(item) for item in lineage.get("authenticated") or []
+            if isinstance(item, Mapping)
+        ]
+        verified_endpoints = {
+            str(item.get("endpoint_class") or "")
+            for item in authenticated_calls
+            if int(item.get("http_status") or 0) == 200
+            and (expected_entry_id is None or str(item.get("entry_id")) == str(expected_entry_id))
+        }
+        slot_ts = _aware_timestamp(as_of) if as_of else None
         authenticated = bool(
             source_class == "AUTHENTICATED_CURRENT_TEAM"
             and auth_state == "AUTH_AVAILABLE"
             and gw == planning_gw
             and ts is not None
+            and (as_of is None or (slot_ts is not None and ts <= slot_ts))
+            and (expected_entry_id is None or {"me", "my_team"} <= verified_endpoints)
             and (
                 expected_entry_id is None
                 or str(payload.get("entry_id") or "") == str(expected_entry_id)

@@ -42,8 +42,18 @@ def checkout(tmp_path, monkeypatch):
     return bare, repo, key
 
 
-def test_encrypted_cas_first_version_and_readback(checkout):
+def test_encrypted_cas_first_version_and_readback(checkout, monkeypatch):
     bare, repo, key = checkout
+    observed_fetch_timeouts = []
+    original_run = subprocess.run
+
+    def record_safe_git_fetch(*args, **kwargs):
+        argv = args[0] if args else []
+        if isinstance(argv, list) and "fetch" in argv:
+            observed_fetch_timeouts.append(kwargs.get("timeout"))
+        return original_run(*args, **kwargs)
+
+    monkeypatch.setattr(module.subprocess, "run", record_safe_git_fetch)
     store = module.EncryptedGitCredentialStore(str(repo), key)
     assert store.load().version == 0
     first = store.compare_and_swap(0, Credential(1, "READY", "dummy-refresh-secret-1234567890123456"))
@@ -53,6 +63,9 @@ def test_encrypted_cas_first_version_and_readback(checkout):
     assert b"dummy-refresh" not in blob
     history = git("--git-dir", str(bare), "log", "-p", "--all")
     assert b"dummy-refresh" not in history
+    # Remote reads tolerate observed 60+ second private-checkout delays;
+    # ciphertext commit/push and refresh-POST policy remain unchanged.
+    assert observed_fetch_timeouts and all(t == 90 for t in observed_fetch_timeouts)
 
 
 def test_cas_conflict_rejects_stale_writer(checkout):

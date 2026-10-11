@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T16:27:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T16:37:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -10,6 +10,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 
 - **GW7 owner what-if MC:** PR #963 tests four paired 500K routes (HOLD, Mbeumo only with assumed 1 FT, Mbeumo + Palmer with -4, and Mbeumo + Saka with -4), using P1.7/P1.4 unchanged, and keeping the full result private. Future mini-league top-3 probability is not modelled; GW6 rival ownership is descriptive, not a probabilistic rank claim.
 
+
+- **P0 hourly owner identity repair (11 Oct 2026):** the first genuine post-merge natural maintenance attempt was safely blocked because the protected job did not define optional FPL_TEAM_ID. The worker now resolves the exact team 3462711 from committed config/v6/consumer_context.json, rejects any conflicting environment override before reading credentials, and preserves the private/public separation. A nonblocking natural job failure must not be counted as successful token renewal. Subsequent real natural validation remains required.
 
 - **Protected hourly OIDC upkeep (11 Oct 2026, PR #975):** the existing genuine ChatGPT hourly core issues-edit event now has a private downstream maintenance job. It reads encrypted access expiry on every eligible real natural occurrence, reuses a healthy token, and only attempts one CAS-guarded refresh within 15 minutes of expiry. It verifies /me and /my-team/3462711 after rotation and retains report-prefetch's 90-second default. The protected emergency pause applies to both workers; ambiguous rotation remains IN_FLIGHT and requires owner action. This adds no scheduler and never blocks Official public acquisition. CI/merge are not proof that the next real near-expiry grant or native delivery succeeded.
 

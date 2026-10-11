@@ -4690,7 +4690,7 @@ def _render_deep_visible_contract_lines(
             (
                 "Finance",
                 finance_quality,
-                "Bank/FT context is usable; unresolved sell-value authority limits executable transfer precision."
+                "Finance authority is partial or unavailable; verify bank, FT, and selling prices before executing transfers."
                 if finance_quality != "🟢 Strong"
                 else "Finance context is sufficient for current route evaluation.",
             ),

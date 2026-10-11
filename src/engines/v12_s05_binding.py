@@ -36,8 +36,13 @@ def build_fixture_display_rows(
     fixtures: Sequence[Mapping[str, Any]],
     weather_rows: Sequence[Mapping[str, Any]] = (),
     workload_rows: Sequence[Mapping[str, Any]] = (),
+    planning_gw: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Project official fixture facts into readable, exact-bound S05 rows."""
+    """Project only the planning GW's official fixtures into readable S05 rows.
+
+    Keep full-season source availability for calculation and lineage, but do
+    not render unrelated GWs as a 380-fixture mobile table.
+    """
     teams = {
         int(row["id"]): str(row.get("name") or "Unknown team")
         for row in bootstrap.get("teams") or []
@@ -75,6 +80,13 @@ def build_fixture_display_rows(
     for raw in fixtures:
         if not isinstance(raw, Mapping) or raw.get("id") is None:
             continue
+        if planning_gw is not None:
+            try:
+                event = int(raw.get("event") or -1)
+            except (TypeError, ValueError):
+                continue
+            if event != int(planning_gw):
+                continue
         fixture_id = int(raw["id"])
         kickoff = _parse_fixture_dt(raw.get("kickoff_time"))
         try:

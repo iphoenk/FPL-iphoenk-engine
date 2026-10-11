@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T12:25:05+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T12:42:30+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -52,6 +52,10 @@ Captain distributions now have an optional calibrated goalkeeper event layer and
 ### Stage C full-universe scanner (11 Oct 2026)
 
 Stage C is enabled for canonical DEEP candidate discovery by the `feature_default_enabled` configuration default; `V12_STAGEC_SCANNER_ENABLED=0` is the deliberate emergency override. The Stage A multiwindow / Stage B shadow / Stage C pipeline scans the full projection input, reconciles unique projection IDs against Official FPL `bootstrap.elements`, and records the Official denominator, eligible denominator, missing/duplicate/unrecognized IDs, position coverage and screening reason codes. Missing or partial evidence is reported as `DEGRADED` rather than claiming full universe coverage. The scanner contributes bounded, provenance-aware candidate intelligence under S04 and route context, not a second Watchlist20 score, transfer authority, P1.7, or Monte Carlo engine. An actual production PASS still requires an occurrence-bound DEEP execution proof, 20-row S11, canonical 500K Monte Carlo, private delivery receipt and matching latest pointer; passing CI is not that proof.
+
+### S05 planning-GW display scope (11 Oct 2026)
+
+Verified 12:27 WIB production S05 completed and passed Stage3, but the visible fixture table included all 380 season fixtures rather than the ten GW7 matches. The integrated report now passes `planning_gw` into the **display-only** fixture projection; only fixtures whose Official FPL `event` exactly matches the planning GW are rendered. Full-season fixture inputs remain available for workload mathematics, source evidence and historical context. An existing regression test now verifies that all ten target-GW cards survive, unrelated-GW/unknown-event rows do not leak, and another GW maps only its own fixtures. The strict conditional S05 table rows/columns QA remains active.
 
 ### S05 exact rendered-table verification (11 Oct 2026)
 

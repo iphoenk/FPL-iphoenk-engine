@@ -7820,6 +7820,7 @@ def run_deep(
         fixtures=fixtures or [],
         weather_rows=s05_inputs.get("weather_rows") or [],
         workload_rows=calendar_context.get("player_workload") or [],
+        planning_gw=planning_gw,
     )
     calendar_context["competition_coverage"].update(
         {

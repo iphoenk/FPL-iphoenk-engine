@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T20:22:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T21:06:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **P1 S02 cohort start-odds transparency (11 Oct 2026):** the DEEP renderer now flags heavily repeated P(start) values and counts rows without supplemental prior/role/manager/normalized-availability start signals. This is a bounded evidence-resolution warning, **not** a re-fit of football odds, a new source of injury probabilities, or a modification of canonical V12_PLAYER_MINUTES, Stage3, P1.7, MC500K, scheduling, or private authentication. Synthetic regressions cover both uniform and differentiated cohorts. Production DEEP and private receipt must be verified separately.
 
 - **P0 protected OIDC Git-CAS authenticated parent push (11 Oct 2026, PR #980):** natural 19:00 hourly maintenance failed before refresh-token POST because the encrypted IN_FLIGHT marker could not be persisted. The 20:13 controlled prefetch confirmed AUTH_UNAVAILABLE fallback while its isolated private snapshot publisher successfully committed. The CAS marker and READY replacement now push the exact detached-worktree commit SHA through the authenticated private checkout; no force, replay, plaintext, second scheduler, MC500K, or P1.7 changes. Regression asserts the authenticated push base. This is a candidate fix, not FULL GREEN: private live auth, canonical DEEP, Stage3, native natural proof and independent private receipt must still pass postmerge.
 

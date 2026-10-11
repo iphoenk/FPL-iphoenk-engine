@@ -10,7 +10,7 @@ from ..publication.store import ROOT
 V6_SOURCE = ROOT / "src" / "runtime_v6"
 V6_CONFIG = ROOT / "config" / "v6"
 V6_WORKFLOWS = tuple(sorted((ROOT / ".github" / "workflows").glob("v6-*.yml")))
-ALLOWED_THIRD_PARTY = {"requests"}
+ALLOWED_THIRD_PARTY = {"requests", "cryptography"}
 _OTHER_ENGINE_VERSIONS = ("v3", "v4", "v5")
 
 

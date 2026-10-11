@@ -1137,6 +1137,7 @@ def _personal_evidence_resolution(
     private_data_root: Path | None = None,
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
+    report_slot: str | None = None,
 ) -> dict[str, Any]:
     candidates = collect_personal_evidence_candidates(
         runtime_root=runtime_root,
@@ -1151,6 +1152,7 @@ def _personal_evidence_resolution(
         candidates,
         planning_gw=planning_gw,
         expected_entry_id=3462711,
+        as_of=report_slot,
     )
 
 def _position_from_official(row: Mapping[str, Any]) -> str:
@@ -7351,6 +7353,7 @@ def run_deep(
             private_data_root=private_data_root,
             allow_legacy_private_sources=allow_legacy_private_sources,
             require_private_personal=require_private_personal,
+            report_slot=report_slot,
         ),
         required=True,
     )

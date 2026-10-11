@@ -96,7 +96,7 @@ def select_personal_evidence(
             and auth_state == "AUTH_AVAILABLE"
             and gw == planning_gw
             and ts is not None
-            and (as_of is None or (slot_ts is not None and ts <= slot_ts))
+            and (as_of is None or (slot_ts is not None and ts <= slot_ts + timedelta(minutes=15)))
             and (expected_entry_id is None or {"me", "my_team"} <= verified_endpoints)
             and (
                 expected_entry_id is None

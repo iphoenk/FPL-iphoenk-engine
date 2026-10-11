@@ -99,7 +99,12 @@ def auth_material_from_env() -> AuthMaterial | None:
     if mode == "rotating_oidc":
         # Intentionally opt-in only; never promote from legacy access-token
         # presence or from a saved browser OIDC record.
-        if (os.getenv("FPL_OIDC_CONTRACT_VERIFIED") or "").lower() != "true":
+        # A one-time owner-approved diagnostic may test the still-unknown
+        # client-specific grant policy WITHOUT enabling natural V6 rotation.
+        # Only the owner-guarded diagnostic workflow supplies this override.
+        contract_verified = (os.getenv("FPL_OIDC_CONTRACT_VERIFIED") or "").lower() == "true"
+        approved_once = (os.getenv("FPL_OIDC_OWNER_CONTROLLED_GRANT") or "").lower() == "true"
+        if not (contract_verified or approved_once):
             raise OfficialFPLAuthConfigurationError("OIDC_CLIENT_CONTRACT_NOT_VERIFIED")
         client_id = (os.getenv("FPL_OIDC_CLIENT_ID") or "").strip()
         if not client_id:

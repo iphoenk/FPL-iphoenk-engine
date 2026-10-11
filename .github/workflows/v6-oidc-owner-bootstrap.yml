@@ -1,0 +1,64 @@
+name: FPL protected OIDC credential enrollment
+run-name: Owner-only encrypted OIDC bootstrap
+
+on:
+  workflow_dispatch:
+    inputs:
+      intent:
+        description: "ENROLL for first use, REENROLL only after security review"
+        required: true
+        type: choice
+        options: [ENROLL, REENROLL]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fpl-private-oidc-enrollment
+  cancel-in-progress: false
+
+jobs:
+  owner-enroll:
+    if: github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    environment: v12-private-reports-publisher
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-v6.lock
+      - name: Install V6 locked dependencies
+        run: python -m pip install --require-hashes -r requirements-v6.lock
+      - name: Require scoped private repo credential
+        env:
+          FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+        shell: bash
+        run: |
+          test -n "$FPL_PRIVATE_REPORTS_TOKEN" || { echo "::error::private publisher not provisioned"; exit 1; }
+      - name: Checkout isolated private persistent store
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: true
+      - name: Bootstrap encrypted credential with zero plaintext output
+        env:
+          FPL_OIDC_STORE_KEY: ${{ secrets.FPL_OIDC_STORE_KEY }}
+          FPL_OIDC_STORE_DIR: private-reports
+          FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN: ${{ secrets.FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN }}
+          FPL_OWNER_CONFIRMED_REENROLL: ${{ inputs.intent == 'REENROLL' && 'REPLACE' || '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ inputs.intent }}" == "REENROLL" ]]; then
+            python -m src.runtime_v6.domains.acquisition.git_oidc_store --reenroll
+          else
+            python -m src.runtime_v6.domains.acquisition.git_oidc_store
+          fi

@@ -80,6 +80,7 @@ _OPTIONAL_SERVING_FILES = (
     "delivery_state.json",
     "presentation_qa.json",
     "gw6-forward-mc.json",
+    "gw7-midfield-mc.json",
 )
 _REPORT_FIRST_SERVING_FILES = (
     "serving_report.json",
@@ -432,6 +433,7 @@ def publish_private_output(
         "serving_report.md",
         "serving_report.json",
         "gw6-forward-mc.json",
+    "gw7-midfield-mc.json",
     ):
         path = canonical_dir / name
         if not path.is_file():
@@ -596,6 +598,8 @@ def publish_private_output(
             "delivery_state.json": "delivery_state.json",
             "presentation_qa.json": "presentation_qa.json",
             "gw6-forward-mc.json": "gw6-forward-mc.json",
+            "gw7-midfield-mc.json": "gw7-midfield-mc.json",
+    "gw7-midfield-mc.json",
         }
         for source_name, latest_name in serving_map.items():
             source = canonical_dir / source_name

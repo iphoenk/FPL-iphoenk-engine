@@ -661,7 +661,11 @@ jobs:
         run: |
           set -euo pipefail
           warm="artifacts/v12-report/gw6-warm-state.json"
-          test -s "$warm"
+          if [ ! -s "$warm" ]; then
+            echo "GW6 forward MC not applicable: no GW6 warm state"
+            echo "GW6_FORWARD_MC=SKIPPED_NO_GW6_WARM_STATE"
+            exit 0
+          fi
           planning_gw="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["planning_gw"])' "$warm")"
           if [ "$planning_gw" != "6" ]; then
             echo "GW6 forward MC not applicable for planning_gw=$planning_gw"

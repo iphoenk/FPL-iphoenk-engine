@@ -103,6 +103,28 @@ class GW7TwoMidOwnerMCContractTests(unittest.TestCase):
         self.assertFalse(result["finance"]["route_decision_net_supported"])
         self.assertTrue(result["official_current15_unchanged"])
 
+    def test_canonical_projection_team_id_is_numeric_and_team_label_is_text(self):
+        warm, picks, standings = _fake_inputs()
+        for row in warm["projections"]["players"]:
+            row["team_id"] = row["team"]
+            row["team"] = "Arsenal" if row["team_id"] == 1 else "Official team name"
+        def simulator(_projection, definitions, **kw):
+            return {
+                "execution_state": "EXECUTED",
+                "canonical_pass": True,
+                "actual_paths": 500_000,
+                "metrics": {k: {} for k in ROUTES},
+                "paired_outputs": {"PALMER_MBEUMO__VS__SAKA_MBEUMO__H1": {"p_gt": 0.5}},
+                "convergence_evidence": {"status": "PASS"},
+                "output_fingerprint": "a" * 64,
+            }
+        result = evaluate(
+            warm, report_slot=warm["report_slot"],
+            league_picks=picks, standings=standings,
+            optimizer=_mock_optimizer, simulator=simulator,
+        )
+        self.assertIn("PALMER_MBEUMO__VS__SAKA_MBEUMO__H1", result["pairwise"])
+        self.assertEqual(result["convergence"]["status"], "PASS")
     def test_fails_closed_when_current_gw_or_occurrence_changes(self):
         warm, picks, standings = _fake_inputs()
         with self.assertRaises(OwnerMidfieldMCError):

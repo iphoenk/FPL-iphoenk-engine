@@ -4452,14 +4452,22 @@ def _render_deep_visible_contract_lines(
         ))
         lines.append("#### RETURN PROFILE")
         lines.extend(_markdown_table(
-            ("Player", "Pblank", "P>=10", "P>=15", "Q75", "Q90", "Variance", "P(DNP)"),
+            ("Player", "Pblank", "Phaul", "P>=10", "Q90"),
             [(
                 r.get("player") or r.get("name"),
                 r.get("p_blank", r.get("blank_probability")),
-                r.get("p_ge_10", r.get("p_haul")),
+                r.get("p_haul", r.get("haul_probability")),
+                r.get("p_ge_10"),
+                r.get("q90", r.get("ceiling_q90")),
+            ) for r in frontier],
+        ))
+        lines.append("#### DISTRIBUTIONAL TAIL / DOWNSIDE")
+        lines.extend(_markdown_table(
+            ("Player", "P>=15", "Q75", "Variance", "P(DNP)"),
+            [(
+                r.get("player") or r.get("name"),
                 r.get("p_ge_15"),
                 r.get("q75"),
-                r.get("q90", r.get("ceiling_q90")),
                 r.get("variance"),
                 r.get("p_dnp"),
             ) for r in frontier],
@@ -4587,12 +4595,19 @@ def _render_deep_visible_contract_lines(
             return str(value)
 
         lines.extend(_markdown_table(
-            ("Player", "Price (£m)", "Direction", "Progress (%)", "Strength", "ETA"),
+            ("Player", "Price", "Direction", "Progress"),
             [(
                 r.get("player") or r.get("player_name") or r.get("name"),
                 r.get("current_price"),
                 r.get("direction"),
                 r.get("official_or_provider_progress", r.get("current_progress_percent", r.get("projected_percent"))),
+            ) for r in rows],
+        ))
+        lines.append("#### PER-PLAYER STRENGTH / ETA EVIDENCE")
+        lines.extend(_markdown_table(
+            ("Player", "Strength", "ETA"),
+            [(
+                r.get("player") or r.get("player_name") or r.get("name"),
                 strength_label(r),
                 r.get("estimated_change_date_wib")
                 or r.get("estimated_change_window")

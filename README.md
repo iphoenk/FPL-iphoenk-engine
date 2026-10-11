@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T16:37:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T17:14:36+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **P1 section evidence repair (11 Oct 2026, PR #977):** S14's numerical summary reads the final 500K P1.4 convergence checkpoint only when the source-selected route, last simulated horizon, and exact path count match the canonical checkpoint; the report distinguishes the MC reference route from the global decision/HOLD and best challenger. S02/S16 expose existing P1.1 start-signal provenance and DNP without changing probabilities. S10 shows native likelihood per player or NOT_CALIBRATED, not synthetic percentages. S08 displays canonical return tail/variance/DNP and explicitly preserves unavailable joint-C/VC evidence. No P1.7, MC seed/path count/kernel, FPL authentication or scheduling changes. CI, postmerge production recompute, private receipt and natural/native rendering are **separate** acceptance gates.
 
 - **P0 Stage3/OUR15 provenance (11 Oct 2026):** public submitted picks are an explicitly stale, non-financial identity fallback, never editable authenticated CURRENT15. Exact team/GW and live /me + /my-team lineage must be bound before private finance is authoritative; Stage3 only accepts S02 degraded after cross-checking 15 distinct submitted IDs, position counts, XI/bench, C/VC, Official provenance and occurrence timestamp. Wrong identity/fixture facts still fail closed. Natural, native visual and full-green production remain independent acceptance gates. See [Stage3 diagnostics](docs/V12_STAGE3_UPSTREAM_DIAGNOSTICS.md).
 

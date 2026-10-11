@@ -182,3 +182,24 @@ def test_errors_do_not_embed_credentials():
 
 def test_repr_redacts_sensitive_values():
     assert "dummy-refresh-token" not in repr(MemoryStore().state)
+
+
+def test_hourly_15_minute_threshold_renews_without_changing_default_behavior():
+    # A token 10 minutes from expiry is still valid for ordinary report-prefetch,
+    # but the natural hourly maintenance check may renew it proactively.
+    store, http, lock = MemoryStore(access="dummy-still-valid", expiry=1600), FakeHTTP(), Lock()
+    m = manager(store, http, lock)
+    assert m.get_access_token() == "dummy-still-valid"
+    assert http.calls == 0
+    assert m.get_access_token(refresh_before_seconds=900) == "dummy-access-next"
+    assert http.calls == 1
+    assert m.get_access_token(refresh_before_seconds=900) == "dummy-access-next"
+    assert http.calls == 1
+
+
+@pytest.mark.parametrize("invalid", [0, 89, 1801, True, 900.0, None])
+def test_hourly_threshold_cannot_exceed_bounded_contract(invalid):
+    store, http = MemoryStore(), FakeHTTP()
+    with pytest.raises(RotationBlocked, match="RENEWAL_WINDOW_INVALID"):
+        manager(store, http).get_access_token(refresh_before_seconds=invalid)
+    assert http.calls == 0

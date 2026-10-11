@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T15:26:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T16:27:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -10,6 +10,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 
 - **GW7 owner what-if MC:** PR #963 tests four paired 500K routes (HOLD, Mbeumo only with assumed 1 FT, Mbeumo + Palmer with -4, and Mbeumo + Saka with -4), using P1.7/P1.4 unchanged, and keeping the full result private. Future mini-league top-3 probability is not modelled; GW6 rival ownership is descriptive, not a probabilistic rank claim.
 
+
+- **Protected hourly OIDC upkeep (11 Oct 2026, PR #975):** the existing genuine ChatGPT hourly core issues-edit event now has a private downstream maintenance job. It reads encrypted access expiry on every eligible real natural occurrence, reuses a healthy token, and only attempts one CAS-guarded refresh within 15 minutes of expiry. It verifies /me and /my-team/3462711 after rotation and retains report-prefetch's 90-second default. The protected emergency pause applies to both workers; ambiguous rotation remains IN_FLIGHT and requires owner action. This adds no scheduler and never blocks Official public acquisition. CI/merge are not proof that the next real near-expiry grant or native delivery succeeded.
 
 - **OIDC private natural V6 activation (11 Oct 2026):** after real owner-controlled refresh and #19 independent reuse (HTTP 200, version 3 unchanged), protected private V6 prefetch defaults to rotating encrypted OIDC; public collection stays independent. Protected `FPL_PRIVATE_AUTO_REFRESH_PAUSED=true` is an emergency stop. Verified finance-only publication requires bank, FT or explicit unlimited, and 15/15 prices. Stale fallback nulls all unauthenticated economics. Natural V12 and next-expiry rotation/delivery remain separate acceptance gates. See [OIDC security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 

@@ -1015,3 +1015,51 @@ jobs:
             -f scheduler_authority=CHATGPT_FPL_MASTER_SCHEDULER
           echo "Dispatched governed visible occurrence: $REPORT_MODE $REPORT_SLOT"
 
+  # This is a dependent job of the existing owner-authorized natural V6 event.
+  # There is intentionally NO schedule / workflow_dispatch / issue-comment
+  # trigger of its own. Never block public ingestion or visible report delivery.
+  private_hourly_oidc_maintenance:
+    name: private_hourly_oidc_maintenance
+    needs: collect
+    if: >-
+      needs.collect.result == 'success' &&
+      needs.collect.outputs.skip != 'true' &&
+      needs.collect.outputs.schedule_kind == 'chatgpt_scheduler' &&
+      github.event_name == 'issues' &&
+      github.event.issue.number == 431 &&
+      github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    continue-on-error: true
+    environment: v12-private-reports-publisher
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-v6.lock
+      - name: Install locked private OIDC dependencies
+        run: python -m pip install --require-hashes -r requirements-v6.lock
+      - name: Checkout private encrypted credential store
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: iphoenk/fpl-reports-private
+          ref: main
+          path: private-reports
+          token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          persist-credentials: true
+      - name: Check expiry and conditionally renew one protected credential
+        env:
+          FPL_HOURLY_SCHEDULER_KIND: ${{ needs.collect.outputs.schedule_kind }}
+          FPL_PRIVATE_AUTO_REFRESH_PAUSED: ${{ vars.FPL_PRIVATE_AUTO_REFRESH_PAUSED }}
+          FPL_OIDC_CONTRACT_VERIFIED: "true"
+          FPL_OIDC_CLIENT_ID: ${{ vars.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_STORE_KEY: ${{ secrets.FPL_OIDC_STORE_KEY }}
+          FPL_OIDC_STORE_DIR: private-reports
+          FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
+        run: python -m src.runtime_v6.domains.report_plane.oidc_hourly_renewal

@@ -62,18 +62,17 @@ permissions:
   contents: read
 
 concurrency:
-  # GitHub keeps at most one pending run per concurrency group. An unrelated
-  # owner comment such as /v12-report-run must therefore never replace a
-  # pending governed V6 report-prefetch while a core run is still active.
+  # Isolate each governed occurrence. GitHub retains only one pending run
+  # per group, so a global V6 group lets a later slot replace an earlier
+  # PRICE/DEEP prefetch before it starts. The logical slot is the idempotency
+  # key for workflow dispatches; issue commands use their immutable comment id.
   group: >-
     ${{
-      (
-        github.event_name == 'issue_comment' &&
-        !startsWith(github.event.comment.body, '/v6-report-prefetch') &&
-        !startsWith(github.event.comment.body, '/v6-manual-recovery')
-      ) &&
-      format('fpl-v6-noncommand-{0}', github.event.comment.id) ||
-      'fpl-v6-hourly-data-ingestion'
+      github.event_name == 'workflow_dispatch' &&
+      format('fpl-v6-occurrence-{0}', inputs.logical_slot || inputs.reason) ||
+      github.event_name == 'issue_comment' &&
+      format('fpl-v6-comment-{0}', github.event.comment.id) ||
+      format('fpl-v6-event-{0}', github.run_id)
     }}
   cancel-in-progress: false
 

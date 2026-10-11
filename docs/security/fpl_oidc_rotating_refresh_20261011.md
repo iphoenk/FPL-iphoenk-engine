@@ -22,6 +22,55 @@ boundary, not proof of unattended or supported renewable access.
 - The provider's own PingFederate documentation says rotation, token reuse
   protection and grace windows depend on client/server configuration.
 
+## Production private V6 adoption after live grant and second-worker PASS (11 Oct 2026)
+
+Production evidence:
+- Owner first real controlled grant: `v6-auth-probe.yml` run #18, ciphertext
+  advanced through durable `IN_FLIGHT` to `READY` (private commits
+  `38905eb6` and `76c47a63`).
+- Independent reuse-only runner: run `38108942046`, HTTP 200 for
+  `/me` and `/my-team/3462711`, valid 15/15 private picks, bank and
+  authenticated FT/price availability, `credential_version=3`,
+  `credential_unchanged=true` and no new ciphertext commit.
+- These prove first live rotation + rehydration, NOT repeated refresh
+  after future expiry, full V12 canonical consumption, or native delivery.
+
+The existing **private_personal_publish** job in
+`v6-natural-data-ingestion.yml` now defaults to `FPL_AUTH_MODE=rotating_oidc`
+and `FPL_OIDC_CONTRACT_VERIFIED=true` only in the
+`v12-private-reports-publisher` protected GitHub environment. This is the
+implementation of the owner's explicit P0 permanent-refresh authorization
+following the real grant and worker reuse test. The public collector and
+authenticated diagnostic trigger are not promoted automatically.
+
+To pause private rotation safely, create GitHub **Environment variable**
+`FPL_PRIVATE_AUTO_REFRESH_PAUSED=true` in `v12-private-reports-publisher`;
+remove or set to `false` to resume. A pause never compromises Official FPL
+public fixtures, submitted XI, event live, mini-league or MATCH mode.
+The existing master scheduler remains the only recurring authority.
+
+The existing private V6 reporter now requires 15/15 verified authenticated
+purchase/selling prices, bank and correctly normalized FT (or explicitly
+UNLIMITED) before claiming full private finance availability. If the
+current session becomes unavailable, stale fallback strips bank, FT,
+hit cost, transfers made and all per-player authenticated economics.
+AUTH_UNAVAILABLE cannot become AUTH_AVAILABLE through saved snapshots.
+
+Required further acceptance:
+1. Full required CI tests PASS, merged SHA matches production main.
+2. The next *natural* governed V6 prefetch invokes private publisher with
+   protected store and publishes current `AUTH_AVAILABLE` for current GW,
+   valid canonical player and financial facts to the private repository.
+3. V12 natural consumes the exact personal prefetch lineage and current
+   transfer GW, with numeric finance only when backed by authenticated facts.
+4. Observe a **second** real refresh after access token has expired, with
+   `IN_FLIGHT → READY`, increased version, verified replacement/readback,
+   correct identity, and subsequent new-worker reuse. Never induce expiry
+   manually or blindly retry an ambiguous or rejected grant.
+5. Independently verify natural occurrence receipt, private serving pointer
+   and native visible 22/23-section DEEP or MATCH 13-section delivery.
+Until all five are verified, **FULL_GREEN_PROD is not established**.
+
 ## Second-worker reuse-only proof (without refresh)
 
 Immediately after a successful controlled token rotation, while the

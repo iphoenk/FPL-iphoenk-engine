@@ -81,11 +81,21 @@ def validate_deep_presentation_lock_contract(
 
     expected_tables = {
         "S01": [("Axis","Status","Current call")],
-        "S02": [("Player","Pos","Opponent","Pstart","xMins","1GW xPts","3GW","5GW","Note")],
+        "S02": [
+            ("Player","Pos","Opponent","Pstart","xMins","1GW xPts","3GW","5GW","Note"),
+            ("Player","P(DNP)","Pstart evidence","Confidence","Signals","Binding"),
+        ],
         "S06B": [("Player","Pstart","xMins","1GW xPts")],
-        "S08": [("Rank","Player","xPts","Pstart","xMins"),("Player","Pblank","Phaul","P>=10","Q90")],
+        "S08": [
+            ("Rank","Player","xPts","Pstart","xMins"),
+            ("Player","Pblank","Phaul","P>=10","Q90"),
+            ("Player","P>=15","Q75","Variance","P(DNP)"),
+        ],
         "S09": [("Chip","Status")],
-        "S10": [("Player","Price","Direction","Progress")],
+        "S10": [
+            ("Player","Price","Direction","Progress"),
+            ("Player","Strength","ETA"),
+        ],
         "S11": [("Player","Pos","£","xMins","Pstart","DNP","Score","Admit","Evidence")],
         "S12": [("#","Player","£","Progress","ETA")],
         "S13": [("#","Player","£","Progress","ETA")],

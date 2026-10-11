@@ -8564,6 +8564,9 @@ def run_deep(
         operational_action=operational_action,
         calendar_context=calendar_context,
     )
+    # Normalize the DEEP producer result before every downstream consumer.
+    # The active DEEP S15B assembly must not inherit legacy league-sized scope metadata.
+    mini_deep_detail = _rebind_s15b_competitive_scope(mini_deep_detail)
     all15_rows = _enrich_all15_rows(
         all15=all15,
         projections=projections,

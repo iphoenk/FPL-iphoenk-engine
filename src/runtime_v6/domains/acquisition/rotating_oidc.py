@@ -8,6 +8,7 @@ contract have been provided. Neither tokens nor provider bodies are logged.
 from __future__ import annotations
 
 import hmac
+import secrets
 import time
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
@@ -179,7 +180,7 @@ class RotatingCredentialManager:
             if not current.refresh_token:
                 raise RotationBlocked("OIDC_CREDENTIAL_NOT_ENROLLED")
 
-            started = replace(current, phase="IN_FLIGHT", transaction_id="grant-in-flight")
+            started = replace(current, phase="IN_FLIGHT", transaction_id=secrets.token_hex(16))
             try:
                 marked = self.store.compare_and_swap(current.version, started)
                 confirmed = self.store.load()

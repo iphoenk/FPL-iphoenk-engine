@@ -7,8 +7,10 @@ No credential or provider response content is emitted to the logs.
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import time
+from pathlib import Path
 from typing import Any, Callable
 
 from src.runtime_v6.domains.acquisition.git_oidc_store import CASLease, store_from_env
@@ -87,8 +89,16 @@ def main() -> int:
             client_id=(os.getenv("FPL_OIDC_CLIENT_ID") or "").strip(),
             contract_verified=True, permit_nonrotating=False,
         )
-        entry_id = int(os.getenv("FPL_TEAM_ID") or "0")
-        result = check_hourly(store=store, manager=manager, entry_id=entry_id)
+        # FPL_TEAM_ID is not guaranteed to be an environment variable in the
+        # protected runner. Use the checked-in canonical consumer identity,
+        # matching the existing REUSE_ONLY probe; check_hourly still requires
+        # exactly the approved 3462711 entry before touching any credential.
+        context = json.loads(Path("config/v6/consumer_context.json").read_text("utf-8"))
+        configured_entry = int(context["entry_id"])
+        env_entry = (os.getenv("FPL_TEAM_ID") or "").strip()
+        if env_entry and int(env_entry) != configured_entry:
+            raise RotationBlocked("OIDC_HOURLY_ENTRY_NOT_APPROVED")
+        result = check_hourly(store=store, manager=manager, entry_id=configured_entry)
     except RotationBlocked as exc:
         allowed = {
             "OIDC_HOURLY_ENTRY_NOT_APPROVED",

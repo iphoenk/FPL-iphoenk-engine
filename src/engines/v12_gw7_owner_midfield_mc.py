@@ -38,7 +38,7 @@ def _read(path: Path) -> dict[str, Any]:
 
 
 def _team(row: Mapping[str, Any]) -> int:
-    return int(row.get("team") or row.get("team_id") or 0)
+    return int(row.get("team_id") or row.get("team") or 0)
 
 
 def _pos(row: Mapping[str, Any]) -> int:
@@ -212,8 +212,8 @@ def evaluate(
         "mc_output_fingerprint": mc.get("output_fingerprint"),
         "lineup_proof": lineup_proof,
         "metrics": {name: metrics[name] for name in ROUTES},
-        "pairwise": mc.get("pairwise"),
-        "convergence": mc.get("convergence"),
+        "pairwise": mc.get("paired_outputs"),
+        "convergence": mc.get("convergence_evidence"),
         "mini_league": _league_counts(league_picks, standings),
         "finance": {
             "transfers": 2, "ft_assumption": 1, "hit_points_assumed": 4,

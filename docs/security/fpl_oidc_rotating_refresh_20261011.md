@@ -22,6 +22,36 @@ boundary, not proof of unattended or supported renewable access.
 - The provider's own PingFederate documentation says rotation, token reuse
   protection and grace windows depend on client/server configuration.
 
+## Second-worker reuse-only proof (without refresh)
+
+Immediately after a successful controlled token rotation, while the
+persisted access token is still valid (more than 90 seconds remaining),
+run **Actions → V6 private auth diagnostic → Run workflow** on `main`
+with **auth_attempt = REUSE_ONLY**.
+
+This starts a fresh GitHub-hosted runner and checks out the existing
+private encrypted credential store at the latest origin/main. The
+dedicated `oidc_reuse_probe` code decrypts it locally using the
+protected environment key, **only reads** its access token and executes
+read-only GET requests to Official FPL `/me` and
+`/my-team/3462711`. The probe has no code path to send a POST to the
+OIDC token endpoint, start a rotation, or write credential state.
+Near-expiry or absent access tokens fail with `REUSE_ONLY_ACCESS_EXPIRED_OR_NEAR_EXPIRY`;
+do not automatically replay a refresh grant.
+
+A passing run must show `OIDC_REUSE_ONLY=PASS`, `me_http=200`,
+`my_team_http=200`, `entry_match=true`, valid 15-player private squad,
+and `credential_unchanged=true`. Verify the private ciphertext blob
+SHA and credential commit count have not advanced during the run.
+No raw access/refresh tokens, response payloads, or cookies are printed.
+GitHub Actions job green alone is insufficient without this evidence.
+
+REUSE_ONLY demonstrates **independent fresh-worker readback and current
+access-token reuse**. It does not demonstrate successful *future* grant
+after expiry, which remains a separate ROTATION_PROVEN lifecycle gate.
+It must not change FPL_AUTH_MODE, FPL_OIDC_CONTRACT_VERIFIED, or the
+master natural scheduler.
+
 ## One controlled live grant, WITHOUT changing natural scheduler
 
 The `v6-auth-probe.yml` workflow now offers an owner-only

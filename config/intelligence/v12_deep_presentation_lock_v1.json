@@ -110,6 +110,18 @@
             "Note"
           ],
           "rows_exact": 15
+        },
+        {
+          "name": "Pstart evidence / DNP audit",
+          "columns": [
+            "Player",
+            "P(DNP)",
+            "Pstart evidence",
+            "Confidence",
+            "Signals",
+            "Binding"
+          ],
+          "rows_exact": 15
         }
       ]
     },
@@ -224,6 +236,17 @@
             "Q90"
           ],
           "rows_exact": 5
+        },
+        {
+          "name": "Distributional tail / downside",
+          "columns": [
+            "Player",
+            "P>=15",
+            "Q75",
+            "Variance",
+            "P(DNP)"
+          ],
+          "rows_exact": 5
         }
       ]
     },
@@ -262,6 +285,15 @@
             "Price",
             "Direction",
             "Progress"
+          ],
+          "rows_exact": 15
+        },
+        {
+          "name": "Per-player strength / ETA evidence",
+          "columns": [
+            "Player",
+            "Strength",
+            "ETA"
           ],
           "rows_exact": 15
         }

@@ -592,3 +592,141 @@ def test_major_international_tournaments_map_to_international():
         "AFC Asian Cup",
     ):
         assert v12_s05_binding._category_for_competition(name) == "INTERNATIONAL"
+
+
+def test_espn_monthly_queries_replace_retired_date_ranges_and_preserve_provenance(monkeypatch):
+    """A cross-month window is fetched by month, deduped, and strictly filtered."""
+    requests_seen = []
+
+    september = {
+        "events": [
+            {
+                "id": "ucl-sep",
+                "date": "2026-09-30T19:00:00Z",
+                "competitions": [{
+                    "date": "2026-09-30T19:00:00Z",
+                    "competitors": [
+                        {"homeAway": "away", "team": {"abbreviation": "ARS"}},
+                        {"homeAway": "home", "team": {"displayName": "Real Madrid"}},
+                    ],
+                }],
+            }
+        ]
+    }
+    october = {
+        "events": [
+            september["events"][0],  # Deduped if ESPN repeats an event.
+            {
+                "id": "ucl-oct",
+                "date": "2026-10-14T19:00:00Z",
+                "competitions": [{
+                    "date": "2026-10-14T19:00:00Z",
+                    "competitors": [
+                        {"homeAway": "home", "team": {"abbreviation": "ARS"}},
+                        {"homeAway": "away", "team": {"displayName": "Real Madrid"}},
+                    ],
+                }],
+            },
+            {
+                "id": "ucl-late",
+                "date": "2026-10-31T19:00:00Z",
+                "competitions": [{
+                    "date": "2026-10-31T19:00:00Z",
+                    "competitors": [
+                        {"homeAway": "home", "team": {"abbreviation": "ARS"}},
+                        {"homeAway": "away", "team": {"displayName": "Real Madrid"}},
+                    ],
+                }],
+            },
+        ]
+    }
+
+    class Response:
+        def __init__(self, token):
+            self.url = f"https://example.test/scoreboard?dates={token}"
+            self.token = token
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return september if self.token == "202609" else october
+
+    def fake_get(url, *, params, timeout):
+        assert "dates" in params and "-" not in params["dates"]
+        assert params["limit"] == "1000"
+        assert timeout == 6
+        requests_seen.append(params["dates"])
+        return Response(params["dates"])
+
+    monkeypatch.setattr(report_time_competition_schedule.requests, "get", fake_get)
+    slug, payload, source_url = report_time_competition_schedule._fetch_one(
+        provider={"base_url": "https://example.test", "request_timeout_seconds": 6},
+        competition_cfg={"slug": "uefa.champions"},
+        start_date="20260920",
+        end_date="20261018",
+    )
+    assert slug == "uefa.champions"
+    assert requests_seen == ["202609", "202610"]
+    assert payload["_retrieval"]["query_granularity"] == "MONTH"
+    assert len(payload["events"]) == 3
+    assert source_url.endswith("dates=202609")
+    rows = report_time_competition_schedule._competition_rows(
+        payload=payload,
+        competition_cfg={"name": "UEFA Champions League", "category": "CONTINENTAL_CLUB"},
+        bootstrap=_bootstrap(),
+        floor=datetime(2026, 9, 20, tzinfo=timezone.utc),
+        ceiling=datetime(2026, 10, 18, tzinfo=timezone.utc),
+        source_url=source_url,
+    )
+    assert [r["source_native_event_id"] for r in rows] == ["ucl-sep", "ucl-oct"]
+    assert rows[0]["source_url"].endswith("dates=202610")  # Deduped last observation.
+    assert rows[1]["source_url"].endswith("dates=202610")
+
+
+def test_espn_month_failure_cannot_claim_complete_schedule(monkeypatch):
+    """A missing monthly response cannot be interpreted as zero fixtures."""
+    import requests
+
+    calls = []
+
+    class Response:
+        def __init__(self, token):
+            self.token = token
+            self.url = f"https://example.test/scoreboard?dates={token}"
+
+        def raise_for_status(self):
+            if self.token == "202610":
+                raise requests.HTTPError("HTTP 400")
+            
+        def json(self):
+            return {"events": []}
+
+    def fake_get(url, *, params, timeout):
+        calls.append(params["dates"])
+        return Response(params["dates"])
+
+    monkeypatch.setattr(report_time_competition_schedule.requests, "get", fake_get)
+    result = report_time_competition_schedule.collect_verified_non_pl_schedule(
+        bootstrap=_bootstrap(),
+        planning_fixtures=[{"kickoff_time": "2026-10-18T14:00:00Z"}],
+        report_timestamp="2026-10-11T04:54:00Z",
+        config={
+            "contract": "REPORT_TIME_COMPETITION_SCHEDULE_V1",
+            "provider": {
+                "base_url": "https://example.test",
+                "lookback_days": 21,
+                "max_parallel_requests": 1,
+                "request_timeout_seconds": 6,
+            },
+            "competitions": [{
+                "name": "UEFA Champions League",
+                "slug": "uefa.champions",
+                "category": "CONTINENTAL_CLUB",
+            }],
+        },
+    )
+    assert calls == ["202609", "202610"]
+    assert result["status"] == "UNAVAILABLE"
+    assert result["authority_complete"] is False
+    assert result["checks"][0]["status"] == "FAILED"

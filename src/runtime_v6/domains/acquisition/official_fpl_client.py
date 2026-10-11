@@ -55,7 +55,7 @@ def _resolve_auth_mode_from_env() -> str:
 
     if raw_mode == "off":
         return "disabled"
-    if raw_mode in {"session_cookie", "bearer_token"}:
+    if raw_mode in {"session_cookie", "bearer_token", "rotating_oidc"}:
         return raw_mode
     if raw_mode not in {"disabled", "auto"}:
         raise OfficialFPLAuthConfigurationError(f"unsupported FPL_AUTH_MODE={raw_mode}")
@@ -91,6 +91,36 @@ def auth_material_from_env() -> AuthMaterial | None:
         token = (os.getenv("FPL_ACCESS_TOKEN") or "").strip()
         if not token:
             raise OfficialFPLAuthConfigurationError("FPL_ACCESS_TOKEN missing")
+        return AuthMaterial(
+            "bearer_token",
+            {"X-API-Authorization": f"Bearer {token}"},
+            (token, f"Bearer {token}"),
+        )
+    if mode == "rotating_oidc":
+        # Intentionally opt-in only; never promote from legacy access-token
+        # presence or from a saved browser OIDC record.
+        if (os.getenv("FPL_OIDC_CONTRACT_VERIFIED") or "").lower() != "true":
+            raise OfficialFPLAuthConfigurationError("OIDC_CLIENT_CONTRACT_NOT_VERIFIED")
+        client_id = (os.getenv("FPL_OIDC_CLIENT_ID") or "").strip()
+        if not client_id:
+            raise OfficialFPLAuthConfigurationError("OIDC_CLIENT_ID_NOT_CONFIGURED")
+        try:
+            from .git_oidc_store import CASLease, store_from_env
+            from .rotating_oidc import RotatingCredentialManager, RotationBlocked
+            manager = RotatingCredentialManager(
+                store=store_from_env(),
+                lease=CASLease(),
+                token_url="https://account.premierleague.com/as/token",
+                approved_host="account.premierleague.com",
+                client_id=client_id,
+                contract_verified=True,
+                # Missing replacement is unsafe until client policy is proven.
+                permit_nonrotating=False,
+            )
+            token = manager.get_access_token()
+        except RotationBlocked:
+            # Preserve only an allowlisted configuration classification.
+            raise OfficialFPLAuthConfigurationError("OIDC_ROTATION_UNAVAILABLE") from None
         return AuthMaterial(
             "bearer_token",
             {"X-API-Authorization": f"Bearer {token}"},

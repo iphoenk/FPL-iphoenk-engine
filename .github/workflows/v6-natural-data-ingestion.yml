@@ -643,11 +643,18 @@ jobs:
 
       - name: Refresh authenticated current-team state in isolated private plane
         env:
-          FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}
+          # Private-only auto-refresh is now production-authorized after a
+          # real official grant plus independent second-worker reuse. Owner can
+          # emergency-pause using protected environment variable below.
+          # Never alter the public collect job's auth routing.
+          FPL_AUTH_MODE: ${{ vars.FPL_PRIVATE_AUTO_REFRESH_PAUSED == 'true' && 'disabled' || 'rotating_oidc' }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
           FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
           FPL_OIDC_CLIENT_ID: ${{ vars.FPL_OIDC_CLIENT_ID }}
-          FPL_OIDC_CONTRACT_VERIFIED: ${{ vars.FPL_OIDC_CONTRACT_VERIFIED }}
+          # Explicit production approval for this isolated private publisher,
+          # backed by live owner-run grant + persisted replacement + reuse.
+          # Do not copy this into the public collector or normal auth probe.
+          FPL_OIDC_CONTRACT_VERIFIED: "true"
           FPL_OIDC_STORE_KEY: ${{ secrets.FPL_OIDC_STORE_KEY }}
           FPL_OIDC_STORE_DIR: private-reports
           FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
@@ -846,12 +853,17 @@ jobs:
               availability.update({
                   "authenticated_state": "AUTH_UNAVAILABLE",
                   "bank": "UNAVAILABLE",
+                  "free_transfers": "NOT_SUPPORTED",
                   "chips": "UNAVAILABLE",
                   "purchase_price": "UNAVAILABLE",
                   "selling_price": "UNAVAILABLE",
               })
               snapshot["availability"] = availability
               snapshot["bank"] = None
+              snapshot["free_transfers"] = None
+              snapshot["free_transfers_source"] = "NOT_SUPPORTED"
+              snapshot["transfers_made"] = None
+              snapshot["hit_cost"] = None
               snapshot["chips"] = []
               snapshot["governance"] = {
                   **dict(snapshot.get("governance") or {}),
@@ -863,6 +875,29 @@ jobs:
               raise SystemExit(0)
           if auth_state != "AUTH_AVAILABLE":
               fail("authoritative personal authentication is unavailable")
+          # Do not promote AUTH_AVAILABLE into finance-green unless the
+          # published snapshot contains verified, complete private economics.
+          # Explicit unlimited transfers are valid but NOT numeric FT.
+          if type(team.get("bank")) is not int:
+              fail("private personal bank is not verified")
+          if not all(
+              isinstance(row, dict)
+              and type(row.get("purchase_price")) is int
+              and type(row.get("selling_price")) is int
+              for row in players
+          ):
+              fail("private personal 15/15 purchase and selling prices not verified")
+          ft_source = str(team.get("free_transfers_source") or "")
+          ft = team.get("free_transfers")
+          if ft_source == "UNLIMITED":
+              if ft is not None:
+                  fail("unlimited transfers must not have numeric FT")
+          elif not (type(ft) is int and 0 <= ft <= 5 and ft_source in {
+              "OFFICIAL_EXPLICIT", "AUTHENTICATED_LIMIT_MINUS_MADE",
+          }):
+              fail("private free transfers not verified by authenticated official evidence")
+          if team.get("availability", {}).get("authenticated_state") != "AUTH_AVAILABLE":
+              fail("private finance availability not authenticated")
           if team_gw <= 0 or team_gw != manifest_gw:
               fail("private personal event does not match the report event")
           if generated < slot - timedelta(minutes=15) or generated > now + timedelta(minutes=2):

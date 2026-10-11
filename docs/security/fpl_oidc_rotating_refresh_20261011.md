@@ -22,6 +22,28 @@ boundary, not proof of unattended or supported renewable access.
 - The provider's own PingFederate documentation says rotation, token reuse
   protection and grace windows depend on client/server configuration.
 
+## 11 October 2026: guarded remote owner enrollment trigger
+
+When an owner is on an iPhone and the connected GitHub tool cannot invoke
+workflow_dispatch, the existing `v6-oidc-owner-bootstrap.yml` workflow also
+accepts a **single exact** GitHub issue #431 command:
+`/fpl-oidc-enroll` via an **issue_comment.created** event.
+
+The job is denied unless `github.actor == github.repository_owner`,
+the target issue number is **431**, and the comment body exactly matches.
+This is a one-time manual operator request, **not** a recurring scheduler or
+FPL natural report trigger. It does not allow REENROLL via comments.
+The pre-existing manual workflow_dispatch path is preserved.
+
+Never include token values in the issue comment. Workflow runs with the
+existing protected environment and writes encrypted credentials to the
+private-only repository. On success, delete the temporary
+`FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN` environment secret.
+
+This enrollment only stores an encrypted seed; it does not itself prove
+a successful refresh grant, a valid /me or /my-team, or rotating browser
+session compatibility. `FPL_AUTH_MODE` remains opt-in.
+
 ## Enforced state-machine contracts
 
 The staged `rotating_oidc.py` provides fail-closed logic for an owner-approved

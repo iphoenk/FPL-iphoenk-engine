@@ -433,7 +433,7 @@ def publish_private_output(
         "serving_report.md",
         "serving_report.json",
         "gw6-forward-mc.json",
-    "gw7-midfield-mc.json",
+        "gw7-midfield-mc.json",
     ):
         path = canonical_dir / name
         if not path.is_file():
@@ -599,7 +599,6 @@ def publish_private_output(
             "presentation_qa.json": "presentation_qa.json",
             "gw6-forward-mc.json": "gw6-forward-mc.json",
             "gw7-midfield-mc.json": "gw7-midfield-mc.json",
-    "gw7-midfield-mc.json",
         }
         for source_name, latest_name in serving_map.items():
             source = canonical_dir / source_name

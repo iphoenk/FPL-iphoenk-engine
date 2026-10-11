@@ -865,6 +865,12 @@ jobs:
               snapshot["transfers_made"] = None
               snapshot["hit_cost"] = None
               snapshot["chips"] = []
+              # Private economics from a saved snapshot have no authority
+              # after the current live auth attempt failed.
+              for row in snapshot.get("players") or []:
+                  if isinstance(row, dict):
+                      row["purchase_price"] = None
+                      row["selling_price"] = None
               snapshot["governance"] = {
                   **dict(snapshot.get("governance") or {}),
                   "auth_bypass_used": True,

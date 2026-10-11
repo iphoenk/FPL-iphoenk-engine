@@ -9,7 +9,7 @@ repair V6, or create another decision authority.
 import argparse
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Mapping
 

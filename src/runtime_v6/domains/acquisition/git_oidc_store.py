@@ -177,3 +177,22 @@ def enroll_once(token: str, *, reenroll: bool = False) -> int:
         raise RotationBlocked("CREDENTIAL_ENROLLMENT_READBACK_FAILED")
     # No plaintext is included in the return value or workflow summary.
     return verified.version
+
+
+def _bootstrap_main() -> int:
+    """Owner-controlled, initial enrollment only. Never write payloads to logs."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Store FPL OIDC credential confidentially")
+    parser.add_argument("--reenroll", action="store_true")
+    args = parser.parse_args()
+    value = os.environ.get("FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN") or ""
+    version = enroll_once(value, reenroll=args.reenroll)
+    print("FPL_OIDC_BOOTSTRAP=ENCRYPTED_PERSISTED")
+    print("FPL_OIDC_STORE_VERSION=" + str(version))
+    print("FPL_OIDC_NEXT=DELETE_BOOTSTRAP_SECRET_FROM_PROTECTED_ENVIRONMENT")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_bootstrap_main())

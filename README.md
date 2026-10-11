@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T10:21:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T12:08:45+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -50,6 +50,10 @@ Captain distributions now have an optional calibrated goalkeeper event layer and
 ### Stage C full-universe scanner (11 Oct 2026)
 
 Stage C is enabled for canonical DEEP candidate discovery by the `feature_default_enabled` configuration default; `V12_STAGEC_SCANNER_ENABLED=0` is the deliberate emergency override. The Stage A multiwindow / Stage B shadow / Stage C pipeline scans the full projection input, reconciles unique projection IDs against Official FPL `bootstrap.elements`, and records the Official denominator, eligible denominator, missing/duplicate/unrecognized IDs, position coverage and screening reason codes. Missing or partial evidence is reported as `DEGRADED` rather than claiming full universe coverage. The scanner contributes bounded, provenance-aware candidate intelligence under S04 and route context, not a second Watchlist20 score, transfer authority, P1.7, or Monte Carlo engine. An actual production PASS still requires an occurrence-bound DEEP execution proof, 20-row S11, canonical 500K Monte Carlo, private delivery receipt and matching latest pointer; passing CI is not that proof.
+
+### S05 verified non-PL schedule acquisition (11 Oct 2026)
+
+ESPN scoreboard date ranges `dates=YYYYMMDD-YYYYMMDD` began returning HTTP 400 in September 2026. The S05 report-time acquisition now requests separate calendar months with `dates=YYYYMM`, deduplicates native event IDs, filters verified source events to the exact report window, and retains event-specific source URLs. Any failed monthly response fails its competition coverage rather than being interpreted as zero fixtures; when non-PL authority is still incomplete, S05 remains truthfully `DEGRADED` while Official FPL remains the Premier League fixture authority. This does not alter V6, xPts/xMins, optimiser, Monte Carlo, private finance, or scheduler ownership.
 
 ## Reports
 

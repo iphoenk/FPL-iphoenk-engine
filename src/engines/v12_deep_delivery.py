@@ -8,7 +8,7 @@ already-produced personal evidence and validates that authoritative V12
 analytics are materially visible in the DEEP report.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Mapping, Sequence
 
 from src.engines.v12_competitive_window import resolve_competitive_window

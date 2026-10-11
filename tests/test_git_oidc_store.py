@@ -118,3 +118,35 @@ def test_wrong_repo_remote_is_rejected(tmp_path, checkout, monkeypatch):
     monkeypatch.setattr(module, "_git", lambda root, *args, **kwargs: b"https://github.com/iphoenk/FPL-iphoenk-engine.git\n" if args[:2] == ("remote", "get-url") else b"")
     with pytest.raises(RotationBlocked, match="WRONG_REMOTE"):
         module.EncryptedGitCredentialStore(str(repo), key)
+
+
+def test_two_distinct_runners_cannot_both_claim_grant(checkout, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    bare, repo, key = checkout
+    one = module.EncryptedGitCredentialStore(str(repo), key)
+    one.compare_and_swap(0, Credential(1, "READY", "dummy-refresh-original"))
+    second_dir = tmp_path / "runner-two"
+    git("clone", "--branch", "main", str(bare), str(second_dir))
+    two = module.EncryptedGitCredentialStore(str(second_dir), key)
+    barrier = Barrier(2)
+
+    def claim(store, ident):
+        state = store.load()
+        assert state.version == 1
+        barrier.wait(timeout=5)
+        try:
+            store.compare_and_swap(
+                state.version,
+                Credential(state.version + 1, "IN_FLIGHT", state.refresh_token,
+                           transaction_id=f"distinct-claim-{ident}"),
+            )
+            return "CLAIMED"
+        except RotationBlocked:
+            return "BLOCKED"
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcome = list(workers.map(lambda pair: claim(*pair), ((one, "one"), (two, "two"))))
+    assert sorted(outcome) == ["BLOCKED", "CLAIMED"]
+    assert one.load().phase == "IN_FLIGHT"

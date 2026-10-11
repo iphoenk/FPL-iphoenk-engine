@@ -1,9 +1,10 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T06:20:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T06:55:00+07:00`
 
 
 - **P0 full-season player history (12 Oct 2026, PR #988):** Official FPL element-summary history is retained for the entire bootstrap universe across GW1..N-1, with fixture-level rows, double-GW aggregation, FINAL/DNP/BLANK/PENDING states, provenance, and an explicit coverage gate. Missing or pending evidence is never coerced to zero.
+- **P0 PRICE prefetch occurrence isolation (12 Oct 2026, PR #989):** V6 workflow concurrency is keyed by logical occurrence for dispatches and immutable issue-comment ID for commands, preventing a later slot from cancelling an earlier pending PRICE/DEEP prefetch while retaining same-occurrence serialization and `cancel-in-progress: false`.
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 

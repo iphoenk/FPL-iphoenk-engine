@@ -168,10 +168,10 @@ def select_personal_evidence(
             source = dict(payload.get("lineage") or {})
             source_valid = bool(
                 row["auth_state"] == "PUBLIC_OFFICIAL"
-                and str(payload.get("status") or "").upper() == "AVAILABLE"
                 and (
                     expected_entry_id is None
                     or (
+                        str(payload.get("status") or "").upper() == "AVAILABLE"
                         str(payload.get("entry_id") or "") == str(expected_entry_id)
                         and str(source.get("entry_id") or "") == str(expected_entry_id)
                         and str(source.get("authority") or "") == "OFFICIAL_FPL"

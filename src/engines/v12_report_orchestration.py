@@ -4478,7 +4478,11 @@ def _render_deep_visible_contract_lines(
                 r.get("player") or r.get("name"),
                 r.get("p_ge_15"),
                 r.get("q75"),
-                r.get("variance"),
+                (
+                    r.get("variance")
+                    if r.get("variance") is not None
+                    else r.get("pmf_variance")
+                ),
                 r.get("p_dnp"),
             ) for r in frontier],
         ))

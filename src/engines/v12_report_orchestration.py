@@ -12,6 +12,7 @@ from ChatGPT/V12 analytic execution truth.
 import hashlib
 import json
 import re
+from math import isfinite
 from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 from zoneinfo import ZoneInfo
@@ -2852,15 +2853,85 @@ def _render_package_frontier_lines(
 
     lines.append("### CANONICAL MONTE CARLO")
     convergence = dict(mc.get("convergence_evidence") or {})
+    checkpoints = [
+        dict(row) for row in convergence.get("checkpoints") or []
+        if isinstance(row, Mapping)
+    ]
+    final_checkpoint = checkpoints[-1] if checkpoints else {}
+    mc_route = str(mc.get("selected_route_id") or "")
+    route_ids = mc.get("route_ids")
+    package_integration = dict(mc.get("package_integration") or {})
+    route_bound = (
+        bool(mc_route)
+        and isinstance(route_ids, list)
+        and mc_route in route_ids
+        and (
+            not package_integration
+            or str(package_integration.get("convergence_route_id") or "") == mc_route
+        )
+    )
+    fields = (
+        "mean_route_delta", "p_route_gt_hold", "p10_delta",
+        "p50_delta", "p90_delta", "expected_regret", "mean_delta_mcse",
+    )
+    numbers: dict[str, float] = {}
+    for field in fields:
+        value = final_checkpoint.get(field)
+        if isinstance(value, bool):
+            break
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            break
+        if not isfinite(numeric):
+            break
+        numbers[field] = numeric
+    # P1.4 checkpoints refer to its explicitly selected route at the LAST
+    # simulated horizon, not necessarily the governed S14 route or challenger.
+    full_checkpoint = (
+        str(mc.get("execution_state") or "").upper() == "EXECUTED"
+        and str(convergence.get("status") or "").upper() == "PASS"
+        and route_bound
+        and isinstance(mc.get("actual_paths"), int)
+        and mc["actual_paths"] >= 500_000
+        and final_checkpoint.get("paths") == mc["actual_paths"]
+        and len(numbers) == len(fields)
+        and 0.0 <= numbers.get("p_route_gt_hold", -1) <= 1.0
+        and numbers.get("mean_delta_mcse", -1) >= 0
+    )
+    horizon = (mc.get("horizons") or [None])[-1]
     lines.extend([
         f"Actual paths: {mc.get('actual_paths', 'UNAVAILABLE')}",
         f"Correlated/common-random status: {mc.get('common_random_numbers', mc.get('correlated_common_random_status', 'UNAVAILABLE'))}",
         f"Convergence: {convergence.get('status', mc.get('convergence', 'UNAVAILABLE'))}",
-        f"Mean delta: {mc.get('mean_delta', mc.get('mean', 'UNAVAILABLE'))}",
-        f"P>HOLD: {mc.get('p_beats_hold', mc.get('p_gt_hold', 'UNAVAILABLE'))}",
-        f"Q10: {mc.get('Q10', 'UNAVAILABLE')} | median: {mc.get('median', 'UNAVAILABLE')} | Q90: {mc.get('Q90', 'UNAVAILABLE')}",
-        f"Expected regret: {mc.get('expected_regret', 'UNAVAILABLE')}",
+        f"MC reference route: {mc_route if route_bound else 'UNAVAILABLE'}; "
+        f"comparison: HOLD; horizon: {horizon if horizon is not None else 'UNAVAILABLE'}GW.",
+        f"Governing S14 decision: {selected_id}; "
+        "MC reference route is not automatically the global best challenger.",
     ])
+    if full_checkpoint:
+        lines.extend([
+            f"Mean delta ({horizon}GW, pts): {numbers['mean_route_delta']:.3f}",
+            f"P(MC route > HOLD): {100.0 * numbers['p_route_gt_hold']:.2f}%",
+            f"Q10 / P50 / Q90 ({horizon}GW, pts): "
+            f"{numbers['p10_delta']:.3f} / {numbers['p50_delta']:.3f} / {numbers['p90_delta']:.3f}",
+            f"Expected regret ({horizon}GW, pts): {numbers['expected_regret']:.3f}",
+            f"Mean delta MCSE (pts): {numbers['mean_delta_mcse']:.4f}",
+        ])
+    else:
+        reason = (
+            "MC_ROUTE_IDENTITY_UNBOUND" if not route_bound
+            else "FINAL_500K_CHECKPOINT_NOT_VALIDATED"
+        )
+        lines.extend([
+            f"Numerical MC checkpoint: UNAVAILABLE ({reason}); "
+            "do not substitute a different route's metrics.",
+            "Mean delta: UNAVAILABLE",
+            "P(MC route > HOLD): UNAVAILABLE",
+            "Q10 / P50 / Q90: UNAVAILABLE",
+            "Expected regret: UNAVAILABLE",
+            "Mean delta MCSE: UNAVAILABLE",
+        ])
 
     verdict = selected_id if selected_id else "HOLD"
     lines.append("### VERDICT")
@@ -4107,13 +4178,15 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
-            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
+            ("Player", "Pos", "Opponent", "Pstart", "DNP", "xMins", "Pstart evidence", "1GW xPts", "3GW", "5GW", "Note"),
             [(
                 r.get("player") or r.get("name"),
                 r.get("position"),
                 r.get("opponent"),
                 r.get("p_start"),
+                r.get("p_dnp"),
                 r.get("xmins"),
+                _compact(r.get("p_start_evidence") or {"quality": "SOURCE_UNAVAILABLE"}),
                 r.get("projection_1gw"),
                 r.get("projection_3gw"),
                 r.get("projection_5gw"),
@@ -4379,15 +4452,24 @@ def _render_deep_visible_contract_lines(
         ))
         lines.append("#### RETURN PROFILE")
         lines.extend(_markdown_table(
-            ("Player", "Pblank", "Phaul", "P>=10", "Q90"),
+            ("Player", "Pblank", "P>=10", "P>=15", "Q75", "Q90", "Variance", "P(DNP)"),
             [(
                 r.get("player") or r.get("name"),
                 r.get("p_blank", r.get("blank_probability")),
-                r.get("p_haul", r.get("haul_probability")),
-                r.get("p_ge_10"),
+                r.get("p_ge_10", r.get("p_haul")),
+                r.get("p_ge_15"),
+                r.get("q75"),
                 r.get("q90", r.get("ceiling_q90")),
+                r.get("variance"),
+                r.get("p_dnp"),
             ) for r in frontier],
         ))
+        joint = dict(payload.get("shared_world_cvc") or {})
+        lines.append(
+            f"Joint C/VC MC: {joint.get('status') or 'UNAVAILABLE'}; "
+            f"vice activation: {joint.get('vice_activation_probability', 'UNAVAILABLE')}; "
+            "missing goalkeeper calibration or joint covariance must not be fabricated."
+        )
         captain = dict(payload.get("captain") or {})
         vice = dict(payload.get("vice_captain") or {})
         leader = dict(payload.get("football_leader") or {})
@@ -4498,13 +4580,24 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S10":
         lines.append("### PREDICTION_STRENGTH")
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        def strength_label(row: Mapping[str, Any]) -> str:
+            value = row.get("prediction_strength")
+            if value in (None, "", "UNAVAILABLE"):
+                return "NOT_CALIBRATED"
+            return str(value)
+
         lines.extend(_markdown_table(
-            ("Player", "Price", "Direction", "Progress"),
+            ("Player", "Price (£m)", "Direction", "Progress (%)", "Strength", "ETA"),
             [(
                 r.get("player") or r.get("player_name") or r.get("name"),
                 r.get("current_price"),
                 r.get("direction"),
                 r.get("official_or_provider_progress", r.get("current_progress_percent", r.get("projected_percent"))),
+                strength_label(r),
+                r.get("estimated_change_date_wib")
+                or r.get("estimated_change_window")
+                or r.get("date_state")
+                or "DATE_UNAVAILABLE",
             ) for r in rows],
         ))
         if rows:
@@ -4513,8 +4606,17 @@ def _render_deep_visible_contract_lines(
                 f"Predictor status: {first.get('freshness', 'UNAVAILABLE')}; "
                 f"source age minutes: {first.get('source_age_minutes', 'UNAVAILABLE')}."
             )
-        strength = payload.get("prediction_strength") or payload.get("prediction_strength_state") or payload.get("confidence") or "UNAVAILABLE"
-        lines.append(f"PREDICTION_STRENGTH: {strength}")
+        supported = sum(strength_label(row) != "NOT_CALIBRATED" for row in rows)
+        lines.append(
+            f"PREDICTION_STRENGTH: NATIVE_FIELD {supported}/{len(rows)} populated; "
+            + (
+                "NOT_CALIBRATED / source likelihood unavailable; progress is NOT "
+                "a calibrated change probability."
+                if supported == 0 else
+                "native per-player labels shown; probability calibration must "
+                "not be inferred from progress or freshness."
+            )
+        )
         lines.append("Price-only conclusion: price evidence never overrides the football decision by itself.")
 
     elif section_id == "S11":
@@ -4912,6 +5014,7 @@ def _render_deep_visible_contract_lines(
                 f"Availability: {r.get('p_available', r.get('pavail', 'UNAVAILABLE'))}; "
                 f"Pstart {r.get('p_start', 'UNAVAILABLE')}; xMins {r.get('xmins', 'UNAVAILABLE')}."
             )
+            lines.append("Start probability provenance: " + _compact(r.get("p_start_evidence") or {"quality": "SOURCE_UNAVAILABLE"}))
             lines.append(
                 f"Projection: 1GW {r.get('projection_1gw', 'UNAVAILABLE')}; "
                 f"3GW {r.get('projection_3gw', 'UNAVAILABLE')}; 5GW {r.get('projection_5gw', 'UNAVAILABLE')}."

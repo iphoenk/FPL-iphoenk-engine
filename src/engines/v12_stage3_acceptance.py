@@ -535,7 +535,11 @@ def validate(
     auth_bound = (
         private_auth == "AUTH_AVAILABLE"
         and int(current_team.get("entry_id") or -1) == 3462711
-        and int(current_team.get("gw") or -1) == int(bundle.get("planning_gw") or -2)
+        and (
+            int(current_team.get("gw") or -1) == int(bundle.get("planning_gw") or -2)
+            or int(current_team.get("editable_planning_gw") or -1)
+            == int(bundle.get("planning_gw") or -2)
+        )
     )
     private_auth_authority = (
         "AUTHENTICATED_CURRENT_TEAM" if auth_bound

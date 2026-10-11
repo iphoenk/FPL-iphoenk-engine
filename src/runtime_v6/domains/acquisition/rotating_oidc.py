@@ -161,21 +161,26 @@ class RotatingCredentialManager:
         self.clock = clock
         self.timeout_seconds = timeout_seconds
 
-    def get_access_token(self) -> str:
+    def get_access_token(self, *, refresh_before_seconds: int = 90) -> str:
+        # Preserve the default 90-second behavior for report-prefetch callers.
+        # Only the private natural-hourly maintenance worker requests 15 minutes.
+        if (type(refresh_before_seconds) is not int
+                or not 90 <= refresh_before_seconds <= 1800):
+            raise RotationBlocked("OIDC_RENEWAL_WINDOW_INVALID")
         if not self.contract_verified:
             raise RotationBlocked("OIDC_CONTRACT_NOT_VERIFIED")
         _check_contract(self.token_url, self.approved_host, self.client_id)
         initial = self.store.load()
         if initial.phase != "READY":
             raise RotationUncertain("OIDC_ROTATION_REQUIRES_REENROLLMENT")
-        if initial.access_token and initial.expires_at > self.clock() + 90:
+        if initial.access_token and initial.expires_at > self.clock() + refresh_before_seconds:
             return initial.access_token
 
         with self.lease.acquire():
             current = self.store.load()
             if current.phase != "READY":
                 raise RotationUncertain("OIDC_ROTATION_REQUIRES_REENROLLMENT")
-            if current.access_token and current.expires_at > self.clock() + 90:
+            if current.access_token and current.expires_at > self.clock() + refresh_before_seconds:
                 return current.access_token
             if not current.refresh_token:
                 raise RotationBlocked("OIDC_CREDENTIAL_NOT_ENROLLED")

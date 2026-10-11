@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T17:14:36+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T17:43:06+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **P1 additive section QA alignment (11 Oct 2026, PR #978):** controlled DEEP 38132292100 proved post-render QA was rejecting correct new S02/S08/S10 evidence tables under the old 1/2/1 schema. S02's second table is an audit of the same 15 players, not 15 additional owners. Exact DEEP schema now requires 2/3/2 tables with 15/5/15 evidence rows, and the downstream visible-body checker counts the primary S02 roster once while rejecting mismatched audit identities. This preserves fail-closed QA, canonical MC500K/P1.7, private authority and natural scheduler. Production and native acceptance remain separate.
 
 - **P1 section evidence repair (11 Oct 2026, PR #977):** S14's numerical summary reads the final 500K P1.4 convergence checkpoint only when the source-selected route, last simulated horizon, and exact path count match the canonical checkpoint; the report distinguishes the MC reference route from the global decision/HOLD and best challenger. S02/S16 expose existing P1.1 start-signal provenance and DNP without changing probabilities. S10 shows native likelihood per player or NOT_CALIBRATED, not synthetic percentages. S08 displays canonical return tail/variance/DNP and explicitly preserves unavailable joint-C/VC evidence. No P1.7, MC seed/path count/kernel, FPL authentication or scheduling changes. CI, postmerge production recompute, private receipt and natural/native rendering are **separate** acceptance gates.
 

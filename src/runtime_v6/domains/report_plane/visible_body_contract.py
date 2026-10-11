@@ -205,6 +205,41 @@ def _extract_table_column(section_body: str, field: str) -> list[str]:
     return result
 
 
+def _s02_primary_visible_tables(
+    section_body: str,
+) -> tuple[int, list[str], list[str], list[str]]:
+    """Count the OUR15 roster once and verify the optional secondary evidence table.
+
+    The second S02 table contains audit evidence for the SAME 15 players, not
+    a second squad. Keep exact row count and ordered identity alignment instead
+    of weakening the visible row-count check.
+    """
+    tables = _parse_markdown_tables(section_body)
+    if not tables:
+        return 0, [], [], []
+    primary_headers, primary_rows = tables[0]
+
+    def values(headers: list[str], rows: list[list[str]], field: str) -> list[str]:
+        normalized = [_normalize_header(value) for value in headers]
+        if field not in normalized:
+            return []
+        index = normalized.index(field)
+        return [
+            row[index].strip() for row in rows
+            if len(row) > index and row[index].strip()
+        ]
+
+    names = values(primary_headers, primary_rows, "player_name")
+    ids = values(primary_headers, primary_rows, "element_id")
+    failures: list[str] = []
+    if len(tables) >= 2:
+        audit_headers, audit_rows = tables[1]
+        audit_names = values(audit_headers, audit_rows, "player_name")
+        if audit_names != names or len(audit_rows) != len(primary_rows):
+            failures.append("VISIBLE_OUR15_AUDIT_IDENTITY_MISMATCH")
+    return len(primary_rows), ids, names, failures
+
+
 def _watchlist_contract(section_body: str) -> tuple[int, list[str]]:
     """Validate the locked Scanner20 table: exact rows and 5/5/5/5 positions.
 
@@ -508,7 +543,12 @@ def validate_visible_report_body(
         section_body = "\n".join(section_content.get(section_id, []))
         strategy_failures: list[str] = []
         if strategy == "TABLE":
-            actual = _count_markdown_table_rows(section_body)
+            if label == "OUR15" and section_id == "S02":
+                actual, _, _, strategy_failures = _s02_primary_visible_tables(
+                    section_body
+                )
+            else:
+                actual = _count_markdown_table_rows(section_body)
         elif strategy in {"XI", "BENCH"}:
             actual, _ = _count_label_list(section_body, strategy)
         elif strategy == "WATCHLIST":
@@ -552,8 +592,11 @@ def validate_visible_report_body(
     )
     xi_bench_section_id = "MATCH2" if match_catalog else "S06"
     our15_body = "\n".join(section_content.get(our15_section_id, []))
-    our15_ids = _extract_table_column(our15_body, "element_id")
-    our15_names = _extract_table_column(our15_body, "player_name")
+    if our15_section_id == "S02":
+        _, our15_ids, our15_names, _ = _s02_primary_visible_tables(our15_body)
+    else:
+        our15_ids = _extract_table_column(our15_body, "element_id")
+        our15_names = _extract_table_column(our15_body, "player_name")
     if "OUR15" in expected_counts:
         identity_values = our15_ids if our15_ids else our15_names
         if len(identity_values) != 15 or len(set(identity_values)) != 15:

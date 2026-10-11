@@ -144,3 +144,38 @@ def test_s08_distribution_tail_and_unavailable_joint_cvc_remain_honest():
     assert "P>=15" in text and "Variance" in text and "P(DNP)" in text
     assert "Joint C/VC MC: UNAVAILABLE" in text
     assert "CAPTAIN DECISION NOT LOCKED" in text
+
+
+def test_stage3_surface_preserves_mc_reference_route_identity_for_s14_summary():
+    from src.engines.v12_integrated_report_runner import _stage3_visible_package_surface
+
+    synthetic_mc = _synthetic_s14()["monte_carlo"]
+    surface = _stage3_visible_package_surface(
+        projections={}, canonical_bundle={}, package_search_result={},
+        package_utility={}, material_mc_routes={},
+        monte_carlo=synthetic_mc, stage3_decision={"selected_route_id": "HOLD"},
+        mini_overlay={},
+    )
+    mc = surface["monte_carlo"]
+    assert mc["selected_route_id"] == "route-A"
+    assert mc["route_ids"] == ["HOLD", "route-A"]
+    assert mc["package_integration"]["convergence_route_id"] == "route-A"
+    text = "\n".join(_render_package_frontier_lines(
+        {**surface, "selected_route_id": "HOLD"}, section_state="COMPLETE"
+    ))
+    assert "MC reference route: route-A; comparison: HOLD; horizon: 5GW" in text
+    assert "Mean delta (5GW, pts): -2.250" in text
+    assert "Governing S14 decision: HOLD" in text
+
+
+def test_s08_variance_uses_existing_canonical_pmf_variance_field():
+    text = _visible("S08", {
+        "captain_profiles": [
+            {"player": "Alpha", "football_rank": 1, "expected_points": 5.6,
+             "p_ge_15": 0.08, "q75": 9, "pmf_variance": 23.75,
+             "p_dnp": 0.1}
+        ],
+        "decision_state": "PREPARE",
+    })
+    assert "| Alpha | 0.08 | 9 | 23.75 | 0.1 |" in text
+    assert "CAPTAIN DECISION NOT LOCKED" in text

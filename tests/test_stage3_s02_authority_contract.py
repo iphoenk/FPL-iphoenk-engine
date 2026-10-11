@@ -313,3 +313,18 @@ def test_s05_fabricated_official_complete_flag_does_not_replace_fixture_catalog(
     assert "S05_PL_FIXTURE_OFFICIAL_MISMATCH" in _verified_s05_pl_fixtures(
         section, expected, planning_gw=7
     )
+
+
+def test_wrong_authenticated_team_without_public_proof_cannot_supply_owned15():
+    result = _select([_auth_candidate(entry=TEAM + 1)])
+    assert result["resolution_status"] == "UNAVAILABLE"
+    assert result["rows"] == []
+    assert result["finance_allowed"] is False
+
+
+def test_missing_public_provenance_does_not_supply_owned15():
+    candidate = _public_candidate()
+    candidate["payload"]["lineage"] = {}
+    result = _select([candidate])
+    assert result["resolution_status"] == "UNAVAILABLE"
+    assert result["rows"] == []

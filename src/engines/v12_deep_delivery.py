@@ -91,10 +91,14 @@ def select_personal_evidence(
             and (expected_entry_id is None or str(item.get("entry_id")) == str(expected_entry_id))
         }
         slot_ts = _aware_timestamp(as_of) if as_of else None
+        editable_gw = payload.get("editable_planning_gw")
         authenticated = bool(
             source_class == "AUTHENTICATED_CURRENT_TEAM"
             and auth_state == "AUTH_AVAILABLE"
-            and gw == planning_gw
+            and (
+                gw == planning_gw
+                or editable_gw == planning_gw
+            )
             and ts is not None
             and (as_of is None or (slot_ts is not None and ts <= slot_ts + timedelta(minutes=15)))
             and (expected_entry_id is None or {"me", "my_team"} <= verified_endpoints)
@@ -123,7 +127,8 @@ def select_personal_evidence(
             "rows": rows,
             "observed_at": observed,
             "timestamp": ts,
-            "gw": gw,
+            "gw": (planning_gw if authenticated else gw),
+            "source_scoring_gw": gw,
             "auth_state": auth_state or "UNKNOWN",
             "exact15": exact15,
             "authenticated": authenticated,

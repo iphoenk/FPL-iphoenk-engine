@@ -172,7 +172,7 @@ def select_personal_evidence(
                     expected_entry_id is None
                     or (
                         str(payload.get("status") or "").upper() == "AVAILABLE"
-                        str(payload.get("entry_id") or "") == str(expected_entry_id)
+                        and str(payload.get("entry_id") or "") == str(expected_entry_id)
                         and str(source.get("entry_id") or "") == str(expected_entry_id)
                         and str(source.get("authority") or "") == "OFFICIAL_FPL"
                         and str(source.get("endpoint_class") or "") == "submitted_picks"

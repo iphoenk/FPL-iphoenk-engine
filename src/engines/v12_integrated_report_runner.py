@@ -3078,6 +3078,39 @@ def _captain_candidate_review(
     }
 
 
+def _rebind_s15b_competitive_scope(
+    detail: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind COMPETITIVE denominator metadata to the resolved window only.
+
+    Runtime snapshots can retain legacy league-sized denominator metadata. The
+    final S15B payload must use the current competitive cohort and its actual
+    available picks, never inherited LEAGUE scope values.
+    """
+    out = dict(detail)
+    competitive = dict(out.get("competitive_window") or {})
+    scope = dict((out.get("denominator_scopes") or {}).get("COMPETITIVE") or {})
+    expected = int(competitive.get("rival_count") or 0)
+    collected = int(competitive.get("picks_available_count") or 0)
+    scopes = dict(out.get("denominator_scopes") or {})
+    scopes["COMPETITIVE"] = {
+        **scope,
+        "label": "COMPETITIVE_WINDOW",
+        "definition": str(competitive.get("window_mode") or "UNAVAILABLE"),
+        "expected": expected,
+        "collected": collected,
+        "denominator": collected,
+        "includes_us": False,
+        "coverage_pct": (
+            round(100.0 * collected / expected, 1)
+            if expected > 0
+            else None
+        ),
+    }
+    out["denominator_scopes"] = scopes
+    return out
+
+
 def _mini_league_deep_detail(
     *,
     mini: Mapping[str, Any] | None,
@@ -7029,6 +7062,9 @@ def refresh_mini_league_only_state(
         if mini_state == "COMPLETE"
         else "ICON+ public coverage is incomplete for this occurrence"
     )
+    # Rebind at the final S15B boundary so legacy league-sized metadata
+    # cannot leak into the Competitive Window scope.
+    s15b_detail = _rebind_s15b_competitive_scope(mini_deep_detail)
     s15b = {
         **mini,
         "current_league_context": _mini_context(mini),
@@ -7039,7 +7075,7 @@ def refresh_mini_league_only_state(
         "differential_opportunities": formation_strategy.get(
             "differential_slots"
         ),
-        **mini_deep_detail,
+        **s15b_detail,
     }
     section_payloads["S15B"] = _section(
         mini_state,

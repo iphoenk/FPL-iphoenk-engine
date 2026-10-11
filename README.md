@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T04:50:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T05:18:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -212,3 +212,8 @@ PR #957 isolates the known live command parser failure: audited `reason` metadat
 ### P0 Official fixture lifecycle classification (12 October 2026)
 
 MATCH now distinguishes Official FPL `LIVE`, `PROVISIONAL_90`, `FINAL`, `NOT_STARTED`, and fail-closed `UNKNOWN` states using lifecycle fields. A postponed fixture remains `NOT_STARTED` with an explicit `POSTPONED` substate. Finality is never inferred from minute 90 alone, and future-dated official snapshots are rejected before MATCH rendering.
+
+
+## S15B competitive scope integrity
+
+The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolved rank-relative cohort and available rival picks for the current occurrence. LEAGUE and RIVALS remain separate scopes, so legacy league-sized metadata cannot masquerade as Competitive Window coverage.

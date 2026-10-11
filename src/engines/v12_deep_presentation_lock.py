@@ -317,6 +317,44 @@ def validate_rendered_deep_presentation(
         actual_tables = _rendered_tables(section_text)
         expected_tables = list(spec.get("tables") or [])
         state = state_by_sid.get(sid, "COMPLETE")
+        if sid == "S05" and state == "COMPLETE":
+            # S05 is data-driven: Official PL fixture rows and verified
+            # occurrence-bound weather rows render as two *independent*
+            # tables only when those source lists exist. Lock both exact
+            # columns and exact row counts, never waive the QA gate.
+            s05_content = next((
+                row.get("content") or {}
+                for row in (report or {}).get("sections") or []
+                if isinstance(row, Mapping)
+                and str(row.get("section_id") or "").upper() == "S05"
+            ), {})
+            if not isinstance(s05_content, Mapping):
+                s05_content = {}
+            fixture_rows = [
+                row for row in s05_content.get("fixtures_display") or []
+                if isinstance(row, Mapping)
+            ]
+            weather_rows = [
+                row for row in s05_content.get("weather") or []
+                if isinstance(row, Mapping)
+            ]
+            expected_tables = []
+            if fixture_rows:
+                expected_tables.append({
+                    "columns": [
+                        "Fixture", "Match", "Sides", "Kickoff (WIB)",
+                        "Rest days", "Venue", "Status", "Weather",
+                    ],
+                    "rows_exact": len(fixture_rows),
+                })
+            if s05_content.get("weather"):
+                expected_tables.append({
+                    "columns": [
+                        "Fixture", "Venue", "Kickoff", "Condition",
+                        "Freshness",
+                    ],
+                    "rows_exact": len(weather_rows),
+                })
         if sid == "S18" and state == "COMPLETE":
             # S18 owns a bounded, canonical route summary, not an opaque
             # multi-kilobyte best-alternative dictionary. Its first table is

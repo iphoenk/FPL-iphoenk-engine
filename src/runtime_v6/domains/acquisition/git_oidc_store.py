@@ -66,12 +66,16 @@ class EncryptedGitCredentialStore:
         return _git(self.directory, "rev-parse", "refs/remotes/origin/main").decode("ascii").strip()
 
     def _read(self, revision: str) -> Credential:
-        raw = _git(
-            self.directory, "show", f"{revision}:{_CREDENTIAL_PATH}",
-            allow_missing=True,
-        )
-        if not raw:
+        present = _git(
+            self.directory, "ls-tree", "--name-only", revision, "--", _CREDENTIAL_PATH
+        ).strip()
+        if not present:
             return Credential(version=0, phase="EMPTY", refresh_token="")
+        # Once ls-tree proves the encrypted path exists, a missing/failed
+        # blob read is a hard integrity failure, NEVER an empty enrollment.
+        raw = _git(self.directory, "show", f"{revision}:{_CREDENTIAL_PATH}")
+        if not raw:
+            raise RotationBlocked("CREDENTIAL_STORE_EMPTY_ENCRYPTED_BLOB")
         try:
             payload = json.loads(self.fernet.decrypt(raw.strip()).decode("utf-8"))
             result = Credential(

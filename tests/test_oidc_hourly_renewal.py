@@ -146,3 +146,31 @@ def test_hourly_workflow_is_protected_downstream_only():
     assert "workflow_dispatch:" not in maintenance
     assert "issue_comment:" not in maintenance
     assert "FPL_OIDC_STORE_KEY" not in collector
+
+
+def test_main_uses_canonical_consumer_id_when_environment_team_id_is_empty(monkeypatch, capsys):
+    import time
+    store = Store(expiry=time.time() + 3600)
+    monkeypatch.setenv("FPL_HOURLY_SCHEDULER_KIND", "chatgpt_scheduler")
+    monkeypatch.delenv("FPL_PRIVATE_AUTO_REFRESH_PAUSED", raising=False)
+    monkeypatch.delenv("FPL_TEAM_ID", raising=False)
+    monkeypatch.setenv("FPL_OIDC_CONTRACT_VERIFIED", "true")
+    monkeypatch.setenv("FPL_OIDC_CLIENT_ID", "dummy-client-id")
+    monkeypatch.setattr(hourly, "store_from_env", lambda: store)
+    monkeypatch.setattr(hourly, "RotatingCredentialManager", lambda **kwargs: Manager(kwargs["store"]))
+    assert hourly.main() == 0
+    assert "OIDC_HOURLY_RENEWAL=REUSED_FRESH" in capsys.readouterr().out
+
+
+def test_main_rejects_conflicting_team_id_without_credential_use(monkeypatch, capsys):
+    monkeypatch.setenv("FPL_HOURLY_SCHEDULER_KIND", "chatgpt_scheduler")
+    monkeypatch.delenv("FPL_PRIVATE_AUTO_REFRESH_PAUSED", raising=False)
+    monkeypatch.setenv("FPL_OIDC_CONTRACT_VERIFIED", "true")
+    monkeypatch.setenv("FPL_OIDC_CLIENT_ID", "dummy-client-id")
+    monkeypatch.setenv("FPL_TEAM_ID", "999")
+    store = Store()
+    monkeypatch.setattr(hourly, "store_from_env", lambda: store)
+    monkeypatch.setattr(hourly, "RotatingCredentialManager", lambda **kwargs: Manager(kwargs["store"]))
+    assert hourly.main() == 2
+    assert "OIDC_HOURLY_ENTRY_NOT_APPROVED" in capsys.readouterr().out
+    assert store.reads == 0

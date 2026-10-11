@@ -1,10 +1,12 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T04:20:37Z`
+> **Last runtime/documentation sync:** `2026-10-11T10:21:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
+
+- **GW7 owner what-if MC:** PR #963 tests four paired 500K routes (HOLD, Mbeumo only with assumed 1 FT, Mbeumo + Palmer with -4, and Mbeumo + Saka with -4), using P1.7/P1.4 unchanged, and keeping the full result private. Future mini-league top-3 probability is not modelled; GW6 rival ownership is descriptive, not a probabilistic rank claim.
 
 
 - **OIDC private natural V6 activation (11 Oct 2026):** after real owner-controlled refresh and #19 independent reuse (HTTP 200, version 3 unchanged), protected private V6 prefetch defaults to rotating encrypted OIDC; public collection stays independent. Protected `FPL_PRIVATE_AUTO_REFRESH_PAUSED=true` is an emergency stop. Verified finance-only publication requires bank, FT or explicit unlimited, and 15/15 prices. Stale fallback nulls all unauthenticated economics. Natural V12 and next-expiry rotation/delivery remain separate acceptance gates. See [OIDC security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).

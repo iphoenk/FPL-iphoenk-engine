@@ -7029,6 +7029,33 @@ def refresh_mini_league_only_state(
         if mini_state == "COMPLETE"
         else "ICON+ public coverage is incomplete for this occurrence"
     )
+    # Rebind denominator scopes at the final S15B boundary.  The source
+    # snapshot may carry legacy league-sized scope metadata; the rendered
+    # Competitive Window must be derived only from this occurrence's resolved
+    # window and collected rival picks.
+    s15b_detail = dict(mini_deep_detail)
+    competitive = dict(s15b_detail.get("competitive_window") or {})
+    competitive_scope = dict(
+        (s15b_detail.get("denominator_scopes") or {}).get("COMPETITIVE") or {}
+    )
+    competitive_expected = int(competitive.get("rival_count") or 0)
+    competitive_collected = int(competitive.get("picks_available_count") or 0)
+    s15b_scopes = dict(s15b_detail.get("denominator_scopes") or {})
+    s15b_scopes["COMPETITIVE"] = {
+        **competitive_scope,
+        "label": "COMPETITIVE_WINDOW",
+        "definition": str(competitive.get("window_mode") or "UNAVAILABLE"),
+        "expected": competitive_expected,
+        "collected": competitive_collected,
+        "denominator": competitive_collected,
+        "includes_us": False,
+        "coverage_pct": (
+            round(100.0 * competitive_collected / competitive_expected, 1)
+            if competitive_expected > 0
+            else None
+        ),
+    }
+    s15b_detail["denominator_scopes"] = s15b_scopes
     s15b = {
         **mini,
         "current_league_context": _mini_context(mini),
@@ -7039,7 +7066,7 @@ def refresh_mini_league_only_state(
         "differential_opportunities": formation_strategy.get(
             "differential_slots"
         ),
-        **mini_deep_detail,
+        **s15b_detail,
     }
     section_payloads["S15B"] = _section(
         mini_state,

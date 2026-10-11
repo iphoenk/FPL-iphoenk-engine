@@ -93,10 +93,13 @@ class EncryptedGitCredentialStore:
         return self._read(self._latest_revision())
 
     def compare_and_swap(self, expected_version: int, proposed: Credential) -> Credential:
-        revision = self._latest_revision()
-        current = self._read(revision)
-        if current.version != expected_version:
-            raise RotationBlocked("CREDENTIAL_STORE_CAS_VERSION_CONFLICT")
+        """Atomic global grant claim; retry only Git commits, NEVER refresh POST.
+
+        Concurrent non-auth publishers can change the Git head between fetch
+        and push without modifying the credential version. A bounded CAS
+        retry preserves the replacement token in this case. Any competing
+        auth write or uncertain persistent state fails closed.
+        """
         value = Credential(
             version=expected_version + 1, phase=proposed.phase,
             refresh_token=proposed.refresh_token,
@@ -117,24 +120,48 @@ class EncryptedGitCredentialStore:
                 }, separators=(",", ":"), sort_keys=True,
             ).encode("utf-8")
         )
-        with tempfile.TemporaryDirectory(prefix="fpl-oidc-encrypted-") as tmp:
-            work = Path(tmp)
-            _git(self.directory, "worktree", "add", "--quiet", "--detach", str(work), revision)
-            try:
-                destination = work / _CREDENTIAL_PATH
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(encrypted + b"\n")
-                destination.chmod(0o600)
-                _git(work, "add", "--", _CREDENTIAL_PATH)
-                _git(work, "-c", "user.name=fpl-oidc-auth-bot",
-                     "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-                     "commit", "--quiet", "-m", "security(private): advance encrypted OIDC credential state")
-                # Critical: no --force/rebase/merge. Pushing a non-FF claim fails,
-                # preventing a second refresh from using the same token version.
-                _git(work, "push", "--quiet", "origin", "HEAD:refs/heads/main")
-            finally:
-                _git(self.directory, "worktree", "remove", "--force", str(work))
-        return value
+        for attempt in range(4):
+            revision = self._latest_revision()
+            current = self._read(revision)
+            if current.version != expected_version:
+                # Ambiguous Git push success: recognize only OUR transaction,
+                # not a different runner claiming the exact same old token.
+                if (
+                    current.version == value.version
+                    and current.phase == value.phase
+                    and current.transaction_id == value.transaction_id
+                    and current.refresh_token == value.refresh_token
+                    and current.access_token == value.access_token
+                ):
+                    return current
+                raise RotationBlocked("CREDENTIAL_STORE_CAS_VERSION_CONFLICT")
+            pushed = False
+            with tempfile.TemporaryDirectory(prefix="fpl-oidc-encrypted-") as tmp:
+                work = Path(tmp)
+                _git(self.directory, "worktree", "add", "--quiet", "--detach", str(work), revision)
+                try:
+                    destination = work / _CREDENTIAL_PATH
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(encrypted + b"\n")
+                    destination.chmod(0o600)
+                    _git(work, "add", "--", _CREDENTIAL_PATH)
+                    _git(work, "-c", "user.name=fpl-oidc-auth-bot",
+                         "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+                         "commit", "--quiet", "-m", "security(private): advance encrypted OIDC credential state")
+                    # Never force, rebase or merge a grant claim.
+                    try:
+                        _git(work, "push", "--quiet", "origin", "HEAD:refs/heads/main")
+                        pushed = True
+                    except RotationBlocked:
+                        # A non-FF push can race a non-auth report publisher.
+                        # A repeated CAS write is safe; a repeated token POST
+                        # is not. Refetch and test credential version next.
+                        pass
+                finally:
+                    _git(self.directory, "worktree", "remove", "--force", str(work))
+            if pushed:
+                return value
+        raise RotationBlocked("CREDENTIAL_STORE_PERSISTENCE_UNCERTAIN")
 
 
 class CASLease:

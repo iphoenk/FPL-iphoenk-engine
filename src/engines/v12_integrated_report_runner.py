@@ -3111,6 +3111,43 @@ def _rebind_s15b_competitive_scope(
     return out
 
 
+def _select_competitive_rows(
+    ordered: Sequence[Mapping[str, Any]],
+    *,
+    our_entry_id: int,
+    competitive_window: Mapping[str, Any],
+) -> list[Mapping[str, Any]]:
+    """Select the resolved cohort by standings position, preserving tied ranks."""
+    rival_count = int(competitive_window.get("rival_count") or 0)
+    if rival_count <= 0:
+        return []
+    our_index = next(
+        (
+            index
+            for index, row in enumerate(ordered)
+            if int(row.get("entry_id") or 0) == our_entry_id
+        ),
+        None,
+    )
+    if our_index is None:
+        rank_set = set(competitive_window.get("ranks") or [])
+        return [
+            row
+            for row in ordered
+            if int(row.get("league_rank") or 0) in rank_set
+        ][:rival_count]
+    if str(competitive_window.get("window_mode") or "") == "TOP10":
+        candidates = list(ordered[: min(10, len(ordered))])
+    else:
+        candidates = list(ordered[max(0, our_index - 9):our_index])
+        candidates.extend(list(ordered[our_index + 1:our_index + 6]))
+    return [
+        row
+        for row in candidates
+        if int(row.get("entry_id") or 0) != our_entry_id
+    ][:rival_count]
+
+
 def _mini_league_deep_detail(
     *,
     mini: Mapping[str, Any] | None,
@@ -3480,12 +3517,11 @@ def _mini_league_deep_detail(
 
     league_size = int(context.get("manager_count") or len(standing_ids))
     competitive_window = resolve_competitive_window(our_rank_i, league_size)
-    competitive_rank_set = set(competitive_window.get("ranks") or [])
-    competitive_rows = [
-        row
-        for row in ordered
-        if int(row.get("league_rank") or 0) in competitive_rank_set
-    ]
+    competitive_rows = _select_competitive_rows(
+        ordered,
+        our_entry_id=int(context.get("our_entry_id") or 0),
+        competitive_window=competitive_window,
+    )
     competitive_entries: list[dict[str, Any]] = []
     competitive_rivals: list[dict[str, Any]] = []
     for row in competitive_rows:

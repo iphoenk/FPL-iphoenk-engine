@@ -46,3 +46,31 @@ def test_s15b_deep_assembly_has_competitive_rebind_before_rendering():
     assert source.count(deep_anchor) >= 2
     assert "**mini_deep_detail," in source
     assert "**s15b_detail," in source
+
+
+
+def test_competitive_cohort_preserves_tied_standings_positions():
+    from src.engines.v12_integrated_report_runner import _select_competitive_rows
+
+    ordered = [
+        {"entry_id": 1, "league_rank": 1},
+        {"entry_id": 2, "league_rank": 2},
+        {"entry_id": 3, "league_rank": 7},
+        {"entry_id": 4, "league_rank": 7},
+        {"entry_id": 5, "league_rank": 9},
+        {"entry_id": 6, "league_rank": 10},
+        {"entry_id": 7, "league_rank": 11},
+        {"entry_id": 8, "league_rank": 12},
+        {"entry_id": 9, "league_rank": 13},
+        {"entry_id": 10, "league_rank": 14},
+    ]
+
+    out = _select_competitive_rows(
+        ordered,
+        our_entry_id=3,
+        competitive_window={"window_mode": "TOP10", "rival_count": 9},
+    )
+
+    assert len(out) == 9
+    assert 3 not in {row["entry_id"] for row in out}
+    assert 4 in {row["entry_id"] for row in out}

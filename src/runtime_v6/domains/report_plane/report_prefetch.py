@@ -1081,9 +1081,21 @@ class PrefetchService:
                         }
                     )
 
+            next_events = [
+                int(row["id"])
+                for row in bootstrap_payload.get("events") or []
+                if isinstance(row, dict)
+                and row.get("is_next") is True
+                and isinstance(row.get("id"), int)
+                and int(row["id"]) > 0
+            ]
+            editable_planning_gw = (
+                next_events[0] if len(next_events) == 1 else None
+            )
             team_artifact = normalise_team(
                 entry_id=entry_id,
                 gw=gw,
+                editable_planning_gw=editable_planning_gw,
                 element_index=elements,
                 bootstrap_lineage=lineage(bootstrap_result, gw=gw),
                 submitted=submitted,

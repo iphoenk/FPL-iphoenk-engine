@@ -3481,11 +3481,33 @@ def _mini_league_deep_detail(
     league_size = int(context.get("manager_count") or len(standing_ids))
     competitive_window = resolve_competitive_window(our_rank_i, league_size)
     competitive_rank_set = set(competitive_window.get("ranks") or [])
-    competitive_rows = [
-        row
-        for row in ordered
-        if int(row.get("league_rank") or 0) in competitive_rank_set
-    ]
+    # Select the bounded cohort by standings position, not rank equality.
+    # Official FPL ranks may tie, so filtering by rank can return more rows
+    # than the resolved rival_count and invalidate the occurrence gate.
+    our_position = next(
+        (
+            index
+            for index, row in enumerate(ordered)
+            if int(row.get("entry_id") or 0) == our_entry_id
+        ),
+        None,
+    )
+    if our_position is None:
+        competitive_rows = [
+            row
+            for row in ordered
+            if int(row.get("league_rank") or 0) in competitive_rank_set
+        ]
+    elif our_rank_i < 10:
+        competitive_rows = [
+            row
+            for row in ordered[: min(10, len(ordered))]
+            if int(row.get("entry_id") or 0) != our_entry_id
+        ]
+    else:
+        above_start = max(0, our_position - 9)
+        competitive_rows = ordered[above_start:our_position]
+        competitive_rows += ordered[our_position + 1 : our_position + 6]
     competitive_entries: list[dict[str, Any]] = []
     competitive_rivals: list[dict[str, Any]] = []
     for row in competitive_rows:

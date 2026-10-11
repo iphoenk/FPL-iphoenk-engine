@@ -691,6 +691,42 @@ jobs:
           }, sort_keys=True))
           PY
 
+      - name: Owner-controlled GW7 Palmer vs Saka canonical paired MC 500K
+        if: >-
+          success() &&
+          needs.parse.outputs.report_mode == 'DEEP' &&
+          github.event_name == 'issue_comment' &&
+          github.event.comment.user.login == github.repository_owner &&
+          contains(github.event.comment.body, 'owner_midfield_mc=true')
+        working-directory: app
+        env:
+          REPORT_SLOT: ${{ needs.parse.outputs.report_slot }}
+        run: |
+          set -euo pipefail
+          warm="artifacts/v12-report/gw6-warm-state.json"
+          test -s "$warm"
+          test -s ../runtime-data/data/v6/mini_leagues/9477/gw_6_manager_picks.json
+          test -s ../runtime-data/data/v6/mini_leagues/9477/standings.json
+          python -m src.engines.v12_gw7_owner_midfield_mc \
+            --warm-state "$warm" \
+            --report-slot "$REPORT_SLOT" \
+            --league-picks ../runtime-data/data/v6/mini_leagues/9477/gw_6_manager_picks.json \
+            --league-standings ../runtime-data/data/v6/mini_leagues/9477/standings.json \
+            --output artifacts/v12-report/gw7-midfield-mc.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("artifacts/v12-report/gw7-midfield-mc.json").read_text())
+          assert result["status"] == "PASS"
+          assert result["actual_paths_each_route"] >= 500_000
+          assert set(result["metrics"]) == {"HOLD", "PALMER_MBEUMO", "SAKA_MBEUMO"}
+          assert result["finance"]["hit_points_assumed"] == 4
+          assert result["mini_league"]["competitive_rivals"] == 9
+          assert result["mini_league"]["probability_of_future_top3"] is None
+          assert result["official_current15_unchanged"]
+          print(json.dumps({"status": "PASS", "paths": result["actual_paths_each_route"],
+                            "routes": sorted(result["metrics"]), "contract": result["contract"]}))
+          PY
       - name: Persist deterministic Stage-2 derived projection cache before downstream acceptance
         if: always() && needs.parse.outputs.report_mode == 'DEEP' && needs.parse.outputs.profile_mode != 'COLD'
         uses: actions/cache/save@v4

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from src.engines.base_state import bootstrap_maps, expanded_live
@@ -11,6 +11,22 @@ OFFICIAL = DATA / "official_snapshot.json"
 PREDICTION_LEDGER = DATA / "prediction_ledger.json"
 OUT = DATA / "live.json"
 MATCH_MODE_CONTRACT = "MATCH_MODE_LIVE_SCORE_V1"
+
+
+def snapshot_timestamp_not_future(value: Any, *, now: datetime | None = None) -> bool:
+    """Reject future-dated official snapshots before they enter MATCH."""
+    if value in (None, ""):
+        return True
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc) <= current.astimezone(timezone.utc)
 
 
 FIXTURE_STATES = frozenset({
@@ -345,6 +361,9 @@ def _empty_payload(
 
 def run() -> dict:
     official = read_json(OFFICIAL, {})
+    for label, value in (("official_snapshot", official.get("generated_at")), ("event_live", (official.get("event_live") or {}).get("generated_at"))):
+        if value and not snapshot_timestamp_not_future(value):
+            raise RuntimeError(f"{label} snapshot timestamp is future-dated")
     bootstrap = official.get("bootstrap") or {}
     if not bootstrap:
         raise RuntimeError("official_snapshot missing bootstrap")

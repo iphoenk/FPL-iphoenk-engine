@@ -182,6 +182,44 @@ jobs:
         run: python -m pip install --require-hashes -r requirements-v6-ci.lock
       - name: Assert fail-closed OIDC rotation contracts with fake tokens only
         run: python -m pytest -q tests/test_rotating_oidc_contract.py
+      - name: Probe only official public OIDC discovery metadata, no credentials
+        shell: bash
+        run: |
+          python - <<'PY'
+          import requests
+          from urllib.parse import urlsplit
+
+          base = "https://account.premierleague.com"
+          paths = ("/as/.well-known/openid-configuration", "/.well-known/openid-configuration")
+          verified = False
+          for path in paths:
+              try:
+                  response = requests.get(base + path, timeout=8, allow_redirects=False)
+                  print("OIDC_DISCOVERY_PATH=" + path + " HTTP=" + str(response.status_code))
+                  if response.status_code != 200:
+                      continue
+                  value = response.json()
+                  issuer = str(value.get("issuer") or "")
+                  token_url = str(value.get("token_endpoint") or "")
+                  token = urlsplit(token_url)
+                  if (
+                      token.scheme == "https"
+                      and token.hostname == "account.premierleague.com"
+                      and issuer.startswith(base)
+                      and isinstance(value.get("grant_types_supported"), list)
+                  ):
+                      supported = value["grant_types_supported"]
+                      print("OIDC_DISCOVERY_ISSUER=" + issuer)
+                      print("OIDC_DISCOVERY_TOKEN_ENDPOINT=" + token_url)
+                      print("OIDC_REFRESH_GRANT_ADVERTISED=" + str("refresh_token" in supported).lower())
+                      verified = True
+                      break
+              except Exception:
+                  print("OIDC_DISCOVERY_PATH=" + path + " STATUS=UNREACHABLE")
+          print("OIDC_DISCOVERY_METADATA=" + ("VERIFIED" if verified else "BLOCKED"))
+          # Read-only public metadata is advisory and cannot validate an app
+          # client, rotation settings, credential grant or browser coexistence.
+          PY
 
   v6-publisher-config:
     name: v6-publisher-config

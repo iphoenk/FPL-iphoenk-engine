@@ -2053,3 +2053,12 @@ def test_current_public_submitted_picks_are_valid_without_private_finance():
     assert resolved["stale"] is True
     assert resolved["finance_allowed"] is False
     assert resolved["source_class"] == "OFFICIAL_SUBMITTED_PICKS"
+
+
+def test_deep_cohort_selection_is_position_bounded_when_ranks_tie():
+    """Tied Official FPL ranks must not inflate the resolved cohort."""
+    source = Path("src/engines/v12_integrated_report_runner.py").read_text(
+        encoding="utf-8"
+    )
+    assert "Select the bounded cohort by standings position" in source
+    assert "official FPL ranks may tie" in source

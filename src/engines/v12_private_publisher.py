@@ -388,6 +388,16 @@ def publish_private_output(
 
     stage3_status = str(stage3.get("status") or "UNKNOWN").upper()
 
+    # Preserve report-first engineering advisory status, but never publish a
+    # full-green DEEP when Stage3 explicitly proves a data-integrity failure.
+    # This includes timestamps observed AFTER the claimed historical slot.
+    if (
+        report_mode == "DEEP"
+        and delivery_status == "READY_FULL"
+        and str(stage3.get("acceptance_class") or "").upper() == "INTEGRITY_FAIL"
+    ):
+        raise PrivatePublishError("STAGE3_INTEGRITY_FAIL_CANNOT_PUBLISH_READY_FULL")
+
     # REPORT-FIRST: P4/Stage3/PERF-F are engineering closure evidence, not
     # publication permission. Production DEEP occurrences must instead satisfy
     # the canonical report-serving contract and serving snapshot validation.

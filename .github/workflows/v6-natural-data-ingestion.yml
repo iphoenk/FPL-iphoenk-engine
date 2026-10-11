@@ -646,6 +646,10 @@ jobs:
           FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
           FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
+          FPL_OIDC_CLIENT_ID: ${{ vars.FPL_OIDC_CLIENT_ID }}
+          FPL_OIDC_CONTRACT_VERIFIED: ${{ vars.FPL_OIDC_CONTRACT_VERIFIED }}
+          FPL_OIDC_STORE_KEY: ${{ secrets.FPL_OIDC_STORE_KEY }}
+          FPL_OIDC_STORE_DIR: private-reports
           FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
           FPL_PRIORITY_LEAGUES: ${{ vars.FPL_PRIORITY_LEAGUES }}
           PRIVATE_REPORT_KIND: ${{ needs.collect.outputs.prefetch_report_kind }}
@@ -679,7 +683,7 @@ jobs:
           # picks / explicit owner evidence and keep finance-only fields
           # unavailable. If auth is configured, the strict #900 validation
           # below remains fail-closed.
-          if [[ "${FPL_AUTH_MODE,,}" == "disabled" || ( -z "$FPL_SESSION_B64" && -z "$FPL_ACCESS_TOKEN" ) ]]; then
+          if [[ "${FPL_AUTH_MODE,,}" == "disabled" || ( "${FPL_AUTH_MODE,,}" != "rotating_oidc" && -z "$FPL_SESSION_B64" && -z "$FPL_ACCESS_TOKEN" ) ]]; then
             echo "PRIVATE_PERSONAL_REFRESH=SKIPPED_AUTH_UNAVAILABLE"
             echo "PUBLIC_CURRENT15_FALLBACK=OFFICIAL_SUBMITTED_PICKS"
             exit 0

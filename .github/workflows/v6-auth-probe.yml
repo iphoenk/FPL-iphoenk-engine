@@ -38,7 +38,10 @@ jobs:
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
         github.actor == github.repository_owner &&
-        github.event.comment.body == '/fpl-auth-probe'
+        (
+          github.event.comment.body == '/fpl-auth-probe' ||
+          github.event.comment.body == '/fpl-auth-probe STORE_HEALTH'
+        )
       )
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -55,7 +58,7 @@ jobs:
       - name: Install locked read-only client dependencies
         run: python -m pip install --require-hashes -r requirements-v6.lock
       - name: Checkout private rotating credential store (only when opted in)
-        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' || (github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'CONTROLLED_ONCE' || inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) }}
+        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' || (github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'CONTROLLED_ONCE' || inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) || (github.event_name == 'issue_comment' && github.event.comment.body == '/fpl-auth-probe STORE_HEALTH') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: iphoenk/fpl-reports-private
@@ -64,7 +67,7 @@ jobs:
           token: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
           persist-credentials: true
       - name: Diagnose rotating store read-only (no OIDC grant)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'STORE_HEALTH' }}
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'STORE_HEALTH') || (github.event_name == 'issue_comment' && github.event.comment.body == '/fpl-auth-probe STORE_HEALTH') }}
         env:
           FPL_OIDC_STORE_KEY: ${{ secrets.FPL_OIDC_STORE_KEY }}
           FPL_OIDC_STORE_DIR: private-reports
@@ -77,7 +80,7 @@ jobs:
           FPL_TEAM_ID: ${{ vars.FPL_TEAM_ID }}
         run: python -m src.runtime_v6.domains.report_plane.oidc_reuse_probe
       - name: Probe /me then /my-team with safe HTTP-only output
-        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) && !(github.event_name == 'issue_comment' && github.event.comment.body == '/fpl-auth-probe STORE_HEALTH') }}
         env:
           FPL_AUTH_MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'CONTROLLED_ONCE') && 'rotating_oidc' || vars.FPL_AUTH_MODE || 'disabled' }}
           FPL_OIDC_OWNER_CONTROLLED_GRANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'CONTROLLED_ONCE') && 'true' || 'false' }}

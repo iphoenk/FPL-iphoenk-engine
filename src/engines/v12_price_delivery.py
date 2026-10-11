@@ -1494,7 +1494,9 @@ def _load_personal_inputs(
         require_private_personal=False,
         enforce_public_disclosure=True,
     )
-    selected = select_personal_evidence(candidates, planning_gw=planning_gw)
+    selected = select_personal_evidence(
+        candidates, planning_gw=planning_gw, expected_entry_id=3462711
+    )
     payload = dict(selected.get("payload") or {})
     source_class = str(selected.get("source_class") or "").upper()
     if source_class == "OFFICIAL_SUBMITTED_PICKS":

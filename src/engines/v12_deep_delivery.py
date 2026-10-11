@@ -8,7 +8,7 @@ already-produced personal evidence and validates that authoritative V12
 analytics are materially visible in the DEEP report.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Mapping, Sequence
 
 from src.engines.v12_competitive_window import resolve_competitive_window
@@ -35,6 +35,8 @@ def select_personal_evidence(
     candidates: Sequence[Mapping[str, Any]],
     *,
     planning_gw: int,
+    expected_entry_id: int | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """Select freshest semantically valid personal evidence.
 
@@ -74,13 +76,41 @@ def select_personal_evidence(
             and raw.get("applicable_planning_gw") == planning_gw
             and raw.get("explicit_confirmation") is True
         )
-        authenticated = auth_state == "AUTH_AVAILABLE"
-        previous_gw = gw is not None and gw < planning_gw
-        public_submitted_current = bool(
-            source_class == "OFFICIAL_SUBMITTED_PICKS"
-            and auth_state == "PUBLIC_OFFICIAL"
-            and gw == planning_gw
+        # HTTP/session availability is not current-GW ownership authority.
+        # In particular, a successful /my-team fetch labelled with the
+        # previous GW must not upgrade submitted picks or private finances.
+        lineage = dict(payload.get("lineage") or {})
+        authenticated_calls = [
+            dict(item) for item in lineage.get("authenticated") or []
+            if isinstance(item, Mapping)
+        ]
+        verified_endpoints = {
+            str(item.get("endpoint_class") or "")
+            for item in authenticated_calls
+            if int(item.get("http_status") or 0) == 200
+            and (expected_entry_id is None or str(item.get("entry_id")) == str(expected_entry_id))
+        }
+        slot_ts = _aware_timestamp(as_of) if as_of else None
+        editable_gw = payload.get("editable_planning_gw")
+        authenticated = bool(
+            source_class == "AUTHENTICATED_CURRENT_TEAM"
+            and auth_state == "AUTH_AVAILABLE"
+            and (
+                gw == planning_gw
+                or editable_gw == planning_gw
+            )
+            and ts is not None
+            and (as_of is None or (slot_ts is not None and ts <= slot_ts + timedelta(minutes=15)))
+            and (expected_entry_id is None or {"me", "my_team"} <= verified_endpoints)
+            and (
+                expected_entry_id is None
+                or str(payload.get("entry_id") or "") == str(expected_entry_id)
+            )
         )
+        previous_gw = gw is not None and gw < planning_gw
+        # Submitted picks remain a public identity snapshot even when the
+        # same GW is current; they never mean editable authenticated CURRENT15.
+        public_submitted_current = False
         current_semantic = bool(
             exact15
             and (
@@ -97,7 +127,8 @@ def select_personal_evidence(
             "rows": rows,
             "observed_at": observed,
             "timestamp": ts,
-            "gw": gw,
+            "gw": (planning_gw if authenticated else gw),
+            "source_scoring_gw": gw,
             "auth_state": auth_state or "UNKNOWN",
             "exact15": exact15,
             "authenticated": authenticated,
@@ -128,7 +159,44 @@ def select_personal_evidence(
             "candidate_count": len(normalized),
         }
 
-    identity_fallbacks = [row for row in normalized if row["exact15"]]
+    identity_fallbacks = []
+    for row in normalized:
+        if not row["exact15"]:
+            continue
+        payload = row["payload"]
+        if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS":
+            source = dict(payload.get("lineage") or {})
+            source_valid = bool(
+                row["auth_state"] == "PUBLIC_OFFICIAL"
+                and (
+                    expected_entry_id is None
+                    or (
+                        str(payload.get("status") or "").upper() == "AVAILABLE"
+                        and str(payload.get("entry_id") or "") == str(expected_entry_id)
+                        and str(source.get("entry_id") or "") == str(expected_entry_id)
+                        and str(source.get("authority") or "") == "OFFICIAL_FPL"
+                        and str(source.get("endpoint_class") or "") == "submitted_picks"
+                        and int(source.get("http_status") or 0) == 200
+                    )
+                )
+            )
+        elif row["source_class"] == "AUTHENTICATED_CURRENT_TEAM":
+            source_valid = (
+                expected_entry_id is None
+                or str(payload.get("entry_id") or "") == str(expected_entry_id)
+            )
+        elif row["source_class"] == "USER_CONFIRMED":
+            source_valid = bool(
+                row["user_current"]
+                or (
+                    expected_entry_id is None
+                    and row["auth_state"] == "USER_CONFIRMED"
+                )
+            )
+        else:
+            source_valid = False
+        if source_valid:
+            identity_fallbacks.append(row)
     if not identity_fallbacks:
         return {
             "resolution_status": "UNAVAILABLE",
@@ -141,8 +209,8 @@ def select_personal_evidence(
     selected = max(
         identity_fallbacks,
         key=lambda row: (
-            row["timestamp"].timestamp() if row["timestamp"] else float("-inf"),
             1 if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS" else 0,
+            row["timestamp"].timestamp() if row["timestamp"] else float("-inf"),
             -row["index"],
         ),
     )

@@ -188,6 +188,7 @@ def normalise_team(
     *,
     entry_id: int,
     gw: int | None,
+    editable_planning_gw: int | None = None,
     element_index: dict[int, dict[str, Any]],
     bootstrap_lineage: dict[str, Any] | None,
     submitted: dict[str, Any],
@@ -256,6 +257,16 @@ def normalise_team(
         "canonical": True,
         "entry_id": entry_id,
         "gw": gw,
+        # gw is the last/current scoring event. This separate, Official
+        # bootstrap-derived next event is the editable transfer horizon.
+        "editable_planning_gw": (
+            editable_planning_gw
+            if authenticated_state == "AUTH_AVAILABLE"
+            and isinstance(auth_picks, list)
+            and isinstance(editable_planning_gw, int)
+            and editable_planning_gw > 0
+            else None
+        ),
         "generated_at": generated_at,
         "authority": "OFFICIAL_FPL",
         "auth_state": authenticated_state,

@@ -107,6 +107,16 @@ def _runtime_root(tmp_path: Path, report_slot: str) -> Path:
     _write(
         runtime / "data/v6/personal/current_team.json",
         {
+            "entry_id": 3462711,
+            "gw": 6,
+            "auth_state": "AUTH_AVAILABLE",
+            "generated_at": "2026-09-21T05:20:00+00:00",
+            "lineage": {
+                "authenticated": [
+                    {"endpoint_class": "me", "http_status": 200, "entry_id": 3462711},
+                    {"endpoint_class": "my_team", "http_status": 200, "entry_id": 3462711},
+                ]
+            },
             "players": [
                 {
                     "element_id": i,

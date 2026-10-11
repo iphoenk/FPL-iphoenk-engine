@@ -29,10 +29,11 @@ def test_private_allowance_follows_authenticated_fields_only(transfers, expected
     assert normalise_authenticated_free_transfers(transfers) == (expected, source)
 
 
-def _normalised(transfers, auth_state="AVAILABLE"):
+def _normalised(transfers, auth_state="AVAILABLE", editable_gw=None):
     return normalise_team(
         entry_id=3462711,
         gw=6,
+        editable_planning_gw=editable_gw,
         element_index={},
         bootstrap_lineage=None,
         submitted={"picks": [], "lineage": {}},
@@ -71,3 +72,20 @@ def test_auth_failure_must_not_expose_transfer_finance_from_payload():
     team = _normalised({"bank": 2, "limit": 4, "made": 1}, auth_state="AUTH_EXPIRED")
     assert team["free_transfers"] is None
     assert team["availability"]["free_transfers"] == "NOT_SUPPORTED"
+
+
+def test_authenticated_editable_next_gw_does_not_rewrite_scoring_gw():
+    team = _normalised({"bank": 2, "limit": 2, "made": 1}, editable_gw=7)
+    assert team["gw"] == 6
+    assert team["editable_planning_gw"] == 7
+    assert team["squad_state"] == "AUTHENTICATED_CURRENT_TEAM"
+
+
+def test_failed_auth_never_claims_authenticated_editable_next_gw():
+    team = _normalised(
+        {"bank": 2, "limit": 2, "made": 1},
+        auth_state="AUTH_EXPIRED",
+        editable_gw=7,
+    )
+    assert team["editable_planning_gw"] is None
+    assert team["free_transfers"] is None

@@ -4119,6 +4119,14 @@ def _render_deep_visible_contract_lines(
             ) for r in rows],
         ))
         authority = dict(payload.get("current15_authority") or {})
+        if str(authority.get("source_class") or "").upper() == "OFFICIAL_SUBMITTED_PICKS":
+            lines.append(
+                "Official last submitted squad (GW"
+                f"{authority.get('applicable_gw', 'UNAVAILABLE')}); "
+                "NOT authenticated editable CURRENT15 for planning GW"
+                f"{authority.get('planning_gw', 'UNAVAILABLE')}. "
+                "Pending transfers and private finances are UNAVAILABLE unless independently bound."
+            )
         lines.append(
             "Current squad evidence: "
             f"{authority.get('source_class', 'UNAVAILABLE')} | "

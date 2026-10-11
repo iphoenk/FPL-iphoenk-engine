@@ -9,6 +9,7 @@ repair V6, or create another decision authority.
 import argparse
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -45,6 +46,127 @@ def _section_map(bundle: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
         for row in ((bundle.get("report") or {}).get("sections") or [])
         if isinstance(row, Mapping)
     }
+
+
+
+def _parse_aware(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo is not None and parsed.utcoffset() is not None else None
+
+
+def _verified_s02_public_fallback(
+    section: Mapping[str, Any],
+    submitted: Mapping[str, Any],
+    *,
+    planning_gw: int,
+    report_slot: str,
+    expected_entry_id: int = 3462711,
+) -> list[str]:
+    """Prove submitted-squad identity; never upgrade to editable CURRENT15."""
+    failures: list[str] = []
+    content = dict(section.get("content") or {})
+    authority = dict(content.get("current15_authority") or {})
+    rows = [dict(r) for r in content.get("rows") or [] if isinstance(r, Mapping)]
+    picks = [dict(p) for p in submitted.get("picks") or [] if isinstance(p, Mapping)]
+
+    def check(ok: bool, code: str) -> None:
+        if not ok:
+            failures.append("S02_" + code)
+
+    def ids(items: list[dict[str, Any]]) -> list[int]:
+        out = []
+        for row in items:
+            try:
+                out.append(int(row.get("element_id", row.get("element", 0))))
+            except (TypeError, ValueError):
+                out.append(0)
+        return out
+
+    row_ids, pick_ids = ids(rows), ids(picks)
+    check(len(rows) == len(picks) == 15, "SUBMITTED_COUNT_INVALID")
+    check(
+        len(set(row_ids)) == 15 and min(row_ids or [0]) > 0
+        and len(set(pick_ids)) == 15 and min(pick_ids or [0]) > 0,
+        "SUBMITTED_DUPLICATE_OR_INVALID_PLAYER",
+    )
+    check(set(row_ids) == set(pick_ids), "OWNED_PLAYERS_NOT_BOUND_TO_PUBLIC_SOURCE")
+    positions = [str(r.get("position") or "").upper() for r in rows]
+    counts = {key: positions.count(key) for key in ("GK", "DEF", "MID", "FWD")}
+    check(counts == {"GK": 2, "DEF": 5, "MID": 5, "FWD": 3}, "POSITION_DISTRIBUTION_INVALID")
+    check(
+        sum(p.get("captain") is True for p in picks) == 1
+        and sum(p.get("vice_captain") is True for p in picks) == 1
+        and not any(p.get("captain") and p.get("vice_captain") for p in picks),
+        "CAPTAIN_VICE_INVALID",
+    )
+    check(
+        sum(int(p.get("multiplier") or 0) > 0 for p in picks) == 11
+        and sum(int(p.get("multiplier") or 0) == 0 for p in picks) == 4,
+        "XI_BENCH_INVALID",
+    )
+    try:
+        source_gw = int(submitted.get("gw"))
+        displayed_gw = int(authority.get("applicable_gw"))
+        report_gw = int(planning_gw)
+    except (TypeError, ValueError):
+        source_gw = displayed_gw = report_gw = -1
+    check(
+        source_gw in {report_gw, report_gw - 1}
+        and displayed_gw == source_gw,
+        "SOURCE_GW_MISMATCH",
+    )
+    check(
+        int(submitted.get("entry_id") or -1) == expected_entry_id,
+        "PUBLIC_TEAM_ID_MISMATCH",
+    )
+    check(
+        str(authority.get("source_class") or "").upper() == "OFFICIAL_SUBMITTED_PICKS",
+        "SOURCE_CLASS_NOT_OFFICIAL_SUBMITTED",
+    )
+    check(
+        str(submitted.get("status") or "").upper() == "AVAILABLE",
+        "PUBLIC_SOURCE_NOT_AVAILABLE",
+    )
+    lineage = dict(submitted.get("lineage") or {})
+    check(
+        lineage.get("authority") == "OFFICIAL_FPL"
+        and lineage.get("endpoint_class") == "submitted_picks"
+        and int(lineage.get("http_status") or 0) == 200
+        and int(lineage.get("entry_id") or -1) == expected_entry_id
+        and int(lineage.get("gw") or -1) == source_gw,
+        "OFFICIAL_PROVENANCE_INVALID",
+    )
+    observed = _parse_aware(authority.get("observed_at"))
+    generated = _parse_aware(submitted.get("generated_at"))
+    slot = _parse_aware(report_slot)
+    check(
+        observed is not None and generated is not None and slot is not None
+        and abs((observed - generated).total_seconds()) <= 5
+        and generated <= slot,
+        "OBSERVATION_TIMESTAMP_INVALID",
+    )
+    check(
+        authority.get("stale") is True,
+        "PUBLIC_IDENTITY_MISREPRESENTED_AS_FRESH_CURRENT",
+    )
+    check(
+        str(authority.get("finance_availability") or "").upper()
+        not in {"AVAILABLE", "COMPLETE"},
+        "PUBLIC_FINANCE_FABRICATED",
+    )
+    check(
+        str(authority.get("resolution_status") or "").upper()
+        != "CURRENT_VALID",
+        "PUBLIC_EDITABLE_AUTHORITY_FABRICATED",
+    )
+    check(
+        "authenticated-current" in str(section.get("degradation_reason") or "").lower(),
+        "PUBLIC_AUTH_GAP_NOT_DISCLOSED",
+    )
+    return failures
 
 
 def _truthful_source_degraded_sections(
@@ -263,6 +385,29 @@ def validate(
         _truthful_source_degraded_sections(sections)
     )
     failures.extend(degradation_failures)
+    # Public submitted picks are a valid identity fallback only when the
+    # separately published Official FPL source agrees with every owned ID.
+    # A generic DEGRADED S02, or a stale /my-team response, cannot pass.
+    if "S02" in degraded:
+        submitted_path = (
+            (private_data_root / "personal/submitted_picks.json")
+            if private_data_root is not None
+            else (runtime_data_root / "data/v6/personal/submitted_picks.json")
+        )
+        try:
+            submitted = _read(submitted_path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            submitted = {}
+        s02_failures = _verified_s02_public_fallback(
+            sections["S02"],
+            submitted,
+            planning_gw=int(bundle.get("planning_gw") or 0),
+            report_slot=str(bundle.get("report_slot") or ""),
+        )
+        if s02_failures:
+            failures.extend(s02_failures)
+        else:
+            truthful_source_degraded.add("S02")
     allowed_degraded = {"S09"} | truthful_source_degraded
     require(
         degraded <= allowed_degraded,
@@ -270,9 +415,19 @@ def validate(
     )
     if "S09" in degraded:
         reason = str((sections["S09"]).get("degradation_reason") or "").lower()
+        chip_content = dict(sections["S09"].get("content") or {})
         require(
-            "authenticated" in reason or "private" in reason,
-            "S09_DEGRADED_NOT_PRIVATE_FACT",
+            ("authenticated" in reason or "private" in reason)
+            and chip_content.get("chip") == "UNAVAILABLE"
+            and chip_content.get("chip_ledger") == "UNAVAILABLE"
+            and chip_content.get("chip_ledger_authority") == "UNAVAILABLE"
+            and chip_content.get("considered_now") is False,
+            "S09_DEGRADED_NOT_FAIL_CLOSED",
+        )
+    if "S02" in truthful_source_degraded:
+        require(
+            str(proof.get("stage3_action") or "") in {"WAIT", "PREPARE"},
+            "S02_PUBLIC_FALLBACK_CANNOT_AUTHORIZE_ACT",
         )
 
     governance = dict(bundle.get("governance") or {})
@@ -314,10 +469,32 @@ def validate(
     )
 
     private_auth = str(current_team.get("auth_state") or "UNAVAILABLE").upper()
+    auth_bound = (
+        private_auth == "AUTH_AVAILABLE"
+        and int(current_team.get("entry_id") or -1) == 3462711
+        and int(current_team.get("gw") or -1) == int(bundle.get("planning_gw") or -2)
+    )
+    private_auth_authority = (
+        "AUTHENTICATED_CURRENT_TEAM" if auth_bound
+        else "AUTH_AVAILABLE_BUT_NOT_BOUND" if private_auth == "AUTH_AVAILABLE"
+        else private_auth
+    )
     status = "PASS" if not failures else "FAIL"
+    acceptance_class = (
+        "INTEGRITY_FAIL" if failures
+        else "VERIFIED_PUBLIC_FALLBACK" if "S02" in truthful_source_degraded
+        else "AUTHENTICATED_BOUND" if auth_bound
+        else "NON_AUTHENTICATED_ACCEPTANCE"
+    )
     return {
         "contract": "V12_STAGE3_INTEGRATED_ACCEPTANCE_V1",
         "status": status,
+        "acceptance_class": acceptance_class,
+        "public_report_deliverable": (
+            str((bundle.get("human_facing_qa") or {}).get("status") or "").upper() == "PASS"
+        ),
+        "private_auth_authority": private_auth_authority,
+        "full_green_prod": False,
         "failures": failures,
         "stage2_green_baseline": STAGE2_GREEN_SHA,
         "model_sha": model_sha,

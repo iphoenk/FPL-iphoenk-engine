@@ -284,3 +284,100 @@ def test_s18_dynamic_contract_rejects_unrelated_extra_table():
     )
     failures = validate_rendered_deep_presentation(body, report)
     assert "S18_RENDERED_TABLE_COUNT=2/1" in failures
+
+
+def _s05_real_fixture_and_weather_body(*, include_weather: bool = True):
+    """Exercise the real S05 renderer and conditional exact presentation lock."""
+    body, report = _valid_body()
+    content = {
+        "gw_topology": "SINGLE",
+        "fixtures_display": [
+            {
+                "fixture_id": 51,
+                "match": "Arsenal vs Leeds",
+                "sides": "Arsenal HOME / Leeds AWAY",
+                "kickoff_wib": "10 Oct 2026, 18:30 WIB",
+                "rest_days": "UNAVAILABLE",
+                "venue": "Emirates Stadium",
+                "venue_status": "VERIFIED",
+                "fixture_status": "FINISHED",
+                "weather": "NORMAL",
+                "weather_state": "FORECAST",
+            },
+            {
+                "fixture_id": 52,
+                "match": "Chelsea vs Bournemouth",
+                "sides": "Chelsea HOME / Bournemouth AWAY",
+                "kickoff_wib": "10 Oct 2026, 21:00 WIB",
+                "rest_days": "UNAVAILABLE",
+                "venue": "Stamford Bridge",
+                "venue_status": "VERIFIED",
+                "fixture_status": "FINISHED",
+                "weather": "UNAVAILABLE",
+                "weather_state": "UNAVAILABLE",
+            },
+        ],
+        "competition_coverage": {
+            "official_pl": True,
+            "verified_non_pl_schedule_bound": True,
+            "weather_binding_status": "FORECAST",
+        },
+        "weather": ([{
+            "fixture_id": 51,
+            "venue": "Emirates Stadium",
+            "kickoff": "2026-10-10T11:30:00Z",
+            "condition": "NORMAL",
+            "freshness": "FRESH",
+        }] if include_weather else []),
+    }
+    for section in report["sections"]:
+        if section["section_id"] == "S05":
+            section["content"] = content
+            break
+    visible, _ = _render_deep_visible_contract_lines(
+        section_id="S05", content=content, owned_ids=set(), owned_names={}
+    )
+    start = body.index("## 5. TEST")
+    end = body.index("## 6. TEST", start)
+    body = body[:start] + "\n".join(["## 5. TEST", "Status: COMPLETE", *visible, ""]) + "\n" + body[end:]
+    return body, report
+
+
+def test_s05_rendered_schema_accepts_exact_fixtures_and_weather_tables():
+    body, report = _s05_real_fixture_and_weather_body(include_weather=True)
+    assert "| Fixture | Match | Sides |" in body
+    assert "| Fixture | Venue | Kickoff | Condition | Freshness |" in body
+    assert validate_rendered_deep_presentation(body, report) == []
+
+
+def test_s05_rendered_schema_accepts_fixtures_without_weather_table():
+    body, report = _s05_real_fixture_and_weather_body(include_weather=False)
+    assert "| Fixture | Match | Sides |" in body
+    assert "| Fixture | Venue | Kickoff | Condition | Freshness |" not in body
+    assert validate_rendered_deep_presentation(body, report) == []
+
+
+def test_s05_rendered_schema_rejects_missing_verified_weather_table():
+    body, report = _s05_real_fixture_and_weather_body(include_weather=True)
+    start = body.index("### WEATHER", body.index("## 5. TEST"))
+    end = body.index("Decision use:", start)
+    body = body[:start] + body[end:]
+    assert "S05_RENDERED_TABLE_COUNT=1/2" in validate_rendered_deep_presentation(body, report)
+
+
+def test_s05_rendered_schema_rejects_truncated_official_fixture_row():
+    body, report = _s05_real_fixture_and_weather_body(include_weather=True)
+    row = next(line for line in body.splitlines() if "| 52 | Chelsea vs Bournemouth |" in line)
+    body = body.replace(row+"\n", "", 1)
+    assert "S05_RENDERED_ROWS=1:1/2" in validate_rendered_deep_presentation(body, report)
+
+
+def test_s05_rendered_schema_rejects_unexpected_extra_table():
+    body, report = _s05_real_fixture_and_weather_body(include_weather=False)
+    body = body.replace(
+        "Decision use: context only; no separate optimizer or news authority.",
+        "| Unauthorized | Data |\n| --- | --- |\n| no | no |\n\n"
+        "Decision use: context only; no separate optimizer or news authority.",
+        1,
+    )
+    assert "S05_RENDERED_TABLE_COUNT=2/1" in validate_rendered_deep_presentation(body, report)

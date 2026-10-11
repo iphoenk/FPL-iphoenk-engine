@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T12:15:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T12:25:05+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -21,7 +21,7 @@ A governed Fantasy Premier League decision-support engine combining public footb
 
 - **Authenticated FT recovery (11 Oct 2026):** V6 private my-team normalizes remaining free transfers from an explicit field or, when absent, from verified `transfers.limit` minus `transfers.made` with bounded integers and explicit provenance. `limit=null` stays UNLIMITED, incomplete evidence stays NOT_SUPPORTED. Never derive private finance from public picks; bearer auto-renewal is a separate unresolved credential-lifecycle task.
 
-- **P0 governance sharding (11 Oct 2026):** preserves the original 49 required V12 test files and 1,340 parameterized node IDs with deterministic, disjoint fail-closed test shards. Exactness-heavy P1.7 reference tests are isolated without changing model mathematics; each job captures per-test durations and CPU identity. The existing `v12-required-verify` branch-protection check remains a mandatory aggregator. PR and postmerge push evidence must both be GREEN before production governance is declared recovered.
+- **P0 governance sharding (11 Oct 2026):** preserves the original 49 required V12 test files and 1,345 parameterized node IDs with deterministic, disjoint fail-closed test shards. Exactness-heavy P1.7 reference tests are isolated without changing model mathematics; each job captures per-test durations and CPU identity. The existing `v12-required-verify` branch-protection check remains a mandatory aggregator. PR and postmerge push evidence must both be GREEN before production governance is declared recovered.
 
 ## Core architecture
 
@@ -52,6 +52,10 @@ Captain distributions now have an optional calibrated goalkeeper event layer and
 ### Stage C full-universe scanner (11 Oct 2026)
 
 Stage C is enabled for canonical DEEP candidate discovery by the `feature_default_enabled` configuration default; `V12_STAGEC_SCANNER_ENABLED=0` is the deliberate emergency override. The Stage A multiwindow / Stage B shadow / Stage C pipeline scans the full projection input, reconciles unique projection IDs against Official FPL `bootstrap.elements`, and records the Official denominator, eligible denominator, missing/duplicate/unrecognized IDs, position coverage and screening reason codes. Missing or partial evidence is reported as `DEGRADED` rather than claiming full universe coverage. The scanner contributes bounded, provenance-aware candidate intelligence under S04 and route context, not a second Watchlist20 score, transfer authority, P1.7, or Monte Carlo engine. An actual production PASS still requires an occurrence-bound DEEP execution proof, 20-row S11, canonical 500K Monte Carlo, private delivery receipt and matching latest pointer; passing CI is not that proof.
+
+### S05 exact rendered-table verification (11 Oct 2026)
+
+The 49 required V12 files now contain 1,345 parameterized node IDs (five additional S05 regression tests, zero removals); the governance fail-closed manifest baseline has been ratcheted accordingly. S05 can display two occurrence-bound tables: verified Official PL fixture identity and optional verified weather. The presentation lock now requires **exact header columns and complete row counts** for every actually bound S05 table. When weather is unavailable, the weather table is omitted without hiding valid fixture rows; any missing bound fixture, missing bound weather table, extra unauthorized table or malformed column fails closed at final human-facing QA. The strict check repairs the first post-#968 production failure `S05_RENDERED_TABLE_COUNT` without downgrading report validation or changing V12 scoring.
 
 ### S05 verified non-PL schedule acquisition (11 Oct 2026)
 

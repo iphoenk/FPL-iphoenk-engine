@@ -2566,6 +2566,30 @@ def _enrich_all15_rows(
         owned_row = owned_map.get(element) or {}
         p_start = row.get("p_start", xm.get("start_probability"))
         xmins = row.get("xmins", xm.get("expected_minutes"))
+        start_signals = [
+            dict(signal) for signal in xm.get("evidence") or []
+            if isinstance(signal, Mapping)
+        ]
+        signal_names = [
+            str(signal.get("signal")) for signal in start_signals
+            if signal.get("signal")
+        ]
+        model_p_start = xm.get("start_probability")
+        start_value_agrees = False
+        try:
+            start_value_agrees = (
+                p_start is not None and model_p_start is not None
+                and abs(float(p_start) - float(model_p_start)) <= 0.001
+            )
+        except (TypeError, ValueError):
+            pass
+        start_evidence_quality = (
+            "SOURCE_UNAVAILABLE" if not start_signals
+            else "BINDING_MISMATCH" if not start_value_agrees
+            else "PRIOR_DOMINATED"
+            if set(signal_names) <= {"neutral_prior"}
+            else "PLAYER_CONDITIONED"
+        )
         status = str(player.get("status") or owned_row.get("status") or "a").lower()
         availability_evidence = dict(
             player.get("availability_evidence") or {}
@@ -2695,6 +2719,14 @@ def _enrich_all15_rows(
                 else "UNAVAILABLE"
             ),
             "availability": row.get("p_available", xm.get("availability")),
+            "p_start_evidence": {
+                "source": "V12_PLAYER_MINUTES" if start_signals else "UNAVAILABLE",
+                "quality": start_evidence_quality,
+                "confidence": xm.get("confidence") or "UNAVAILABLE",
+                "signals": signal_names,
+                "signal_count": len(start_signals),
+                "model_probability_agrees": start_value_agrees,
+            },
             "gw_availability": gw_availability,
             "gw_availability_confidence": (
                 availability_evidence.get("gw_availability_confidence")

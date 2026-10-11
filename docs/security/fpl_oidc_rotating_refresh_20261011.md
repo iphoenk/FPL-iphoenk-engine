@@ -22,6 +22,47 @@ boundary, not proof of unattended or supported renewable access.
 - The provider's own PingFederate documentation says rotation, token reuse
   protection and grace windows depend on client/server configuration.
 
+## One controlled live grant, WITHOUT changing natural scheduler
+
+The `v6-auth-probe.yml` workflow now offers an owner-only
+`auth_attempt=CONTROLLED_ONCE` via **Actions → V6 private auth diagnostic →
+Run workflow** on `main`. The workflow checks the exact owner identity,
+uses the existing protected `v12-private-reports-publisher` environment,
+temporarily selects rotating auth for that ONE job, and requires an explicit
+owner-selected input. It DOES NOT require changing `FPL_AUTH_MODE` or
+`FPL_OIDC_CONTRACT_VERIFIED` environment variables.
+
+Before running:
+- Owner agrees to possible Safari logout or refresh-token family collision;
+  this has not been verified for the live FPL SPA client.
+- The encrypted credential exists, the temporary bootstrap secret is deleted,
+  `FPL_OIDC_CLIENT_ID` is configured, and the protected encryption key is present.
+- Confirm no competing controlled credential probe is active.
+- Do NOT refresh via Safari or resume browser silent renewal concurrently.
+- Keep `FPL_AUTH_MODE` disabled for natural jobs. Controlled grant is one-shot,
+  not a supported-production-client-policy certification.
+
+The workflow intentionally makes a single token grant attempt. It writes a
+durable IN_FLIGHT marker before POST, persists any replacement refresh token,
+and reads it back before invoking authenticated /me and /my-team. Subsequent
+probes may use a still-live saved access token without a second exchange.
+Do not retry a failed or timed-out grant; record a redacted error and
+investigate/reenroll safely.
+
+Observed proof stages MUST remain distinct: public discovery and client-ID
+format; owner-approved first grant HTTP status; persisted replacement version;
+identity and exact team checks; second-worker reuse; subsequent controlled
+natural V6 and V12 evidence; genuine native visible delivery. No one status
+alone implies permanent refresh.
+
+The former frozen cross-CPU artifact `36287336832` expired or became
+unavailable by 2026-10-11, breaking repository governance. It is replaced
+ONLY by the independently verified direct 3-CPU PASS run `38101198457`
+(artifact `v12-runtime-cross-cpu-acceptance-38101198457`, physical CPUs 3,
+8 probes, bit-identical sha256
+`89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87`).
+The gate continues fetching and checking actual unexpired proof evidence.
+
 ## Enforced state-machine contracts
 
 The staged `rotating_oidc.py` provides fail-closed logic for an owner-approved

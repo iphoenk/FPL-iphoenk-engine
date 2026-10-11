@@ -719,7 +719,7 @@ jobs:
           result = json.loads(Path("artifacts/v12-report/gw7-midfield-mc.json").read_text())
           assert result["status"] == "PASS"
           assert result["actual_paths_each_route"] >= 500_000
-          assert set(result["metrics"]) == {"HOLD", "PALMER_MBEUMO", "SAKA_MBEUMO"}
+          assert set(result["metrics"]) == {"HOLD", "MBEUMO_ONLY", "PALMER_MBEUMO", "SAKA_MBEUMO"}
           assert result["finance"]["hit_points_assumed"] == 4
           assert result["mini_league"]["competitive_rivals"] == 9
           assert result["mini_league"]["probability_of_future_top3"] is None

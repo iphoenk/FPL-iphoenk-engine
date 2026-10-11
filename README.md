@@ -1,19 +1,25 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T10:21:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T04:20:37Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
 
+- **GW7 owner what-if MC:** PR #963 tests four paired 500K routes (HOLD, Mbeumo only with assumed 1 FT, Mbeumo + Palmer with -4, and Mbeumo + Saka with -4), using P1.7/P1.4 unchanged, and keeping the full result private. Future mini-league top-3 probability is not modelled; GW6 rival ownership is descriptive, not a probabilistic rank claim.
 
-- **Owner GW7 Palmer/Saka paired MC (11 Oct 2026):** an explicit owner-only `owner_midfield_mc=true` DEEP issue command evaluates HOLD vs Bruno+Ødegaard to Palmer+Mbeumo or Saka+Mbeumo with existing unchanged P1.7/P1.4 canonical 500K paired worlds (1/3/5GW). The same-occurrence private warm state is mandatory; both transfer packages carry an assumed 1FT/-4 hit. Results are private-only, while latest rival ownership is descriptive and future Top-3 odds remain unmodelled. No natural scheduler or submitted squad is changed. (PR #963)
+
+- **OIDC private natural V6 activation (11 Oct 2026):** after real owner-controlled refresh and #19 independent reuse (HTTP 200, version 3 unchanged), protected private V6 prefetch defaults to rotating encrypted OIDC; public collection stays independent. Protected `FPL_PRIVATE_AUTO_REFRESH_PAUSED=true` is an emergency stop. Verified finance-only publication requires bank, FT or explicit unlimited, and 15/15 prices. Stale fallback nulls all unauthenticated economics. Natural V12 and next-expiry rotation/delivery remain separate acceptance gates. See [OIDC security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
+
+- **OIDC second-worker reuse-only proof (11 Oct 2026):** the protected V6 auth probe offers owner-only `REUSE_ONLY` (new runner, encrypted store read, current saved access token only; GET /me and /my-team; never refresh or write ciphertext). Green requires correct identity and no store version change; expired tokens fail safely. See [security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 
 - **OIDC controlled-first-grant gate (11 Oct 2026):** after encrypted iPhone enrollment, owner may choose `CONTROLLED_ONCE` in existing V6 auth probe to test a single official refresh without enabling rotating auth for natural jobs. Possible Safari session collision must be understood; live grant, persistent rotation, /me identity, subsequent reuse and natural V12 delivery are separately verified. Restored hard cross-CPU governance proof from direct 3-model PASS run 38101198457 (not waived). [Security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 
 - **OIDC rotating auth P0 (11 Oct 2026):** official discovery verified; initial fail-closed rotation core merged in #959. Follow-on opt-in V6 integration adds encrypted private Git CAS secret state and owner-only GitHub Actions enrollment, with key protected as an environment secret. This does not enable real refresh until the owner supplies credentials and explicitly verifies the client policy. See [OIDC security and iPhone steps](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 
 - **Authenticated FT recovery (11 Oct 2026):** V6 private my-team normalizes remaining free transfers from an explicit field or, when absent, from verified `transfers.limit` minus `transfers.made` with bounded integers and explicit provenance. `limit=null` stays UNLIMITED, incomplete evidence stays NOT_SUPPORTED. Never derive private finance from public picks; bearer auto-renewal is a separate unresolved credential-lifecycle task.
+
+- **P0 governance sharding (11 Oct 2026):** preserves the original 49 required V12 test files and 1,340 parameterized node IDs with deterministic, disjoint fail-closed test shards. Exactness-heavy P1.7 reference tests are isolated without changing model mathematics; each job captures per-test durations and CPU identity. The existing `v12-required-verify` branch-protection check remains a mandatory aggregator. PR and postmerge push evidence must both be GREEN before production governance is declared recovered.
 
 ## Core architecture
 

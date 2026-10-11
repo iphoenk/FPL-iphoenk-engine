@@ -96,7 +96,7 @@ class GW7TwoMidOwnerMCContractTests(unittest.TestCase):
         self.assertEqual(set(result["metrics"]), set(ROUTES))
         self.assertEqual(
             {r["route_id"]: r["execution_cost_points"] for r in observed["routes"]},
-            {"HOLD": 0, "PALMER_MBEUMO": 4, "SAKA_MBEUMO": 4},
+            {"HOLD": 0, "MBEUMO_ONLY": 0, "PALMER_MBEUMO": 4, "SAKA_MBEUMO": 4},
         )
         self.assertEqual(result["mini_league"]["competitive_rivals"], 9)
         self.assertIsNone(result["mini_league"]["probability_of_future_top3"])

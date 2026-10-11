@@ -21,6 +21,7 @@ COMPETITIVE_LEAGUE = 9477
 
 ROUTES = {
     "HOLD": {},
+    "MBEUMO_ONLY": {15: 427},
     "PALMER_MBEUMO": {426: 154, 15: 427},
     "SAKA_MBEUMO": {426: 12, 15: 427},
 }
@@ -171,12 +172,13 @@ def evaluate(
                     "formation_comparison": forms,
                 }
         is_hold = name == "HOLD"
+        is_one_ft = name == "MBEUMO_ONLY"
         definitions.append({
             "route_id": name,
-            "classification": "CURRENT15" if is_hold else "OWNER_TWO_MID_WHAT_IF",
+            "classification": "CURRENT15" if is_hold else ("OWNER_ONE_MID_WHAT_IF" if is_one_ft else "OWNER_TWO_MID_WHAT_IF"),
             "per_gw": per_gw,
-            "execution_cost_points": 0.0 if is_hold else 4.0,
-            "execution_cost_status": "HOLD_ZERO" if is_hold else "ASSUMED_ONE_FT_ONE_HIT",
+            "execution_cost_points": 0.0 if (is_hold or is_one_ft) else 4.0,
+            "execution_cost_status": ("HOLD_ZERO" if is_hold else ("ASSUMED_ONE_FT_ZERO_HIT" if is_one_ft else "ASSUMED_ONE_FT_ONE_HIT")),
             "decision_net_supported": is_hold,
         })
     binding = str((projections.get("model_evidence_binding") or {}).get("output_fingerprint") or "")
@@ -216,7 +218,9 @@ def evaluate(
         "convergence": mc.get("convergence_evidence"),
         "mini_league": _league_counts(league_picks, standings),
         "finance": {
-            "transfers": 2, "ft_assumption": 1, "hit_points_assumed": 4,
+            "transfers": {"HOLD": 0, "MBEUMO_ONLY": 1, "PALMER_MBEUMO": 2, "SAKA_MBEUMO": 2},
+            "ft_assumption": 1, "hit_points_assumed": 4,
+            "hit_points_by_route": {"HOLD": 0, "MBEUMO_ONLY": 0, "PALMER_MBEUMO": 4, "SAKA_MBEUMO": 4},
             "authenticated_current_selling_values_required_before_execution": True,
             "route_decision_net_supported": False,
         },

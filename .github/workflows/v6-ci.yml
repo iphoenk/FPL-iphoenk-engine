@@ -17,6 +17,8 @@ on:
       - "tests/test_private_data_boundary.py"
       - "tests/test_rotating_oidc_contract.py"
       - "tests/test_git_oidc_store.py"
+      - "tests/test_oidc_second_worker_reuse_only.py"
+      - "tests/test_data_platform_private_auto_refresh_contract.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
       - ".github/workflows/v6-scheduler-watchdog.yml"
@@ -40,6 +42,8 @@ on:
       - "tests/test_private_data_boundary.py"
       - "tests/test_rotating_oidc_contract.py"
       - "tests/test_git_oidc_store.py"
+      - "tests/test_oidc_second_worker_reuse_only.py"
+      - "tests/test_data_platform_private_auto_refresh_contract.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
       - ".github/workflows/v6-scheduler-watchdog.yml"
@@ -164,6 +168,8 @@ jobs:
           tests/test_private_data_boundary.py
           tests/test_rotating_oidc_contract.py
           tests/test_git_oidc_store.py
+          tests/test_oidc_second_worker_reuse_only.py
+          tests/test_data_platform_private_auto_refresh_contract.py
 
   oidc-rotation-contract:
     name: oidc-rotation-contract
@@ -184,7 +190,7 @@ jobs:
       - name: Install hash-locked test dependencies
         run: python -m pip install --require-hashes -r requirements-v6-ci.lock
       - name: Assert fail-closed OIDC rotation contracts with fake tokens only
-        run: python -m pytest -q tests/test_rotating_oidc_contract.py tests/test_git_oidc_store.py tests/test_oidc_controlled_refresh_gate.py
+        run: python -m pytest -q tests/test_rotating_oidc_contract.py tests/test_git_oidc_store.py tests/test_oidc_controlled_refresh_gate.py tests/test_oidc_second_worker_reuse_only.py tests/test_data_platform_private_auto_refresh_contract.py
       - name: Probe only official public OIDC discovery metadata, no credentials
         shell: bash
         run: |

@@ -84,3 +84,21 @@ def test_history_reconciliation_requires_authoritative_team_id(monkeypatch, tmp_
     monkeypatch.setattr(mod, "CONFIG_PATH", cfg)
     with pytest.raises(RuntimeError, match="team_id"):
         mod.run()
+
+
+def test_full_season_history_covers_all_slots_and_aggregates_dgw():
+    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
+    detail = {"element_summaries": {"10": {"history": [{"event": 1, "fixture": 101, "minutes": 90, "total_points": 6, "saves": 3}, {"event": 2, "fixture": 102, "minutes": 0, "total_points": 0, "saves": 0}, {"event": 2, "fixture": 103, "minutes": 90, "total_points": 8, "saves": 6}], "fixtures": [{"event": 1, "id": 101, "finished": True}, {"event": 2, "id": 102, "finished": True}, {"event": 2, "id": 103, "finished": True}]}}}
+    out = mod.build_full_season_history(snapshot=snapshot, detail=detail)
+    assert out["coverage_gate"]["status"] == "PASS"
+    assert out["as_of"]["historical_gws"] == [1, 2, 3]
+    assert out["players"]["10"]["history"]["2"]["status"] == "FINAL"
+    assert out["players"]["10"]["history"]["2"]["aggregate"]["minutes"] == 90
+    assert out["players"]["10"]["history"]["2"]["fixture_count"] == 2
+
+def test_full_season_history_marks_missing_detail_without_zero_fill():
+    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 3}, "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}], "elements": [{"id": 10}]}}
+    out = mod.build_full_season_history(snapshot=snapshot, detail={"element_summaries": {}})
+    assert out["coverage_gate"]["status"] == "PARTIAL"
+    assert out["coverage_gate"]["missing_records"]
+    assert out["coverage_gate"]["pending_never_coerced_to_zero"] is True

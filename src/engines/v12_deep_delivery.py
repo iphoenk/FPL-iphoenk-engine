@@ -159,20 +159,44 @@ def select_personal_evidence(
             "candidate_count": len(normalized),
         }
 
-    identity_fallbacks = [
-        row for row in normalized
-        if row["exact15"] and (
-            row["source_class"] != "OFFICIAL_SUBMITTED_PICKS"
-            or (
+    identity_fallbacks = []
+    for row in normalized:
+        if not row["exact15"]:
+            continue
+        payload = row["payload"]
+        if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS":
+            source = dict(payload.get("lineage") or {})
+            source_valid = bool(
                 row["auth_state"] == "PUBLIC_OFFICIAL"
+                and str(payload.get("status") or "").upper() == "AVAILABLE"
                 and (
                     expected_entry_id is None
-                    or str(row["payload"].get("entry_id") or "")
-                    == str(expected_entry_id)
+                    or (
+                        str(payload.get("entry_id") or "") == str(expected_entry_id)
+                        and str(source.get("entry_id") or "") == str(expected_entry_id)
+                        and str(source.get("authority") or "") == "OFFICIAL_FPL"
+                        and str(source.get("endpoint_class") or "") == "submitted_picks"
+                        and int(source.get("http_status") or 0) == 200
+                    )
                 )
             )
-        )
-    ]
+        elif row["source_class"] == "AUTHENTICATED_CURRENT_TEAM":
+            source_valid = (
+                expected_entry_id is None
+                or str(payload.get("entry_id") or "") == str(expected_entry_id)
+            )
+        elif row["source_class"] == "USER_CONFIRMED":
+            source_valid = bool(
+                row["user_current"]
+                or (
+                    expected_entry_id is None
+                    and row["auth_state"] == "USER_CONFIRMED"
+                )
+            )
+        else:
+            source_valid = False
+        if source_valid:
+            identity_fallbacks.append(row)
     if not identity_fallbacks:
         return {
             "resolution_status": "UNAVAILABLE",

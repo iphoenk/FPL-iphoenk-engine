@@ -49,7 +49,73 @@ until a durable encrypted backend and provider contract are verified.
 9. A failed private state MUST NOT gate Official public fixture, picks, MATCH
    or mini-league acquisition and native report delivery.
 
-## Required production backend, not yet provisioned
+## Implemented opt-in persistent backend (second stage, 11 October 2026)
+
+The private-reports Git repository holds **only authenticated encrypted ciphertext**
+at `.auth-private/fpl-oidc-credential.enc`. The Fernet key resides **only** in
+the protected GitHub Actions environment secret `FPL_OIDC_STORE_KEY`.
+Never add either the key or the raw tokens to repository files or reports.
+
+- A strict remote allowlist pins writes to `iphoenk/fpl-reports-private`.
+- Each update fetches the freshest `origin/main`, checks the credential version,
+  commits only encrypted bytes in a temporary Git worktree, and pushes with
+  fast-forward semantics. A raced writer fails rather than overwriting.
+- The initial encrypted IN_FLIGHT state is a cross-runner exclusive grant claim;
+  no other process can re-use the same refresh token. A failed/missing final
+  write or crash requires explicit owner re-enrollment, never blind retry.
+- The owner-only `v6-oidc-owner-bootstrap.yml` workflow seeds ciphertext using
+  a token supplied as a **protected environment secret**, not a workflow input.
+- Private publisher and read-only auth probe use the backend only when the
+  environment variable `FPL_AUTH_MODE=rotating_oidc` is explicitly selected.
+  The legacy bearer/session paths and public-first operation remain intact.
+- `FPL_OIDC_CONTRACT_VERIFIED=true` is a privileged **owner approval flag**;
+  it must not be set based only on provider metadata or fake-token CI tests.
+  Confirm the browser client ID, its expected token grant policy and possible
+  Safari session impact first.
+- GitHub Actions environment secrets themselves have separate access controls
+  and are not readable back; the durable encrypted Git blob is versioned and
+  independently read back after each write. The private Git history is
+  immutable audit provenance for **ciphertext only**.
+- The bootstrap secret `FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN` MUST be deleted by
+  the owner from GitHub Settings → Environments immediately after enrollment,
+  because Actions cannot delete it without separate privileged API permissions.
+  Never treat its lingering presence as permanent credential storage.
+
+### Owner-only iPhone setup after code and security CI is green
+
+1. Safari → github.com → `iphoenk/FPL-iphoenk-engine` →
+   **Settings → Environments → v12-private-reports-publisher**.
+2. Add protected environment secret `FPL_OIDC_STORE_KEY` with a locally
+   generated **32-byte random URL-safe-base64 Fernet key**. Use only secure
+   browser/Shortcuts local crypto; never paste it into a chat or screenshot.
+3. Retrieve the refresh token locally from the already-authorized Safari FPL
+   session using an approved, owner-inspected iOS Shortcut. Copy directly to
+   environment secret `FPL_OIDC_BOOTSTRAP_REFRESH_TOKEN`, and clear clipboard.
+   Do not output it in a Shortcut notification, iCloud note, issue or PR.
+4. In repository **Actions → FPL protected OIDC credential enrollment →
+   Run workflow**, choose **ENROLL**. Inspect only status/version. This
+   stores ciphertext without calling the official token endpoint.
+5. Delete the temporary bootstrap environment secret in GitHub. Verify the
+   encrypted file is present in the private repo without decoding it.
+6. Extract the **non-secret** client ID from Safari's OIDC storage record and
+   set environment variable `FPL_OIDC_CLIENT_ID` in the same environment.
+7. Independently validate supported public-client refresh behavior, Safari
+   collision/re-login policy, and that the client ID is correct; then set
+   environment variable `FPL_OIDC_CONTRACT_VERIFIED=true`.
+8. Set environment variable `FPL_AUTH_MODE=rotating_oidc`. Run one controlled
+   **V6 private auth diagnostic** to intentionally perform the first live
+   grant. Observe only redacted /me, identity and /my-team 3462711 outcomes.
+9. Verify `IN_FLIGHT → READY` persisted a newer encrypted credential version;
+   run another worker/probe, verify re-use without a second refresh, and
+   verify finance/FT provenance and canonical V12 report consumption.
+10. If Safari was invalidated by the server grant, log back into FPL there.
+    If the server rejects the grant, **do not** repeatedly run refresh; use
+    owner-authorized **REENROLL** after diagnosing the provider behavior.
+
+**No unattended refresh is green merely from CI.** No refresh token has been
+enrolled by the assistant, and no live grant has been performed.
+
+## Prior design constraints / external-store alternatives
 
 Choose an existing approved secret manager (e.g., AWS Secrets Manager with
 DynamoDB conditional lease / version state, or a similarly audited service).

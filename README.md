@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T10:44:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T04:20:37Z`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
@@ -16,6 +16,8 @@ A governed Fantasy Premier League decision-support engine combining public footb
 - **OIDC rotating auth P0 (11 Oct 2026):** official discovery verified; initial fail-closed rotation core merged in #959. Follow-on opt-in V6 integration adds encrypted private Git CAS secret state and owner-only GitHub Actions enrollment, with key protected as an environment secret. This does not enable real refresh until the owner supplies credentials and explicitly verifies the client policy. See [OIDC security and iPhone steps](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 
 - **Authenticated FT recovery (11 Oct 2026):** V6 private my-team normalizes remaining free transfers from an explicit field or, when absent, from verified `transfers.limit` minus `transfers.made` with bounded integers and explicit provenance. `limit=null` stays UNLIMITED, incomplete evidence stays NOT_SUPPORTED. Never derive private finance from public picks; bearer auto-renewal is a separate unresolved credential-lifecycle task.
+
+- **P0 governance sharding (11 Oct 2026):** preserves the original 49 required V12 test files and 1,340 parameterized node IDs with deterministic, disjoint fail-closed test shards. Exactness-heavy P1.7 reference tests are isolated without changing model mathematics; each job captures per-test durations and CPU identity. The existing `v12-required-verify` branch-protection check remains a mandatory aggregator. PR and postmerge push evidence must both be GREEN before production governance is declared recovered.
 
 ## Core architecture
 

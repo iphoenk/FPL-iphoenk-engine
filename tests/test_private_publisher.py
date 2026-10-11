@@ -186,6 +186,30 @@ def test_private_publish_ignores_engineering_stage3_failure_when_report_gate_pas
     assert receipt["engineering_closure_blocks_report"] is False
 
 
+def test_private_publish_rejects_explicit_stage3_integrity_fail(tmp_path):
+    canonical = tmp_path / "canonical"
+    private = tmp_path / "private"
+    canonical.mkdir()
+    _write_fixture(canonical)
+    (canonical / "stage3_acceptance.json").write_text(
+        json.dumps({
+            "status": "FAIL",
+            "acceptance_class": "INTEGRITY_FAIL",
+            "failures": ["S02_OBSERVATION_TIMESTAMP_INVALID"],
+        }), encoding="utf-8",
+    )
+    with pytest.raises(PrivatePublishError, match="STAGE3_INTEGRITY_FAIL_CANNOT_PUBLISH_READY_FULL"):
+        publish_private_output(
+            canonical_dir=canonical,
+            private_root=private,
+            run_id="synthetic-invalid-observation",
+            season="2026-27",
+            model_sha="a" * 40,
+            runtime_sha="b" * 40,
+        )
+    assert not (private / "latest").exists()
+
+
 def test_latest_pointer_advances_across_distinct_occurrences_without_mutating_history(tmp_path):
     canonical = tmp_path / "canonical"
     private = tmp_path / "private"

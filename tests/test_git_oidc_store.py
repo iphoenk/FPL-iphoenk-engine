@@ -150,3 +150,19 @@ def test_two_distinct_runners_cannot_both_claim_grant(checkout, tmp_path):
         outcome = list(workers.map(lambda pair: claim(*pair), ((one, "one"), (two, "two"))))
     assert sorted(outcome) == ["BLOCKED", "CLAIMED"]
     assert one.load().phase == "IN_FLIGHT"
+
+
+def test_existing_ciphertext_read_failure_is_not_empty_enrollment(checkout, monkeypatch):
+    _, repo, key = checkout
+    store = module.EncryptedGitCredentialStore(str(repo), key)
+    store.compare_and_swap(0, Credential(1, "READY", "dummy-refresh-existing"))
+    real = module._git
+
+    def unreadable(root, *args, **kwargs):
+        if args[:1] == ("show",):
+            raise RotationBlocked("CREDENTIAL_STORE_GIT_OPERATION_FAILED")
+        return real(root, *args, **kwargs)
+
+    monkeypatch.setattr(module, "_git", unreadable)
+    with pytest.raises(RotationBlocked, match="GIT_OPERATION_FAILED"):
+        store.load()

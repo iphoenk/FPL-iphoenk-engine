@@ -15,6 +15,7 @@ on:
       - "tests/test_data_platform_*.py"
       - "tests/test_data_platform_production_acceptance.py"
       - "tests/test_private_data_boundary.py"
+      - "tests/test_rotating_oidc_contract.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
       - ".github/workflows/v6-scheduler-watchdog.yml"
@@ -36,6 +37,7 @@ on:
       - "tests/test_data_platform_*.py"
       - "tests/test_data_platform_production_acceptance.py"
       - "tests/test_private_data_boundary.py"
+      - "tests/test_rotating_oidc_contract.py"
       - ".github/workflows/v6-ci.yml"
       - ".github/workflows/v6-natural-data-ingestion.yml"
       - ".github/workflows/v6-scheduler-watchdog.yml"
@@ -158,6 +160,28 @@ jobs:
           tests/test_data_platform_*.py
           tests/test_data_platform_production_acceptance.py
           tests/test_private_data_boundary.py
+          tests/test_rotating_oidc_contract.py
+
+  oidc-rotation-contract:
+    name: oidc-rotation-contract
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-v6-ci.lock
+      - name: Install hash-locked test dependencies
+        run: python -m pip install --require-hashes -r requirements-v6-ci.lock
+      - name: Assert fail-closed OIDC rotation contracts with fake tokens only
+        run: python -m pytest -q tests/test_rotating_oidc_contract.py
 
   v6-publisher-config:
     name: v6-publisher-config

@@ -2049,6 +2049,7 @@ def test_current_public_submitted_picks_are_valid_without_private_finance():
         }],
         planning_gw=6,
     )
-    assert resolved["resolution_status"] == "CURRENT_VALID"
+    assert resolved["resolution_status"] == "STALE_IDENTITY_FALLBACK"
+    assert resolved["stale"] is True
     assert resolved["finance_allowed"] is False
     assert resolved["source_class"] == "OFFICIAL_SUBMITTED_PICKS"

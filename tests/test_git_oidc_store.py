@@ -55,6 +55,27 @@ def test_encrypted_cas_first_version_and_readback(checkout):
     assert b"dummy-refresh" not in history
 
 
+def test_cas_push_uses_authenticated_parent_checkout(checkout, monkeypatch):
+    _, repo, key = checkout
+    actual_pushes = []
+    original = module._git
+
+    def record_push(directory, *args, **kwargs):
+        if args and args[0] == "push":
+            actual_pushes.append((Path(directory).resolve(), args[-1]))
+        return original(directory, *args, **kwargs)
+
+    monkeypatch.setattr(module, "_git", record_push)
+    store = module.EncryptedGitCredentialStore(str(repo), key)
+    store.compare_and_swap(0, Credential(1, "READY", "dummy-refresh-value"))
+    assert len(actual_pushes) == 1
+    checkout_root, refspec = actual_pushes[0]
+    assert checkout_root == repo.resolve()
+    assert refspec.endswith(":refs/heads/main")
+    assert not refspec.startswith("HEAD:")
+    assert store.load().phase == "READY"
+
+
 def test_cas_conflict_rejects_stale_writer(checkout):
     _, repo, key = checkout
     store = module.EncryptedGitCredentialStore(str(repo), key)

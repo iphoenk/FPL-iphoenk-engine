@@ -152,9 +152,15 @@ class EncryptedGitCredentialStore:
                     _git(work, "-c", "user.name=fpl-oidc-auth-bot",
                          "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
                          "commit", "--quiet", "-m", "security(private): advance encrypted OIDC credential state")
-                    # Never force, rebase or merge a grant claim.
+                    # Never force, rebase or merge a grant claim. Use the original
+                    # private checkout for the push: actions/checkout provisions
+                    # repository write authentication there, not necessarily in
+                    # a detached auxiliary worktree on all runner Git versions.
+                    # Resolve the exact new commit, never push the checkout HEAD.
+                    commit_sha = _git(work, "rev-parse", "HEAD").decode("ascii").strip()
                     try:
-                        _git(work, "push", "--quiet", "origin", "HEAD:refs/heads/main")
+                        _git(self.directory, "push", "--quiet", "origin",
+                             f"{commit_sha}:refs/heads/main")
                         pushed = True
                     except RotationBlocked:
                         # A non-FF push can race a non-auth report publisher.

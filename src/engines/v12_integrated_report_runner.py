@@ -1150,6 +1150,7 @@ def _personal_evidence_resolution(
     return select_personal_evidence(
         candidates,
         planning_gw=planning_gw,
+        expected_entry_id=3462711,
     )
 
 def _position_from_official(row: Mapping[str, Any]) -> str:
@@ -8766,6 +8767,10 @@ def run_deep(
                     "source": (personal_resolution or {}).get("source"),
                     "observed_at": (personal_resolution or {}).get("observed_at"),
                     "applicable_gw": (personal_resolution or {}).get("gw"),
+                    "planning_gw": planning_gw,
+                    "entry_id": (
+                        (personal_resolution or {}).get("payload") or {}
+                    ).get("entry_id"),
                     "resolution_status": (personal_resolution or {}).get("resolution_status"),
                     "auth_state": str(
                         private_current_team.get("auth_state") or "UNAVAILABLE"

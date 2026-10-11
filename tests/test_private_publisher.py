@@ -190,7 +190,9 @@ def test_private_publish_rejects_explicit_stage3_integrity_fail(tmp_path):
     canonical = tmp_path / "canonical"
     private = tmp_path / "private"
     canonical.mkdir()
-    _write_fixture(canonical)
+    bundle = _write_fixture(canonical)
+    bundle["delivery_status"] = "READY_FULL"
+    (canonical / "report_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
     (canonical / "stage3_acceptance.json").write_text(
         json.dumps({
             "status": "FAIL",

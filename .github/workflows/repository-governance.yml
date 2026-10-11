@@ -471,7 +471,7 @@ jobs:
               accepted = json.loads(zf.read(json_names[0]))
 
           checks = {
-              "schema": accepted.get("schema") == "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V2",
+              "schema": accepted.get("schema") == "V12_RUNTIME_CROSS_CPU_ACCEPTANCE_V3",
               "status": accepted.get("status") == "PASS",
               "proof_mode": accepted.get("proof_mode") == "DIRECT_CURRENT_HEAD_MULTI_CPU",
               "head": accepted.get("current_head") == proof["proof_head"],

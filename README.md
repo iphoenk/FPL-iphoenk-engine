@@ -1,11 +1,13 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-11T10:03:59+07:00`
+> **Last runtime/documentation sync:** `2026-10-11T10:21:00+07:00`
 
 A governed Fantasy Premier League decision-support engine combining public football facts, probabilistic modelling, full-universe discovery, squad optimisation, Monte Carlo, mini-league context, and private report delivery.
 
 > **V6 establishes factual truth. Canonical V12 interprets those facts for FPL decisions. Manager-specific state and reports remain private.**
 
+
+- **Owner GW7 Palmer/Saka paired MC (11 Oct 2026):** an explicit owner-only `owner_midfield_mc=true` DEEP issue command evaluates HOLD vs Bruno+Ødegaard to Palmer+Mbeumo or Saka+Mbeumo with existing unchanged P1.7/P1.4 canonical 500K paired worlds (1/3/5GW). The same-occurrence private warm state is mandatory; both transfer packages carry an assumed 1FT/-4 hit. Results are private-only, while latest rival ownership is descriptive and future Top-3 odds remain unmodelled. No natural scheduler or submitted squad is changed. (PR #963)
 
 - **OIDC controlled-first-grant gate (11 Oct 2026):** after encrypted iPhone enrollment, owner may choose `CONTROLLED_ONCE` in existing V6 auth probe to test a single official refresh without enabling rotating auth for natural jobs. Possible Safari session collision must be understood; live grant, persistent rotation, /me identity, subsequent reuse and natural V12 delivery are separately verified. Restored hard cross-CPU governance proof from direct 3-model PASS run 38101198457 (not waived). [Security runbook](docs/security/fpl_oidc_rotating_refresh_20261011.md).
 

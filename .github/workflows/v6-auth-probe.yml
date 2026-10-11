@@ -3,6 +3,15 @@ run-name: FPL private auth probe
 
 on:
   workflow_dispatch:
+    inputs:
+      auth_attempt:
+        description: "CONTROLLED_ONCE may rotate FPL Safari token; owner only. Choose NORMAL otherwise."
+        required: true
+        type: choice
+        default: NORMAL
+        options:
+          - NORMAL
+          - CONTROLLED_ONCE
   issue_comment:
     types: [created]
 
@@ -16,7 +25,13 @@ concurrency:
 jobs:
   private-auth-probe:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (
+          inputs.auth_attempt != 'CONTROLLED_ONCE' ||
+          github.actor == github.repository_owner
+        )
+      ) ||
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
@@ -38,7 +53,7 @@ jobs:
       - name: Install locked read-only client dependencies
         run: python -m pip install --require-hashes -r requirements-v6.lock
       - name: Checkout private rotating credential store (only when opted in)
-        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' }}
+        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' || (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'CONTROLLED_ONCE') }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: iphoenk/fpl-reports-private
@@ -48,7 +63,8 @@ jobs:
           persist-credentials: true
       - name: Probe /me then /my-team with safe HTTP-only output
         env:
-          FPL_AUTH_MODE: ${{ vars.FPL_AUTH_MODE || 'disabled' }}
+          FPL_AUTH_MODE: ${{ (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'CONTROLLED_ONCE') && 'rotating_oidc' || vars.FPL_AUTH_MODE || 'disabled' }}
+          FPL_OIDC_OWNER_CONTROLLED_GRANT: ${{ (github.event_name == 'workflow_dispatch' && inputs.auth_attempt == 'CONTROLLED_ONCE') && 'true' || 'false' }}
           FPL_SESSION_B64: ${{ secrets.FPL_SESSION_B64 }}
           FPL_ACCESS_TOKEN: ${{ secrets.FPL_ACCESS_TOKEN }}
           FPL_OIDC_CLIENT_ID: ${{ vars.FPL_OIDC_CLIENT_ID }}

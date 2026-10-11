@@ -2266,6 +2266,12 @@ def _stage3_visible_package_surface(
             "actual_paths": monte_carlo.get("actual_paths"),
             "seed": monte_carlo.get("seed"),
             "horizons": monte_carlo.get("horizons"),
+            # Preserve the CANONICAL P1.4 route/comparator lineage.
+            # Checkpoint deltas are for this route at the final MC horizon,
+            # NOT necessarily the S14 governing HOLD or best challenger.
+            "selected_route_id": monte_carlo.get("selected_route_id"),
+            "route_ids": monte_carlo.get("route_ids"),
+            "package_integration": monte_carlo.get("package_integration"),
             "convergence_evidence": monte_carlo.get(
                 "convergence_evidence"
             ),

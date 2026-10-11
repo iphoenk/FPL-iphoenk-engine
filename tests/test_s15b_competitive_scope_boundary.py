@@ -32,3 +32,17 @@ def test_s15b_competitive_scope_rebind_does_not_inherit_league_denominator():
         "includes_us": False,
         "coverage_pct": 88.9,
     }
+
+
+
+def test_s15b_deep_assembly_has_competitive_rebind_before_rendering():
+    """Guard the active DEEP path, not only the MINI_LEAGUE_ONLY path."""
+    from pathlib import Path
+
+    source = Path("src/engines/v12_integrated_report_runner.py").read_text(
+        encoding="utf-8"
+    )
+    deep_anchor = "mini_deep_detail = _rebind_s15b_competitive_scope(mini_deep_detail)"
+    assert source.count(deep_anchor) >= 2
+    assert "**mini_deep_detail," in source
+    assert "**s15b_detail," in source

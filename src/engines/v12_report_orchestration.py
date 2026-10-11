@@ -4178,15 +4178,13 @@ def _render_deep_visible_contract_lines(
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
         lines.extend(_markdown_table(
-            ("Player", "Pos", "Opponent", "Pstart", "DNP", "xMins", "Pstart evidence", "1GW xPts", "3GW", "5GW", "Note"),
+            ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
                 r.get("player") or r.get("name"),
                 r.get("position"),
                 r.get("opponent"),
                 r.get("p_start"),
-                r.get("p_dnp"),
                 r.get("xmins"),
-                _compact(r.get("p_start_evidence") or {"quality": "SOURCE_UNAVAILABLE"}),
                 r.get("projection_1gw"),
                 r.get("projection_3gw"),
                 r.get("projection_5gw"),
@@ -4197,6 +4195,18 @@ def _render_deep_visible_contract_lines(
                         r.get("price_relevance"),
                     ) if v not in (None, "", "NONE_MATERIAL", [])
                 ) or "No material note",
+            ) for r in rows],
+        ))
+        lines.append("#### PSTART EVIDENCE / DNP AUDIT")
+        lines.extend(_markdown_table(
+            ("Player", "P(DNP)", "Pstart evidence", "Confidence", "Signals", "Binding"),
+            [(
+                r.get("player") or r.get("name"),
+                r.get("p_dnp"),
+                (r.get("p_start_evidence") or {}).get("quality", "SOURCE_UNAVAILABLE"),
+                (r.get("p_start_evidence") or {}).get("confidence", "UNAVAILABLE"),
+                (r.get("p_start_evidence") or {}).get("signal_count", "UNAVAILABLE"),
+                (r.get("p_start_evidence") or {}).get("model_probability_agrees", "UNAVAILABLE"),
             ) for r in rows],
         ))
         authority = dict(payload.get("current15_authority") or {})

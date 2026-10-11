@@ -179,3 +179,32 @@ def test_s08_variance_uses_existing_canonical_pmf_variance_field():
     })
     assert "| Alpha | 0.08 | 9 | 23.75 | 0.1 |" in text
     assert "CAPTAIN DECISION NOT LOCKED" in text
+
+def test_s02_warns_about_uniform_cohort_without_recomputing_odds():
+    rows = [
+        {"name": f"Player {i}", "p_start": 0.8299 if i < 14 else 0.7489,
+         "p_dnp": 0.09, "xmins": 69,
+         "p_start_evidence": {
+             "quality": "PLAYER_CONDITIONED",
+             "confidence": "HIGH",
+             "signals": ["neutral_prior", "season_start_rate"],
+             "signal_count": 2,
+         }}
+        for i in range(15)
+    ]
+    text = _visible("S02", {"rows": rows})
+    assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" in text
+    assert "14/15 players share P(start)=0.8299" in text
+    assert "14/14 shared rows lack supplementary" in text
+    assert "published equality does NOT prove equal individual starting odds" in text
+    assert "| Player 0 |" in text and "| Player 14 |" in text
+
+
+def test_s02_no_cohort_warning_when_odds_are_differentiated():
+    rows = [
+        {"name": f"Player {i}", "p_start": round(0.60 + i * 0.02, 4),
+         "xmins": 68, "p_start_evidence": {"signals": ["season_start_rate"]}}
+        for i in range(15)
+    ]
+    text = _visible("S02", {"rows": rows})
+    assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" not in text

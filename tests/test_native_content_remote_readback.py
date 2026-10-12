@@ -147,3 +147,11 @@ def test_deep_degraded_without_serving_markdown_uses_report_body(tmp_path: Path)
     verified = json.loads(receipt_path.read_text(encoding="utf-8"))
     assert verified["private_remote_readback"] == "PASS"
     assert verified["native_content_remote_readback"] == "UNVERIFIED"
+
+
+def test_optional_native_manifest_is_only_staged_when_it_exists():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert 'git add --sparse "$REPORT_PATH/delivery_receipt.json"' in text
+    assert 'if [ -f "$REPORT_PATH/native_content.manifest.json" ]; then' in text
+    assert 'git add --sparse "$REPORT_PATH/native_content.manifest.json"' in text
+    assert 'git add --sparse "$REPORT_PATH/native_content.manifest.json" "$REPORT_PATH/delivery_receipt.json"' not in text

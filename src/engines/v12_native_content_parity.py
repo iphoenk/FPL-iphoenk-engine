@@ -1,4 +1,3 @@
-@
 from __future__ import annotations
 
 """Lossless DEEP section transport for a native ChatGPT presentation consumer.

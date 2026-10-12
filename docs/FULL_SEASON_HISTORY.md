@@ -25,3 +25,6 @@ never converted to zeroes.
 V12 production acceptance also binds `p_start`, `xmins`, and DNP evidence from
 the canonical `V12_PLAYER_MINUTES` output, while S08 consumes the canonical
 captain frontier and its distribution/security evidence.
+
+
+The V6 occurrence artifact is stored as `history/official_detail.json.gz` (lossless gzip-compressed JSON) so the complete official universe remains publishable within repository artifact limits. The V12 runner reads this form transparently.

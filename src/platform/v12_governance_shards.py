@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fail-closed deterministic sharding of the exact pre-repair V12 required suite.
 
-The original 49-file pytest selection is preserved, with one new P1 test file, and 1367 collected
-parametrized test node IDs are the 11 October 2026 PR #965 acceptance baseline plus twelve P1 evidence regressions.
-No tests are skipped, deselected, or replaced by subset fixtures.
+The 49-file reviewed V12 suite is expanded to 50 required files and 1375 collected
+pytest node IDs, adding 8 native remote-readback regression cases. No tests are
+skipped, deselected, or replaced by subset fixtures.
 """
 from __future__ import annotations
 
@@ -62,6 +62,7 @@ REQUIRED_FILES = [
     "tests/test_personal_data_plane.py",
     "tests/test_private_delivery_security.py",
     "tests/test_private_publisher.py",
+    "tests/test_native_content_remote_readback.py",
     "tests/test_data_platform_scheduler_authority.py",
     "tests/test_data_platform_scheduler_recovery_guard.py",
     "tests/test_data_platform_scheduler_watchdog.py",
@@ -70,7 +71,7 @@ REQUIRED_FILES = [
     "tests/test_data_platform_precompute_control.py",
     "tests/test_runtime_cross_cpu_proof_registry.py"
 ]
-BASELINE_TOTAL = 1367
+BASELINE_TOTAL = 1375
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

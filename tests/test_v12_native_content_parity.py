@@ -16,36 +16,36 @@ from src.runtime_v6.domains.report_plane.delivery_integrity import (
 
 
 def _source(ids=DEEP_MANDATORY_SECTIONS):
-    header = "FPL MASTER V12 — DEEP REPORT\\nSlot: 2026-10-12T16:32:00+07:00\\n\\n"
+    header = "FPL MASTER V12 — DEEP REPORT\nSlot: 2026-10-12T16:32:00+07:00\n\n"
     sections = []
     for section_id in ids:
         number = section_id[1:].lstrip("0")
         if section_id == "S06":
             body = (
-                "Status: COMPLETE\\n"
-                "<style>.pitch { color: green; }</style>\\n"
-                "<section class='pitch'>C / VC</section>\\n"
-                "Captain: Haaland; Vice: Verbruggen\\n"
+                "Status: COMPLETE\n"
+                "<style>.pitch { color: green; }</style>\n"
+                "<section class='pitch'>C / VC</section>\n"
+                "Captain: Haaland; Vice: Verbruggen\n"
             )
         elif section_id == "S15B":
             body = (
-                "Status: COMPLETE\\n"
-                "| Player | Owned | Captain | EO |\\n"
-                "| --- | --- | --- | --- |\\n"
+                "Status: COMPLETE\n"
+                "| Player | Owned | Captain | EO |\n"
+                "| --- | --- | --- | --- |\n"
                 + "".join(
-                    f"| Player {i} | {i}/58 | {i}/58 | {i}.0% |\\n"
+                    f"| Player {i} | {i}/58 | {i}/58 | {i}.0% |\n"
                     for i in range(58)
                 )
             )
         elif section_id == "S16":
             body = "".join(
-                f"### PLAYER {i} — Player {i}\\n"
-                f"P(start): {i / 100:.2f}; xMins: {i + 45}\\n"
+                f"### PLAYER {i} — Player {i}\n"
+                f"P(start): {i / 100:.2f}; xMins: {i + 45}\n"
                 for i in range(1, 16)
             )
         else:
-            body = "Status: COMPLETE\\nValue: 0.1234; UNAVAILABLE stays UNAVAILABLE\\n"
-        sections.append(f"## {number}. SECTION {section_id}\\n{body}\\n")
+            body = "Status: COMPLETE\nValue: 0.1234; UNAVAILABLE stays UNAVAILABLE\n"
+        sections.append(f"## {number}. SECTION {section_id}\n{body}\n")
     return header + "".join(sections)
 
 

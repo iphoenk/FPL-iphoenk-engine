@@ -4663,6 +4663,22 @@ def _render_deep_visible_contract_lines(
                 return "NOT_CALIBRATED"
             return str(value)
 
+        def eta_label(row: Mapping[str, Any]) -> str:
+            # An ETA is only rendered when the producer bound a date/window.
+            # Otherwise expose the governed reason/state; never turn a missing
+            # crossing into a fabricated date or a generic actionable signal.
+            for field in ("estimated_change_date_wib", "estimated_change_window"):
+                value = row.get(field)
+                if value not in (None, ""):
+                    return str(value)
+            state = row.get("date_state")
+            reason = row.get("eta_reason") or row.get("eta_context")
+            if state not in (None, "", "UNAVAILABLE", "DATE_UNAVAILABLE"):
+                return str(state)
+            if reason not in (None, ""):
+                return f"ETA_UNAVAILABLE ({reason})"
+            return "ETA_UNAVAILABLE (NO_SUPPORTED_CROSSING)"
+
         lines.extend(_markdown_table(
             ("Player", "Price", "Direction", "Progress"),
             [(
@@ -4678,10 +4694,7 @@ def _render_deep_visible_contract_lines(
             [(
                 r.get("player") or r.get("player_name") or r.get("name"),
                 strength_label(r),
-                r.get("estimated_change_date_wib")
-                or r.get("estimated_change_window")
-                or r.get("date_state")
-                or "DATE_UNAVAILABLE",
+                eta_label(r),
             ) for r in rows],
         ))
         if rows:

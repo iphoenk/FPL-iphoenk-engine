@@ -31,3 +31,6 @@ The V6 occurrence artifact is stored as `history/official_detail.json.gz` (lossl
 
 
 Artifact transport note (12 Oct 2026): the complete occurrence-bound `history/official_detail.json.gz` is lossless gzip JSON. Compression changes storage representation only; it does not reduce the Official FPL universe, historical GW range, fixture-level rows, status states, or coverage gate.
+
+
+Analytics acceptance binding (12 Oct 2026): the V12 runner first checks the canonical full-history paths and then searches only for the exact `official_detail.json`/`official_detail.json.gz` artifact names inside the checked-out runtime tree. Captain acceptance consumes the canonical S08 frontier/profile surface; it does not create a second captain authority.

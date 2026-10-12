@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed deterministic sharding of the exact pre-repair V12 required suite.
 
-The 49-file reviewed V12 suite is expanded to 50 required files and 1375 collected
+The prior 50-file V12 suite is expanded to 51 required files and 1375 collected
 pytest node IDs, adding 8 native remote-readback regression cases. No tests are
 skipped, deselected, or replaced by subset fixtures.
 """

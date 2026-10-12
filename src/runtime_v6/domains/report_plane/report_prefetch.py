@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,7 +46,79 @@ from .prefetch_contract import (
     write_json,
 )
 from .security import safe_error
+from src.engines.official_history_reconciliation import build_full_season_history
 
+
+def _build_full_history_artifact(
+    *, client: Any, bootstrap_payload: dict[str, Any], fixtures: list[dict[str, Any]],
+    planning_gw: int | None, generated_at: str, workers: int = 12,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Fetch the official element-summary universe for the current V6 occurrence."""
+    elements = [
+        row for row in (bootstrap_payload.get("elements") or [])
+        if isinstance(row, dict) and row.get("id") is not None
+    ]
+    ids = sorted({int(row["id"]) for row in elements})
+    summaries: dict[str, Any] = {}
+    health: dict[str, Any] = {}
+    if not ids:
+        return {}, {"status": "UNAVAILABLE", "expected_players": 0, "covered_players": 0}
+    def fetch(element_id: int) -> tuple[int, dict[str, Any]]:
+        result = client.element_summary(element_id)
+        return element_id, result
+    with ThreadPoolExecutor(max_workers=max(1, min(int(workers), len(ids)))) as pool:
+        futures = [pool.submit(fetch, element_id) for element_id in ids]
+        for future in as_completed(futures):
+            element_id, result = future.result()
+            status = str(result.get("status") or "UNAVAILABLE")
+            health[str(element_id)] = {
+                "status": status,
+                "http_status": result.get("http_status"),
+                "checked_at": result.get("checked_at"),
+                "payload_digest": result.get("payload_digest"),
+            }
+            if status == "LIVE" and isinstance(result.get("payload"), dict):
+                payload = result["payload"]
+                summaries[str(element_id)] = {
+                    "fixtures": payload.get("fixtures") or [],
+                    "history": payload.get("history") or [],
+                    "history_past": payload.get("history_past") or [],
+                }
+    snapshot = {
+        "generated_at": generated_at,
+        "bootstrap": bootstrap_payload,
+        "fixtures": fixtures,
+        "phase": {"current_gw": int(planning_gw or 1)},
+    }
+    full_history = build_full_season_history(
+        snapshot=snapshot,
+        detail={"element_summaries": summaries},
+    )
+    full_history["generated_at"] = generated_at
+    full_history["provenance"]["runtime_artifact"] = "V6_REPORT_PREFETCH"
+    full_history["provenance"]["request_health"] = health
+    artifact = {
+        "schema_version": 1,
+        "contract": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1",
+        "generated_at": generated_at,
+        "authority": "OFFICIAL_FPL",
+        "element_summaries": summaries,
+        "full_season_history": full_history,
+        "enrichment": {
+            "status": "AVAILABLE" if len(summaries) == len(ids) else "PARTIAL",
+            "expected_players": len(ids),
+            "covered_players": len(summaries),
+            "workers": max(1, min(int(workers), len(ids))),
+            "health": health,
+        },
+    }
+    return artifact, {
+        "status": "AVAILABLE" if len(summaries) == len(ids) else "PARTIAL",
+        "expected_players": len(ids),
+        "covered_players": len(summaries),
+        "request_count": len(ids),
+        "failed_requests": len(ids) - len(summaries),
+    }
 
 _AUTH_ACTION_BY_STATE = {
     "AUTH_AVAILABLE": "NONE",
@@ -875,6 +948,32 @@ class PrefetchService:
                     }
                 )
 
+        full_history_status = "NOT_REQUESTED"
+        if report_kind == "full_master" and client and bootstrap_payload:
+            try:
+                fixtures_for_history = []
+                fixture_method = getattr(client, "fixtures", None)
+                fixture_result = fixture_method() if callable(fixture_method) else {}
+                if fixture_result.get("status") == "LIVE" and isinstance(fixture_result.get("payload"), list):
+                    fixtures_for_history = [dict(row) for row in fixture_result["payload"] if isinstance(row, dict)]
+                detail_artifact, history_health = _build_full_history_artifact(
+                    client=client, bootstrap_payload=bootstrap_payload,
+                    fixtures=fixtures_for_history, planning_gw=gw,
+                    generated_at=generated_at,
+                    workers=int(self.config.get("element_summary_workers", 12)),
+                )
+                full_history_status = history_health.get("status", "UNAVAILABLE")
+                history_relative = "history/official_detail.json"
+                write_json(self.output_root / history_relative, detail_artifact, secrets=secrets)
+                artifacts.append(artifact_meta(self.output_root, history_relative))
+            except Exception as exc:
+                full_history_status = "UNAVAILABLE"
+                advisory_source_failures.append({
+                    "domain": "official_fpl_history",
+                    "endpoint_class": "element_summary_universe",
+                    "status": "FAILED",
+                    "error": safe_error(exc),
+                })
         # Independent public MATCH fixture/status refresh: do not reuse a
         # stale core Official snapshot or depend on authenticated /my-team.
         if report_kind == "match_mode" and client is not None and gw is not None:

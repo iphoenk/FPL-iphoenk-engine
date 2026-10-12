@@ -110,18 +110,40 @@ def _build_full_history_artifact(
     if not ids:
         return {}, {"status": "UNAVAILABLE", "expected_players": 0, "covered_players": 0}
     def fetch(element_id: int) -> tuple[int, dict[str, Any]]:
-        result = client.element_summary(element_id)
-        return element_id, result
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                result = client.element_summary(element_id)
+                if str(result.get("status") or "").upper() == "LIVE" or attempt == 2:
+                    return element_id, result
+            except Exception as exc:
+                last_error = exc
+            if attempt < 2:
+                time.sleep(min(0.25 * (2 ** attempt), 1.0))
+        return element_id, {
+            "status": "UNAVAILABLE",
+            "error": safe_error(last_error) if last_error else "element_summary_retry_exhausted",
+        }
     with ThreadPoolExecutor(max_workers=max(1, min(int(workers), len(ids)))) as pool:
         futures = [pool.submit(fetch, element_id) for element_id in ids]
         for future in as_completed(futures):
-            element_id, result = future.result()
+            try:
+                element_id, result = future.result()
+            except Exception as exc:
+                # A single player request must not erase the rest of the
+                # official universe. The health record remains explicit.
+                health[f"future-{len(health) + 1}"] = {
+                    "status": "UNAVAILABLE",
+                    "error": safe_error(exc),
+                }
+                continue
             status = str(result.get("status") or "UNAVAILABLE")
             health[str(element_id)] = {
                 "status": status,
                 "http_status": result.get("http_status"),
                 "checked_at": result.get("checked_at"),
                 "payload_digest": result.get("payload_digest"),
+                "error": result.get("error"),
             }
             if status == "LIVE" and isinstance(result.get("payload"), dict):
                 payload = result["payload"]

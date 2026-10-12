@@ -1,3 +1,4 @@
+@
 from __future__ import annotations
 
 from hashlib import sha256
@@ -85,6 +86,25 @@ def test_native_ui_acceptance_requires_transport_and_remote_readback():
         user_visible_acceptance=True,
         transport_status="PASS",
         remote_readback="UNVERIFIED",
+        files=files,
+        canonical_body=body,
+    )
+    assert receipt["verification_status"] == "UNVERIFIED"
+
+
+def test_native_ui_acceptance_defaults_fail_closed_without_transport_evidence():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    receipt = build_native_ui_acceptance(
+        manifest,
+        rendered_section_ids=manifest["section_ids"],
+        rendered_content=body,
+        user_visible_acceptance=True,
         files=files,
         canonical_body=body,
     )

@@ -1,6 +1,9 @@
 from pathlib import Path
 
-from src.engines.v12_integrated_report_runner import _analytics_production_acceptance
+from src.engines.v12_integrated_report_runner import (
+    _analytics_production_acceptance,
+    _s08_acceptance_from_canonical,
+)
 from src.engines.v12_deep_delivery import validate_s19_canonical_binding
 
 
@@ -47,6 +50,28 @@ def test_missing_canonical_frontier_is_partial_not_text_based_pass(tmp_path: Pat
     assert acceptance["s08_captain"]["evidence_status"] == "PARTIAL"
     assert acceptance["s08_captain"]["frontier_count"] == 0
     assert acceptance["s08_captain"]["canonical_binding"] is False
+
+
+def test_s08_acceptance_is_rebuilt_from_rendered_canonical_content():
+    actual = _s08_acceptance_from_canonical({
+        "decision_state": "LOCK",
+        "captain_frontier": [
+            {"element_id": 11, "player": "Haaland"},
+            {"element_id": 12, "player": "De Cuyper"},
+        ],
+        "s08_acceptance": {
+            "evidence_status": "PARTIAL",
+            "frontier_count": 0,
+            "canonical_binding": False,
+        },
+    })
+    assert actual == {
+        "evidence_status": "PASS",
+        "decision_state": "LOCK",
+        "frontier_count": 2,
+        "frontier_source": "S08_CANONICAL_CAPTAIN_FRONTIER",
+        "canonical_binding": True,
+    }
 
 
 def _valid_sections():

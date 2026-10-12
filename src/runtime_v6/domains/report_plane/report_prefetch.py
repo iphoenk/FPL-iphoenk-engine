@@ -1019,7 +1019,19 @@ class PrefetchService:
                     ensure_ascii=False,
                 ).encode("utf-8")
                 history_path.write_bytes(gzip.compress(history_payload, compresslevel=9))
+                # Keep a small uncompressed acceptance sidecar with the complete
+                # reconciled coverage metadata. The gzip artifact remains the
+                # lossless raw source; the sidecar avoids runtime dependence on
+                # decoding a large binary blob just to bind production evidence.
+                summary_relative = "history/official_detail.json"
+                summary_artifact = {
+                    key: value
+                    for key, value in detail_artifact.items()
+                    if key != "element_summaries"
+                }
+                write_json(self.output_root / summary_relative, summary_artifact, secrets=secrets)
                 artifacts.append(artifact_meta(self.output_root, history_relative))
+                artifacts.append(artifact_meta(self.output_root, summary_relative))
             except Exception as exc:
                 full_history_status = "UNAVAILABLE"
                 advisory_source_failures.append({

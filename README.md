@@ -1,5 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Formation MC human-facing QA repair (12 Oct 2026):** S06/S08/S14/S19 now require the canonical Formation MC table whenever bound formation rows exist, and XI/bench values are rendered as human-facing summaries without Python mapping repr. This changes presentation validation only; MC500K, P1.7, scheduler, and private delivery contracts are unchanged.
 - **Lossless native manifest/chunk transport (12 Oct 2026):** DEEP native content keeps the legacy full artifact for compatibility and publishes a compact manifest plus line-bound section chunks. Producer round-trip and remote readback are fail-closed; transport PASS never implies native ChatGPT UI VERIFIED without an explicit consumer acceptance receipt.
 - **CI trigger note (12 Oct 2026):** controlled S18/S19 verification remains separate from natural acceptance and requires terminal governance evidence on the exact head.
 - **Native consumer gate (12 Oct 2026):** the structured consumer now rejects invalid manifests, missing or reordered chunks, and partial section consumption; `VERIFIED` remains unavailable until transport, remote readback, and user-visible native acceptance pass for one occurrence.
@@ -11,7 +12,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T21:05:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T21:58:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

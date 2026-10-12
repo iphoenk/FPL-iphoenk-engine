@@ -6,7 +6,11 @@ from src.engines.v12_deep_presentation_lock import (
     load_deep_presentation_lock,
     validate_rendered_deep_presentation,
 )
-from src.engines.v12_report_orchestration import _render_package_frontier_lines, _render_deep_visible_contract_lines
+from src.engines.v12_report_orchestration import (
+    _formation_mc_lines,
+    _render_package_frontier_lines,
+    _render_deep_visible_contract_lines,
+)
 
 
 def _heading(sid: str) -> str:
@@ -109,6 +113,50 @@ def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
 def test_rendered_deep_schema_lock_accepts_exact_markdown():
     body, report = _valid_body()
     assert validate_rendered_deep_presentation(body, report) == []
+
+
+def test_formation_mc_table_is_required_in_every_bound_owner_section():
+    body, report = _valid_body()
+    formations = [{
+        "formation": "3-4-3",
+        "actual_paths": 500000,
+        "mean_xpts": 55.0,
+        "p10": 30.0,
+        "p50": 55.0,
+        "p90": 80.0,
+        "variance": 20.0,
+        "captain": "A",
+        "vice_captain": "B",
+        "autosub_probability": 0.1,
+        "convergence": "PASS",
+    }]
+    formation_mc = {"formations": formations, "horizon": {"start_gw": 7, "end_gw": 12}}
+    table = _formation_mc_lines(formation_mc)
+    for sid in ("S06", "S08", "S14", "S19"):
+        for row in report["sections"]:
+            if row["section_id"] == sid:
+                row["content"] = {"formation_mc": formation_mc}
+                break
+        start = body.index(f"## {int(sid[1:])}. TEST")
+        next_start = body.find("\n## ", start + 1)
+        end = len(body) if next_start < 0 else next_start
+        section = body[start:end].rstrip()
+        body = body[:start] + section + "\n" + "\n".join(table) + "\n\n" + body[end:]
+    assert validate_rendered_deep_presentation(body, report) == []
+
+
+def test_formation_mc_renderer_does_not_emit_python_mapping_repr():
+    lines = _formation_mc_lines({
+        "formations": [{
+            "formation": "3-4-3",
+            "actual_paths": 500000,
+            "convergence": "PASS",
+            "xi": [{"player": "A", "position": "MID"}],
+            "bench": {"gk": "B", "order": [{"player": "C"}]},
+        }],
+        "horizon": {"start_gw": 7, "end_gw": 12},
+    })
+    assert not any("{'" in line or "[{'" in line for line in lines)
 
 
 def test_rendered_deep_schema_lock_rejects_old_s01_two_column_renderer():

@@ -124,6 +124,7 @@ from src.models.v12_analytics_foundation import (
 )
 from src.models.v12_stage1_analytics import build_canonical_universe
 from src.models.official_role_evidence import attach_official_role_evidence
+from src.engines.official_history_reconciliation import build_full_season_history
 from src.models.team_strength import build_team_strength
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1109,6 +1110,83 @@ def _official_payload(runtime_root: Path) -> dict[str, Any]:
         "bootstrap": dict(bootstrap),
         "fixtures": [dict(row) for row in fixtures if isinstance(row, Mapping)],
     }
+
+
+def _analytics_production_acceptance(
+    *,
+    runtime_data_root: Path,
+    official: Mapping[str, Any],
+    rows: Sequence[Mapping[str, Any]],
+    captain_surface: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Bind analytics evidence to the exact integrated report occurrence."""
+    detail = _read_json(runtime_data_root / "data" / "official_detail.json", {}) or {}
+    full_history = dict(detail.get("full_season_history") or {})
+    if not full_history:
+        full_history = dict((detail.get("historical_entry") or {}).get("full_season_history") or {})
+    if not full_history:
+        snapshot = dict((official.get("payload") or {}).get("official") or {})
+        if snapshot:
+            full_history = build_full_season_history(snapshot=snapshot, detail=detail)
+    gate = dict(full_history.get("coverage_gate") or {})
+    as_of = dict(full_history.get("as_of") or {})
+    universe = dict(full_history.get("universe") or {})
+    historical_gws = as_of.get("historical_gws") or []
+    history = {
+        "contract": full_history.get("contract") or "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "status": str(gate.get("status") or "UNAVAILABLE").upper(),
+        "planning_gw": as_of.get("planning_gw"),
+        "historical_range": f"GW1-GW{max(historical_gws)}" if isinstance(historical_gws, list) and historical_gws else "UNAVAILABLE",
+        "historical_gws": historical_gws,
+        "covered_players": universe.get("covered_players"),
+        "expected_players": universe.get("expected_players"),
+        "coverage_gate": gate.get("status") or "UNAVAILABLE",
+        "expected_gw_slots": gate.get("expected_gw_slots"),
+        "available_gw_slots": gate.get("available_gw_slots"),
+        "expected_player_slots": gate.get("expected_player_slots"),
+        "missing_records": gate.get("missing_records") or [],
+        "pending_never_coerced_to_zero": gate.get("pending_never_coerced_to_zero") is True,
+        "dnp_and_blank_distinguished": gate.get("dnp_and_blank_distinguished") is True,
+        "double_gameweeks_aggregate_fixture_rows": gate.get("double_gameweeks_aggregate_fixture_rows") is True,
+        "provenance": dict(full_history.get("provenance") or {}),
+        "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
+    }
+    p_rows = [row for row in rows if isinstance(row, Mapping) and row.get("p_start") is not None]
+    p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
+    unique_values = {str(row.get("p_start")) for row in p_rows}
+    pstart = {
+        "evidence_status": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
+        "resolution_status": "FULL_RESOLUTION" if len(unique_values) > 1 else "LIMITED_RESOLUTION",
+        "rows_with_probability": len(p_rows),
+        "rows_with_evidence": len(p_evidence),
+        "formula_owner": "V12_PLAYER_MINUTES",
+        "probability_recomputed_in_materializer": False,
+        "production_bound": True,
+    }
+    frontier = captain_surface.get("captain_frontier") or []
+    decision_state = str(captain_surface.get("captain_state") or captain_surface.get("decision_state") or "UNAVAILABLE").upper()
+    captain = {
+        "evidence_status": "PASS" if isinstance(frontier, list) and bool(frontier) and decision_state in {"LOCK", "PREPARE"} else "PARTIAL",
+        "decision_state": decision_state,
+        "frontier_count": len(frontier) if isinstance(frontier, list) else 0,
+        "lock_requires_all_calibrated_layers": True,
+        "prepare_is_not_executable": decision_state != "LOCK",
+        "production_bound": True,
+    }
+    acceptance = {
+        "contract": "V12_ANALYTICS_PRODUCTION_ACCEPTANCE_V1",
+        "p_start": pstart,
+        "s08_captain": captain,
+        "full_history": {
+            "evidence_status": "PASS" if history["status"] == "PASS" else history["status"],
+            "coverage_gate": history["status"],
+            "planning_gw": history.get("planning_gw"),
+            "historical_range": history.get("historical_range"),
+            "covered_players": history.get("covered_players"),
+            "expected_players": history.get("expected_players"),
+        },
+    }
+    return history, acceptance
 
 
 def _planning_gw(bootstrap: Mapping[str, Any]) -> int:
@@ -6357,6 +6435,14 @@ def refresh_price_only_state(
 
     s02 = dict(section_payloads["S02"].get("content") or {})
     s02["rows"] = all15_rows
+    history_acceptance, analytics_acceptance = _analytics_production_acceptance(
+        runtime_data_root=runtime_data_root,
+        official=official,
+        rows=all15_rows,
+        captain_surface=captain_surface,
+    )
+    s02["full_season_history"] = history_acceptance
+    s02["analytics_acceptance"] = analytics_acceptance
     section_payloads["S02"]["content"] = bound("S02", s02)
 
     s03 = dict(section_payloads["S03"].get("content") or {})
@@ -7065,6 +7151,14 @@ def refresh_mini_league_only_state(
 
     s02 = dict(section_payloads["S02"].get("content") or {})
     s02["rows"] = all15_rows
+    history_acceptance, analytics_acceptance = _analytics_production_acceptance(
+        runtime_data_root=runtime_data_root,
+        official=official,
+        rows=all15_rows,
+        captain_surface=captain_surface,
+    )
+    s02["full_season_history"] = history_acceptance
+    s02["analytics_acceptance"] = analytics_acceptance
     section_payloads["S02"]["content"] = bound("S02", s02)
 
     section_payloads["S06B"] = _section(
@@ -7163,7 +7257,10 @@ def refresh_mini_league_only_state(
     section_payloads["S18"]["content"] = bound("S18", s18)
     section_payloads["S19"]["content"] = bound(
         "S19",
-        {"final_judgement": final_judgement},
+        {
+            "final_judgement": final_judgement,
+            "analytics_acceptance": analytics_acceptance,
+        },
     )
 
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")

@@ -7,6 +7,7 @@ from src.engines.v12_formation_monte_carlo import (
     FormationMonteCarloError,
     run_formation_monte_carlo,
 )
+from src.engines.v12_report_orchestration import _formation_mc_lines
 
 
 def _routes():
@@ -123,4 +124,47 @@ def test_formation_mc_rejects_non_current15_route():
             route_builder=lambda **_: routes,
             simulator=_fake_simulator,
         )
+
+
+def test_formation_mc_renderer_exposes_all_rows_and_route_separation():
+    payload = {
+        "horizon": {"start_gw": 7, "end_gw": 12},
+        "formations": [
+            {
+                "formation": formation,
+                "actual_paths": 500000,
+                "convergence": "PASS",
+                "xi": list(range(1, 12)),
+                "bench": {"gk": 15, "order": [12, 13, 14]},
+                "captain": 1,
+                "vice_captain": 2,
+                "mean_xpts": 10,
+                "p10": 1,
+                "p50": 10,
+                "p90": 20,
+                "variance": 2,
+                "autosub_probability": 0.1,
+                "captain_haul_probability": 0.2,
+                "captain_blank_probability": 0.3,
+                "vice_activation_probability": 0.4,
+                "minutes_risk": {"status": "P1_1_PROJECTION_BOUND"},
+            }
+            for formation in FORMATIONS
+        ],
+        "integrity": {
+            "formation_count": 8,
+            "all_legal_formations": True,
+            "all_mc_500k": True,
+            "all_convergence_pass": True,
+            "all_p17_exact": True,
+            "all_current15_bound": True,
+            "no_legacy_mc": True,
+            "no_route_mc_substitution": True,
+        },
+    }
+    rendered = "\n".join(_formation_mc_lines(payload))
+    assert all(formation in rendered for formation in FORMATIONS)
+    assert "GW7-GW12" in rendered
+    assert "| 500000 |" in rendered
+    assert "no_route_mc_substitution=True" in rendered
 

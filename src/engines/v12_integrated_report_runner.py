@@ -128,6 +128,7 @@ from src.models.v12_stage1_analytics import build_canonical_universe
 from src.models.official_role_evidence import attach_official_role_evidence
 from src.engines.official_history_reconciliation import build_full_season_history
 from src.models.team_strength import build_team_strength
+from src.rules import FINANCE_RULES
 
 ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_PATH = ROOT / "control" / "fpl_master_v12" / "FPL_MASTER_CANONICAL_V12.txt"
@@ -2033,6 +2034,26 @@ _EXECUTION_FINANCE_UNAVAILABLE = frozenset(
 )
 
 
+
+
+
+def _resolved_hit_cost_per_extra_transfer(
+    finance: Mapping[str, Any] | None,
+) -> int | None:
+    """Resolve transfer-hit cost from authenticated finance or Official FPL rules.
+
+    Authenticated finance remains authoritative when it supplies a valid value.
+    If the personal payload omits the value, the active verified ruleset supplies
+    the deterministic rule. Missing or malformed rule metadata remains unresolved.
+    """
+    row = dict(finance or {})
+    value = row.get("hit_cost_per_extra_transfer")
+    if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+        return value
+    rule_value = FINANCE_RULES.get("extra_transfer_hit_points")
+    if isinstance(rule_value, int) and not isinstance(rule_value, bool) and rule_value >= 0:
+        return rule_value
+    return None
 def _execution_finance_available(finance: Mapping[str, Any] | None) -> bool:
     row = dict(finance or {})
     return bool(
@@ -8393,9 +8414,7 @@ def run_deep(
                     free_transfers=(finance or {}).get(
                         "free_transfers"
                     ),
-                    hit_cost_per_extra_transfer=(finance or {}).get(
-                        "hit_cost_per_extra_transfer"
-                    ),
+                    hit_cost_per_extra_transfer=_resolved_hit_cost_per_extra_transfer(finance),
                     future_frontier_by_route=None,
                     information_value_by_route={},
                     price_risk_by_route={},
@@ -8460,9 +8479,7 @@ def run_deep(
                     free_transfers=(finance or {}).get(
                         "free_transfers"
                     ),
-                    hit_cost_per_extra_transfer=(finance or {}).get(
-                        "hit_cost_per_extra_transfer"
-                    ),
+                    hit_cost_per_extra_transfer=_resolved_hit_cost_per_extra_transfer(finance),
                     future_frontier_by_route=None,
                     information_value_by_route={},
                     price_risk_by_route={},

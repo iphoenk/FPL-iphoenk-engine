@@ -1,4 +1,5 @@
 # FPL iphoenk Engine v3.39.0
+- **CI trigger note (12 Oct 2026):** controlled S18/S19 verification remains separate from natural acceptance and requires terminal governance evidence on the exact head.
 
 - **Canonical captain/vice presentation closure (12 Oct 2026):** S08 is the only final C/VC decision authority for S06 pitch badges. P1.7 formation-frontier optimizer C/VC assumptions and exact xPts remain preserved as separate score provenance and are not silently recomputed; illegal S08 C/VC outside the selected XI fails closed. This repairs the observed 16:18 controlled DEEP S06_S08_VICE_CANONICAL_MISMATCH without suppressing validation.
 

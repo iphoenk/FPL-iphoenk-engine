@@ -5572,6 +5572,24 @@ def _render_deep_visible_contract_lines(
                 ("Robustness", _simple_status(route.get("robustness"))),
                 ("Action verdict", _simple_status(route.get("action_verdict"))),
             )))
+            economics_state = str(
+                route.get("execution_economics_status") or ""
+            ).upper()
+            economics_fields = (
+                route.get("transfer_cost"),
+                route.get("gw1_net"),
+                route.get("three_gw"),
+                route.get("five_gw"),
+            )
+            economics_complete = (
+                economics_state in {"AVAILABLE", "PASS", "SUPPORTED"}
+                and all(value not in (None, "", "UNAVAILABLE") for value in economics_fields)
+            )
+            lines.append(
+                "S18 TRANSFER ECONOMICS INTEGRITY: "
+                + ("PASS" if economics_complete else "PARTIAL")
+                + "; unavailable economics never makes an alternative executable."
+            )
             # Preserve bounded mini-league decision provenance: the existing
             # semantic acceptance requires football EV and rank-gain utility
             # evidence to remain visible, not buried in the original dict.

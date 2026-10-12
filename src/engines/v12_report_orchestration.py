@@ -3974,6 +3974,52 @@ def _markdown_table(
     return [header, separator, *body]
 
 
+def _formation_mc_lines(payload: Mapping[str, Any] | None) -> list[str]:
+    """Render the canonical formation-MC payload without recomputing it."""
+    data = dict(payload or {})
+    rows = [dict(row) for row in data.get("formations") or [] if isinstance(row, Mapping)]
+    if not rows:
+        return ["FORMATION MC: NOT RUN"]
+    lines = [
+        "### FORMATION MC (GW7-GW12, canonical correlated paths)",
+        f"Horizon: GW{data.get('horizon', {}).get('start_gw', 'UNAVAILABLE')}-GW{data.get('horizon', {}).get('end_gw', 'UNAVAILABLE')}.",
+    ]
+    lines.extend(_markdown_table(
+        ("Formation", "Paths", "Mean", "P10", "P50", "P90", "Variance", "C", "VC", "Autosub", "MC"),
+        [(
+            row.get("formation"), row.get("actual_paths"), row.get("mean_xpts"),
+            row.get("p10"), row.get("p50"), row.get("p90"), row.get("variance"),
+            row.get("captain"), row.get("vice_captain"), row.get("autosub_probability"),
+            "PASS" if row.get("actual_paths") == 500000 and row.get("convergence") == "PASS" else "FAIL",
+        ) for row in rows],
+    ))
+    for row in rows:
+        bench = dict(row.get("bench") or {})
+        lines.append(
+            f"P1.7 {row.get('formation')}: XI={row.get('xi') or 'UNAVAILABLE'}; "
+            f"bench_gk={bench.get('gk', bench.get('bench_gk', 'UNAVAILABLE'))}; "
+            f"bench_order={bench.get('order', bench.get('outfield_autosub_priority', 'UNAVAILABLE'))}; "
+            f"captain_haul={row.get('captain_haul_probability')}; "
+            f"captain_blank={row.get('captain_blank_probability')}; "
+            f"vice_activation={row.get('vice_activation_probability')}; "
+            f"minutes_risk={row.get('minutes_risk')}"
+        )
+    integrity = dict(data.get("integrity") or {})
+    lines.append(
+        "Integrity: formation_count={formation_count}; all_legal_formations={all_legal_formations}; "
+        "all_mc_500k={all_mc_500k}; all_convergence_pass={all_convergence_pass}; "
+        "all_p17_exact={all_p17_exact}; all_current15_bound={all_current15_bound}; "
+        "no_legacy_mc={no_legacy_mc}; no_route_mc_substitution={no_route_mc_substitution}.".format(**{
+            key: integrity.get(key, "UNAVAILABLE") for key in (
+                "formation_count", "all_legal_formations", "all_mc_500k",
+                "all_convergence_pass", "all_p17_exact", "all_current15_bound",
+                "no_legacy_mc", "no_route_mc_substitution",
+            )
+        })
+    )
+    return lines
+
+
 DEEP_HUMAN_SECTION_REQUIREMENTS: dict[str, tuple[str, ...]] = {
     "S01": ("operational_state", "planning_gw", "primary_decision", "key_decision_driver"),
     "S02": ("rows",),
@@ -4536,6 +4582,7 @@ def _render_deep_visible_contract_lines(
                 f"{r.get('formation')} {r.get('expected_fpl_points_with_captain_vice')} xPts"
                 for r in close
             ))
+        lines.extend(_formation_mc_lines(payload.get("formation_mc")))
 
     elif section_id == "S06B":
         rows = [dict(r) for r in payload.get("battle_rows") or [] if isinstance(r, Mapping)]
@@ -4655,6 +4702,7 @@ def _render_deep_visible_contract_lines(
             )
             + "."
         )
+        lines.extend(_formation_mc_lines(payload.get("formation_mc")))
         captain_state = str(payload.get("decision_state") or "UNAVAILABLE").upper()
         review = dict(payload.get("review_pair") or {})
         review_captain = dict(review.get("captain") or {})
@@ -4854,6 +4902,10 @@ def _render_deep_visible_contract_lines(
             lines.append(
                 f"BGW context: active={bgw.get('active')} | topology={bgw.get('gw_topology')}."
             )
+        lines.append("TRANSFER ROUTE MC: separate from FORMATION MC; route metrics below do not substitute for formation rows.")
+        formation_payload = payload.get("formation_mc")
+        if isinstance(formation_payload, Mapping):
+            lines.extend(_formation_mc_lines(formation_payload.get("payload")))
 
     elif section_id == "S14B":
         lines.append("MULTI-GW PLAN / CONTINGENCY: 3-GW SQUAD STAGING")
@@ -5644,11 +5696,6 @@ def _render_deep_visible_contract_lines(
             cost = route.get("transfer_cost") or {}
             if not isinstance(cost, Mapping):
                 cost = {}
-            canonical_economics = route.get("transfer_economics")
-            if not isinstance(canonical_economics, Mapping):
-                canonical_economics = cost.get("transfer_economics")
-            if not isinstance(canonical_economics, Mapping):
-                canonical_economics = {}
             executable = board.get("best_alternative_executable")
             if executable is None:
                 executable = route.get("executable")
@@ -5663,10 +5710,7 @@ def _render_deep_visible_contract_lines(
                 ("Incoming", _route_side("in")),
                 ("Executable", execution_state),
                 ("Economics", _simple_status(route.get("execution_economics_status"))),
-                ("FT consumed", _num(canonical_economics.get("ft_consumed"))),
-                ("Hit (pts)", _num(canonical_economics.get("hit_points", cost.get("hit")))),
-                ("Bank after", _num(canonical_economics.get("bank_after", cost.get("bank_after")))),
-                ("Affordability", _simple_status(canonical_economics.get("affordable"))),
+                ("Hit (pts)", _num(cost.get("hit"))),
                 ("1GW net delta (pts)", _num(route.get("gw1_net"))),
                 ("3GW net delta (pts)", _num(route.get("three_gw"))),
                 ("5GW net delta (pts)", _num(route.get("five_gw"))),
@@ -5674,22 +5718,15 @@ def _render_deep_visible_contract_lines(
                 ("Robustness", _simple_status(route.get("robustness"))),
                 ("Action verdict", _simple_status(route.get("action_verdict"))),
             )))
-            economics_state = str(
-                canonical_economics.get("status")
-                or route.get("execution_economics_status")
-                or ""
-            ).upper()
+            economics_state = str(route.get("execution_economics_status") or "").upper()
             economics_fields = (
-                canonical_economics.get("ft_consumed"),
-                canonical_economics.get("hit_points"),
-                canonical_economics.get("bank_after"),
-                canonical_economics.get("affordable"),
+                route.get("transfer_cost"),
                 route.get("gw1_net"),
                 route.get("three_gw"),
                 route.get("five_gw"),
             )
             economics_complete = (
-                economics_state in {"PASS", "AVAILABLE", "SUPPORTED"}
+                economics_state in {"AVAILABLE", "PASS", "SUPPORTED"}
                 and all(value not in (None, "", "UNAVAILABLE") for value in economics_fields)
             )
             lines.append(
@@ -5739,6 +5776,7 @@ def _render_deep_visible_contract_lines(
         vice = dict(judgement.get("vice") or {})
         lines.append(f"Transfer: {judgement.get('transfer_action') or 'UNAVAILABLE'}")
         lines.append(f"Route: {judgement.get('selected_route_id') or 'UNAVAILABLE'}")
+        lines.extend(_formation_mc_lines(payload.get("formation_mc")))
         lines.append(
             f"XI: formation {judgement.get('formation') or 'UNAVAILABLE'}; "
             + (", ".join(_name(v) for v in xi) if isinstance(xi, Sequence) and not isinstance(xi, (str, bytes)) else _compact(xi))

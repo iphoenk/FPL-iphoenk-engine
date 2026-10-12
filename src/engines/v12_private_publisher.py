@@ -494,6 +494,39 @@ def publish_private_output(
     )
     digest_md = render_private_digest_markdown(digest)
 
+    # Exact-byte, all-section content transport for a future native ChatGPT
+    # consumer. It is private and is NOT proof of user-visible native rendering.
+    native_content_json = None
+    if (
+        report_mode == "DEEP"
+        and delivery_status == "READY_FULL"
+        and (canonical_dir / "serving_report.md").is_file()
+    ):
+        from src.engines.v12_native_content_parity import (
+            NativeContentParityError,
+            build_lossless_native_content,
+        )
+
+        serving_body = (canonical_dir / "serving_report.md").read_text(
+            encoding="utf-8"
+        )
+        raw_sections = (bundle.get("report") or {}).get("sections") if isinstance(
+            bundle.get("report"), Mapping
+        ) else None
+        try:
+            native_content = build_lossless_native_content(
+                canonical_body=serving_body,
+                report_slot=report_slot,
+                canonical_body_sha256=canonical_body_sha,
+                canonical_sections=raw_sections if isinstance(raw_sections, list) else None,
+            )
+        except NativeContentParityError as exc:
+            raise PrivatePublishError(f"NATIVE_CONTENT_PARITY_FAILED:{exc}") from exc
+        native_content_json = (
+            json.dumps(native_content, ensure_ascii=False, separators=(",", ":"), default=str)
+            + "\\n"
+        )
+
     previous_deep_baseline = None
     previous_deep_baseline_json = None
     if (
@@ -590,6 +623,11 @@ def publish_private_output(
     )
     digest_sha = write_text(report_dir / "digest.json", digest_json)
     digest_md_sha = write_text(report_dir / "digest.md", digest_md)
+    native_content_sha = None
+    if native_content_json is not None:
+        native_content_sha = write_text(
+            report_dir / "native_content.json", native_content_json
+        )
     previous_deep_baseline_sha = None
     if previous_deep_baseline_json is not None:
         previous_deep_baseline_sha = write_text(
@@ -614,6 +652,8 @@ def publish_private_output(
             source = canonical_dir / source_name
             if source.is_file():
                 _atomic_replace_bytes(latest_dir / latest_name, source.read_bytes())
+        if native_content_json is not None:
+            _atomic_replace_text(latest_dir / "native_content.json", native_content_json)
         if previous_deep_baseline_json is not None:
             _atomic_replace_text(
                 latest_dir / "previous_deep_baseline.json",
@@ -653,6 +693,11 @@ def publish_private_output(
         "delivery_status": delivery_status or "LEGACY",
         "same_occurrence_recovery_upgrade": recovery_upgrade,
         "serving_snapshot_published": (canonical_dir / "serving_report.json").is_file(),
+        "native_content_transport_status": (
+            "PASS" if native_content_sha is not None else "NOT_APPLICABLE"
+        ),
+        "native_content_sha256": native_content_sha,
+        "native_chatgpt_render_acceptance": "UNVERIFIED",
         "previous_deep_baseline_published": previous_deep_baseline_sha is not None,
         "previous_deep_baseline_sha256": previous_deep_baseline_sha,
         "math_recomputed": False,

@@ -2511,6 +2511,66 @@ def _materialize_canonical_report(
             }
         )
 
+    # S08 is the single captain/vice *decision* authority. P1.7's own
+    # formation-frontier C/VC remains intact as score provenance, but must
+    # never be presented as a second final captain or vice decision.
+    by_id = {str(item.get("section_id")): item for item in sections}
+    s06_row, s08_row = by_id.get("S06"), by_id.get("S08")
+    if (
+        s06_row and s08_row
+        and s06_row.get("state") == "COMPLETE"
+        and s08_row.get("state") == "COMPLETE"
+    ):
+        lineup = dict(s06_row.get("content") or {})
+        decision = dict(s08_row.get("content") or {})
+
+        def _cvc_id(value: Any) -> int:
+            if isinstance(value, Mapping):
+                value = value.get("element_id") or value.get("element")
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        xi_ids = {
+            _cvc_id(value)
+            for value in lineup.get("starting_xi") or []
+        }
+        captain = decision.get("captain")
+        vice = decision.get("vice_captain")
+        captain_id, vice_id = _cvc_id(captain), _cvc_id(vice)
+        if (
+            captain_id <= 0 or vice_id <= 0 or captain_id == vice_id
+            or captain_id not in xi_ids or vice_id not in xi_ids
+        ):
+            raise ReportOrchestrationError(
+                "canonical S08 captain/vice cannot be bound to S06 XI"
+            )
+        p17_captain = lineup.get("captain")
+        p17_vice = lineup.get("vice_captain")
+        if (
+            _cvc_id(p17_captain) != captain_id
+            or _cvc_id(p17_vice) != vice_id
+        ):
+            lineup["lineup_frontier_cvc"] = {
+                "captain": p17_captain,
+                "vice_captain": p17_vice,
+                "scope": "P1_7_FORMATION_FRONTIER_ONLY",
+                "not_final_cvc_authority": True,
+            }
+            lineup["captain_adjusted_projection_scope"] = (
+                "P1_7_FRONTIER_SCORE_NOT_S08_FINAL_CVC_RECOMPUTE"
+            )
+        lineup["captain"] = dict(captain)
+        lineup["vice_captain"] = dict(vice)
+        lineup["canonical_cvc_binding"] = {
+            "source_section": "S08",
+            "captain_id": captain_id,
+            "vice_id": vice_id,
+            "status": "BOUND",
+        }
+        s06_row["content"] = lineup
+
     resolution_failures = validate_resolved_sections(sections)
     if resolution_failures:
         raise ReportOrchestrationError(
@@ -4457,6 +4517,13 @@ def _render_deep_visible_contract_lines(
             f"captain-adjusted={payload.get('captain_adjusted_xpts', 'UNAVAILABLE')}."
         )
         lines.insert(0, render_s06_pitch(payload))
+        if payload.get("lineup_frontier_cvc"):
+            lines.append(
+                "C/VC decision authority: S08 canonical (pitch badges). "
+                "P1.7 formation-frontier score retains its original optimizer "
+                "C/VC assumptions; the score is NOT a recalculated projection "
+                "for the S08 final C/VC pair."
+            )
         comparisons = [dict(r) for r in payload.get("formation_comparison") or [] if isinstance(r, Mapping)]
         if comparisons:
             close = sorted(

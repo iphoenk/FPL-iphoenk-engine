@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Mode-aware private report readback (13 Oct 2026):** MATCH 02:30 failed after a successful private push because the remote validator required a DEEP-only native manifest. The verifier now checks remote occurrence canonical SHA256, receipt identity, and mode-specific latest digest for all modes; only READY_FULL DEEP requires the lossless native manifest/chunk round trip. Non-native MATCH/PRICE and evidence-based degraded DEEP keep native UI acceptance UNVERIFIED. This repairs delivery transport, not the FPL analytics, scheduler authority, or MC500K.
+
 - **Formation MC wrapper binding (12 Oct 2026):** S14 validation now unwraps the canonical `formation_mc.payload` shape used by the producer, while all P1.7 evidence fields are rendered through the human-facing summary path. This preserves the fail-closed delivery barrier and does not change MC500K or route mathematics.
 - **Formation MC human-facing QA repair (12 Oct 2026):** S06/S08/S14/S19 now require the canonical Formation MC table whenever bound formation rows exist, and XI/bench values are rendered as human-facing summaries without Python mapping repr. This changes presentation validation only; MC500K, P1.7, scheduler, and private delivery contracts are unchanged.
 - **Lossless native manifest/chunk transport (12 Oct 2026):** DEEP native content keeps the legacy full artifact for compatibility and publishes a compact manifest plus line-bound section chunks. Producer round-trip and remote readback are fail-closed; transport PASS never implies native ChatGPT UI VERIFIED without an explicit consumer acceptance receipt.
@@ -13,7 +15,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T22:35:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T04:38:19+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

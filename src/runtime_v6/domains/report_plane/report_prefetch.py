@@ -1024,10 +1024,18 @@ class PrefetchService:
                 # lossless raw source; the sidecar avoids runtime dependence on
                 # decoding a large binary blob just to bind production evidence.
                 summary_relative = "history/official_detail.json"
+                full_history = dict(detail_artifact.get("full_season_history") or {})
                 summary_artifact = {
-                    key: value
-                    for key, value in detail_artifact.items()
-                    if key != "element_summaries"
+                    "schema_version": detail_artifact.get("schema_version"),
+                    "contract": detail_artifact.get("contract"),
+                    "generated_at": detail_artifact.get("generated_at"),
+                    "authority": detail_artifact.get("authority"),
+                    "full_season_history": {
+                        key: full_history.get(key)
+                        for key in ("contract", "generated_at", "as_of", "universe", "coverage_gate", "provenance")
+                        if key in full_history
+                    },
+                    "enrichment": dict(detail_artifact.get("enrichment") or {}),
                 }
                 write_json(self.output_root / summary_relative, summary_artifact, secrets=secrets)
                 artifacts.append(artifact_meta(self.output_root, history_relative))

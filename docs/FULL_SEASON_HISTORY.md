@@ -37,3 +37,6 @@ Analytics acceptance binding (12 Oct 2026): the V12 runner first checks the cano
 
 
 Runtime binding note (12 Oct 2026): each occurrence publishes both the lossless raw `history/official_detail.json.gz` and an uncompressed `history/official_detail.json` sidecar containing the reconciled full-history coverage metadata. The sidecar is not a reduced history source; it is the production acceptance index, while the gzip artifact retains the complete element-summary universe.
+
+
+Acceptance sidecar note: the uncompressed `history/official_detail.json` contains only coverage metadata; the complete player and fixture-level history remains in the lossless `history/official_detail.json.gz` artifact.

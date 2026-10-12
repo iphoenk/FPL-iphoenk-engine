@@ -61,10 +61,20 @@ def build_fixture_display_rows(
             "_kickoff": kickoff,
         }
 
+    # Prefer the player-specific rest interval already derived by the
+    # canonical workload context. The per-fixture projection field is
+    # optional, so retaining only that field made production S05 show
+    # UNAVAILABLE even when days_rest was verified.
     rest_hours_by_fixture: dict[int, list[float]] = {}
+    player_days_rest_by_fixture: dict[int, list[float]] = {}
     for player in workload_rows:
         if not isinstance(player, Mapping):
             continue
+        try:
+            player_days_rest = float(player.get("days_rest"))
+        except (TypeError, ValueError):
+            player_days_rest = -1.0
+        next_pl = _parse_fixture_dt(player.get("next_pl_fixture_datetime"))
         for item in player.get("planning_gw_fixtures") or []:
             if not isinstance(item, Mapping) or item.get("fixture_id") is None:
                 continue
@@ -72,9 +82,65 @@ def build_fixture_display_rows(
                 fixture_id = int(item["fixture_id"])
                 hours = float(item.get("rest_from_previous_fixture_hours"))
             except (TypeError, ValueError):
-                continue
+                hours = -1.0
             if hours >= 0:
                 rest_hours_by_fixture.setdefault(fixture_id, []).append(hours)
+            kickoff = _parse_fixture_dt(item.get("kickoff") or item.get("kickoff_time"))
+            if (
+                player_days_rest >= 0
+                and kickoff is not None
+                and next_pl is not None
+                and abs((kickoff - next_pl).total_seconds()) <= 60
+            ):
+                player_days_rest_by_fixture.setdefault(fixture_id, []).append(
+                    player_days_rest * 24.0
+                )
+
+    # Official PL fixture ordering is the final fail-safe for a display row.
+    # It is descriptive only: it does not change xPts, P(start), or xMins.
+    official_kickoffs_by_team: dict[int, list[tuple[datetime, int]]] = {}
+    for fixture in fixtures:
+        if not isinstance(fixture, Mapping) or fixture.get("id") is None:
+            continue
+        kickoff = _parse_fixture_dt(fixture.get("kickoff_time"))
+        if kickoff is None:
+            continue
+        try:
+            fixture_id = int(fixture["id"])
+            home_id = int(fixture["team_h"])
+            away_id = int(fixture["team_a"])
+        except (TypeError, ValueError):
+            continue
+        official_kickoffs_by_team.setdefault(home_id, []).append((kickoff, fixture_id))
+        official_kickoffs_by_team.setdefault(away_id, []).append((kickoff, fixture_id))
+    for values in official_kickoffs_by_team.values():
+        values.sort()
+
+    official_rest_hours_by_fixture: dict[int, float] = {}
+    for fixture in fixtures:
+        if not isinstance(fixture, Mapping) or fixture.get("id") is None:
+            continue
+        kickoff = _parse_fixture_dt(fixture.get("kickoff_time"))
+        if kickoff is None:
+            continue
+        try:
+            fixture_id = int(fixture["id"])
+            team_ids = (int(fixture["team_h"]), int(fixture["team_a"]))
+        except (TypeError, ValueError):
+            continue
+        previous_intervals = []
+        for team_id in team_ids:
+            previous = [
+                prior_kickoff
+                for prior_kickoff, prior_id in official_kickoffs_by_team.get(team_id, [])
+                if prior_id != fixture_id and prior_kickoff < kickoff
+            ]
+            if previous:
+                previous_intervals.append(
+                    (kickoff - max(previous)).total_seconds() / 3600.0
+                )
+        if previous_intervals:
+            official_rest_hours_by_fixture[fixture_id] = min(previous_intervals)
 
     rows: list[dict[str, Any]] = []
     for raw in fixtures:
@@ -117,9 +183,19 @@ def build_fixture_display_rows(
             status = "NOT STARTED"
         rest_days = raw.get("rest_days", raw.get("days_rest"))
         if rest_days is None:
-            rest_hours = rest_hours_by_fixture.get(fixture_id) or []
+            rest_hours = (
+                rest_hours_by_fixture.get(fixture_id)
+                or player_days_rest_by_fixture.get(fixture_id)
+                or []
+            )
             if rest_hours:
                 rest_days = min(rest_hours) / 24.0
+        if rest_days is None:
+            rest_days = (
+                official_rest_hours_by_fixture.get(fixture_id) / 24.0
+                if fixture_id in official_rest_hours_by_fixture
+                else None
+            )
         if rest_days is None:
             rest_display = "UNAVAILABLE"
         else:

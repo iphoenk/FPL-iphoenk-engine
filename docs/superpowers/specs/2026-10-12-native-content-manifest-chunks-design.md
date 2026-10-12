@@ -12,6 +12,10 @@ The validator has one fail-closed path for producer and remote data. It validate
 
 The native consumer is represented by a strict acceptance contract. It consumes the manifest and every chunk, renders ordered section components including the S06 pitch, all table rows, all S16 profiles, typed decision/evidence panels, and verification indicators, and emits an acceptance receipt. Transport or Markdown/HTML rendering alone cannot elevate the status beyond `UNVERIFIED`.
 
+## Mode-specific remote readback (13 Oct 2026)
+
+The native manifest/chunk requirement applies only to `DEEP` with `delivery_status=READY_FULL`. Public-first `MATCH`, `PRICE`, and evidence-based `DEEP READY_DEGRADED` do not generate native manifests; their receipts retain `native_content_format=NOT_APPLICABLE` and native/UI acceptance `UNVERIFIED`. The remote validator still fail-closes on wrong occurrence identity, report mode, missing or altered canonical bundle/body/digest/execution-proof bytes, or the mode-specific latest digest mismatch. For DEEP READY_FULL, the strict complete native manifest, chunk and latest parity contract remains mandatory. Successful mode-specific readback sets `private_remote_readback=PASS` on the receipt, not native UI VERIFIED.
+
 ## Failure handling
 
 Missing, empty, oversized, corrupted, duplicated, reordered, or incomplete chunks fail closed. A section catalog mismatch fails closed. A remote commit mismatch or latest pointer mismatch fails closed. UI acceptance is `UNVERIFIED` unless every expected section and chunk was consumed and the rendered canonical hash matches the manifest.

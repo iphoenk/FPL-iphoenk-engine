@@ -428,6 +428,7 @@ def _competitive_tiebreak(
     risk_context: Mapping[str, Any] | None,
     risk_context_complete: bool,
     league_complete: bool,
+    rivals_complete: bool,
     competitive_complete: bool,
 ) -> tuple[Mapping[str, Any], bool, dict[str, Any]]:
     posture = str(risk_posture or "BALANCED").upper()
@@ -488,6 +489,7 @@ def _competitive_tiebreak(
         "risk_posture_context_complete": bool(risk_context_complete),
         "football_frontier_close": len(frontier) >= 2,
         "league_complete": bool(league_complete),
+        "rivals_complete": bool(rivals_complete),
         "competitive_window_complete": bool(competitive_complete),
         "captain_exposure_complete": exposure_complete,
         "competitive_consequence": consequence,
@@ -498,6 +500,7 @@ def _competitive_tiebreak(
         posture == "BALANCED"
         or not risk_context_complete
         or not league_complete
+        or not rivals_complete
         or not competitive_complete
         or not exposure_complete
         or len(frontier) < 2
@@ -506,6 +509,8 @@ def _competitive_tiebreak(
             tie_break_status = "PRESERVE_FOOTBALL_LEADER_BALANCED"
         elif not risk_context_complete:
             tie_break_status = "UNAVAILABLE_INCOMPLETE_RISK_POSTURE_CONTEXT"
+        elif not rivals_complete:
+            tie_break_status = "UNAVAILABLE_INCOMPLETE_RIVALS_SCOPE"
         else:
             tie_break_status = "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
         context["tie_break_status"] = tie_break_status
@@ -845,6 +850,7 @@ def decide_captain_vice(
             risk_context=risk_context,
             risk_context_complete=risk_context_complete,
             league_complete=league_complete,
+            rivals_complete=rivals_complete,
             competitive_complete=competitive_complete,
         )
 

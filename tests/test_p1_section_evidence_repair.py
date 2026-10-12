@@ -208,3 +208,46 @@ def test_s02_no_cohort_warning_when_odds_are_differentiated():
     ]
     text = _visible("S02", {"rows": rows})
     assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" not in text
+
+
+def test_s15_downgrades_model_snapshot_when_exact_s02_binding_is_partial():
+    evidence = {
+        key: {"state": "COMPLETE"}
+        for key in (
+            "CURRENT15 identity", "model snapshot", "tactical",
+            "post-match underlying", "fixtures/calendar",
+            "workload/travel", "authenticated finance",
+            "price predictor freshness", "mini-league standings/live",
+            "weather",
+        )
+    }
+    text = _visible("S15", {
+        "evidence_quality": evidence,
+        "cross_section_evidence": {
+            "full_history_state": "UNAVAILABLE",
+            "pstart_evidence_state": "UNAVAILABLE",
+            "pstart_resolution_state": "UNAVAILABLE",
+            "availability_binding": "PARTIAL",
+        },
+    })
+    assert "Availability / minutes | 🟡 Partial | Model snapshot is current" in text
+    assert "exact-bound full-history/P(start) evidence is incomplete" in text
+    assert "Overall evidence confidence: HIGH" not in text
+
+
+def test_s15_keeps_model_snapshot_strong_when_exact_s02_binding_is_complete():
+    evidence = {
+        key: {"state": "COMPLETE"}
+        for key in (
+            "CURRENT15 identity", "model snapshot", "tactical",
+            "post-match underlying", "fixtures/calendar",
+            "workload/travel", "authenticated finance",
+            "price predictor freshness", "mini-league standings/live",
+            "weather",
+        )
+    }
+    text = _visible("S15", {
+        "evidence_quality": evidence,
+        "cross_section_evidence": {"availability_binding": "COMPLETE"},
+    })
+    assert "Availability / minutes | 🟢 Strong | Current model snapshot supports" in text

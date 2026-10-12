@@ -243,3 +243,12 @@ Before declaring the report-prefetch path production-green, verify:
 12. CI remains green.
 
 If an Official endpoint or credential is unavailable, record the exact degraded acceptance item. Do not convert the condition into false GREEN.
+
+
+### Distinguishing public legacy credentials from protected authentication
+
+In V6 report-prefetch outputs, `legacy_public_auth_state` is an observation of the public legacy authentication path, including real `AUTH_EXPIRED` responses. It is not a health check of protected rotating credentials.
+
+`auth_state_source=PUBLIC_LEGACY_CREDENTIALS`, `private_rotating_auth_state=NOT_EVALUATED_IN_PUBLIC_PLANE`, and `private_auth_reconciliation=PENDING_PROTECTED_PUBLISHER` explicitly distinguish these scopes. `auth_action_scope=PUBLIC_LEGACY_ONLY` identifies which credentials any existing renewal advice concerns.
+
+The protected private publisher independently verifies current team and financial fields. No public V6 record can promote that result without an authoritative protected attestation. `strict_complete`, source failures, temporal controls and previously persisted occurrences are unchanged. This change labels existing status facts; it does not claim completed protected authentication reconciliation.

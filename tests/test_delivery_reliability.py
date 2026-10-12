@@ -957,3 +957,19 @@ def test_nonblocking_optional_observability_never_changes_ready_full_state():
     )
     assert occurrence["current_state"] == "PUBLISHED_FULL"
     assert occurrence["delivery_status"] == "READY_FULL"
+
+
+def test_public_prefetch_explains_legacy_auth_without_claiming_private_success():
+    from pathlib import Path
+    source = Path("src/runtime_v6/domains/report_plane/report_prefetch.py").read_text(encoding="utf-8")
+    assert source.count('"auth_state_source": "PUBLIC_LEGACY_CREDENTIALS"') == 2
+    assert source.count('"private_rotating_auth_state": "NOT_EVALUATED_IN_PUBLIC_PLANE"') == 2
+    assert source.count('"auth_action_scope": "PUBLIC_LEGACY_ONLY"') == 2
+    assert "PENDING_PROTECTED_PUBLISHER" in source
+
+
+def test_legacy_auth_expiry_remains_truthful_and_public_first_nonblocking():
+    from src.runtime_v6.domains.report_plane.report_prefetch import normalize_report_auth_state
+    assert normalize_report_auth_state("AUTH_EXPIRED", requested=True) == "AUTH_EXPIRED"
+    assert normalize_report_auth_state("AUTH_AVAILABLE", requested=True) == "AUTH_OK"
+    assert normalize_report_auth_state(None, requested=False) == "AUTH_NOT_REQUESTED"

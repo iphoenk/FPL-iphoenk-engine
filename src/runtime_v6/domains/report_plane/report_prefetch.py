@@ -46,8 +46,53 @@ from .prefetch_contract import (
     write_json,
 )
 from .security import safe_error
-from src.engines.official_history_reconciliation import build_full_season_history
 
+
+def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any]) -> dict[str, Any]:
+    """V6-local full-season reconciler; keeps acquisition inside the V6 boundary."""
+    bootstrap = snapshot.get("bootstrap") or {}
+    elements = [row for row in bootstrap.get("elements") or [] if isinstance(row, dict) and row.get("id") is not None]
+    element_ids = sorted({int(row["id"]) for row in elements})
+    planning_gw = int((snapshot.get("phase") or {}).get("current_gw") or 1)
+    historical_gws = list(range(1, max(1, planning_gw)))
+    events = {int(row.get("id")): row for row in bootstrap.get("events") or [] if isinstance(row, dict) and row.get("id") is not None}
+    fixtures = [row for row in snapshot.get("fixtures") or [] if isinstance(row, dict)]
+    fixture_by_gw: dict[int, list[dict[str, Any]]] = {}
+    for row in fixtures:
+        event = row.get("event") or row.get("round")
+        if event is not None:
+            fixture_by_gw.setdefault(int(event), []).append(row)
+    players: dict[str, Any] = {}
+    missing: list[dict[str, int]] = []
+    available = 0
+    for element in elements:
+        element_id = int(element["id"])
+        summary = summaries.get(str(element_id))
+        history = [row for row in (summary or {}).get("history") or [] if isinstance(row, dict)]
+        player_records: dict[str, Any] = {}
+        for gw in historical_gws:
+            rows = [row for row in history if int(row.get("round") or row.get("event") or 0) == gw]
+            fixture_rows = list(fixture_by_gw.get(gw) or [])
+            event = events.get(gw) or {}
+            if summary is None:
+                missing.append({"element": element_id, "gw": gw})
+                continue
+            minutes = sum(float(row.get("minutes") or 0) for row in rows)
+            status = "PENDING" if event.get("finished") is not True else ("FINAL" if rows and minutes > 0 else ("DNP" if rows else "BLANK"))
+            player_records[str(gw)] = {"gw": gw, "status": status, "fixtures": rows, "fixture_context": fixture_rows, "fixture_count": len(rows) if rows else len(fixture_rows), "source": f"Official FPL element-summary/{element_id}/"}
+            available += 1
+        players[str(element_id)] = {"element_id": element_id, "position": element.get("element_type"), "team": element.get("team"), "history": player_records, "coverage": {"expected_gw_slots": len(historical_gws), "available_gw_slots": len(player_records), "missing_gw_slots": len(historical_gws) - len(player_records)}}
+    expected = len(element_ids) * len(historical_gws)
+    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing else "PARTIAL"
+    return {
+        "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "generated_at": snapshot.get("generated_at"),
+        "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"},
+        "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0},
+        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
+        "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False},
+        "players": players,
+    }
 
 def _build_full_history_artifact(
     *, client: Any, bootstrap_payload: dict[str, Any], fixtures: list[dict[str, Any]],
@@ -90,10 +135,7 @@ def _build_full_history_artifact(
         "fixtures": fixtures,
         "phase": {"current_gw": int(planning_gw or 1)},
     }
-    full_history = build_full_season_history(
-        snapshot=snapshot,
-        detail={"element_summaries": summaries},
-    )
+    full_history = _reconcile_full_history(snapshot, summaries)
     full_history["generated_at"] = generated_at
     full_history["provenance"]["runtime_artifact"] = "V6_REPORT_PREFETCH"
     full_history["provenance"]["request_health"] = health

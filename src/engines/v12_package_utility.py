@@ -397,8 +397,20 @@ def _build_resolved_transfer_economics(
     projection_by_id: Mapping[int, Mapping[str, Any]],
 ) -> dict[str, Any]:
     transfer_count = int(route.get("transfer_count") or 0)
+    canonical = {
+        "transfer_count": transfer_count,
+        "ft_consumed": hit.get("ft_consumed"),
+        "hit_points": hit.get("hit_points"),
+        "bank_after": route.get("bank_after"),
+        "affordable": route.get("affordable"),
+    }
+    sell_value_complete = all(
+        isinstance(row, Mapping) and row.get("sell_value") is not None
+        for row in route.get("players_out") or []
+    )
     if (
         route.get("economics_status") != "RESOLVED"
+        or not sell_value_complete
         or route.get("affordable") is not True
         or hit.get("status") != "RESOLVED"
         or shadow.get("status") != "PASS"
@@ -412,6 +424,8 @@ def _build_resolved_transfer_economics(
             "ft_shadow": dict(shadow),
             "bank_after": route.get("bank_after"),
             "affordable": route.get("affordable"),
+            "executable": False,
+            **canonical,
             "reason": "UNRESOLVED_EXECUTION_ECONOMICS",
         }
     reacquisition_now = 0.0
@@ -445,6 +459,8 @@ def _build_resolved_transfer_economics(
     economics["price_movement_effect_semantics"] = (
         "NO_FUTURE_PRICE_PREDICTION_EMBEDDED"
     )
+    economics.update(canonical)
+    economics["executable"] = True
     return economics
 
 
@@ -479,7 +495,7 @@ def _route_net_horizons(
                 "gross_delta_vs_hold": None,
                 "net_delta_vs_hold": None,
             }
-            canonical_inputs[label] = {"expected_points_delta": 0.0, "status": "UNAVAILABLE"}
+            canonical_inputs[label] = {"expected_points_delta": None, "status": "UNAVAILABLE"}
             continue
         gross_delta = _f(route_row.get("gross_route_utility")) - _f(
             hold_row.get("gross_route_utility")
@@ -515,6 +531,17 @@ def _route_net_horizons(
             "net_utility_delta": (
                 round(net_delta, 6) if net_delta is not None else None
             ),
+            "status": "READY" if net_delta is not None else "ECONOMICS_PARTIAL",
+        }
+    if any(
+        value.get("status") != "READY"
+        for value in canonical_inputs.values()
+    ):
+        return output, {
+            "status": "PARTIAL",
+            "horizons": canonical_inputs,
+            "collapsed": False,
+            "reason": "TRANSFER_ECONOMICS_UNRESOLVED",
         }
     analysis = build_horizon_analysis(
         one_gw=canonical_inputs["GW+1"],

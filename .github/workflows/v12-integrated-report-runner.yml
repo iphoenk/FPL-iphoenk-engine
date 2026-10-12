@@ -1080,7 +1080,7 @@ jobs:
           PY
             (
               cd ../private-reports
-              git add "$REPORT_PATH/native_content.manifest.json" "$REPORT_PATH/delivery_receipt.json"
+              git add --sparse "$REPORT_PATH/native_content.manifest.json" "$REPORT_PATH/delivery_receipt.json"
               git commit -m "report(v12): record native content remote readback" >/dev/null
               git push origin HEAD:main
               remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"

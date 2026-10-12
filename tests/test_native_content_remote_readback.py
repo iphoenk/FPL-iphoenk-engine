@@ -127,3 +127,23 @@ def test_match_corrupted_canonical_bytes_fail_remote_readback(tmp_path: Path):
     result = _run_script(tmp_path, "MATCH", sha)
     assert result.returncode != 0
     assert "remote occurrence hash mismatch: report_bundle.json" in result.stderr
+
+
+def test_deep_degraded_without_serving_markdown_uses_report_body(tmp_path: Path):
+    repo, _ = _fixture(tmp_path, "DEEP", ready_full=False)
+    root = repo / "reports/2026-27/gw_6/occurrence"
+    (root / "serving_report.md").unlink()
+    receipt_path = root / "delivery_receipt.json"
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    receipt["canonical_body_sha256"] = hashlib.sha256(
+        (root / "report_body.md").read_bytes()
+    ).hexdigest()
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "degraded DEEP without serving markdown")
+    sha = _git(repo, "rev-parse", "HEAD")
+    result = _run_script(tmp_path, "DEEP", sha)
+    assert result.returncode == 0, result.stderr
+    verified = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert verified["private_remote_readback"] == "PASS"
+    assert verified["native_content_remote_readback"] == "UNVERIFIED"

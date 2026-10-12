@@ -27,6 +27,89 @@ def test_manifest_chunks_round_trip_and_small_chunk_boundaries():
     assert all(len(value.encode()) <= 600 for value in files.values())
 
 
+def test_manifest_records_canonical_bytes_and_keeps_encoded_chunks_under_limit():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    assert manifest["canonical_body_bytes"] == len(body.encode())
+    assert all(len(value.encode()) <= 256 for value in files.values())
+    assert all(entry["byte_length"] == len(files[entry["path"]].encode()) for entry in manifest["chunks"])
+
+
+def test_manifest_rejects_part_count_and_part_order_corruption():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    if manifest["chunk_count"] < 2:
+        pytest.fail("fixture must produce multiple chunks")
+    manifest["chunks"][0]["part_count"] += 1
+    with pytest.raises(NativeContentParityError, match="part count"):
+        from src.engines.v12_native_content_parity import validate_manifest_chunks
+        validate_manifest_chunks(manifest, files, canonical_body=body)
+
+
+def test_manifest_rejects_noncanonical_section_catalog():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    manifest["section_ids"] = list(reversed(manifest["section_ids"]))
+    from src.engines.v12_native_content_parity import validate_manifest_chunks
+    with pytest.raises(NativeContentParityError, match="section catalog"):
+        validate_manifest_chunks(manifest, files, canonical_body=body)
+
+
+def test_native_ui_acceptance_requires_transport_and_remote_readback():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    receipt = build_native_ui_acceptance(
+        manifest,
+        rendered_section_ids=manifest["section_ids"],
+        rendered_content=body,
+        user_visible_acceptance=True,
+        transport_status="PASS",
+        remote_readback="UNVERIFIED",
+        files=files,
+        canonical_body=body,
+    )
+    assert receipt["verification_status"] == "UNVERIFIED"
+
+
+def test_native_ui_acceptance_defaults_fail_closed_without_transport_evidence():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    receipt = build_native_ui_acceptance(
+        manifest,
+        rendered_section_ids=manifest["section_ids"],
+        rendered_content=body,
+        user_visible_acceptance=True,
+        files=files,
+        canonical_body=body,
+    )
+    assert receipt["verification_status"] == "UNVERIFIED"
+
+
 def test_manifest_chunks_reject_missing_swapped_and_corrupt_chunks():
     body = _source()
     artifact = build_lossless_native_content(

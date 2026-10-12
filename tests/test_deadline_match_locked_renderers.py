@@ -51,7 +51,9 @@ def test_match_locked_renderer_exact_human_tables_and_no_internal_ids():
     assert "| Player | Event | Detail | Match status | Decision implication |" in body
     assert "| Player | Club | Signal | Evidence | Sustainable / noisy | OUR15 / next-opponent implication |" in body
     assert "| Player / Team | Learning | Evidence | Next-GW implication | Action state |" in body
-    assert "| P7 | 17/58 (29.3%) | 16/58 (27.6%) | 5/58 (8.6%) | 3/58 (5.2%) | 82/58 (141.4%) | Shield |" in body\n    assert "COMPETITIVE WINDOW LIVE CONSEQUENCE" in body\n    assert "rivals=9" in body
+    assert "| P7 | 17/58 (29.3%) | 16/58 (27.6%) | 5/58 (8.6%) | 3/58 (5.2%) | 82/58 (141.4%) | Shield |" in body
+    assert "COMPETITIVE WINDOW LIVE CONSEQUENCE" in body
+    assert "rivals=9" in body
     assert "element_id" not in body
     assert "LOCKED_SUBMITTED_PICKS" not in body
     assert "BLOCKED_BY_CAPTAIN_APPEARANCE" not in body

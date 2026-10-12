@@ -116,6 +116,7 @@ def test_private_publisher_copies_canonical_files_bit_identical_and_preserves_id
     )
     assert copied_bundle["section_manifest"] == bundle["section_manifest"]
     assert copied_bundle["report"]["S03"] == bundle["report"]["S03"]
+    assert receipt["native_ui_acceptance"] == "UNVERIFIED"
 
 
 def test_private_publish_is_idempotent_for_identical_occurrence(tmp_path):

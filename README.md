@@ -2,6 +2,8 @@
 
 - **Lossless native manifest/chunk transport (12 Oct 2026):** DEEP native content keeps the legacy full artifact for compatibility and publishes a compact manifest plus line-bound section chunks. Producer round-trip and remote readback are fail-closed; transport PASS never implies native ChatGPT UI VERIFIED without an explicit consumer acceptance receipt.
 - **CI trigger note (12 Oct 2026):** controlled S18/S19 verification remains separate from natural acceptance and requires terminal governance evidence on the exact head.
+- **Native consumer gate (12 Oct 2026):** the structured consumer now rejects invalid manifests, missing or reordered chunks, and partial section consumption; `VERIFIED` remains unavailable until transport, remote readback, and user-visible native acceptance pass for one occurrence.
+- **Controlled acceptance boundary (12 Oct 2026):** a successful private readback still reports `REMOTE_READBACK_PASS`; only a separate user-visible native acceptance receipt may advance the same occurrence to `VERIFIED`.
 
 - **Lossless native-content transport (12 Oct 2026):** for READY_FULL DEEP with a serving report, private publication now emits occurrence-bound `native_content.json` in the report directory and `latest/native_content.json`. It preserves **all 22/23 sections, all Markdown rows, S16 player profiles, evidence wording, original source markup, exact canonical bytes and SHA256**, plus typed blocks for a future ChatGPT-native renderer. Content transport PASS is strictly separate from **native ChatGPT UI acceptance = UNVERIFIED**. No second scheduler, external publication, content cap, or recomputed model values. Regression tests reject missing sections, mismatched hashes and truncated blocks. The consumer must replace source HTML with actual native components and separately verify user-visible fidelity before claiming native FULL GREEN.
 
@@ -9,7 +11,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T19:59:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T21:05:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.
@@ -257,3 +259,5 @@ The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolv
 
 - **S18 rule-engine hit-cost binding (12 Oct 2026):** missing authenticated hit-cost metadata now resolves from the active verified Official FPL ruleset; unresolved rule metadata remains fail-closed.
 
+
+- **Native UI receipt boundary (12 Oct 2026):** producer and remote evidence never substitute for a user-visible native component acceptance receipt.

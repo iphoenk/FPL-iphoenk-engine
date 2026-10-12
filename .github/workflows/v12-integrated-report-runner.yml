@@ -1048,6 +1048,15 @@ jobs:
           }
           body = show(f"{root}/serving_report.md")
           validate_manifest_chunks(manifest, files, canonical_body=body)
+          latest_manifest_raw = show("latest/native_content.manifest.json")
+          latest_manifest = json.loads(latest_manifest_raw)
+          if latest_manifest.get("canonical_body_sha256") != manifest.get("canonical_body_sha256"):
+              raise SystemExit("latest native manifest canonical hash mismatch")
+          for entry in manifest["chunks"]:
+              occurrence_raw = show(f"{root}/{entry['path']}")
+              latest_raw = show(f"latest/{entry['path']}")
+              if occurrence_raw != latest_raw:
+                  raise SystemExit(f"latest native chunk mismatch: {entry['path']}")
           manifest["remote_readback"] = "PASS"
           manifest["verification_status"] = "REMOTE_READBACK_PASS"
           (repo / root / "native_content.manifest.json").write_text(
@@ -1057,8 +1066,13 @@ jobs:
           receipt_path = repo / root / "delivery_receipt.json"
           receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
           receipt["native_content_remote_readback"] = "PASS"
+          receipt["native_content_round_trip"] = "PASS"
+          receipt["native_content_truncation"] = "PASS"
           receipt["native_content_commit"] = commit
           receipt["native_content_transport_status"] = "PASS"
+          receipt["native_content_manifest_sha256"] = __import__("hashlib").sha256(
+              (repo / root / "native_content.manifest.json").read_bytes()
+          ).hexdigest()
           receipt_path.write_text(
               json.dumps(receipt, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
               encoding="utf-8",

@@ -51,4 +51,6 @@ def test_match_icon_live_keeps_exposure_and_rivals_separate():
     tables=load_match_presentation_lock()["sections"]["MATCH10"]["tables"]
     assert tables[0]["name"] == "Material player exposure"
     assert tables[1]["name"] == "Competitive Window live consequence"
-    assert tables[0]["columns"] == ["Player","Owned","Starter","Captain","Vice","EO","Live consequence"]\n    assert load_match_presentation_lock()["rules"]["match10_uses_shared_competitive_window_resolver"] is True\n    assert load_match_presentation_lock()["rules"]["fresh_direct_rival_semantics_forbidden"] is True
+    assert tables[0]["columns"] == ["Player","Owned","Starter","Captain","Vice","EO","Live consequence"]
+    assert load_match_presentation_lock()["rules"]["match10_uses_shared_competitive_window_resolver"] is True
+    assert load_match_presentation_lock()["rules"]["fresh_direct_rival_semantics_forbidden"] is True

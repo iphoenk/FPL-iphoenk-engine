@@ -135,7 +135,7 @@ def test_formation_mc_table_is_required_in_every_bound_owner_section():
     for sid in ("S06", "S08", "S14", "S19"):
         for row in report["sections"]:
             if row["section_id"] == sid:
-                row["content"] = {"formation_mc": formation_mc}
+                row["content"] = {"formation_mc": {"payload": formation_mc} if sid == "S14" else formation_mc}
                 break
         start = body.index(f"## {int(sid[1:])}. TEST")
         next_start = body.find("\n## ", start + 1)

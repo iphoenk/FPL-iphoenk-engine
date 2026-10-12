@@ -45,6 +45,7 @@ from src.engines.v12_monte_carlo import (
     canonical_package_seed,
     run_package_monte_carlo,
 )
+from src.engines.v12_formation_monte_carlo import run_formation_monte_carlo
 from src.engines.v12_package_search import (
     compose_material_two_transfer_packages,
     search_packages,
@@ -7128,6 +7129,18 @@ def refresh_mini_league_only_state(
     )
     final_judgement["bgw_context"] = bgw_context
     final_judgement["bgw_reconciled"] = True
+    final_judgement["formation_mc_decision"] = {
+        "status": "PASS" if formation_mc else "NOT_RUN",
+        "selected_formation": (lineup or {}).get("formation"),
+        "ranking": (
+            (formation_mc.get("formation_mc") or {}).get("ranking")
+            if formation_mc
+            else None
+        ),
+        "decision_consumer": "S06_S08_S14_S15B",
+        "mean_not_sole_criterion": True,
+        "transfer_route_mc_separate": True,
+    }
 
     baseline_dashboard = dict(
         (section_payloads["S01"].get("content") or {}).get(
@@ -7585,6 +7598,7 @@ def run_deep(
     warm_state_out: Path | None = None,
 ) -> dict[str, Any]:
     ledger: list[dict[str, Any]] = []
+    formation_mc = None
     scenario_overrides = dict(scenario_overrides or {})
     stage2_cache_proof: dict[str, Any] = {}
     canonical = CANONICAL_PATH.read_text(encoding="utf-8")
@@ -7881,6 +7895,34 @@ def run_deep(
                 planning_gw=planning_gw,
             ),
         )
+        authenticated_current15 = bool(
+            str(private_current_team.get("auth_state") or "").upper() == "AUTH_AVAILABLE"
+            and not bool((personal_resolution or {}).get("stale"))
+            and len(owned_ids) == 15
+        )
+        if authenticated_current15:
+            formation_mc = _stage(
+                ledger,
+                "P1_4_FORMATION_MC_GW7_GW12",
+                lambda: run_formation_monte_carlo(
+                    projections,
+                    current15=sorted(owned_ids),
+                    input_snapshot_id=(
+                        "private-full-master:"
+                        + str(prefetch.get("report_prefetch_run_id") or prefetch.get("request_id") or report_slot)
+                    ),
+                    planning_gw=planning_gw,
+                    seed=int(_fingerprint({"report_slot": report_slot, "current15": sorted(owned_ids)})[:8], 16),
+                ),
+                required=True,
+            )
+        else:
+            _skip_stage(
+                ledger,
+                "P1_4_FORMATION_MC_GW7_GW12",
+                "authenticated CURRENT15 is unavailable or stale",
+                required=True,
+            )
     else:
         reason = (
             "P1.1/P1.3 prerequisite failed: "
@@ -7890,6 +7932,7 @@ def run_deep(
         _skip_stage(ledger, "P1_6_TACTICAL_ROLE", reason)
         _skip_stage(ledger, "ALL15_MATERIALIZATION", reason, required=True)
         _skip_stage(ledger, "P1_7_LINEUP", reason)
+        _skip_stage(ledger, "P1_4_FORMATION_MC_GW7_GW12", reason, required=True)
         all15 = {
             "rows": [
                 {
@@ -9208,6 +9251,11 @@ def run_deep(
             lineup_state,
             {
                 **_lineup_content(lineup),
+                "formation_mc": (
+                    (formation_mc or {}).get("formation_mc")
+                    if formation_mc
+                    else {"status": "NOT_RUN", "authority": "AUTHENTICATED_CURRENT_TEAM_REQUIRED"}
+                ),
                 "bgw_context": dict(bgw_context),
                 "bgw_lineup_review_required": bool(bgw_context.get("active")),
             },
@@ -9231,7 +9279,14 @@ def run_deep(
         ),
         "S08": _section(
             captain_section_state,
-            captain_surface,
+            {
+                **captain_surface,
+                "formation_mc": (
+                    (formation_mc or {}).get("formation_mc")
+                    if formation_mc
+                    else {"status": "NOT_RUN", "authority": "AUTHENTICATED_CURRENT_TEAM_REQUIRED"}
+                ),
+            },
             captain_section_reason,
         ),
         "S09": _section(
@@ -9294,6 +9349,20 @@ def run_deep(
                 "package_routes": stage3_visible.get("package_routes", []),
                 "frontier": stage3_visible.get("frontier", []),
                 **stage3_visible,
+                "formation_mc": (
+                    {
+                        "status": "PASS",
+                        "source": "P1_4_FORMATION_MC_GW7_GW12",
+                        "payload": (formation_mc or {}).get("formation_mc"),
+                        "transfer_route_mc_separate": True,
+                    }
+                    if formation_mc
+                    else {
+                        "status": "NOT_RUN",
+                        "source": "P1_4_FORMATION_MC_GW7_GW12",
+                        "transfer_route_mc_separate": True,
+                    }
+                ),
                 "bgw_context": dict(bgw_context),
                 "bgw_frontier_review_required": bool(bgw_context.get("active")),
                 "bgw_is_context_not_second_optimizer": True,
@@ -9320,6 +9389,12 @@ def run_deep(
                         "EXECUTED_CANONICAL"
                         if monte_carlo and monte_carlo.get("canonical_pass") is True
                         else "FAILED"
+                    ),
+                    "p1_4_formation_mc": (
+                        "EXECUTED_CANONICAL_8_FORMATIONS"
+                        if formation_mc
+                        and (formation_mc.get("formation_mc") or {}).get("integrity", {}).get("all_mc_500k") is True
+                        else "NOT_RUN_OR_FAILED"
                     ),
                     "p1_8_downstream_overlay": "EXECUTED" if mini_overlay else "FAILED",
                 },
@@ -9501,6 +9576,11 @@ def run_deep(
             "COMPLETE",
             {
                 "final_judgement": final_judgement,
+                "formation_mc": (
+                    (formation_mc or {}).get("formation_mc")
+                    if formation_mc
+                    else {"status": "NOT_RUN", "authority": "AUTHENTICATED_CURRENT_TEAM_REQUIRED"}
+                ),
             },
         ),
     }

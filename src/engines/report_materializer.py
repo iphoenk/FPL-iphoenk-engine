@@ -602,16 +602,27 @@ def run() -> dict[str, Any]:
     projections = read_json(DATA / "projections.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
     latest = read_json(DATA / "latest.json", {})
-    latest = read_json(DATA / "latest.json", {})
+    v6_prefetch_latest = read_json(
+        DATA / "v6" / "report_prefetch" / "latest.json", {}
+    )
     logical_slot = (
         user.get("logical_slot")
         or user.get("report_slot")
+        or v6_prefetch_latest.get("target_logical_report_slot")
+        or v6_prefetch_latest.get("logical_slot")
         or latest.get("target_logical_report_slot")
         or latest.get("logical_slot")
     )
+    requested_report_kind = str(user.get("report_kind") or "").strip()
+    if not requested_report_kind:
+        requested_report_kind = {
+            "DEEP": "full_master",
+            "MATCH": "match_mode",
+            "PRICE": "price",
+        }.get(str(user.get("report_mode") or "").strip().upper(), "full_master")
     legacy_official = read_json(DATA / "official_detail.json", {})
     occurrence_official = _load_occurrence_bound_official_detail(
-        report_kind=str(user.get("report_kind") or user.get("report_mode") or "full_master"),
+        report_kind=requested_report_kind,
         logical_slot=logical_slot,
     )
     official = dict(legacy_official)

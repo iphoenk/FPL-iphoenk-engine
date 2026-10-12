@@ -259,3 +259,5 @@ The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolv
 
 - **S18 rule-engine hit-cost binding (12 Oct 2026):** missing authenticated hit-cost metadata now resolves from the active verified Official FPL ruleset; unresolved rule metadata remains fail-closed.
 
+
+- **Native UI receipt boundary (12 Oct 2026):** producer and remote evidence never substitute for a user-visible native component acceptance receipt.

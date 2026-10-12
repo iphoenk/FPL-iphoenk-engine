@@ -1,11 +1,13 @@
 # FPL iphoenk Engine v3.39.0
 - **CI trigger note (12 Oct 2026):** controlled S18/S19 verification remains separate from natural acceptance and requires terminal governance evidence on the exact head.
 
+- **Lossless native-content transport (12 Oct 2026):** for READY_FULL DEEP with a serving report, private publication now emits occurrence-bound `native_content.json` in the report directory and `latest/native_content.json`. It preserves **all 22/23 sections, all Markdown rows, S16 player profiles, evidence wording, original source markup, exact canonical bytes and SHA256**, plus typed blocks for a future ChatGPT-native renderer. Content transport PASS is strictly separate from **native ChatGPT UI acceptance = UNVERIFIED**. No second scheduler, external publication, content cap, or recomputed model values. Regression tests reject missing sections, mismatched hashes and truncated blocks. The consumer must replace source HTML with actual native components and separately verify user-visible fidelity before claiming native FULL GREEN.
+
 - **Canonical captain/vice presentation closure (12 Oct 2026):** S08 is the only final C/VC decision authority for S06 pitch badges. P1.7 formation-frontier optimizer C/VC assumptions and exact xPts remain preserved as separate score provenance and are not silently recomputed; illegal S08 C/VC outside the selected XI fails closed. This repairs the observed 16:18 controlled DEEP S06_S08_VICE_CANONICAL_MISMATCH without suppressing validation.
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T10:50:00+00:00`
+> **Last runtime/documentation sync:** `2026-10-12T17:23:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

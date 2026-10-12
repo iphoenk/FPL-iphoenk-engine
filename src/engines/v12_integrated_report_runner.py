@@ -1204,6 +1204,8 @@ def _analytics_production_acceptance(
         captain_surface.get("captain_frontier")
         or captain_surface.get("frontier")
         or captain_surface.get("captain_profiles")
+        or captain_surface.get("frontier_comparison")
+        or captain_surface.get("profiles")
         or []
     )
     decision_state = str(captain_surface.get("captain_state") or captain_surface.get("decision_state") or "UNAVAILABLE").upper()

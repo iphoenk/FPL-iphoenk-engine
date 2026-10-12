@@ -34,3 +34,6 @@ Artifact transport note (12 Oct 2026): the complete occurrence-bound `history/of
 
 
 Analytics acceptance binding (12 Oct 2026): the V12 runner first checks the canonical full-history paths and then searches only for the exact `official_detail.json`/`official_detail.json.gz` artifact names inside the checked-out runtime tree. Captain acceptance consumes the canonical S08 frontier/profile surface; it does not create a second captain authority.
+
+
+Runtime binding note (12 Oct 2026): each occurrence publishes both the lossless raw `history/official_detail.json.gz` and an uncompressed `history/official_detail.json` sidecar containing the reconciled full-history coverage metadata. The sidecar is not a reduced history source; it is the production acceptance index, while the gzip artifact retains the complete element-summary universe.

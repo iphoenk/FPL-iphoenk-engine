@@ -2235,7 +2235,9 @@ def _stage3_visible_package_surface(
                     "ft_usage": route.get("ft_usage"),
                     "economics_status": economics.get("status"),
                     "bank_after": route.get("bank_after"),
+                    "transfer_economics": deepcopy(economics),
                 },
+                "transfer_economics": deepcopy(economics),
                 "gw1_net": (
                     (horizons.get("GW+1") or {}).get(
                         "net_delta_vs_hold"

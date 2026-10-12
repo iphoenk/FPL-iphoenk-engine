@@ -930,6 +930,25 @@ jobs:
           PY
           echo "PRIVATE_PERSONAL_REFRESH=PASS"
 
+      - name: Attest occurrence-bound private rotating auth health
+        # No token material, no public credentials, and no second refresh.
+        env:
+          PRIVATE_REPORT_KIND: ${{ needs.collect.outputs.prefetch_report_kind }}
+          PRIVATE_LOGICAL_SLOT: ${{ needs.collect.outputs.prefetch_logical_slot }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          key="$(python -c 'import sys; from src.engines.v12_auth_health_reconciliation import slot_key; print(slot_key(sys.argv[1],sys.argv[2]))' "$PRIVATE_LOGICAL_SLOT" "$PRIVATE_REPORT_KIND")"
+          target="private-reports/personal/auth_health/occurrences/$key.json"
+          test ! -e "$target" || { echo "PRIVATE_AUTH_ATTESTATION_OCCURRENCE_ALREADY_EXISTS"; exit 1; }
+          python -m src.engines.v12_auth_health_reconciliation attest \
+            --manifest "$RUNNER_TEMP/v6-private-acquisition/data/v6/report_prefetch/latest.json" \
+            --team private-reports/personal/current_team.json \
+            --slot "$PRIVATE_LOGICAL_SLOT" \
+            --run-id "$GITHUB_RUN_ID" \
+            --output "$target"
+          echo "PRIVATE_AUTH_ATTESTATION=CREATED"
+
       - name: Persist private personal snapshot
         working-directory: private-reports
         shell: bash

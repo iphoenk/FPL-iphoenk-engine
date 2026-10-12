@@ -227,6 +227,83 @@ def select_personal_evidence(
     }
 
 
+def validate_s19_canonical_binding(
+    *,
+    s06: Mapping[str, Any],
+    s08: Mapping[str, Any],
+    s15b: Mapping[str, Any],
+    s19: Mapping[str, Any],
+    s08_acceptance: Mapping[str, Any],
+    rendered_text: str = "",
+) -> list[str]:
+    """Fail-closed S19 reconciliation against the canonical S08 object."""
+    failures: list[str] = []
+
+    def _id(value: Any) -> int:
+        if not isinstance(value, Mapping):
+            return 0
+        try:
+            return int(value.get("element_id") or value.get("element") or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    s08_cap, s08_vice = _id(s08.get("captain")), _id(s08.get("vice_captain"))
+    s06_cap, s06_vice = _id(s06.get("captain")), _id(s06.get("vice_captain"))
+    judgement = dict(s19.get("final_judgement") or {})
+    s19_cap, s19_vice = _id(judgement.get("final_captain")), _id(judgement.get("vice"))
+    if (s06_cap, s06_vice) != (s08_cap, s08_vice):
+        failures.append("S19_S06_S08_CVC_MISMATCH")
+    if (s19_cap, s19_vice) != (s08_cap, s08_vice):
+        failures.append("S19_S08_FINAL_CVC_MISMATCH")
+    if s19_cap == 0 or s19_vice == 0 or s19_cap == s19_vice:
+        failures.append("S19_CVC_NOT_LEGAL")
+    consumed = {str(value) for value in judgement.get("consumed_sections") or []}
+    if not {"S08", "S15B"}.issubset(consumed):
+        failures.append("S19_REQUIRED_CONSUMERS_MISSING")
+
+    xi = {
+        _id(row) if isinstance(row, Mapping) else int(row or 0)
+        for row in s06.get("starting_xi") or []
+    }
+    if s19_cap not in xi or s19_vice not in xi:
+        failures.append("S19_CVC_OUTSIDE_FINAL_XI")
+
+    expected_frontier = [
+        str(row.get("element_id") or row.get("element") or "")
+        for row in s08.get("captain_frontier") or []
+        if isinstance(row, Mapping)
+    ]
+    observed_frontier = [
+        str(row.get("element_id") or row.get("element") or "")
+        for row in judgement.get("captain_frontier") or []
+        if isinstance(row, Mapping)
+    ]
+    if not expected_frontier or observed_frontier != expected_frontier:
+        failures.append("S19_FRONTIER_NOT_CANONICAL")
+
+    acceptance_status = str(s08_acceptance.get("evidence_status") or "").upper()
+    if (
+        acceptance_status != "PASS"
+        or s08_acceptance.get("canonical_binding") is not True
+        or int(s08_acceptance.get("frontier_count") or 0) <= 0
+        or s08_acceptance.get("frontier_source") != "S08_CANONICAL_CAPTAIN_FRONTIER"
+    ):
+        failures.append("S19_S08_ACCEPTANCE_BINDING_NOT_PASS")
+
+    s08_state = str(s08.get("decision_state") or "UNAVAILABLE").upper()
+    s19_state = str(judgement.get("captain_state") or "UNAVAILABLE").upper()
+    if s19_state != s08_state:
+        failures.append("S19_STATE_NOT_BOUND_TO_S08")
+    if s08_state == "PREPARE":
+        if str(judgement.get("recommendation_status") or "").upper() == "EXECUTABLE_LOCK":
+            failures.append("S19_PREPARE_MARKED_EXECUTABLE")
+        if "CAPTAIN NOT FINAL" not in str(rendered_text).upper():
+            failures.append("S19_PREPARE_FINAL_LABEL_MISSING")
+    if acceptance_status == "PARTIAL" and "FULL_SEVEN_LAYER_EVIDENCE_AVAILABLE" in str(rendered_text):
+        failures.append("S19_PARTIAL_EVIDENCE_CLAIMED_FULL")
+    return failures
+
+
 def validate_deep_decision_content_delivery(
     report: Mapping[str, Any],
     body: str,
@@ -1362,6 +1439,20 @@ def validate_deep_decision_content_delivery(
     s19 = content("S19")
     if state("S19") == "COMPLETE":
         judgement = dict(s19.get("final_judgement") or {})
+        s08_acceptance = dict(
+            (content("S02").get("analytics_acceptance") or {}).get("s08_captain")
+            or {}
+        )
+        failures.extend(
+            validate_s19_canonical_binding(
+                s06=s06,
+                s08=s08,
+                s15b=s15b,
+                s19=s19,
+                s08_acceptance=s08_acceptance,
+                rendered_text=body,
+            )
+        )
         consumed = {
             str(value)
             for value in judgement.get("consumed_sections") or []

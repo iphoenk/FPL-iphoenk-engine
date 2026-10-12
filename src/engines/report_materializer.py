@@ -448,6 +448,83 @@ def _enforce_sizes() -> dict[str, int]:
     return sizes
 
 
+def _full_season_history_acceptance(official: dict[str, Any], planning_gw: Any) -> dict[str, Any]:
+    """Expose the canonical full-history gate without copying player rows."""
+    raw = official.get("full_season_history") or {}
+    if not raw:
+        historical = official.get("historical_entry") or {}
+        raw = historical.get("full_season_history") or {}
+    gate = dict(raw.get("coverage_gate") or {})
+    as_of = dict(raw.get("as_of") or {})
+    universe = dict(raw.get("universe") or {})
+    expected_gw = as_of.get("historical_gws")
+    status = str(gate.get("status") or "UNAVAILABLE").upper()
+    if status not in {"PASS", "PARTIAL"}:
+        status = "UNAVAILABLE"
+    return {
+        "contract": raw.get("contract") or "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "status": status,
+        "planning_gw": as_of.get("planning_gw", planning_gw),
+        "historical_gws": expected_gw or [],
+        "historical_range": (
+            f"GW1-GW{max(expected_gw)}" if isinstance(expected_gw, list) and expected_gw
+            else "UNAVAILABLE"
+        ),
+        "expected_gw_slots": len(expected_gw) if isinstance(expected_gw, list) else gate.get("expected_gw_slots"),
+        "available_gw_slots": gate.get("available_gw_slots"),
+        "expected_player_slots": gate.get("expected_player_slots"),
+        "missing_records": gate.get("missing_records") or [],
+        "expected_players": universe.get("expected_players"),
+        "covered_players": universe.get("covered_players"),
+        "coverage_ratio": universe.get("coverage_ratio"),
+        "pending_never_coerced_to_zero": gate.get("pending_never_coerced_to_zero") is True,
+        "dnp_and_blank_distinguished": gate.get("dnp_and_blank_distinguished") is True,
+        "double_gameweeks_aggregate_fixture_rows": gate.get("double_gameweeks_aggregate_fixture_rows") is True,
+        "provenance": dict(raw.get("provenance") or {}),
+        "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
+    }
+
+
+def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any]) -> dict[str, Any]:
+    captaincy = dict(user.get("captaincy") or {})
+    source_rows = user.get("rows") or []
+    pstart_rows = [row for row in source_rows if isinstance(row, dict) and row.get("p_start") is not None]
+    pstart_evidence = [row for row in pstart_rows if isinstance(row.get("p_start_evidence"), dict)]
+    frontier = captaincy.get("captain_frontier") or []
+    pstart_status = "PASS" if len(pstart_rows) == 15 and len(pstart_evidence) == len(pstart_rows) else "PARTIAL"
+    resolution = "FULL" if any(
+        len((row.get("p_start_evidence") or {}).get("signals") or []) >= 2
+        for row in pstart_evidence
+    ) else "LIMITED_RESOLUTION"
+    captain_state = str(captaincy.get("captain_state") or "UNAVAILABLE").upper()
+    return {
+        "contract": "V12_ANALYTICS_PRODUCTION_ACCEPTANCE_V1",
+        "p_start": {
+            "evidence_status": pstart_status,
+            "resolution_status": resolution,
+            "rows_with_probability": len(pstart_rows),
+            "rows_with_evidence": len(pstart_evidence),
+            "formula_owner": "V12_PLAYER_MINUTES",
+            "probability_recomputed_in_materializer": False,
+        },
+        "s08_captain": {
+            "evidence_status": "PASS" if isinstance(frontier, list) and frontier and captain_state in {"LOCK", "PREPARE"} else "PARTIAL",
+            "decision_state": captain_state,
+            "frontier_count": len(frontier) if isinstance(frontier, list) else 0,
+            "lock_requires_all_calibrated_layers": True,
+            "prepare_is_not_executable": captain_state != "LOCK",
+        },
+        "full_history": {
+            "evidence_status": "PASS" if full_history.get("status") == "PASS" else full_history.get("status", "UNAVAILABLE"),
+            "coverage_gate": full_history.get("status", "UNAVAILABLE"),
+            "planning_gw": full_history.get("planning_gw"),
+            "historical_range": full_history.get("historical_range"),
+            "covered_players": full_history.get("covered_players"),
+            "expected_players": full_history.get("expected_players"),
+        },
+    }
+
+
 def run() -> dict[str, Any]:
     user = read_json(USER_OUT, {})
     watchlist = read_json(DATA / "dss_watchlist.json", {})
@@ -461,6 +538,8 @@ def run() -> dict[str, Any]:
     prediction_accuracy = read_json(DATA / "prediction_accuracy.json", {})
     auth = read_json(DATA / "auth.json", {})
     current_team = read_json(DATA / "v6" / "personal" / "current_team.json", {})
+    full_season_history = _full_season_history_acceptance(official, user.get("planning_gw"))
+    analytics_acceptance = _analytics_acceptance(user=user, full_history=full_season_history)
 
     owned = _owned_rows(user, team, projections)
     watch_summary = _watchlist_summary(watchlist, deep=False)
@@ -493,6 +572,8 @@ def run() -> dict[str, Any]:
         "price_calibration_readiness": True,
         "fast_context_compacted": True,
         "deep_context_full_fidelity": True,
+        "full_season_history": full_season_history,
+        "analytics_acceptance": analytics_acceptance,
     }
 
     user.setdefault("owned_squad", {})["count"] = len(owned)
@@ -524,6 +605,8 @@ def run() -> dict[str, Any]:
         "report_time_intelligence": user.get("report_time_intelligence") or {},
         "engine": user.get("engine_line"),
         "action_board": user.get("action_board") or [],
+        "full_season_history": full_season_history,
+        "analytics_acceptance": analytics_acceptance,
     }
     deep = {
         **brief,
@@ -533,6 +616,8 @@ def run() -> dict[str, Any]:
         "personal_match_context": personal_match_context,
         "watchlist_20": watch_deep["positions"],
         "captaincy": _captain(user, deep=True),
+        "full_season_history": full_season_history,
+        "analytics_acceptance": analytics_acceptance,
         "starting_xi": user.get("starting_xi"),
         "horizon_policy": user.get("horizon_policy"),
         "report_mode": user.get("report_mode"),
@@ -584,6 +669,8 @@ def run() -> dict[str, Any]:
         "technical_lazy_load": True,
         "fast_context_compacted": True,
         "deep_context_full_fidelity": True,
+        "full_season_history": full_season_history,
+        "analytics_acceptance": analytics_acceptance,
     }
     atomic_json(DATA / "latest.json", latest)
     sizes = _enforce_sizes()

@@ -4177,6 +4177,26 @@ def _render_deep_visible_contract_lines(
 
     elif section_id == "S02":
         rows = [dict(r) for r in payload.get("rows") or [] if isinstance(r, Mapping)]
+        full_history = dict(payload.get("full_season_history") or {})
+        acceptance = dict(payload.get("analytics_acceptance") or {})
+        pstart_acceptance = dict(acceptance.get("p_start") or {})
+        lines.append(
+            "FULL-HISTORY PRODUCTION EVIDENCE: "
+            f"{full_history.get('status', 'UNAVAILABLE')}; "
+            f"planning GW {full_history.get('planning_gw', 'UNAVAILABLE')}; "
+            f"{full_history.get('historical_range', 'UNAVAILABLE')}; "
+            f"universe {full_history.get('covered_players', 'UNAVAILABLE')}/"
+            f"{full_history.get('expected_players', 'UNAVAILABLE')}; "
+            "Official FPL element-summary; pending is not coerced to zero."
+        )
+        lines.append(
+            "PSTART PRODUCTION EVIDENCE: "
+            f"{pstart_acceptance.get('evidence_status', 'UNAVAILABLE')}; "
+            f"{pstart_acceptance.get('rows_with_evidence', 0)}/"
+            f"{pstart_acceptance.get('rows_with_probability', 0)} rows bound to "
+            "V12_PLAYER_MINUTES evidence; resolution "
+            f"{pstart_acceptance.get('resolution_status', 'UNAVAILABLE')}."
+        )
         lines.extend(_markdown_table(
             ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
@@ -5597,6 +5617,15 @@ def _render_deep_visible_contract_lines(
                 return "UNAVAILABLE"
             return f"{value * 100:.1f}%" if probability else f"{value:.2f}"
 
+        analytics_acceptance = dict(payload.get("analytics_acceptance") or {})
+        s08_acceptance = dict(analytics_acceptance.get("s08_captain") or {})
+        lines.append(
+            "S08 PRODUCTION EVIDENCE: "
+            f"{s08_acceptance.get('evidence_status', 'UNAVAILABLE')}; "
+            f"frontier {s08_acceptance.get('frontier_count', 0)} rows; "
+            f"decision state {s08_acceptance.get('decision_state', 'UNAVAILABLE')}; "
+            "PREPARE is visible but not executable until all calibrated layers are available."
+        )
         lines.append(f"Captain football frontier: {frontier_class}.")
         if frontier:
             lines.append(

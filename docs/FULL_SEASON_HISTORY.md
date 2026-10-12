@@ -40,3 +40,8 @@ Runtime binding note (12 Oct 2026): each occurrence publishes both the lossless 
 
 
 Acceptance sidecar note: the uncompressed `history/official_detail.json` contains only coverage metadata; the complete player and fixture-level history remains in the lossless `history/official_detail.json.gz` artifact.
+
+
+## Current V12 serving binding (12 October 2026)
+
+The V12 materializer reads the occurrence-bound V6 artifact at `data/v6/history/official_detail.json` or its lossless `.gz` form only when `report_kind=full_master`, the target logical slot matches, and the artifact generation timestamp matches `data/v6/report_prefetch/latest.json`. A stale legacy `data/official_detail.json` cannot promote S02 full-history or P(start) evidence to production PASS.

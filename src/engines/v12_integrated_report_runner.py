@@ -6607,6 +6607,21 @@ def refresh_price_only_state(
         canonical_text=canonical,
         section_payloads=section_payloads,
     )
+    # Re-attach the occurrence-bound analytics manifests after canonical
+    # section resolution. This keeps the acceptance evidence in the exact
+    # report object used by the human-facing renderer.
+    for rendered_section in new_report.get("sections") or []:
+        if not isinstance(rendered_section, Mapping):
+            continue
+        section_id = str(rendered_section.get("section_id") or "").upper()
+        content = dict(rendered_section.get("content") or {})
+        if section_id == "S02":
+            content["full_season_history"] = dict(history_acceptance)
+            content["analytics_acceptance"] = dict(analytics_acceptance)
+            rendered_section["content"] = content
+        elif section_id == "S19":
+            content["analytics_acceptance"] = dict(analytics_acceptance)
+            rendered_section["content"] = content
     section_manifest = [
         {
             "section_id": str(row.get("section_id") or ""),
@@ -7268,6 +7283,21 @@ def refresh_mini_league_only_state(
         canonical_text=canonical,
         section_payloads=section_payloads,
     )
+    # Re-attach the occurrence-bound analytics manifests after canonical
+    # section resolution. This keeps the acceptance evidence in the exact
+    # report object used by the human-facing renderer.
+    for rendered_section in new_report.get("sections") or []:
+        if not isinstance(rendered_section, Mapping):
+            continue
+        section_id = str(rendered_section.get("section_id") or "").upper()
+        content = dict(rendered_section.get("content") or {})
+        if section_id == "S02":
+            content["full_season_history"] = dict(history_acceptance)
+            content["analytics_acceptance"] = dict(analytics_acceptance)
+            rendered_section["content"] = content
+        elif section_id == "S19":
+            content["analytics_acceptance"] = dict(analytics_acceptance)
+            rendered_section["content"] = content
     section_manifest = [
         {
             "section_id": str(row.get("section_id") or ""),

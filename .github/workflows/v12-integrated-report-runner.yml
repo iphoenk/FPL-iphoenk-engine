@@ -1107,10 +1107,11 @@ jobs:
                       raise SystemExit(f"latest native chunk mismatch: {entry['path']}")
               manifest["remote_readback"] = "PASS"
               manifest["verification_status"] = "REMOTE_READBACK_PASS"
-              (repo / root / "native_content.manifest.json").write_text(
-                  json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-                  encoding="utf-8",
-              )
+              final_manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+              (repo / root / "native_content.manifest.json").write_bytes(final_manifest_bytes)
+              # Same-occurrence latest and occurrence manifests must agree byte-for-byte
+              # after remote proof; the publisher owns this update, never an ad-hoc edit.
+              (repo / "latest/native_content.manifest.json").write_bytes(final_manifest_bytes)
               receipt["native_content_remote_readback"] = "PASS"
               receipt["native_content_round_trip"] = "PASS"
               receipt["native_content_truncation"] = "PASS"
@@ -1138,14 +1139,53 @@ jobs:
               cd ../private-reports
               git add --sparse "$REPORT_PATH/delivery_receipt.json"
               if [ -f "$REPORT_PATH/native_content.manifest.json" ]; then
-                git add --sparse "$REPORT_PATH/native_content.manifest.json"
+                git add --sparse "$REPORT_PATH/native_content.manifest.json" "latest/native_content.manifest.json"
               fi
               git commit -m "report(v12): record native content remote readback" >/dev/null
               git push origin HEAD:main
               remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
               test "$(git rev-parse HEAD)" = "$remote_sha"
+              echo "FINAL_REMOTE_SHA=$remote_sha" >> ../app/artifacts/v12-private-delivery/remote_readback.env
             )
             publisher_rc=$?
+            if [ "$publisher_rc" -eq 0 ]; then
+              # Public proof MUST hash the exact final receipt persisted at the
+              # second immutable remote commit, not the pre-readback local receipt.
+              . artifacts/v12-private-delivery/remote_readback.env
+              git -C ../private-reports show "$FINAL_REMOTE_SHA:$REPORT_PATH/delivery_receipt.json" \
+                > artifacts/v12-private-delivery/receipt.json
+              FINAL_REMOTE_SHA="$FINAL_REMOTE_SHA" REPORT_PATH="$REPORT_PATH" python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          repo = Path("../private-reports")
+          commit = os.environ["FINAL_REMOTE_SHA"]
+          root = os.environ["REPORT_PATH"]
+          def show(path):
+              return subprocess.check_output(["git", "-C", str(repo), "show", f"{commit}:{path}"])
+
+          receipt_bytes = Path("artifacts/v12-private-delivery/receipt.json").read_bytes()
+          if receipt_bytes != show(f"{root}/delivery_receipt.json"):
+              raise SystemExit("final private receipt remote bytes mismatch")
+          receipt = json.loads(receipt_bytes)
+          if receipt.get("private_remote_readback") != "PASS":
+              raise SystemExit("final private receipt not remote-verified")
+          if receipt.get("destination") != root:
+              raise SystemExit("final private receipt occurrence mismatch")
+          if receipt.get("native_content_format") == "MANIFEST_CHUNKS_V1":
+              occurrence_manifest = show(f"{root}/native_content.manifest.json")
+              if occurrence_manifest != show("latest/native_content.manifest.json"):
+                  raise SystemExit("final latest native manifest byte parity mismatch")
+              if hashlib.sha256(occurrence_manifest).hexdigest() != receipt.get("native_content_manifest_sha256"):
+                  raise SystemExit("final remote manifest receipt hash mismatch")
+          print("FINAL_REMOTE_RECEIPT_SHA256=" + hashlib.sha256(receipt_bytes).hexdigest())
+          print("FINAL_REMOTE_COMMIT=" + commit)
+          PY
+              publisher_rc=$?
+            fi
           fi
           if [ "$publisher_rc" -eq 0 ]; then
             echo "status=PASS" >> "$GITHUB_OUTPUT"

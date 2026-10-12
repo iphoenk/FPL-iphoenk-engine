@@ -1049,6 +1049,10 @@ class PrefetchService:
                     "schema_version": detail_artifact.get("schema_version"),
                     "contract": detail_artifact.get("contract"),
                     "generated_at": detail_artifact.get("generated_at"),
+                    "report_kind": detail_artifact.get("report_kind"),
+                    "target_logical_report_slot": detail_artifact.get("target_logical_report_slot"),
+                    "slot_identity": detail_artifact.get("slot_identity"),
+                    "report_prefetch_run_id": detail_artifact.get("report_prefetch_run_id"),
                     "authority": detail_artifact.get("authority"),
                     "full_season_history": {
                         key: full_history.get(key)

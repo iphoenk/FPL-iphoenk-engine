@@ -721,6 +721,7 @@ def publish_private_output(
         "native_content_round_trip": "PASS" if native_manifest_json else "UNVERIFIED",
         "native_content_truncation": "PASS" if native_manifest_json else "UNVERIFIED",
         "native_content_commit": None,
+        "native_ui_acceptance": "UNVERIFIED",
         "native_chatgpt_render_acceptance": "UNVERIFIED",
         "previous_deep_baseline_published": previous_deep_baseline_sha is not None,
         "previous_deep_baseline_sha256": previous_deep_baseline_sha,

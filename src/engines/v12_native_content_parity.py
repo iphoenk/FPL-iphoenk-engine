@@ -180,21 +180,45 @@ def validate_lossless_native_content(
         raise NativeContentParityError("section count mismatch")
 
 
-def _chunk_lines(section: Mapping[str, Any], max_bytes: int) -> list[str]:
+def _encode_chunk(
+    section_id: str, part_index: int, part_count: int, content: str
+) -> str:
+    payload = {
+        "section_id": section_id,
+        "part_index": part_index,
+        "part_count": part_count,
+        "source_bytes": len(content.encode("utf-8")),
+        "source_sha256": sha256(content.encode("utf-8")).hexdigest(),
+        "content": content,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+
+
+def _chunk_lines(
+    section: Mapping[str, Any], max_bytes: int, *, section_id: str
+) -> list[str]:
     lines = str(section.get("source") or "").splitlines(keepends=True)
     chunks: list[str] = []
     current = ""
     for line in lines:
         candidate = current + line
-        if current and len(candidate.encode("utf-8")) > max_bytes:
+        # Reserve enough metadata width for the final part count. This keeps
+        # the serialized JSON file, not merely its content string, under the
+        # connector-safe limit.
+        encoded_size = len(
+            _encode_chunk(section_id, 999999, 999999, candidate).encode("utf-8")
+        )
+        if current and encoded_size > max_bytes:
             chunks.append(current)
             current = line
+        elif not current and encoded_size > max_bytes:
+            raise NativeContentParityError(
+                f"single Markdown line exceeds chunk limit: {section_id}"
+            )
         else:
             current = candidate
     if current or not chunks:
         chunks.append(current)
-    if any(len(chunk.encode("utf-8")) > max_bytes for chunk in chunks):
-        raise NativeContentParityError("single Markdown line exceeds chunk limit")
     return chunks
 
 
@@ -212,18 +236,12 @@ def build_manifest_chunks(
     entries: list[dict[str, Any]] = []
     chunk_count = 0
     for section_id, section in zip(section_ids, sections):
-        parts = _chunk_lines(section, max_chunk_bytes)
+        parts = _chunk_lines(section, max_chunk_bytes, section_id=section_id)
         for index, content in enumerate(parts):
             path = str(PurePosixPath("native_content") / f"{section_id}.part-{index:03d}.json")
-            payload = {
-                "section_id": section_id,
-                "part_index": index,
-                "part_count": len(parts),
-                "source_bytes": len(content.encode("utf-8")),
-                "source_sha256": sha256(content.encode("utf-8")).hexdigest(),
-                "content": content,
-            }
-            encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + "\n"
+            encoded = _encode_chunk(section_id, index, len(parts), content)
+            if len(encoded.encode("utf-8")) > max_chunk_bytes:
+                raise NativeContentParityError("serialized chunk exceeds chunk limit")
             files[path] = encoded
             entries.append({
                 "path": path,
@@ -260,27 +278,43 @@ def validate_manifest_chunks(
     entries = list(manifest.get("chunks") or [])
     if manifest.get("chunk_count") != len(entries) or len(files) != len(entries):
         raise NativeContentParityError("chunk count mismatch")
+    if manifest.get("canonical_body_bytes") != len(canonical_body.encode("utf-8")):
+        raise NativeContentParityError("canonical byte length mismatch")
+    section_ids = list(manifest.get("section_ids") or [])
+    expected_sections = (
+        list(DEEP_WITH_S16B_SECTIONS)
+        if "S16B" in section_ids
+        else list(DEEP_MANDATORY_SECTIONS)
+    )
+    if section_ids != expected_sections or manifest.get("expected_section_count") != len(expected_sections):
+        raise NativeContentParityError("section catalog mismatch")
     grouped: dict[str, list[dict[str, Any]]] = {}
     for entry in entries:
         path = str(entry.get("path") or "")
         if path not in files:
             raise NativeContentParityError("chunk missing")
         raw = files[path]
+        if entry.get("byte_length") != len(raw.encode("utf-8")):
+            raise NativeContentParityError("chunk byte length mismatch")
         if sha256(raw.encode("utf-8")).hexdigest() != entry.get("sha256"):
             raise NativeContentParityError("chunk hash mismatch")
         payload = json.loads(raw)
         content = payload.get("content")
         if not isinstance(content, str) or not content:
             raise NativeContentParityError("chunk empty")
+        for key in ("section_id", "part_index", "part_count"):
+            if payload.get(key) != entry.get(key):
+                label = key.replace("_", " ")
+                raise NativeContentParityError(f"chunk {label} mismatch")
         if len(content.encode("utf-8")) != payload.get("source_bytes"):
             raise NativeContentParityError("chunk byte length mismatch")
         if sha256(content.encode("utf-8")).hexdigest() != payload.get("source_sha256"):
             raise NativeContentParityError("chunk source hash mismatch")
         grouped.setdefault(str(payload.get("section_id")), []).append(payload)
-    if list(grouped) != list(manifest.get("section_ids") or []):
+    if list(grouped) != section_ids:
         raise NativeContentParityError("section missing or duplicated")
     rebuilt = str(manifest.get("prefix") or "")
-    for section_id in manifest.get("section_ids") or []:
+    for section_id in section_ids:
         parts = sorted(grouped[section_id], key=lambda row: int(row.get("part_index", -1)))
         expected = len(parts)
         if [p.get("part_index") for p in parts] != list(range(expected)):
@@ -297,11 +331,22 @@ def validate_manifest_chunks(
 def build_native_ui_acceptance(
     manifest: Mapping[str, Any], *, rendered_section_ids: Sequence[str],
     rendered_content: str, user_visible_acceptance: bool,
+    transport_status: str = "PASS", remote_readback: str = "PASS",
+    files: Mapping[str, str] | None = None, canonical_body: str | None = None,
 ) -> dict[str, Any]:
     """Create a receipt only after an actual native consumer readback."""
     expected = list(manifest.get("section_ids") or [])
+    manifest_valid = True
+    if files is not None and canonical_body is not None:
+        try:
+            validate_manifest_chunks(manifest, files, canonical_body=canonical_body)
+        except NativeContentParityError:
+            manifest_valid = False
     status = "PASS" if (
         user_visible_acceptance
+        and str(transport_status).upper() == "PASS"
+        and str(remote_readback).upper() == "PASS"
+        and manifest_valid
         and list(rendered_section_ids) == expected
         and sha256(rendered_content.encode("utf-8")).hexdigest()
         == manifest.get("canonical_body_sha256")
@@ -311,7 +356,7 @@ def build_native_ui_acceptance(
         "native_ui_section_count": len(rendered_section_ids),
         "native_ui_rendered_section_ids": list(rendered_section_ids),
         "native_ui_content_hash": sha256(rendered_content.encode("utf-8")).hexdigest(),
-        "native_ui_matches_manifest": "PASS" if list(rendered_section_ids) == expected else "FAIL",
+        "native_ui_matches_manifest": "PASS" if status == "PASS" else "UNVERIFIED",
         "native_ui_all_chunks_consumed": "PASS" if status == "PASS" else "UNVERIFIED",
         "native_ui_user_visible_acceptance": "PASS" if user_visible_acceptance else "UNVERIFIED",
         "verification_status": "VERIFIED" if status == "PASS" else "UNVERIFIED",

@@ -1059,7 +1059,20 @@ jobs:
               ("digest.md", "digest_md_sha256"),
               ("execution_proof_private.json", "execution_proof_private_sha256"),
           ]
-          body_source = "serving_report.md" if mode == "DEEP" else "report_body.md"
+          # A degraded DEEP occurrence can legitimately lack serving_report.md.
+          # Mirror the publisher's actual canonical-body source selection.
+          def remote_exists(path):
+              return subprocess.run(
+                  ["git", "-C", str(repo), "cat-file", "-e", f"{commit}:{path}"],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL,
+              ).returncode == 0
+
+          body_source = (
+              "serving_report.md"
+              if mode == "DEEP" and remote_exists(f"{root}/serving_report.md")
+              else "report_body.md"
+          )
           canonical_files.append((body_source, "canonical_body_sha256"))
           for name, hash_field in canonical_files:
               expected = receipt.get(hash_field)

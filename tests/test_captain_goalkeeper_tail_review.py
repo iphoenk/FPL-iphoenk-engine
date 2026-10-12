@@ -161,3 +161,19 @@ def test_close_captain_tiebreak_requires_rivals_scope():
     assert out["competitive_context"]["rivals_complete"] is False
     assert out["competitive_context"]["tie_break_status"] == "UNAVAILABLE_INCOMPLETE_RIVALS_SCOPE"
     assert out["mini_league_override_applied"] is False
+
+
+def test_close_frontier_exposes_canonical_shared_world_gate_without_gk_fabrication():
+    keeper = _candidate(1, "Keeper", "GK", {2: .2, 6: .7, 10: .1})
+    forward = _candidate(2, "Forward", "FWD", {2: .3, 6: .4, 12: .3})
+    out = decide_captain_vice(
+        [keeper, forward],
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+    )
+    shared = out["shared_world_cvc"]
+    assert shared["status"] == "AVAILABLE"
+    assert shared["paths"] == 500_000
+    assert shared["convergence"]["gate_status"] == "PASS"
+    assert shared["goalkeeper_event_calibration"]["required"] is False
+    assert shared["goalkeeper_event_calibration"]["missing_event_model_is_not_synthesized"] is True

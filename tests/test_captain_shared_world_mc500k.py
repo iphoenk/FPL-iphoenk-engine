@@ -84,3 +84,25 @@ def test_shared_world_mini_league_rank_simulation_uses_same_world():
     assert result["mini_league"]["status"] == "AVAILABLE"
     assert result["mini_league"]["shared_world"] is True
     assert result["mini_league"]["teams"] == 2
+
+
+def test_canonical_pmf_path_is_available_without_invented_gk_events():
+    rows = [
+        candidate(1, "GK", {2: 0.5, 6: 0.5}),
+        candidate(2, "FWD", {2: 0.4, 10: 0.6}),
+    ]
+    rows[0].pop("goalkeeper_event_calibration")
+    result = simulate_shared_world_cvc(
+        rows,
+        captain_id=1,
+        vice_captain_id=2,
+        require_goalkeeper_event_calibration=False,
+    )
+    assert result["status"] == "AVAILABLE"
+    assert result["paths"] == MC_PATHS == 500_000
+    assert result["convergence"]["gate_status"] == "PASS"
+    assert result["goalkeeper_event_calibration"]["required"] is False
+    assert result["goalkeeper_event_calibration"]["status_by_element"]["1"] == (
+        "NOT_REQUIRED_CANONICAL_PMF"
+    )
+    assert result["goalkeeper_event_calibration"]["missing_event_model_is_not_synthesized"] is True

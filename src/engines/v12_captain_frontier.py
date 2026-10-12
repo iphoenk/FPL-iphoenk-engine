@@ -881,6 +881,7 @@ def decide_captain_vice(
             candidates,
             captain_id=captain_id,
             vice_captain_id=int(vice.get("element_id") or 0),
+            require_goalkeeper_event_calibration=False,
         )
     review_challenger = _goalkeeper_tail_review(
         frontier, selected, classification,
@@ -932,7 +933,10 @@ def decide_captain_vice(
         joint_ready = (
             str(joint.get("status") or "").upper() == "AVAILABLE"
             and int(joint.get("paths") or 0) == 500_000
-            and str(convergence.get("status") or "").upper() == "PASS"
+            and (
+                str(convergence.get("status") or "").upper() == "PASS"
+                or str(convergence.get("gate_status") or "").upper() == "PASS"
+            )
         )
         rank_ready = (
             not mini_changed or
@@ -1024,7 +1028,8 @@ def decide_captain_vice(
             "historical_picks_not_target_gw_forecast": True,
             "mc500k_mutated": False,
             "shared_world_cvc_mc_paths": 500_000,
-            "shared_world_cvc_requires_gk_calibration": True,
+            "shared_world_cvc_requires_gk_calibration": False,
+            "shared_world_cvc_gk_calibration_mode": "OPTIONAL_WHEN_CANONICAL_PMF_IS_COMPLETE",
             "shared_world_cvc_no_hardcoded_winner": True,
         },
     }

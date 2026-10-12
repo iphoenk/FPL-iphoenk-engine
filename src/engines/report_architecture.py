@@ -52,6 +52,39 @@ def _projection_map(projections: dict[str, Any]) -> dict[int, dict[str, Any]]:
     return {int(p["element"]): p for p in projections.get("players") or [] if p.get("element") is not None}
 
 
+def _pstart_rows(team: dict[str, Any], projections: dict[str, Any]) -> list[dict[str, Any]]:
+    """Bind canonical player-minutes evidence into the serving acceptance payload."""
+    pmap = _projection_map(projections)
+    rows: list[dict[str, Any]] = []
+    for owned in team.get("team_value_ledger") or []:
+        element = int(owned.get("element") or -1)
+        projection = pmap.get(element) or {}
+        xmins = projection.get("xmins") or {}
+        p_start = next((x for x in (
+            xmins.get("start_probability"),
+            projection.get("p_start"),
+            projection.get("start_probability"),
+        ) if x is not None), None)
+        if p_start is None:
+            continue
+        evidence = next((x for x in (
+            xmins.get("p_start_evidence"),
+            projection.get("p_start_evidence"),
+            xmins.get("start_probability_evidence"),
+            projection.get("start_probability_evidence"),
+        ) if isinstance(x, dict)), None)
+        rows.append({
+            "element": element,
+            "name": owned.get("name") or projection.get("name"),
+            "position": owned.get("position") or projection.get("position"),
+            "p_start": p_start,
+            "p_dnp": xmins.get("dnp_probability", projection.get("p_dnp")),
+            "xmins": xmins.get("expected_minutes"),
+            "p_start_evidence": evidence,
+        })
+    return rows
+
+
 def _owned_squad(team: dict[str, Any], projections: dict[str, Any], stable_mode: bool) -> dict[str, Any]:
     pmap = _projection_map(projections)
     rows = []
@@ -393,6 +426,7 @@ def build() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
             "confidence": "HIGH" if overall == "HOLD" and captaincy.get("decision") == "LOCK" and lineup_section.get("decision") == "LOCK" else "MEDIUM" if overall != "REVIEW" else "LOW",
         },
         "owned_squad": _owned_squad(team, projections, stable_mode),
+        "rows": _pstart_rows(team, projections),
         "changes_since_last_report": delta,
         "starting_xi": lineup_section,
         "captaincy": captaincy,

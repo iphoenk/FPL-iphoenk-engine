@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T07:25:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T07:35:00+07:00`
 
 
 - **P0 full-season player history (12 Oct 2026, PR #988):** Official FPL element-summary history is retained for the entire bootstrap universe across GW1..N-1, with fixture-level rows, double-GW aggregation, FINAL/DNP/BLANK/PENDING states, provenance, and an explicit coverage gate. Missing or pending evidence is never coerced to zero.

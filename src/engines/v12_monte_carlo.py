@@ -1319,6 +1319,7 @@ def _resolve_route_chunk(
     bench_gk = valid["bench_gk"]
     n = len(next(iter(player_world.values()))["points"])
     total = np.zeros(n, dtype=np.float64)
+    autosub_points = np.zeros(n, dtype=np.float64)
     starter_gk = None
     dnp_counts = {pos: np.zeros(n, dtype=np.int8) for pos in OUTFIELD}
 
@@ -1338,7 +1339,9 @@ def _resolve_route_chunk(
     starter_gk_appeared = np.asarray(player_world[starter_gk]["appeared"], dtype=bool)
     reserve_gk_appeared = np.asarray(player_world[bench_gk]["appeared"], dtype=bool)
     gk_sub = (~starter_gk_appeared) & reserve_gk_appeared
-    total += np.where(gk_sub, np.asarray(player_world[bench_gk]["points"], dtype=np.float64), 0.0)
+    gk_points = np.where(gk_sub, np.asarray(player_world[bench_gk]["points"], dtype=np.float64), 0.0)
+    total += gk_points
+    autosub_points += gk_points
 
     bench_positions = tuple(_position(pmap[element]) for element in bench)
     lookup = _autosub_lookup(tuple(valid["start_counts"]), bench_positions)
@@ -1358,7 +1361,9 @@ def _resolve_route_chunk(
         selected_bits[choose] = bits
     for idx, element in enumerate(bench):
         selected = (selected_bits & (1 << idx)) != 0
-        total += np.where(selected, np.asarray(player_world[element]["points"], dtype=np.float64), 0.0)
+        bench_points = np.where(selected, np.asarray(player_world[element]["points"], dtype=np.float64), 0.0)
+        total += bench_points
+        autosub_points += bench_points
 
     captain = valid["captain"]
     vice = valid["vice_captain"]
@@ -1378,6 +1383,9 @@ def _resolve_route_chunk(
         "captain_takeover": (~captain_appeared) & vice_appeared,
         "captain_appeared": captain_appeared,
         "vice_appeared": vice_appeared,
+        "captain_points": np.asarray(player_world[captain]["points"], dtype=np.float64),
+        "vice_points": np.asarray(player_world[vice]["points"], dtype=np.float64),
+        "autosub_points": autosub_points,
     }
 
 
@@ -2162,8 +2170,8 @@ def _simulate_route_arrays_serial(
     if actual_paths <= 0:
         raise MonteCarloError("actual_paths must be positive")
     horizons = sorted(set(int(x) for x in horizons))
-    if not horizons or horizons[-1] > 5 or horizons[0] <= 0:
-        raise MonteCarloError("supported horizons are within 1..5")
+    if not horizons or horizons[-1] > 6 or horizons[0] <= 0:
+        raise MonteCarloError("supported horizons are within 1..6")
     by_gw = _material_player_ids(route_defs, horizons)
     ordered_gws = sorted(by_gw)
     if len(ordered_gws) < horizons[-1]:
@@ -2196,6 +2204,7 @@ def _simulate_route_arrays_serial(
         rid: {
             "autosub_paths": 0,
             "captain_takeover_paths": 0,
+            "by_gw": {},
         }
         for rid in route_ids
     }
@@ -2311,6 +2320,37 @@ def _simulate_route_arrays_serial(
                         resolved["captain_takeover"]
                     )
                 )
+                gw_stats = route_diag[rid]["by_gw"].setdefault(
+                    str(gw),
+                    {
+                        "paths": 0,
+                        "autosub_paths": 0,
+                        "captain_takeover_paths": 0,
+                        "captain_blank_paths": 0,
+                        "captain_haul_paths": 0,
+                        "autosub_value_sum": 0.0,
+                    },
+                )
+                gw_stats["paths"] += n
+                gw_stats["autosub_paths"] += int(
+                    np.count_nonzero(resolved["autosub_any"])
+                )
+                gw_stats["captain_takeover_paths"] += int(
+                    np.count_nonzero(resolved["captain_takeover"])
+                )
+                gw_stats["captain_blank_paths"] += int(
+                    np.count_nonzero(
+                        resolved["captain_appeared"]
+                        & (resolved["captain_points"] <= 2.0)
+                    )
+                )
+                gw_stats["captain_haul_paths"] += int(
+                    np.count_nonzero(
+                        resolved["captain_appeared"]
+                        & (resolved["captain_points"] >= 10.0)
+                    )
+                )
+                gw_stats["autosub_value_sum"] += float(np.sum(resolved["autosub_points"]))
                 if gw_index in horizons:
                     cost = route.get(
                         "execution_cost_points"
@@ -2394,6 +2434,16 @@ def _simulate_route_arrays_serial(
         }
     denom = actual_paths * len(ordered_gws)
     for rid, row in route_diag.items():
+        per_gw = {}
+        for gw, stats in sorted(row["by_gw"].items(), key=lambda item: int(item[0])):
+            paths = max(1, int(stats["paths"]))
+            per_gw[gw] = {
+                "autosub_path_rate": float(stats["autosub_paths"]) / paths,
+                "captain_takeover_path_rate": float(stats["captain_takeover_paths"]) / paths,
+                "captain_blank_probability": float(stats["captain_blank_paths"]) / paths,
+                "captain_haul_probability": float(stats["captain_haul_paths"]) / paths,
+                "expected_autosub_value": float(stats["autosub_value_sum"]) / paths,
+            }
         diagnostics["route_path_semantics"][rid] = {
             "autosub_path_rate": float(
                 row["autosub_paths"]
@@ -2403,6 +2453,7 @@ def _simulate_route_arrays_serial(
                 row["captain_takeover_paths"]
             )
             / max(1, denom),
+            "by_gw": per_gw,
         }
     return route_totals, diagnostics
 
@@ -2550,29 +2601,54 @@ def _merge_parallel_sampling_diagnostics(
         }
     )
     for route_id in route_ids:
+        route_semantics = [
+            ((diag.get("route_path_semantics") or {}).get(route_id) or {})
+            for _, _, _, diag in ordered
+        ]
         names = sorted(
             {
                 name
-                for _, _, _, diag in ordered
-                for name in (
-                    (diag.get("route_path_semantics") or {}).get(route_id)
-                    or {}
-                )
+                for semantics in route_semantics
+                for name, value in semantics.items()
+                if not isinstance(value, Mapping)
             }
         )
         first["route_path_semantics"][route_id] = {
             name: sum(
                 int(path_count)
                 * float(
-                    (
-                        (diag.get("route_path_semantics") or {}).get(route_id)
-                        or {}
-                    ).get(name, 0.0)
+                    semantics.get(name, 0.0)
                 )
-                for _, path_count, _, diag in ordered
+                for (_, path_count, _, _), semantics in zip(ordered, route_semantics)
             )
             / total
             for name in names
+        }
+        by_gw_keys = sorted(
+            {
+                gw
+                for semantics in route_semantics
+                for gw in (semantics.get("by_gw") or {})
+            },
+            key=int,
+        )
+        first["route_path_semantics"][route_id]["by_gw"] = {
+            gw: {
+                name: sum(
+                    int(path_count)
+                    * float(((semantics.get("by_gw") or {}).get(gw) or {}).get(name, 0.0))
+                    for (_, path_count, _, _), semantics in zip(ordered, route_semantics)
+                ) / total
+                for name in sorted(
+                    {
+                        name
+                        for semantics in route_semantics
+                        for name, value in ((semantics.get("by_gw") or {}).get(gw) or {}).items()
+                        if not isinstance(value, Mapping)
+                    }
+                )
+            }
+            for gw in by_gw_keys
         }
 
     first_invariants = dict(
@@ -3246,6 +3322,17 @@ def run_correlated_monte_carlo(
                         arrays[a][horizon],
                         arrays[b][horizon],
                     )
+
+            # Winner probability is computed from the same common-world
+            # arrays, never reconstructed from independent route means.
+            winner_stack = np.vstack(
+                [arrays[rid][horizon] for rid in route_ids]
+            )
+            winners = np.argmax(winner_stack, axis=0)
+            for index, rid in enumerate(route_ids):
+                metrics[rid][str(horizon)]["p_route_best"] = float(
+                    np.mean(winners == index)
+                )
 
         checkpoints = [
             int(x)

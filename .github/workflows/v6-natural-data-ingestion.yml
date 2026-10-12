@@ -439,9 +439,29 @@ jobs:
           git commit -m "data(v6): atomic hourly snapshot ${{ github.run_id }} [${{ needs.collect.outputs.schedule_kind }}] [dedicated_v6_github_app]"
           published_sha="$(git rev-parse HEAD)"
           basic_auth="$(printf 'x-access-token:%s' "$PUBLISH_TOKEN" | base64 -w0)"
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" push \
-            --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
-            origin "HEAD:refs/heads/${RUNTIME_BRANCH}"
+          # The runtime branch is a single-writer CAS surface. A concurrent
+          # occurrence may advance it after the initial lease capture. Refresh
+          # the lease and retry only the same immutable candidate; never force
+          # push without the branch tip observed immediately before the attempt.
+          published=false
+          for attempt in 1 2 3; do
+            git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" fetch --depth=1 origin "+refs/heads/${RUNTIME_BRANCH}:refs/remotes/origin/${RUNTIME_BRANCH}"
+            RUNTIME_BASE_SHA="$(git rev-parse "refs/remotes/origin/${RUNTIME_BRANCH}")"
+            echo "Runtime publish CAS attempt ${attempt}; expected=${RUNTIME_BASE_SHA}; candidate=${published_sha}"
+            if git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $basic_auth" push \
+              --force-with-lease="refs/heads/${RUNTIME_BRANCH}:${RUNTIME_BASE_SHA}" \
+              origin "HEAD:refs/heads/${RUNTIME_BRANCH}"; then
+              published=true
+              break
+            fi
+            if [[ "${attempt}" != 3 ]]; then
+              sleep 2
+            fi
+          done
+          if [[ "${published}" != true ]]; then
+            echo "::error::V6 runtime publish CAS failed after three lease-refresh attempts"
+            exit 1
+          fi
           echo "PUBLISHED_RUNTIME_SHA=$published_sha" >> "$GITHUB_ENV"
 
       - name: Verify published V6 runtime provenance and exact tree

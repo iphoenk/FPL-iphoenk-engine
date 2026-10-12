@@ -251,3 +251,16 @@ def test_s15_keeps_model_snapshot_strong_when_exact_s02_binding_is_complete():
         "cross_section_evidence": {"availability_binding": "COMPLETE"},
     })
     assert "Availability / minutes | 🟢 Strong | Current model snapshot supports" in text
+
+
+def test_s10_unsupported_eta_is_explicitly_stateful_not_generic_unavailable():
+    text = _visible("S10", {"rows": [
+        {"name": "Alpha", "current_price": 5.5, "direction": "RISE",
+         "date_state": "UNAVAILABLE", "eta_reason": "NO_SUPPORTED_CROSSING"},
+        {"name": "Beta", "current_price": 6.0, "direction": "FALL",
+         "date_state": "UNAVAILABLE"},
+        {"name": "Gamma", "current_price": 6.5, "direction": "RISE",
+         "estimated_change_date_wib": "14 Oct 2026 06:00 WIB"},
+    ]})
+    assert "ETA_UNAVAILABLE (NO_SUPPORTED_CROSSING)" in text
+    assert "14 Oct 2026 06:00 WIB" in text

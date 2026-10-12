@@ -80,3 +80,26 @@ def test_unresolved_economics_does_not_replace_horizon_net_with_zero():
     assert horizons["GW+1"]["net_delta_vs_hold"] is None
     assert horizons["3GW"]["net_delta_vs_hold"] is None
     assert horizons["5GW"]["net_delta_vs_hold"] is None
+
+
+
+def test_missing_authenticated_hit_cost_resolves_from_active_official_ruleset():
+    from src.engines.v12_integrated_report_runner import (
+        _resolved_hit_cost_per_extra_transfer,
+    )
+    from src.rules import FINANCE_RULES
+
+    assert FINANCE_RULES["extra_transfer_hit_points"] == 4
+    assert _resolved_hit_cost_per_extra_transfer(
+        {"hit_cost_per_extra_transfer": None}
+    ) == 4
+
+
+def test_explicit_authenticated_hit_cost_remains_authoritative():
+    from src.engines.v12_integrated_report_runner import (
+        _resolved_hit_cost_per_extra_transfer,
+    )
+
+    assert _resolved_hit_cost_per_extra_transfer(
+        {"hit_cost_per_extra_transfer": 4}
+    ) == 4

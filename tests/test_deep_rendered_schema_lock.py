@@ -6,7 +6,12 @@ from src.engines.v12_deep_presentation_lock import (
     load_deep_presentation_lock,
     validate_rendered_deep_presentation,
 )
-from src.engines.v12_report_orchestration import _render_package_frontier_lines, _render_deep_visible_contract_lines
+from src.engines.v12_report_orchestration import (
+    _formation_mc_lines,
+    _render_package_frontier_lines,
+    _render_deep_visible_contract_lines,
+    _sanitize_mapping_reprs,
+)
 
 
 def _heading(sid: str) -> str:
@@ -381,3 +386,35 @@ def test_s05_rendered_schema_rejects_unexpected_extra_table():
         1,
     )
     assert "S05_RENDERED_TABLE_COUNT=2/1" in validate_rendered_deep_presentation(body, report)
+
+
+def test_formation_mc_table_is_counted_when_bound_by_the_section_producer():
+    body, report = _valid_body()
+    formation_mc = {
+        "horizon": {"start_gw": 7, "end_gw": 12},
+        "formations": [{
+            "formation": "3-4-3", "actual_paths": 500000, "mean_xpts": 70,
+            "p10": 55, "p50": 70, "p90": 88, "variance": 12,
+            "captain": "Captain", "vice_captain": "Vice",
+            "autosub_probability": 0.9, "convergence": "PASS",
+        }],
+    }
+    for section in report["sections"]:
+        if section["section_id"] == "S06":
+            section["content"] = {"formation_mc": formation_mc}
+            break
+    start = body.index("## 6. TEST")
+    end = body.index("## 6B. TEST")
+    body = body[:start] + "\n".join([
+        "## 6. TEST", "Status: COMPLETE", *_formation_mc_lines(formation_mc), ""
+    ]) + "\n" + body[end:]
+    assert validate_rendered_deep_presentation(body, report) == []
+
+
+def test_json_mapping_strings_are_sanitized_before_human_facing_qa():
+    rendered = _sanitize_mapping_reprs(
+        'Evidence: {"status": "PASS", "value": 3, "ready": true}'
+    )
+    assert "{'status'" not in rendered
+    assert '"status"' not in rendered
+    assert "status=PASS" in rendered

@@ -21,7 +21,7 @@ class NativeContentParityError(ValueError):
     """A DEEP source cannot be transported without content loss."""
 
 
-_HEADING = re.compile(r"^## ([0-9]+[A-Z]?)\\. ([^\\n]+)(?:\\n|$)", re.MULTILINE)
+_HEADING = re.compile(r"^## ([0-9]+[A-Z]?)\. ([^\n]+)(?:\n|$)", re.MULTILINE)
 
 
 def _id(number: str) -> str:

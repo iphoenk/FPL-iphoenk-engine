@@ -497,6 +497,8 @@ def publish_private_output(
     # Exact-byte, all-section content transport for a future native ChatGPT
     # consumer. It is private and is NOT proof of user-visible native rendering.
     native_content_json = None
+    native_manifest_json = None
+    native_chunk_files: dict[str, str] = {}
     if (
         report_mode == "DEEP"
         and delivery_status == "READY_FULL"
@@ -504,6 +506,7 @@ def publish_private_output(
     ):
         from src.engines.v12_native_content_parity import (
             NativeContentParityError,
+            build_manifest_chunks,
             build_lossless_native_content,
         )
 
@@ -524,6 +527,12 @@ def publish_private_output(
             raise PrivatePublishError(f"NATIVE_CONTENT_PARITY_FAILED:{exc}") from exc
         native_content_json = (
             json.dumps(native_content, ensure_ascii=False, separators=(",", ":"), default=str)
+            + "\n"
+        )
+        native_manifest, native_chunk_files = build_manifest_chunks(native_content)
+        native_manifest["occurrence_path"] = str(report_dir.relative_to(private_root))
+        native_manifest_json = (
+            json.dumps(native_manifest, ensure_ascii=False, indent=2, sort_keys=True)
             + "\n"
         )
 
@@ -628,6 +637,9 @@ def publish_private_output(
         native_content_sha = write_text(
             report_dir / "native_content.json", native_content_json
         )
+        write_text(report_dir / "native_content.manifest.json", native_manifest_json or "")
+        for relative_path, chunk_payload in native_chunk_files.items():
+            write_text(report_dir / relative_path, chunk_payload)
     previous_deep_baseline_sha = None
     if previous_deep_baseline_json is not None:
         previous_deep_baseline_sha = write_text(
@@ -654,6 +666,9 @@ def publish_private_output(
                 _atomic_replace_bytes(latest_dir / latest_name, source.read_bytes())
         if native_content_json is not None:
             _atomic_replace_text(latest_dir / "native_content.json", native_content_json)
+            _atomic_replace_text(latest_dir / "native_content.manifest.json", native_manifest_json or "")
+            for relative_path, chunk_payload in native_chunk_files.items():
+                _atomic_replace_text(latest_dir / relative_path, chunk_payload)
         if previous_deep_baseline_json is not None:
             _atomic_replace_text(
                 latest_dir / "previous_deep_baseline.json",
@@ -697,6 +712,15 @@ def publish_private_output(
             "PASS" if native_content_sha is not None else "NOT_APPLICABLE"
         ),
         "native_content_sha256": native_content_sha,
+        "native_content_format": "MANIFEST_CHUNKS_V1" if native_manifest_json else "NOT_APPLICABLE",
+        "native_content_manifest_sha256": sha256_bytes((native_manifest_json or "").encode("utf-8")) if native_manifest_json else None,
+        "native_content_canonical_sha256": canonical_body_sha if native_manifest_json else None,
+        "native_content_chunk_count": len(native_chunk_files),
+        "native_content_section_count": len(native_content.get("section_ids") or []) if native_content_json else 0,
+        "native_content_remote_readback": "UNVERIFIED",
+        "native_content_round_trip": "PASS" if native_manifest_json else "UNVERIFIED",
+        "native_content_truncation": "PASS" if native_manifest_json else "UNVERIFIED",
+        "native_content_commit": None,
         "native_chatgpt_render_acceptance": "UNVERIFIED",
         "previous_deep_baseline_published": previous_deep_baseline_sha is not None,
         "previous_deep_baseline_sha256": previous_deep_baseline_sha,

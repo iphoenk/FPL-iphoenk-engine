@@ -6,9 +6,60 @@ import pytest
 
 from src.engines.v12_native_content_parity import (
     NativeContentParityError,
+    build_manifest_chunks,
+    build_native_ui_acceptance,
     build_lossless_native_content,
     validate_lossless_native_content,
 )
+
+
+def test_manifest_chunks_round_trip_and_small_chunk_boundaries():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    assert manifest["transport_parity"] == "PASS"
+    assert manifest["chunk_count"] == len(files) > len(DEEP_MANDATORY_SECTIONS)
+    assert manifest["expected_section_count"] == 22
+    assert all(len(value.encode()) <= 600 for value in files.values())
+
+
+def test_manifest_chunks_reject_missing_swapped_and_corrupt_chunks():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    manifest, files = build_manifest_chunks(artifact, max_chunk_bytes=256)
+    removed = dict(files)
+    removed.pop(next(iter(removed)))
+    with pytest.raises(NativeContentParityError, match="chunk count"):
+        from src.engines.v12_native_content_parity import validate_manifest_chunks
+        validate_manifest_chunks(manifest, removed, canonical_body=body)
+    corrupt = dict(files)
+    corrupt[next(iter(corrupt))] = corrupt[next(iter(corrupt))].replace("content", "CONTENT", 1)
+    with pytest.raises(NativeContentParityError):
+        validate_manifest_chunks(manifest, corrupt, canonical_body=body)
+
+
+def test_native_ui_acceptance_remains_unverified_without_user_visible_ack():
+    body = _source()
+    artifact = build_lossless_native_content(
+        canonical_body=body,
+        report_slot="2026-10-12T18:57:00+07:00",
+        canonical_body_sha256=sha256(body.encode()).hexdigest(),
+    )
+    receipt = build_native_ui_acceptance(
+        artifact,
+        rendered_section_ids=artifact["section_ids"],
+        rendered_content=body,
+        user_visible_acceptance=False,
+    )
+    assert receipt["verification_status"] == "UNVERIFIED"
 from src.runtime_v6.domains.report_plane.delivery_integrity import (
     DEEP_MANDATORY_SECTIONS,
     DEEP_WITH_S16B_SECTIONS,

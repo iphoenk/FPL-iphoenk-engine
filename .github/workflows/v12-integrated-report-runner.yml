@@ -1015,6 +1015,34 @@ jobs:
               local_sha="$(git rev-parse HEAD)"
               remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
               test "$local_sha" = "$remote_sha"
+              REPORT_PATH="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["destination"])' ../app/artifacts/v12-private-delivery/receipt.json)"
+              FIRST_REMOTE_SHA="$remote_sha" REPORT_PATH="$REPORT_PATH" PYTHONPATH=../app python - <<'PY'
+              import json, os, subprocess
+              from pathlib import Path
+              from src.engines.v12_native_content_parity import validate_manifest_chunks
+              root = Path(os.environ["REPORT_PATH"])
+              commit = os.environ["FIRST_REMOTE_SHA"]
+              def show(path):
+                  return subprocess.check_output(["git", "show", f"{commit}:{path}"], text=True)
+              manifest = json.loads(show(f"{root}/native_content.manifest.json"))
+              files = {entry["path"]: show(f"{root}/{entry['path']}") for entry in manifest["chunks"]}
+              body = show(f"{root}/serving_report.md")
+              validate_manifest_chunks(manifest, files, canonical_body=body)
+              manifest["remote_readback"] = "PASS"
+              manifest["verification_status"] = "REMOTE_READBACK_PASS"
+              (root / "native_content.manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+              receipt_path = root / "delivery_receipt.json"
+              receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+              receipt["native_content_remote_readback"] = "PASS"
+              receipt["native_content_commit"] = commit
+              receipt["native_content_transport_status"] = "PASS"
+              receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+              PY
+              git add "$REPORT_PATH/native_content.manifest.json" "$REPORT_PATH/delivery_receipt.json"
+              git commit -m "report(v12): record native content remote readback" >/dev/null
+              git push origin HEAD:main
+              remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+              test "$(git rev-parse HEAD)" = "$remote_sha"
             )
             publisher_rc=$?
           fi

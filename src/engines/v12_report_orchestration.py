@@ -3999,10 +3999,10 @@ def _formation_mc_lines(payload: Mapping[str, Any] | None) -> list[str]:
             f"P1.7 {row.get('formation')}: XI={_human_summary(row.get('xi') or 'UNAVAILABLE')}; "
             f"bench_gk={_human_summary(bench.get('gk', bench.get('bench_gk', 'UNAVAILABLE')))}; "
             f"bench_order={_human_summary(bench.get('order', bench.get('outfield_autosub_priority', 'UNAVAILABLE')))}; "
-            f"captain_haul={row.get('captain_haul_probability')}; "
-            f"captain_blank={row.get('captain_blank_probability')}; "
-            f"vice_activation={row.get('vice_activation_probability')}; "
-            f"minutes_risk={row.get('minutes_risk')}"
+            f"captain_haul={_human_summary(row.get('captain_haul_probability'))}; "
+            f"captain_blank={_human_summary(row.get('captain_blank_probability'))}; "
+            f"vice_activation={_human_summary(row.get('vice_activation_probability'))}; "
+            f"minutes_risk={_human_summary(row.get('minutes_risk'))}"
         )
     integrity = dict(data.get("integrity") or {})
     lines.append(

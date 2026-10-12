@@ -1213,10 +1213,36 @@ def _analytics_production_acceptance(
         "evidence_status": "PASS" if isinstance(frontier, list) and bool(frontier) and decision_state in {"LOCK", "PREPARE"} else "PARTIAL",
         "decision_state": decision_state,
         "frontier_count": len(frontier) if isinstance(frontier, list) else 0,
+        "frontier_source": (
+            "S08_CANONICAL_CAPTAIN_FRONTIER"
+            if isinstance(frontier, list) and frontier
+            else None
+        ),
+        "canonical_binding": bool(isinstance(frontier, list) and frontier),
         "lock_requires_all_calibrated_layers": True,
         "prepare_is_not_executable": decision_state != "LOCK",
         "production_bound": True,
     }
+    supplied_acceptance = captain_surface.get("s08_acceptance")
+    if isinstance(supplied_acceptance, Mapping):
+        captain = {
+            **captain,
+            "evidence_status": supplied_acceptance.get(
+                "evidence_status", captain["evidence_status"]
+            ),
+            "decision_state": supplied_acceptance.get(
+                "decision_state", captain["decision_state"]
+            ),
+            "frontier_count": supplied_acceptance.get(
+                "frontier_count", captain["frontier_count"]
+            ),
+            "frontier_source": supplied_acceptance.get(
+                "frontier_source", captain["frontier_source"]
+            ),
+            "canonical_binding": supplied_acceptance.get(
+                "canonical_binding", captain["canonical_binding"]
+            ),
+        }
     acceptance = {
         "contract": "V12_ANALYTICS_PRODUCTION_ACCEPTANCE_V1",
         "p_start": pstart,
@@ -4490,6 +4516,16 @@ def _captain_decision_surface(
         ),
         "raw_mean_is_not_sole_authority": True,
         "governance": dict(decision.get("governance") or {}),
+        "s08_acceptance": {
+            "evidence_status": (
+                "PASS" if decorated_frontier and decision_state in {"LOCK", "PREPARE"}
+                else "PARTIAL"
+            ),
+            "decision_state": decision_state,
+            "frontier_count": len(decorated_frontier),
+            "frontier_source": "S08_CANONICAL_CAPTAIN_FRONTIER" if decorated_frontier else None,
+            "canonical_binding": bool(decorated_frontier),
+        },
     }
 
 

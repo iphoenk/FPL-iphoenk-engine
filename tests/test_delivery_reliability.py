@@ -525,8 +525,19 @@ def _canonical_dir(
             "sections": {row["section_id"]: row for row in sections},
         },
     )
+    # Serving text must reflect the 22 canonical section headings; a
+    # one-word synthetic body would violate the new lossless parity contract.
+    synthetic_body = (
+        f"FPL MASTER V12 — DEEP REPORT\nStatus: {delivery_status}\n\n"
+        + "".join(
+            f"## {row['section_id'][1:].lstrip('0')}. {row.get('label') or row['section_id']}\n"
+            f"Status: {row.get('state', 'COMPLETE')}\n"
+            f"Evidence: synthetic test fixture\n\n"
+            for row in sections
+        )
+    )
     (root / "serving_report.md").write_text(
-        f"{delivery_status}\n", encoding="utf-8"
+        synthetic_body, encoding="utf-8"
     )
     _write_json(
         root / "delivery_status.json",

@@ -13,7 +13,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T22:16:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T22:35:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

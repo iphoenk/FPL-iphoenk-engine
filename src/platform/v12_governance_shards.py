@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed deterministic sharding of the exact pre-repair V12 required suite.
 
-The original 49-file pytest selection is preserved, with one new P1 test file, and 1363 collected
+The original 49-file pytest selection is preserved, with one new P1 test file, and 1364 collected
 parametrized test node IDs are the 11 October 2026 PR #965 acceptance baseline plus twelve P1 evidence regressions.
 No tests are skipped, deselected, or replaced by subset fixtures.
 """
@@ -70,7 +70,7 @@ REQUIRED_FILES = [
     "tests/test_data_platform_precompute_control.py",
     "tests/test_runtime_cross_cpu_proof_registry.py"
 ]
-BASELINE_TOTAL = 1363
+BASELINE_TOTAL = 1364
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

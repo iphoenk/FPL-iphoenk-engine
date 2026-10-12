@@ -3,6 +3,7 @@ import json
 import pytest
 
 from src.engines import official_history_reconciliation as mod
+from src.runtime_v6.domains.report_plane import report_prefetch
 
 
 def _write(path, payload):
@@ -102,3 +103,34 @@ def test_full_season_history_marks_missing_detail_without_zero_fill():
     assert out["coverage_gate"]["status"] == "PARTIAL"
     assert out["coverage_gate"]["missing_records"]
     assert out["coverage_gate"]["pending_never_coerced_to_zero"] is True
+
+
+def test_full_history_fetch_retries_per_player_and_isolates_failure(monkeypatch):
+    calls = {}
+
+    class Client:
+        def element_summary(self, element_id):
+            calls[element_id] = calls.get(element_id, 0) + 1
+            if element_id == 10 and calls[element_id] < 2:
+                raise RuntimeError("transient timeout")
+            if element_id == 11:
+                raise RuntimeError("permanent failure")
+            return {"status": "LIVE", "payload": {"history": [], "fixtures": [], "history_past": []}}
+
+    monkeypatch.setattr(report_prefetch.time, "sleep", lambda _: None)
+    artifact, health = report_prefetch._build_full_history_artifact(
+        client=Client(),
+        bootstrap_payload={"elements": [{"id": 10}, {"id": 11}], "events": []},
+        fixtures=[],
+        planning_gw=2,
+        generated_at="2026-10-12T06:00:00Z",
+        workers=2,
+    )
+    assert health["status"] == "PARTIAL"
+    assert health["expected_players"] == 2
+    assert health["covered_players"] == 1
+    assert health["failed_requests"] == 1
+    assert calls[10] == 2
+    assert calls[11] == 3
+    assert set(artifact["element_summaries"]) == {"10"}
+    assert artifact["enrichment"]["health"]["11"]["status"] == "UNAVAILABLE"

@@ -1115,13 +1115,22 @@ def _official_payload(runtime_root: Path) -> dict[str, Any]:
 
 def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str | None]:
     """Load the occurrence-bound full-history artifact from supported V6 layouts."""
-    candidates = (
+    candidates = [
         runtime_data_root / "data" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "current" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "history" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "history" / "official_detail.json.gz",
-    )
+    ]
+    # Runtime-data is an independently checked-out factual tree. Keep the
+    # explicit contract paths first, then tolerate a publisher layout prefix
+    # without weakening the content contract or selecting an arbitrary file.
+    for path in sorted(runtime_data_root.rglob("official_detail.json.gz")):
+        if path not in candidates:
+            candidates.append(path)
+    for path in sorted(runtime_data_root.rglob("official_detail.json")):
+        if path not in candidates:
+            candidates.append(path)
     for path in candidates:
         if path.suffix == ".gz":
             try:
@@ -1191,7 +1200,12 @@ def _analytics_production_acceptance(
         "probability_recomputed_in_materializer": False,
         "production_bound": True,
     }
-    frontier = captain_surface.get("captain_frontier") or []
+    frontier = (
+        captain_surface.get("captain_frontier")
+        or captain_surface.get("frontier")
+        or captain_surface.get("captain_profiles")
+        or []
+    )
     decision_state = str(captain_surface.get("captain_state") or captain_surface.get("decision_state") or "UNAVAILABLE").upper()
     captain = {
         "evidence_status": "PASS" if isinstance(frontier, list) and bool(frontier) and decision_state in {"LOCK", "PREPARE"} else "PARTIAL",

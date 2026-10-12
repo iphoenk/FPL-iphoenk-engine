@@ -1,6 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T04:20:00+00:00`
+> **Last runtime/documentation sync:** `2026-10-12T12:47:00+07:00`
+- **P0 exact-slot prefetch collision repair (12 Oct 2026):** the occurrence orchestrator binds an existing active/queued or terminal-success V6 prefetch for the exact report kind and logical slot before dispatching. This prevents GitHub's one-pending-run behavior from cancelling an unstarted prefetch and producing a zero-job `FAILED_PREFETCH`; failed/cancelled runs are never reused. Scheduler authority, report idempotency, MC500K, P1.7 and full-universe routes remain unchanged.
 - **P0 full-season player history (12 Oct 2026, PR #988):** Official FPL element-summary history is retained for the entire bootstrap universe across GW1..N-1, with fixture-level rows, double-GW aggregation, FINAL/DNP/BLANK/PENDING states, provenance, and an explicit coverage gate. Missing or pending evidence is never coerced to zero.
 - **P0 PRICE prefetch occurrence isolation (12 Oct 2026, PR #989):** V6 workflow concurrency is keyed by logical occurrence for dispatches and immutable issue-comment ID for commands, preventing a later slot from cancelling an earlier pending PRICE/DEEP prefetch while retaining same-occurrence serialization and `cancel-in-progress: false`.
 - **P1 analytics production acceptance (12 Oct 2026, documentation timestamp 2026-10-12T07:05:00+07:00):** DEEP now carries an immutable acceptance manifest for P(start) evidence, S08 captain frontier state, and the Official FPL full-season GW1..N-1 coverage gate. Evidence completeness is separated from model resolution and LOCK readiness, so PREPARE or LIMITED_RESOLUTION cannot be mislabeled executable or fully calibrated.

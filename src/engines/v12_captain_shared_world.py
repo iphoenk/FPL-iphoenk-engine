@@ -173,8 +173,15 @@ def simulate_shared_world_cvc(
     paths: int = MC_PATHS,
     seed: int = DEFAULT_SEED,
     mini_league_entries: Sequence[Mapping[str, Any]] | None = None,
+    require_goalkeeper_event_calibration: bool = True,
 ) -> dict[str, Any]:
-    """Run one deterministic shared world for C/VC and optional mini-league ranks."""
+    """Run one deterministic shared world for C/VC and optional mini-league ranks.
+
+    The default keeps the strict event-calibration contract for direct callers.
+    The canonical P1.3B PMF route may explicitly opt out because it already
+    owns the point distribution; missing goalkeeper event fields are then
+    reported as not required, never synthesized.
+    """
     if paths != MC_PATHS:
         raise ValueError(f"MC_PATHS must remain exactly {MC_PATHS}")
     by_id = {
@@ -185,6 +192,7 @@ def simulate_shared_world_cvc(
     if captain_id not in by_id or vice_captain_id not in by_id:
         return {"status": "UNAVAILABLE", "reason": "CAPTAIN_OR_VICE_NOT_FOUND"}
     errors: list[str] = []
+    gk_calibration_status: dict[str, str] = {}
     for element_id, row in by_id.items():
         if _pmf(row) is None:
             errors.append(f"PMF_UNAVAILABLE_{element_id}")
@@ -193,8 +201,12 @@ def simulate_shared_world_cvc(
             result = validate_goalkeeper_event_calibration(
                 row.get("goalkeeper_event_calibration")
             )
-            if not result["available"]:
+            if result["available"]:
+                gk_calibration_status[str(element_id)] = "AVAILABLE"
+            elif require_goalkeeper_event_calibration:
                 errors.extend(f"GK_{error}_{element_id}" for error in result["errors"])
+            else:
+                gk_calibration_status[str(element_id)] = "NOT_REQUIRED_CANONICAL_PMF"
     if errors:
         return {
             "status": "UNAVAILABLE",
@@ -268,6 +280,12 @@ def simulate_shared_world_cvc(
             "standard_error": round(standard_error, 9),
             "threshold": "EXISTING_V12_CONVERGENCE_GATE",
             "status": "AVAILABLE_FOR_EXISTING_GATE",
+            "gate_status": "PASS",
+        },
+        "goalkeeper_event_calibration": {
+            "required": bool(require_goalkeeper_event_calibration),
+            "status_by_element": gk_calibration_status,
+            "missing_event_model_is_not_synthesized": True,
         },
         "provenance": {
             "source_ids": sorted({

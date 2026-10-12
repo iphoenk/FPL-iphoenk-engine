@@ -100,6 +100,9 @@ def make_private_attestation(
         "entry_id": int(manifest["entry_id"]),
         "gw": int(manifest["gw"]),
         "authenticated_current15": good,
+        "legacy_public_auth_state": str(manifest.get("report_auth_state") or "UNAVAILABLE").upper(),
+        "effective_auth_state": "AUTH_AVAILABLE" if good else "UNVERIFIED",
+        "reconciliation_status": "PASS" if good else "UNVERIFIED",
         "private_auth_state": "AUTH_AVAILABLE" if good else "UNVERIFIED",
         "team_sha256": team_sha256,
         "team_generated_at": str(team.get("generated_at") or ""),
@@ -145,6 +148,9 @@ def reconcile(
             and int(att.get("entry_id") or 0) == int(manifest["entry_id"])
             and int(att.get("gw") or 0) == int(manifest["gw"])
             and att.get("authenticated_current15") is True
+            and att.get("legacy_public_auth_state") == legacy
+            and att.get("effective_auth_state") == "AUTH_AVAILABLE"
+            and att.get("reconciliation_status") == "PASS"
             and att.get("private_auth_state") == "AUTH_AVAILABLE"
             and att.get("team_sha256") == team_sha256
             and _iso(att["team_generated_at"]) == _iso(team["generated_at"])

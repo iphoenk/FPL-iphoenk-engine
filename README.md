@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Public auth source separation (13 October 2026):** V6 prefetch now preserves its legacy credential result and labels that result as PUBLIC_LEGACY_CREDENTIALS. The separately protected rotating-auth state is NOT_EVALUATED_IN_PUBLIC_PLANE until verified by the protected publisher; no public result may imply protected credential expiry or protected authentication success. The existing data boundary and scheduler are unchanged. Required governance suite: 1,379 test nodes.
+
 - **Final persisted receipt proof and latest native parity (13 Oct 2026):** controlled DEEP 06:11 published remote readback PASS but issue proof hashed the pre-readback receipt rather than the byte-identical final private receipt; occurrence manifest showed REMOTE_READBACK_PASS while latest manifest stayed TRANSPORT_PASS. The integrated publisher now rereads the final immutable remote receipt before public proof and updates latest native manifest from the same validated occurrence with full byte parity and hash gate. Required V12 suite is ratcheted to 1,377 cases across 51 files. This does not assert user-visible native rendering or change canonical MC, P1.7, scheduler or past occurrence history.
 
 - **Mode-aware private report readback and required CI ratchet (13 Oct 2026):** MATCH 02:30 failed after a successful private push because the remote validator required a DEEP-only native manifest. The verifier now checks remote occurrence canonical SHA256, receipt identity, and mode-specific latest digest for all modes; only READY_FULL DEEP requires the lossless native manifest/chunk round trip. Non-native MATCH/PRICE and evidence-based degraded DEEP keep native UI acceptance UNVERIFIED. The governed full V12 suite is increased from 50 files/1367 nodes to 51 files/1375 nodes, including 8 mode-specific readback regression cases, without dropping any prior tests. This repairs delivery transport, not the FPL analytics, scheduler authority, or MC500K.
@@ -17,7 +19,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-13T06:22:30+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T06:27:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

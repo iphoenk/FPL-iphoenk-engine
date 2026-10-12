@@ -4197,6 +4197,18 @@ def _render_deep_visible_contract_lines(
             "V12_PLAYER_MINUTES evidence; resolution "
             f"{pstart_acceptance.get('resolution_status', 'UNAVAILABLE')}."
         )
+        # Numerical forecasts remain visible but are not proof of bound evidence.
+        # Never promote an estimate into a fully evidenced production claim.
+        if (
+            str(full_history.get("status") or "").upper() != "PASS"
+            or str(pstart_acceptance.get("evidence_status") or "").upper() != "PASS"
+            or str(pstart_acceptance.get("resolution_status") or "").upper() != "FULL"
+        ):
+            lines.append(
+                "EVIDENCE WARNING: Numerical Pstart/xMins/xPts below are model estimates; "
+                "missing exact-slot full-history or Pstart acceptance is NOT a zero "
+                "and does NOT establish high-confidence production evidence."
+            )
         lines.extend(_markdown_table(
             ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(
@@ -6032,9 +6044,9 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
             pstart_state = str(pstart.get("evidence_status") or "UNAVAILABLE").upper()
             resolution_state = str(pstart.get("resolution_status") or "UNAVAILABLE").upper()
             bound_complete = (
-                full_state == "COMPLETE"
-                and pstart_state in {"COMPLETE", "AVAILABLE", "BOUND"}
-                and resolution_state not in {"UNAVAILABLE", "PARTIAL", "LIMITED_RESOLUTION", "PREPARE"}
+                full_state == "PASS"
+                and pstart_state == "PASS"
+                and resolution_state == "FULL"
             )
             if s02_content:
                 content_map["cross_section_evidence"] = {

@@ -708,6 +708,8 @@ def test_m_p1_7_lineup_and_captain_outputs_are_visibly_required():
         "FORMATION / XI / BENCH",
         {
             "formation": "3-5-2",
+            "captain": {"element_id": 1, "player": "P01"},
+            "vice_captain": {"element_id": 2, "player": "P02"},
             "starting_xi": [{"element": i, "name": f"P{i:02d}"} for i in range(1, 12)],
             "bench": {"gk": {"element": 12, "name": "P12"}, "order": [13, 14, 15]},
             "lineup_score": {"xpts_mean": 55.0},

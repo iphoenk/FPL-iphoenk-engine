@@ -59,8 +59,7 @@ jobs:
       - name: Install locked read-only client dependencies
         run: python -m pip install --require-hashes -r requirements-v6.lock
       - name: Checkout private rotating credential store (only when opted in)
-        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' || (github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'CONTROLLED_ONCE' || inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) || (github.event_name == 'issue_comment' && github.event.comment.body == '/fpl-auth-probe STORE_HEALTH') ||
-        (github.event_name == 'issue_comment' && github.event.comment.body == '/fpl-auth-probe CONTROLLED_ONCE') }}
+        if: ${{ vars.FPL_AUTH_MODE == 'rotating_oidc' || (github.event_name == 'workflow_dispatch' && (inputs.auth_attempt == 'CONTROLLED_ONCE' || inputs.auth_attempt == 'REUSE_ONLY' || inputs.auth_attempt == 'STORE_HEALTH')) || (github.event_name == 'issue_comment' && (github.event.comment.body == '/fpl-auth-probe STORE_HEALTH' || github.event.comment.body == '/fpl-auth-probe CONTROLLED_ONCE')) }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: iphoenk/fpl-reports-private

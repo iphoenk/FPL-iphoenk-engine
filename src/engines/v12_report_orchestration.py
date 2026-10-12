@@ -3996,9 +3996,9 @@ def _formation_mc_lines(payload: Mapping[str, Any] | None) -> list[str]:
     for row in rows:
         bench = dict(row.get("bench") or {})
         lines.append(
-            f"P1.7 {row.get('formation')}: XI={row.get('xi') or 'UNAVAILABLE'}; "
-            f"bench_gk={bench.get('gk', bench.get('bench_gk', 'UNAVAILABLE'))}; "
-            f"bench_order={bench.get('order', bench.get('outfield_autosub_priority', 'UNAVAILABLE'))}; "
+            f"P1.7 {row.get('formation')}: XI={_human_summary(row.get('xi') or 'UNAVAILABLE')}; "
+            f"bench_gk={_human_summary(bench.get('gk', bench.get('bench_gk', 'UNAVAILABLE')))}; "
+            f"bench_order={_human_summary(bench.get('order', bench.get('outfield_autosub_priority', 'UNAVAILABLE')))}; "
             f"captain_haul={row.get('captain_haul_probability')}; "
             f"captain_blank={row.get('captain_blank_probability')}; "
             f"vice_activation={row.get('vice_activation_probability')}; "

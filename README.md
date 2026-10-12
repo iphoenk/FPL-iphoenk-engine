@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T13:10:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T13:25:00+07:00`
 - **P0 exact-slot prefetch collision repair (12 Oct 2026):** the occurrence orchestrator binds an existing active/queued or terminal-success V6 prefetch for the exact report kind and logical slot before dispatching. This prevents GitHub's one-pending-run behavior from cancelling an unstarted prefetch and producing a zero-job `FAILED_PREFETCH`; failed/cancelled runs are never reused. Scheduler authority, report idempotency, MC500K, P1.7 and full-universe routes remain unchanged.
 - **P0 full-season player history (12 Oct 2026, PR #988):** Official FPL element-summary history is retained for the entire bootstrap universe across GW1..N-1, with fixture-level rows, double-GW aggregation, FINAL/DNP/BLANK/PENDING states, provenance, and an explicit coverage gate. Missing or pending evidence is never coerced to zero.
 - **P0 PRICE prefetch occurrence isolation (12 Oct 2026, PR #989):** V6 workflow concurrency is keyed by logical occurrence for dispatches and immutable issue-comment ID for commands, preventing a later slot from cancelling an earlier pending PRICE/DEEP prefetch while retaining same-occurrence serialization and `cancel-in-progress: false`.
@@ -213,6 +213,11 @@ PR #957 isolates the known live command parser failure: audited `reason` metadat
 - **Stage3 temporal-integrity and OIDC store diagnostics (11 Oct 2026):** an explicit DEEP Stage3 `acceptance_class=INTEGRITY_FAIL` is now forbidden to publish as `READY_FULL` (including `S02_OBSERVATION_TIMESTAMP_INVALID` on an after-slot retry). Independent engineering-only Stage3 closure remains advisory under report-first. Owner-only auth diagnostic `STORE_HEALTH` reads encrypted credential phase/version and coarse expiry metadata without making a refresh request, writing secrets or pretending natural success. Keep natural/receipt/MC500K/P1.7 untouched and use this read-only gate before any possibly destructive re-enrollment.
 - **OIDC STORE_HEALTH connected-control command (11 Oct 2026):** control issue #431 accepts the exact owner-only comment `/fpl-auth-probe STORE_HEALTH` as an alias for the existing read-only `STORE_HEALTH` diagnostic. It checks only encrypted-store metadata; it never issues an OIDC grant, refreshes credentials, writes the store, exposes tokens, or counts as natural scheduler proof.
 
+
+
+### V6 full-history request isolation (12 October 2026)
+
+Official element-summary acquisition now retries each player request within a bounded budget and records per-player failures without aborting the full universe. Partial coverage remains explicitly PARTIAL/UNAVAILABLE, never promoted to PASS; this repairs request-fanout failure isolation without changing historical completeness gates or report semantics.
 
 ### P0 Official fixture lifecycle classification (12 October 2026)
 

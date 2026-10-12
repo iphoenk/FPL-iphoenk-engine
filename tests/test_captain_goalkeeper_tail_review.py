@@ -142,3 +142,22 @@ def test_complete_mini_league_posture_selects_only_among_football_viable_review_
         candidates, keeper, "CLOSE", risk_posture="PROTECT",
         **{**flags, "competitive_complete": False})
     assert fallback["player"] == "Differential"
+
+
+def test_close_captain_tiebreak_requires_rivals_scope():
+    keeper = _candidate(1, "Keeper", "GK", {2: .2, 6: .7, 10: .1})
+    mid = _candidate(2, "Mid", "MID", {2: .3, 6: .4, 12: .3})
+    out = decide_captain_vice(
+        [keeper, mid],
+        baseline_captain_id=1,
+        baseline_vice_id=2,
+        risk_posture="PROTECT",
+        risk_context_complete=True,
+        league_complete=True,
+        rivals_complete=False,
+        competitive_complete=True,
+    )
+    assert out["classification"] == "CLOSE"
+    assert out["competitive_context"]["rivals_complete"] is False
+    assert out["competitive_context"]["tie_break_status"] == "UNAVAILABLE_INCOMPLETE_RIVALS_SCOPE"
+    assert out["mini_league_override_applied"] is False

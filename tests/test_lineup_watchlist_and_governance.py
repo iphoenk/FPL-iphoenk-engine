@@ -549,6 +549,7 @@ def test_close_frontier_can_be_resolved_by_protect_or_attack_posture():
         baseline_vice_id=1,
         risk_posture="PROTECT",
         league_complete=True,
+        rivals_complete=True,
         competitive_complete=True,
     )
     attack = decide_captain_vice(
@@ -557,6 +558,7 @@ def test_close_frontier_can_be_resolved_by_protect_or_attack_posture():
         baseline_vice_id=2,
         risk_posture="ATTACK",
         league_complete=True,
+        rivals_complete=True,
         competitive_complete=True,
     )
     assert protect["classification"] == "CLOSE"
@@ -624,7 +626,7 @@ def test_missing_mini_league_context_preserves_football_leader_and_fabricates_no
     assert out["captain"]["player"] == "Baseline"
     assert out["mini_league_override_applied"] is False
     assert out["competitive_context"]["tie_break_status"] == (
-        "UNAVAILABLE_INCOMPLETE_MINI_LEAGUE_EVIDENCE"
+        "UNAVAILABLE_INCOMPLETE_RIVALS_SCOPE"
     )
     for row in out["competitive_context"]["competitive_consequence"]:
         assert row["expected_relative_points_delta_vs_league"] is None

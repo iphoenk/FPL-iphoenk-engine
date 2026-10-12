@@ -1,6 +1,6 @@
 # FPL iphoenk Engine v3.39.0
 
-> **Last runtime/documentation sync:** `2026-10-12T13:25:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T13:50:00+07:00`
 - **P0 exact-slot prefetch collision repair (12 Oct 2026):** the occurrence orchestrator binds an existing active/queued or terminal-success V6 prefetch for the exact report kind and logical slot before dispatching. This prevents GitHub's one-pending-run behavior from cancelling an unstarted prefetch and producing a zero-job `FAILED_PREFETCH`; failed/cancelled runs are never reused. Scheduler authority, report idempotency, MC500K, P1.7 and full-universe routes remain unchanged.
 - **P0 full-season player history (12 Oct 2026, PR #988):** Official FPL element-summary history is retained for the entire bootstrap universe across GW1..N-1, with fixture-level rows, double-GW aggregation, FINAL/DNP/BLANK/PENDING states, provenance, and an explicit coverage gate. Missing or pending evidence is never coerced to zero.
 - **P0 PRICE prefetch occurrence isolation (12 Oct 2026, PR #989):** V6 workflow concurrency is keyed by logical occurrence for dispatches and immutable issue-comment ID for commands, preventing a later slot from cancelling an earlier pending PRICE/DEEP prefetch while retaining same-occurrence serialization and `cancel-in-progress: false`.
@@ -223,6 +223,10 @@ Official element-summary acquisition now retries each player request within a bo
 
 MATCH now distinguishes Official FPL `LIVE`, `PROVISIONAL_90`, `FINAL`, `NOT_STARTED`, and fail-closed `UNKNOWN` states using lifecycle fields. A postponed fixture remains `NOT_STARTED` with an explicit `POSTPONED` substate. Finality is never inferred from minute 90 alone, and future-dated official snapshots are rejected before MATCH rendering.
 
+
+### S08/S15B rivals-scope gate (12 October 2026)
+
+Captain tie-breaks now require complete LEAGUE, RIVALS and COMPETITIVE scopes. Missing RIVALS coverage remains fail-soft and cannot apply a competitive override or certify a CLOSE captain decision.
 
 ## S15B competitive scope integrity
 

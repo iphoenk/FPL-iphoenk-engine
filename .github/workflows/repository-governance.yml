@@ -139,20 +139,20 @@ jobs:
           # narrow empty-body case; malformed non-empty bodies still fail closed.
           if not body.strip():
               readme_fallback = re.search(
-                  rf"(?m)^> \\*\\*Last runtime/documentation sync:\\*\\* `(${iso})`\\s*$",
+                  rf"(?m)^> \*\*Last runtime/documentation sync:\*\* `({iso})`\s*$",
                   open("README.md", encoding="utf-8").read(),
               )
               if readme_fallback:
                   timestamp = readme_fallback.group(1)
                   body = (
-                      f"Change timestamp: ${timestamp}\\n"
-                      "Documentation sync: UPDATED\\n"
-                      f"Documentation timestamp: ${timestamp}\\n"
+                      f"Change timestamp: {timestamp}\n"
+                      "Documentation sync: UPDATED\n"
+                      f"Documentation timestamp: {timestamp}\n"
                   )
                   print("::warning::PR event body was empty; using checked-in README documentation timestamp")
-          change = re.search(rf"(?mi)^Change timestamp:\\s*(${iso})\\s*$", body)
-          sync = re.search(r"(?mi)^Documentation sync:\\s*(UPDATED|NOT_APPLICABLE)\\s*$", body)
-          doc_ts = re.search(rf"(?mi)^Documentation timestamp:\\s*(${iso})\\s*$", body)
+          change = re.search(rf"(?mi)^Change timestamp:\s*({iso})\s*$", body)
+          sync = re.search(r"(?mi)^Documentation sync:\s*(UPDATED|NOT_APPLICABLE)\s*$", body)
+          doc_ts = re.search(rf"(?mi)^Documentation timestamp:\s*({iso})\s*$", body)
 
           if not change:
               print("::error::PR description must contain 'Change timestamp: <ISO-8601 timestamp with timezone>'")

@@ -1260,6 +1260,41 @@ def _analytics_production_acceptance(
     return history, acceptance
 
 
+def _s08_acceptance_from_canonical(
+    s08_content: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Build S08 acceptance metadata from the rendered canonical S08 object."""
+    content = dict(s08_content or {})
+    frontier = next(
+        (
+            content.get(key)
+            for key in (
+                "captain_frontier",
+                "frontier",
+                "captain_profiles",
+                "frontier_comparison",
+                "profiles",
+            )
+            if isinstance(content.get(key), list)
+        ),
+        [],
+    )
+    state = str(
+        content.get("decision_state")
+        or content.get("captain_state")
+        or "UNAVAILABLE"
+    ).upper()
+    count = len(frontier)
+    bound = bool(frontier) and state in {"LOCK", "PREPARE"}
+    return {
+        "evidence_status": "PASS" if bound else "PARTIAL",
+        "decision_state": state,
+        "frontier_count": count,
+        "frontier_source": "S08_CANONICAL_CAPTAIN_FRONTIER" if frontier else None,
+        "canonical_binding": bound,
+    }
+
+
 def _planning_gw(bootstrap: Mapping[str, Any]) -> int:
     events = [dict(row) for row in bootstrap.get("events") or [] if isinstance(row, Mapping)]
     next_rows = [row for row in events if row.get("is_next") is True]
@@ -9713,6 +9748,27 @@ def run_deep(
         checkpoint_time=checkpoint_time,
         mathematical_decision_stack=math_stack,
     )
+    rendered_s08 = next(
+        (
+            dict(row.get("content") or {})
+            for row in report.get("sections") or []
+            if isinstance(row, Mapping)
+            and str(row.get("section_id") or "").upper() == "S08"
+        ),
+        {},
+    )
+    canonical_s08_acceptance = _s08_acceptance_from_canonical(rendered_s08)
+    for rendered_section in report.get("sections") or []:
+        if not isinstance(rendered_section, Mapping):
+            continue
+        section_id = str(rendered_section.get("section_id") or "").upper()
+        if section_id not in {"S02", "S19"}:
+            continue
+        content = dict(rendered_section.get("content") or {})
+        acceptance = dict(content.get("analytics_acceptance") or {})
+        acceptance["s08_captain"] = dict(canonical_s08_acceptance)
+        content["analytics_acceptance"] = acceptance
+        rendered_section["content"] = content
     section_manifest = [
         {
             "section_id": str(row.get("section_id") or ""),

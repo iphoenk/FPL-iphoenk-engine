@@ -2336,6 +2336,49 @@ def _locked_default(
     return None
 
 
+def _bind_s06_captain_from_s08(sections: list[dict[str, Any]]) -> None:
+    """Copy S08 C/VC badges onto S06 only if both IDs are valid selected XI."""
+    # S06 is the visual XI surface; S08 owns the canonical C/VC decision.
+    # Bind only the presentation badges to S08 after checking both belong to
+    # the selected XI. Never mutate lineup membership, MC or decision scores.
+    by_id = {str(section.get("section_id")): section for section in sections}
+    pitch = by_id.get("S06")
+    captaincy = by_id.get("S08")
+    if (
+        pitch is not None and captaincy is not None
+        and pitch.get("state") == "COMPLETE"
+        and captaincy.get("state") == "COMPLETE"
+    ):
+        pitch_content = dict(pitch.get("content") or {})
+        decision_content = dict(captaincy.get("content") or {})
+        selected = {
+            int(player.get("element") or player.get("element_id") or 0)
+            for player in pitch_content.get("starting_xi") or []
+            if isinstance(player, Mapping)
+        }
+        canonical = {}
+        for role in ("captain", "vice_captain"):
+            value = decision_content.get(role)
+            if not isinstance(value, Mapping):
+                break
+            try:
+                element = int(value.get("element_id") or value.get("element") or 0)
+            except (ValueError, TypeError):
+                break
+            if element <= 0 or element not in selected:
+                break
+            canonical[role] = dict(value)
+        if (
+            len(canonical) == 2
+            and int(canonical["captain"].get("element_id") or canonical["captain"].get("element"))
+            != int(canonical["vice_captain"].get("element_id") or canonical["vice_captain"].get("element"))
+        ):
+            pitch_content.update(canonical)
+            pitch_content["captain_vice_presentation_authority"] = "S08_CANONICAL_COPY"
+            pitch["content"] = pitch_content
+
+
+
 def _materialize_canonical_report(
     *,
     canonical_text: str,
@@ -2510,6 +2553,9 @@ def _materialize_canonical_report(
                 "content": content,
             }
         )
+
+    if structural_mode == "DEEP":
+        _bind_s06_captain_from_s08(sections)
 
     resolution_failures = validate_resolved_sections(sections)
     if resolution_failures:

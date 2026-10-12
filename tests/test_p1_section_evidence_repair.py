@@ -208,3 +208,17 @@ def test_s02_no_cohort_warning_when_odds_are_differentiated():
     ]
     text = _visible("S02", {"rows": rows})
     assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" not in text
+
+
+def test_s10_unsupported_eta_is_explicitly_stateful_not_generic_unavailable():
+    text = _visible("S10", {"rows": [
+        {"name": "Alpha", "current_price": 5.5, "direction": "RISE",
+         "date_state": "UNAVAILABLE", "eta_reason": "NO_SUPPORTED_CROSSING"},
+        {"name": "Beta", "current_price": 6.0, "direction": "FALL",
+         "date_state": "UNAVAILABLE"},
+        {"name": "Gamma", "current_price": 6.5, "direction": "RISE",
+         "estimated_change_date_wib": "14 Oct 2026 06:00 WIB"},
+    ]})
+    assert "ETA_UNAVAILABLE (NO_SUPPORTED_CROSSING)" in text
+    assert "ETA_UNAVAILABLE (NO_SUPPORTED_CROSSING)" in text
+    assert "14 Oct 2026 06:00 WIB" in text

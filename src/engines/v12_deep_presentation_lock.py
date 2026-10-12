@@ -342,9 +342,15 @@ def validate_rendered_deep_presentation(
             )
             if isinstance(section_content, Mapping):
                 formation_mc = section_content.get("formation_mc")
-                formation_rows = (
-                    [row for row in formation_mc.get("formations") or [] if isinstance(row, Mapping)]
+                formation_payload = (
+                    formation_mc.get("payload")
                     if isinstance(formation_mc, Mapping)
+                    and isinstance(formation_mc.get("payload"), Mapping)
+                    else formation_mc
+                )
+                formation_rows = (
+                    [row for row in formation_payload.get("formations") or [] if isinstance(row, Mapping)]
+                    if isinstance(formation_payload, Mapping)
                     else []
                 )
                 if formation_rows:

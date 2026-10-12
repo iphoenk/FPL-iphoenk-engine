@@ -1,3 +1,4 @@
+@
 from __future__ import annotations
 
 """Lossless DEEP section transport for a native ChatGPT presentation consumer.
@@ -331,7 +332,7 @@ def validate_manifest_chunks(
 def build_native_ui_acceptance(
     manifest: Mapping[str, Any], *, rendered_section_ids: Sequence[str],
     rendered_content: str, user_visible_acceptance: bool,
-    transport_status: str = "PASS", remote_readback: str = "PASS",
+    transport_status: str = "UNVERIFIED", remote_readback: str = "UNVERIFIED",
     files: Mapping[str, str] | None = None, canonical_body: str | None = None,
 ) -> dict[str, Any]:
     """Create a receipt only after an actual native consumer readback."""

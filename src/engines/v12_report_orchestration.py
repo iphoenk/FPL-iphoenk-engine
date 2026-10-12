@@ -4810,6 +4810,8 @@ def _render_deep_visible_contract_lines(
 
         identity = _state("CURRENT15 identity")
         model = _state("model snapshot")
+        cross_section = dict(payload.get("cross_section_evidence") or {})
+        availability_binding = str(cross_section.get("availability_binding") or "").upper()
         tactical = _state("tactical")
         underlying = _state("post-match underlying")
         fixtures = _state("fixtures/calendar")
@@ -4828,6 +4830,18 @@ def _render_deep_visible_contract_lines(
             finance_quality = "🟡 Partial"
 
         price_quality = _quality_from_state(price_state)
+        availability_state = model
+        availability_impact = (
+            "Current model snapshot supports P(start)/xMins decision use."
+            if "UNAVAILABLE" not in model
+            else "P(start)/xMins confidence is materially limited."
+        )
+        if availability_binding == "PARTIAL" and "UNAVAILABLE" not in model:
+            availability_state = "PARTIAL"
+            availability_impact = (
+                "Model snapshot is current, but exact-bound full-history/P(start) "
+                "evidence is incomplete; individualized availability confidence is limited."
+            )
         rows: list[tuple[str, str, str]] = [
             (
                 "Squad / OUR15",
@@ -4838,10 +4852,8 @@ def _render_deep_visible_contract_lines(
             ),
             (
                 "Availability / minutes",
-                _quality_from_state(model),
-                "Current model snapshot supports P(start)/xMins decision use."
-                if "UNAVAILABLE" not in model
-                else "P(start)/xMins confidence is materially limited.",
+                _quality_from_state(availability_state),
+                availability_impact,
             ),
             (
                 "Football underlying",
@@ -5956,6 +5968,39 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         reason = str(row.get("degradation_reason") or "").strip()
         if state != "COMPLETE" and reason:
             lines.append(f"Reason: {reason}")
+        # S15 owns decision-evidence quality, including cross-section
+        # completeness. Bind the exact S02 acceptance state before rendering
+        # so a healthy model snapshot cannot promote missing full-history or
+        # P(start) evidence to "Strong".
+        if section_id == "S15":
+            s02_content = next(
+                (
+                    dict(item.get("content") or {})
+                    for item in sections
+                    if str(item.get("section_id") or "") == "S02"
+                    and isinstance(item.get("content"), Mapping)
+                ),
+                {},
+            )
+            full_history = dict(s02_content.get("full_season_history") or {})
+            acceptance = dict(s02_content.get("analytics_acceptance") or {})
+            pstart = dict(acceptance.get("p_start") or {})
+            full_state = str(full_history.get("status") or "UNAVAILABLE").upper()
+            pstart_state = str(pstart.get("evidence_status") or "UNAVAILABLE").upper()
+            resolution_state = str(pstart.get("resolution_status") or "UNAVAILABLE").upper()
+            bound_complete = (
+                full_state == "COMPLETE"
+                and pstart_state in {"COMPLETE", "AVAILABLE", "BOUND"}
+                and resolution_state not in {"UNAVAILABLE", "PARTIAL", "LIMITED_RESOLUTION", "PREPARE"}
+            )
+            if s02_content:
+                content_map["cross_section_evidence"] = {
+                    "full_history_state": full_state,
+                    "pstart_evidence_state": pstart_state,
+                    "pstart_resolution_state": resolution_state,
+                    "availability_binding": "COMPLETE" if bound_complete else "PARTIAL",
+                }
+
         # Renderer consumes the bound payload verbatim. Binding metadata is
         # deliberately not synthesized here: missing binding must fail QA,
         # never be repaired by presentation code.

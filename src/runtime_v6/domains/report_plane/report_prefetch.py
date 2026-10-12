@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import os
 import time
@@ -1005,8 +1006,19 @@ class PrefetchService:
                     workers=int(self.config.get("element_summary_workers", 12)),
                 )
                 full_history_status = history_health.get("status", "UNAVAILABLE")
-                history_relative = "history/official_detail.json"
-                write_json(self.output_root / history_relative, detail_artifact, secrets=secrets)
+                # The full-universe artifact is intentionally compressed: the
+                # official element-summary payload can exceed GitHub's 100 MB
+                # blob limit. The runner knows how to read this losslessly.
+                history_relative = "history/official_detail.json.gz"
+                history_path = self.output_root / history_relative
+                history_path.parent.mkdir(parents=True, exist_ok=True)
+                history_payload = json.dumps(
+                    detail_artifact,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                history_path.write_bytes(gzip.compress(history_payload, compresslevel=9))
                 artifacts.append(artifact_meta(self.output_root, history_relative))
             except Exception as exc:
                 full_history_status = "UNAVAILABLE"

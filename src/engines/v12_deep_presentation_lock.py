@@ -390,7 +390,7 @@ def validate_rendered_deep_presentation(
             if isinstance(candidate, Mapping):
                 expected_tables = [{
                     "columns": ["Decision field", "Canonical value"],
-                    "rows_exact": 13,
+                    "rows_exact": 16,
                 }]
                 ml = candidate.get("mini_league_utility")
                 if isinstance(ml, Mapping):
@@ -414,7 +414,8 @@ def validate_rendered_deep_presentation(
                     row[0] for row in actual_tables[0]["rows"] if row
                 ] != [
                     "Route", "Route type", "Outgoing", "Incoming", "Executable",
-                    "Economics", "Hit (pts)", "1GW net delta (pts)",
+                    "Economics", "FT consumed", "Hit (pts)", "Bank after",
+                    "Affordability", "1GW net delta (pts)",
                     "3GW net delta (pts)", "5GW net delta (pts)",
                     "P(beats HOLD)", "Robustness", "Action verdict",
                 ]:

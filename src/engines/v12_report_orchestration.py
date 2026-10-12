@@ -5644,6 +5644,11 @@ def _render_deep_visible_contract_lines(
             cost = route.get("transfer_cost") or {}
             if not isinstance(cost, Mapping):
                 cost = {}
+            canonical_economics = route.get("transfer_economics")
+            if not isinstance(canonical_economics, Mapping):
+                canonical_economics = cost.get("transfer_economics")
+            if not isinstance(canonical_economics, Mapping):
+                canonical_economics = {}
             executable = board.get("best_alternative_executable")
             if executable is None:
                 executable = route.get("executable")
@@ -5658,7 +5663,10 @@ def _render_deep_visible_contract_lines(
                 ("Incoming", _route_side("in")),
                 ("Executable", execution_state),
                 ("Economics", _simple_status(route.get("execution_economics_status"))),
-                ("Hit (pts)", _num(cost.get("hit"))),
+                ("FT consumed", _num(canonical_economics.get("ft_consumed"))),
+                ("Hit (pts)", _num(canonical_economics.get("hit_points", cost.get("hit")))),
+                ("Bank after", _num(canonical_economics.get("bank_after", cost.get("bank_after")))),
+                ("Affordability", _simple_status(canonical_economics.get("affordable"))),
                 ("1GW net delta (pts)", _num(route.get("gw1_net"))),
                 ("3GW net delta (pts)", _num(route.get("three_gw"))),
                 ("5GW net delta (pts)", _num(route.get("five_gw"))),
@@ -5666,15 +5674,22 @@ def _render_deep_visible_contract_lines(
                 ("Robustness", _simple_status(route.get("robustness"))),
                 ("Action verdict", _simple_status(route.get("action_verdict"))),
             )))
-            economics_state = str(route.get("execution_economics_status") or "").upper()
+            economics_state = str(
+                canonical_economics.get("status")
+                or route.get("execution_economics_status")
+                or ""
+            ).upper()
             economics_fields = (
-                route.get("transfer_cost"),
+                canonical_economics.get("ft_consumed"),
+                canonical_economics.get("hit_points"),
+                canonical_economics.get("bank_after"),
+                canonical_economics.get("affordable"),
                 route.get("gw1_net"),
                 route.get("three_gw"),
                 route.get("five_gw"),
             )
             economics_complete = (
-                economics_state in {"AVAILABLE", "PASS", "SUPPORTED"}
+                economics_state in {"PASS", "AVAILABLE", "SUPPORTED"}
                 and all(value not in (None, "", "UNAVAILABLE") for value in economics_fields)
             )
             lines.append(

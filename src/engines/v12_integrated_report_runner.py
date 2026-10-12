@@ -1112,6 +1112,24 @@ def _official_payload(runtime_root: Path) -> dict[str, Any]:
     }
 
 
+def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str | None]:
+    """Load the occurrence-bound full-history artifact from supported V6 layouts."""
+    candidates = (
+        runtime_data_root / "data" / "official_detail.json",
+        runtime_data_root / "data" / "v6" / "official_detail.json",
+        runtime_data_root / "data" / "v6" / "current" / "official_detail.json",
+        runtime_data_root / "data" / "v6" / "history" / "official_detail.json",
+    )
+    for path in candidates:
+        payload = _read_json(path, {}) or {}
+        if isinstance(payload, Mapping) and (
+            payload.get("element_summaries")
+            or payload.get("full_season_history")
+            or payload.get("historical_entry")
+        ):
+            return dict(payload), str(path.relative_to(runtime_data_root))
+    return {}, None
+
 def _analytics_production_acceptance(
     *,
     runtime_data_root: Path,
@@ -1120,7 +1138,7 @@ def _analytics_production_acceptance(
     captain_surface: Mapping[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Bind analytics evidence to the exact integrated report occurrence."""
-    detail = _read_json(runtime_data_root / "data" / "official_detail.json", {}) or {}
+    detail, detail_path = _load_official_detail(runtime_data_root)
     full_history = dict(detail.get("full_season_history") or {})
     if not full_history:
         full_history = dict((detail.get("historical_entry") or {}).get("full_season_history") or {})
@@ -1150,6 +1168,7 @@ def _analytics_production_acceptance(
         "double_gameweeks_aggregate_fixture_rows": gate.get("double_gameweeks_aggregate_fixture_rows") is True,
         "provenance": dict(full_history.get("provenance") or {}),
         "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
+        "artifact_path": detail_path,
     }
     p_rows = [row for row in rows if isinstance(row, Mapping) and row.get("p_start") is not None]
     p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
@@ -2808,6 +2827,9 @@ def _enrich_all15_rows(
                 else "UNAVAILABLE"
             ),
             "availability": row.get("p_available", xm.get("availability")),
+            "p_start": p_start,
+            "xmins": xmins,
+            "p_dnp": row.get("p_dnp", xm.get("dnp_probability")),
             "p_start_evidence": {
                 "source": "V12_PLAYER_MINUTES" if start_signals else "UNAVAILABLE",
                 "quality": start_evidence_quality,
@@ -4201,7 +4223,19 @@ def _captain_decision_surface(
                 ),
                 "p_start": mechanism.get("p_start", visible.get("p_start")),
                 "xmins": mechanism.get("xmins", visible.get("xmins")),
-                "p_dnp": mechanism.get("p_dnp"),
+                "p_dnp": (
+                    mechanism.get("p_dnp")
+                    if mechanism.get("p_dnp") is not None
+                    else (
+                        (mechanism.get("xmins") or {}).get("dnp_probability")
+                        if isinstance(mechanism.get("xmins"), Mapping)
+                        else (
+                            (player.get("xmins") or {}).get("dnp_probability")
+                            if isinstance(player.get("xmins"), Mapping)
+                            else None
+                        )
+                    )
+                ),
                 "point_distribution": point_distribution,
                 "league_scope": league_scope,
                 "rivals_scope": rivals_scope,

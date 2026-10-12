@@ -12,3 +12,16 @@ Slot states are explicit:
 - `PENDING`: the Official event is not final; it is never converted to zero.
 
 The coverage gate reports expected and available GW slots, expected player slots, missing records, canonical snapshot timestamp, source authority, and whether fallback was used. The retrospective submitted-team proxy remains separate and cannot be used as predictive pre-deadline accuracy.
+## Production occurrence binding
+
+For `full_master` report-prefetch occurrences, V6 publishes the occurrence-bound
+`data/v6/history/official_detail.json` artifact. It contains the complete
+Official FPL `element-summary/{element_id}/` universe and the reconciled
+`OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1` coverage gate. V12 accepts this
+artifact only when it matches the checked-out runtime occurrence; missing or
+partial element summaries remain visible as `PARTIAL`/`UNAVAILABLE` and are
+never converted to zeroes.
+
+V12 production acceptance also binds `p_start`, `xmins`, and DNP evidence from
+the canonical `V12_PLAYER_MINUTES` output, while S08 consumes the canonical
+captain frontier and its distribution/security evidence.

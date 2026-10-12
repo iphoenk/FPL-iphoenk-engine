@@ -5018,10 +5018,24 @@ def _render_deep_visible_contract_lines(
             "COMPETITIVE": "Dynamic rank-relative Competitive Window excluding us",
         }
         lines.append("### DENOMINATOR SCOPES")
+        scope_rows = [
+            dict(scopes.get(key) or {})
+            for key in ("LEAGUE", "RIVALS", "COMPETITIVE")
+        ]
+        scope_integrity = all(
+            row.get("expected") not in (None, 0, "")
+            and row.get("collected") == row.get("expected")
+            for row in scope_rows
+        )
         lines.extend(_markdown_table(
             ("Scope", "Definition", "Coverage"),
             [(key, dict(scopes.get(key) or {}).get("definition") or definitions[key], _coverage(dict(scopes.get(key) or {}))) for key in ("LEAGUE", "RIVALS", "COMPETITIVE")],
         ))
+        lines.append(
+            "S15B SCOPE INTEGRITY: "
+            + ("PASS" if scope_integrity else "PARTIAL")
+            + "; LEAGUE, RIVALS and COMPETITIVE denominators are evaluated independently."
+        )
 
         lines.append("### TOP 10 MACRO CONTEXT")
         lines.extend(_markdown_table(

@@ -264,3 +264,25 @@ def test_s10_unsupported_eta_is_explicitly_stateful_not_generic_unavailable():
     ]})
     assert "ETA_UNAVAILABLE (NO_SUPPORTED_CROSSING)" in text
     assert "14 Oct 2026 06:00 WIB" in text
+
+
+def test_s15b_scope_integrity_is_explicit_and_independent():
+    payload = {
+        "coverage_state": "FULL",
+        "expected_manager_count": 58,
+        "submitted_picks_available_count": 58,
+        "denominator_scopes": {
+            "LEAGUE": {"collected": 58, "expected": 58},
+            "RIVALS": {"collected": 57, "expected": 57},
+            "COMPETITIVE": {"collected": 9, "expected": 9},
+        },
+        "rank_battle": [],
+        "competitive_window": {"our_rank": 5, "league_size": 58, "above_count": 4,
+                               "below_count": 5, "rival_count": 9, "ranks": [1,2,3,4,6,7,8,9,10]},
+        "league_our15_exposure": [], "rivals_our15_exposure": [],
+        "competitive_our15_exposure": [], "competitive_rivals": [],
+        "competitive_window_threats": [], "captain_leverage": [],
+        "current_league_context": {},
+    }
+    text = _visible("S15B", payload)
+    assert "S15B SCOPE INTEGRITY: PASS" in text

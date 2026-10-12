@@ -256,4 +256,5 @@ The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolv
 
 
 - **S18 rule-engine hit-cost binding (12 Oct 2026):** missing authenticated hit-cost metadata now resolves from the active verified Official FPL ruleset; unresolved rule metadata remains fail-closed.
+- **Human-facing Formation MC QA binding (12 Oct 2026):** when the canonical producer supplies Formation MC rows, the presentation validator now expects and counts that typed table in S06, S08, S14 and S19. JSON-serialized evidence strings are decoded before human-facing QA, so valid canonical evidence is not mistaken for a raw mapping leak.
 

@@ -20,6 +20,7 @@ coherent report bundle.
 
 import argparse
 import cProfile
+import gzip
 import hashlib
 import json
 import os
@@ -1119,9 +1120,17 @@ def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str 
         runtime_data_root / "data" / "v6" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "current" / "official_detail.json",
         runtime_data_root / "data" / "v6" / "history" / "official_detail.json",
+        runtime_data_root / "data" / "v6" / "history" / "official_detail.json.gz",
     )
     for path in candidates:
-        payload = _read_json(path, {}) or {}
+        if path.suffix == ".gz":
+            try:
+                with gzip.open(path, "rt", encoding="utf-8") as handle:
+                    payload = json.load(handle)
+            except (OSError, ValueError, json.JSONDecodeError):
+                payload = {}
+        else:
+            payload = _read_json(path, {}) or {}
         if isinstance(payload, Mapping) and (
             payload.get("element_summaries")
             or payload.get("full_season_history")

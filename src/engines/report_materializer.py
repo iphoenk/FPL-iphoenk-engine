@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import json
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -23,6 +24,64 @@ WATCH_OUT = DATA / "dss_watchlist_summary.json"
 OWNED_DETAIL_OUT = DATA / "official_detail_owned.json"
 WATCH_DETAIL_OUT = DATA / "official_detail_watchlist.json"
 USER_OUT = DATA / "user_report.json"
+
+_V6_HISTORY_CONTRACT = "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1"
+
+
+def _normalise_occurrence_slot(value: Any) -> str | None:
+    try:
+        parsed = datetime.fromisoformat(str(value or "").replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc).isoformat()
+
+
+def _read_json_or_gzip(path: Path) -> dict[str, Any]:
+    if path.is_file():
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, UnicodeDecodeError):
+            return {}
+    gzip_path = Path(str(path) + ".gz")
+    if gzip_path.is_file():
+        try:
+            return json.loads(gzip.decompress(gzip_path.read_bytes()).decode("utf-8"))
+        except (OSError, ValueError, UnicodeDecodeError, gzip.BadGzipFile):
+            return {}
+    return {}
+
+
+def _load_occurrence_bound_official_detail(
+    *, report_kind: str, logical_slot: str | None,
+) -> dict[str, Any]:
+    """Load V6 full-history only when it belongs to this exact report occurrence."""
+    if report_kind != "full_master" or not logical_slot:
+        return {}
+    latest = read_json(DATA / "v6" / "report_prefetch" / "latest.json", {}) or {}
+    if str(latest.get("report_kind") or "").strip() != "full_master":
+        return {}
+    requested_slot = _normalise_occurrence_slot(logical_slot)
+    target_slot = _normalise_occurrence_slot(
+        latest.get("target_logical_report_slot") or latest.get("logical_slot")
+    )
+    if not requested_slot or requested_slot != target_slot:
+        return {}
+    generated = _normalise_occurrence_slot(latest.get("generated_at"))
+    if not generated:
+        return {}
+    root = DATA / "v6" / "history" / "official_detail.json"
+    detail = _read_json_or_gzip(root)
+    if str(detail.get("contract") or "") != _V6_HISTORY_CONTRACT:
+        return {}
+    if _normalise_occurrence_slot(detail.get("generated_at")) != generated:
+        return {}
+    full_history = detail.get("full_season_history")
+    if not isinstance(full_history, dict):
+        return {}
+    return detail
+
 
 
 def _now() -> str:
@@ -543,7 +602,25 @@ def run() -> dict[str, Any]:
     projections = read_json(DATA / "projections.json", {})
     lineup = read_json(DATA / "lineup_decision.json", {})
     latest = read_json(DATA / "latest.json", {})
-    official = read_json(DATA / "official_detail.json", {})
+    latest = read_json(DATA / "latest.json", {})
+    logical_slot = (
+        user.get("logical_slot")
+        or user.get("report_slot")
+        or latest.get("target_logical_report_slot")
+        or latest.get("logical_slot")
+    )
+    legacy_official = read_json(DATA / "official_detail.json", {})
+    occurrence_official = _load_occurrence_bound_official_detail(
+        report_kind=str(user.get("report_kind") or user.get("report_mode") or "full_master"),
+        logical_slot=logical_slot,
+    )
+    official = dict(legacy_official)
+    if occurrence_official:
+        official.update(occurrence_official)
+    else:
+        # Never let a stale legacy history artifact claim current production
+        # full-history evidence when the exact V6 occurrence is not bound.
+        official["full_season_history"] = {}
     official_snapshot = read_json(DATA / "official_snapshot.json", {})
     live = read_json(DATA / "live.json", {})
     prediction_accuracy = read_json(DATA / "prediction_accuracy.json", {})

@@ -488,8 +488,19 @@ def _full_season_history_acceptance(official: dict[str, Any], planning_gw: Any) 
 def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any]) -> dict[str, Any]:
     captaincy = dict(user.get("captaincy") or {})
     source_rows = user.get("rows") or []
-    pstart_rows = [row for row in source_rows if isinstance(row, dict) and row.get("p_start") is not None]
-    pstart_evidence = [row for row in pstart_rows if isinstance(row.get("p_start_evidence"), dict)]
+    pstart_rows = [
+        row for row in source_rows
+        if isinstance(row, dict)
+        and next((value for value in (
+            row.get("p_start"), row.get("start_probability"), row.get("pstart")
+        ) if value is not None), None) is not None
+    ]
+    pstart_evidence = [
+        row for row in pstart_rows
+        if any(isinstance(row.get(key), dict) for key in (
+            "p_start_evidence", "start_probability_evidence"
+        ))
+    ]
     frontier = captaincy.get("captain_frontier") or []
     pstart_status = "PASS" if len(pstart_rows) == 15 and len(pstart_evidence) == len(pstart_rows) else "PARTIAL"
     resolution = "FULL" if any(

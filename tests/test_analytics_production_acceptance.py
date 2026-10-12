@@ -58,3 +58,35 @@ def test_analytics_acceptance_separates_evidence_from_resolution_and_lock():
     assert out["s08_captain"]["evidence_status"] == "PASS"
     assert out["s08_captain"]["decision_state"] == "PREPARE"
     assert out["full_history"]["evidence_status"] == "PASS"
+
+
+def test_report_architecture_binds_owned_player_minutes_evidence():
+    from src.engines.report_architecture import _pstart_rows
+
+    rows = _pstart_rows(
+        {"team_value_ledger": [{"element": 11, "name": "Alpha", "position": "MID"}]},
+        {"players": [{
+            "element": 11,
+            "xmins": {
+                "start_probability": 0.73,
+                "expected_minutes": 68,
+                "dnp_probability": 0.11,
+                "p_start_evidence": {
+                    "source": "V12_PLAYER_MINUTES",
+                    "signals": ["season_start_rate", "role_start_probability"],
+                },
+            },
+        }]},
+    )
+    assert rows == [{
+        "element": 11,
+        "name": "Alpha",
+        "position": "MID",
+        "p_start": 0.73,
+        "p_dnp": 0.11,
+        "xmins": 68,
+        "p_start_evidence": {
+            "source": "V12_PLAYER_MINUTES",
+            "signals": ["season_start_rate", "role_start_probability"],
+        },
+    }]

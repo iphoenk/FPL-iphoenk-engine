@@ -997,8 +997,21 @@ jobs:
               if ! git diff --cached --quiet; then
                 git commit -m "report(v12): private ${REPORT_MODE} ${REPORT_SLOT} run ${GITHUB_RUN_ID}"
               fi
-              git pull --rebase origin main
-              git push origin HEAD:main
+              push_ok=1
+              for push_attempt in 1 2 3; do
+                if git push origin HEAD:main; then
+                  push_ok=0
+                  break
+                fi
+                if [ "$push_attempt" -lt 3 ]; then
+                  git fetch origin main
+                  git rebase --abort >/dev/null 2>&1 || true
+                  git rebase --strategy-option=theirs origin/main
+                fi
+              done
+              if [ "$push_ok" -ne 0 ]; then
+                exit 1
+              fi
               local_sha="$(git rev-parse HEAD)"
               remote_sha="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
               test "$local_sha" = "$remote_sha"

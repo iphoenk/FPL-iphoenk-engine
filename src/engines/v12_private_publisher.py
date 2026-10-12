@@ -524,7 +524,7 @@ def publish_private_output(
             raise PrivatePublishError(f"NATIVE_CONTENT_PARITY_FAILED:{exc}") from exc
         native_content_json = (
             json.dumps(native_content, ensure_ascii=False, separators=(",", ":"), default=str)
-            + "\\n"
+            + "\n"
         )
 
     previous_deep_baseline = None

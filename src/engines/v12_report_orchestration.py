@@ -2517,7 +2517,8 @@ def _materialize_canonical_report(
     by_id = {str(item.get("section_id")): item for item in sections}
     s06_row, s08_row = by_id.get("S06"), by_id.get("S08")
     if (
-        s06_row and s08_row
+        not current_gw_locked
+        and s06_row and s08_row
         and s06_row.get("state") == "COMPLETE"
         and s08_row.get("state") == "COMPLETE"
     ):
@@ -2561,8 +2562,8 @@ def _materialize_canonical_report(
             lineup["captain_adjusted_projection_scope"] = (
                 "P1_7_FRONTIER_SCORE_NOT_S08_FINAL_CVC_RECOMPUTE"
             )
-        lineup["captain"] = dict(captain)
-        lineup["vice_captain"] = dict(vice)
+        lineup["captain"] = dict(captain) if isinstance(captain, Mapping) else {"element_id": captain_id}
+        lineup["vice_captain"] = dict(vice) if isinstance(vice, Mapping) else {"element_id": vice_id}
         lineup["canonical_cvc_binding"] = {
             "source_section": "S08",
             "captain_id": captain_id,

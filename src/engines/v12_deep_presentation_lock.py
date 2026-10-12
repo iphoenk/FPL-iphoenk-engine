@@ -326,6 +326,35 @@ def validate_rendered_deep_presentation(
         spec = dict(sections_cfg.get(sid) or {})
         actual_tables = _rendered_tables(section_text)
         expected_tables = list(spec.get("tables") or [])
+        # FORMATION MC is a canonical, typed table rendered in several
+        # sections when the producer binds it. Derive the extra expectation
+        # from the same section payload that drives the renderer; never waive
+        # the count or row checks when it is present.
+        if sid in {"S06", "S08", "S14", "S19"}:
+            section_content = next(
+                (
+                    row.get("content") or {}
+                    for row in (report or {}).get("sections") or []
+                    if isinstance(row, Mapping)
+                    and str(row.get("section_id") or "").upper() == sid
+                ),
+                {},
+            )
+            if isinstance(section_content, Mapping):
+                formation_mc = section_content.get("formation_mc")
+                formation_rows = (
+                    [row for row in formation_mc.get("formations") or [] if isinstance(row, Mapping)]
+                    if isinstance(formation_mc, Mapping)
+                    else []
+                )
+                if formation_rows:
+                    expected_tables.append({
+                        "columns": [
+                            "Formation", "Paths", "Mean", "P10", "P50", "P90",
+                            "Variance", "C", "VC", "Autosub", "MC",
+                        ],
+                        "rows_exact": len(formation_rows),
+                    })
         state = state_by_sid.get(sid, "COMPLETE")
         if sid == "S05" and state == "COMPLETE":
             # S05 is data-driven: Official PL fixture rows and verified

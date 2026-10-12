@@ -101,3 +101,21 @@ def test_s18_captain_surface_distinguishes_canonical_and_provisional_priority():
     assert "Priority C/VC: Bruno Fernandes / Erling Haaland" in visible
     assert "state PREPARE" in visible
     assert "not executable unless LOCK" in visible
+
+
+def test_s18_economics_integrity_is_partial_when_route_values_are_unavailable():
+    visible = _render({
+        "axes": [],
+        "best_alternative_executable": False,
+        "best_alternative": {
+            "route": "R1",
+            "execution_economics_status": "DEGRADED",
+            "transfer_cost": {},
+            "gw1_net": "UNAVAILABLE",
+            "three_gw": "UNAVAILABLE",
+            "five_gw": "UNAVAILABLE",
+            "action_verdict": "WAIT",
+        },
+    })
+    assert "S18 TRANSFER ECONOMICS INTEGRITY: PARTIAL" in visible
+    assert "unavailable economics never makes an alternative executable" in visible

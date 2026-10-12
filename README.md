@@ -7,7 +7,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-12T17:29:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-12T17:50:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.
@@ -251,3 +251,6 @@ The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolv
 - **S19 documentation lineage trigger (12 Oct 2026):** canonical S08 evidence binding is verified independently from controlled occurrence acceptance.
 
 - **S19 runtime acceptance binding (12 Oct 2026):** acceptance metadata is rebuilt from the rendered canonical S08 object before S19 validation.
+
+
+- **S18 rule-engine hit-cost binding (12 Oct 2026):** missing authenticated hit-cost metadata now resolves from the active verified Official FPL ruleset; unresolved rule metadata remains fail-closed.

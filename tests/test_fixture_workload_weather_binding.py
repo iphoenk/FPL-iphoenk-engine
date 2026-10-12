@@ -387,6 +387,30 @@ def test_s05_binding_surfaces_europe_and_weather(monkeypatch, tmp_path):
     assert context["weather"][0]["fpl_impact"] == "LOW"
 
 
+def test_fixture_display_rows_uses_official_fixture_order_for_rest_days():
+    fixtures = [
+        {
+            "id": 8999,
+            "event": 5,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-09-30T14:00:00Z",
+        },
+        {
+            "id": 9001,
+            "event": 6,
+            "team_h": 1,
+            "team_a": 2,
+            "kickoff_time": "2026-10-03T14:00:00Z",
+        },
+    ]
+    rows = v12_s05_binding.build_fixture_display_rows(
+        bootstrap=_bootstrap(), fixtures=fixtures, planning_gw=6
+    )
+    assert rows[0]["fixture_id"] == 9001
+    assert rows[0]["rest_days"] == "3.0"
+
+
 def test_fixture_display_rows_expose_readable_identity_wib_venue_and_weather_binding():
     fixtures = [
         {

@@ -1009,7 +1009,36 @@ def validate_deep_decision_content_delivery(
         )
     }
 
+    # Cross-section C/VC presentation must agree with the canonical S08 decision.
+    # A rendered badge from a different optimizer output is not a valid LOCK.
+    s06 = content("S06")
     s08 = content("S08")
+    s19 = content("S19")
+    if state("S06") == "COMPLETE" and state("S08") == "COMPLETE":
+        def _decision_id(value: Any) -> int:
+            if not isinstance(value, Mapping):
+                return 0
+            try:
+                return int(value.get("element_id") or value.get("element") or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        for key, label in (("captain", "CAPTAIN"), ("vice_captain", "VICE")):
+            expected = _decision_id(s08.get(key))
+            rendered = _decision_id(s06.get(key))
+            if expected <= 0 or rendered <= 0 or expected != rendered:
+                failures.append(f"S06_S08_{label}_CANONICAL_MISMATCH")
+        if state("S19") == "COMPLETE":
+            final = dict(s19.get("final_judgement") or {})
+            for key, final_key, label in (
+                ("captain", "final_captain", "CAPTAIN"),
+                ("vice_captain", "vice", "VICE"),
+            ):
+                expected = _decision_id(s08.get(key))
+                observed = _decision_id(final.get(final_key))
+                if expected <= 0 or observed <= 0 or expected != observed:
+                    failures.append(f"S08_S19_{label}_CANONICAL_MISMATCH")
+
     if state("S08") == "COMPLETE":
         captain_state = str(s08.get("decision_state") or "").upper()
         if captain_state not in {"WAIT", "PREPARE", "LOCK"}:

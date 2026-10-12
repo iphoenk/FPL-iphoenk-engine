@@ -155,3 +155,22 @@ def test_optional_native_manifest_is_only_staged_when_it_exists():
     assert 'if [ -f "$REPORT_PATH/native_content.manifest.json" ]; then' in text
     assert 'git add --sparse "$REPORT_PATH/native_content.manifest.json"' in text
     assert 'git add --sparse "$REPORT_PATH/native_content.manifest.json" "$REPORT_PATH/delivery_receipt.json"' not in text
+
+
+def test_final_public_proof_receipt_is_read_from_second_remote_commit():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    delivery = text[text.index("      - name: Publish canonical output to private repository"):text.index("      - name: Build allowlisted public operational proof")]
+    assert 'echo "FINAL_REMOTE_SHA=$remote_sha"' in delivery
+    assert 'git -C ../private-reports show "$FINAL_REMOTE_SHA:$REPORT_PATH/delivery_receipt.json"' in delivery
+    assert '> artifacts/v12-private-delivery/receipt.json' in delivery
+    assert 'if receipt_bytes != show(f"{root}/delivery_receipt.json"):' in delivery
+    assert 'raise SystemExit("final private receipt remote bytes mismatch")' in delivery
+
+
+def test_final_latest_native_manifest_matches_remote_occurrence_bytes():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert '(repo / "latest/native_content.manifest.json").write_bytes(final_manifest_bytes)' in text
+    assert 'git add --sparse "$REPORT_PATH/native_content.manifest.json" "latest/native_content.manifest.json"' in text
+    assert 'if occurrence_manifest != show("latest/native_content.manifest.json"):' in text
+    assert 'raise SystemExit("final latest native manifest byte parity mismatch")' in text
+    assert 'raise SystemExit("final remote manifest receipt hash mismatch")' in text

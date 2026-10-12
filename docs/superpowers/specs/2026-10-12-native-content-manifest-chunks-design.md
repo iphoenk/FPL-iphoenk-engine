@@ -16,6 +16,10 @@ The native consumer is represented by a strict acceptance contract. It consumes 
 
 The native manifest/chunk requirement applies only to `DEEP` with `delivery_status=READY_FULL`. Public-first `MATCH`, `PRICE`, and evidence-based `DEEP READY_DEGRADED` do not generate native manifests; their receipts retain `native_content_format=NOT_APPLICABLE` and native/UI acceptance `UNVERIFIED`. The remote validator still fail-closes on wrong occurrence identity, report mode, missing or altered canonical bundle/body/digest/execution-proof bytes, or the mode-specific latest digest mismatch. For DEEP READY_FULL, the strict complete native manifest, chunk and latest parity contract remains mandatory. Successful mode-specific readback sets `private_remote_readback=PASS` on the receipt, not native UI VERIFIED.
 
+## Final remote receipt and latest parity (13 Oct 2026)
+
+The terminal public proof must reference SHA256 of the **final second-commit remote receipt bytes**, not the local publisher receipt created before native remote readback. After the initial immutable remote readback and validation, the governed publisher persists the readback manifest to the occurrence and latest manifest paths and the final receipt to the occurrence. It confirms the final pushed commit, independently rereads the receipt from that immutable commit, byte-compares the occurrence/ latest manifests, and verifies the manifest SHA256 against the final receipt before permitting public proof. An intermediate receipt hash cannot be called the terminal receipt hash. This workflow makes no user-visible ChatGPT UI acceptance claim.
+
 ## Failure handling
 
 Missing, empty, oversized, corrupted, duplicated, reordered, or incomplete chunks fail closed. A section catalog mismatch fails closed. A remote commit mismatch or latest pointer mismatch fails closed. UI acceptance is `UNVERIFIED` unless every expected section and chunk was consumed and the rendered canonical hash matches the manifest.

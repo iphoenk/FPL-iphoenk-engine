@@ -41,3 +41,23 @@ The existing golden and contract suites must pass. A walk-forward backtest
 must compare starter Brier score, log loss, calibration, xMins error, DNP and
 cameo calibration by position and team. Six gameweeks are evidence coverage,
 not sufficient sample size for claiming high calibration confidence.
+
+## Immutable as-of provider history for controlled and natural DEEP
+
+A report-prefetch may normalize current Understat/FotMob observations after its
+logical slot. The S02 retrospective bridge now selects the newest Git-committed
+V6 public normalized source whose commit timestamp and source effective_at both
+precede the exact report slot. It reads bounded `runtime-data-v6` ancestry,
+with a source SHA256 and immutable source commit stored in advisory provenance.
+No later source can be relabeled as pre-slot, and an unavailable ancestor is
+reported as UNAVAILABLE rather than a fabricated zero or future backfill.
+This is read-only V6 evidence selection, not a new data collector or a second
+P(start)/xMins mathematical authority.
+
+Regression uses synthetic local Git commits to prove a post-slot refresh and a
+backdated effective_at cannot pass the source-time cutoff. Stage3 temporal
+integrity and the authoritative V6 publisher remain unchanged.
+
+Change timestamp: 2026-10-14T04:40:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T04:40:00+07:00

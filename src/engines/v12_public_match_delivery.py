@@ -448,9 +448,15 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
             f"{h_score}-{a_score}" if isinstance(h_score, int) and isinstance(a_score, int)
             else "UNAVAILABLE"
         )
-        status = "FT" if fixture.get("finished") is True else (
-            "LIVE" if fixture.get("started") is True else "NOT_STARTED"
-        )
+        # Match row status must agree with Official fixture settlement:
+        # finished_provisional is neither currently live nor final.
+        from src.engines.live_state_service import classify_fixture_state
+        fixture_state = classify_fixture_state(fixture)["state"]
+        status = {
+            "FINAL": "FT", "LIVE": "LIVE",
+            "PROVISIONAL_90": "PROVISIONAL_90",
+            "NOT_STARTED": "NOT_STARTED", "UNKNOWN": "UNKNOWN",
+        }[fixture_state]
         fixtures.append({
             "fixture": f"{home} vs {away}", "score": score_display,
             "status": status, "kickoff": fixture.get("kickoff_time"),

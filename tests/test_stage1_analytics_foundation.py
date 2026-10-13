@@ -2217,6 +2217,11 @@ def test_pstart_resolution_accepts_equality_only_if_input_evidence_matches():
                     "role_start_probability",
                 ],
                 "model_probability_agrees": True,
+                "signal_values": [
+                    {"signal": "neutral_prior", "probability": .72, "weight": .8},
+                    {"signal": "player_selection_posterior", "probability": .8712, "weight": 1.8},
+                    {"signal": "role_start_probability", "probability": .86, "weight": 1.1},
+                ],
                 "selection_evidence": {
                     "status": "AVAILABLE", "observed_matches": 6,
                     "starts": 6, "recent_starts": 3,

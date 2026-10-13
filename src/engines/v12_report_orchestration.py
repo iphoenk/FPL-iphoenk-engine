@@ -4317,6 +4317,69 @@ def _render_deep_visible_contract_lines(
                 "missing exact-slot full-history or Pstart acceptance is NOT a zero "
                 "and does NOT establish high-confidence production evidence."
             )
+        context = dict(full_history.get("retrospective_context") or {})
+        if context.get("contract") == "V12_GW1_GW6_RETROSPECTIVE_CONTEXT_V1":
+            sources = context.get("source_health") or {}
+            u = sources.get("understat") or {}
+            f = sources.get("fotmob") or {}
+            lines.append(
+                "GW1-GW6 VERIFIED CONTEXT: official player universe "
+                f"{context.get('official_players_in_universe')}; official slots "
+                f"{context.get('official_gw_slots_present')}/"
+                f"{context.get('expected_official_gw_slots')}; "
+                f"FPL points finalized={context.get('official_points_finalized')}; "
+                f"Understat verified joins={u.get('verified_join_count')} "
+                f"(season aggregates only); FotMob verified FT fixtures="
+                f"{f.get('verified_match_count')}. Non-official FT does NOT finalize FPL points."
+            )
+            team = (context.get("focus_team") or {})
+            form = team.get("form_gw1_gw6") or {}
+            lines.append(
+                "CHELSEA GW1-GW6 OBSERVED RESULTS: "
+                f"{form.get('wins')}W {form.get('draws')}D {form.get('losses')}L, "
+                f"goals {form.get('goals_for')}-{form.get('goals_against')}; "
+                "retrospective match results, NOT projected team fit."
+            )
+            lines.extend(_markdown_table(
+                ("GW", "Opponent", "H/A", "GF", "GA", "Result", "FPL status"),
+                [(
+                    r.get("gw"), r.get("opponent"), "H" if r.get("home") else "A",
+                    r.get("goals_for"), r.get("goals_against"), r.get("result"),
+                    r.get("fpl_points_settlement"),
+                ) for r in form.get("matches") or []],
+            ))
+            tactical = team.get("tactical_observation") or {}
+            lines.append(
+                "CHELSEA COACH / FORMATION OBSERVATION: "
+                f"{tactical.get('manager', 'UNAVAILABLE')} | "
+                f"{tactical.get('formation', 'UNAVAILABLE')} | "
+                f"{tactical.get('status', 'UNAVAILABLE')}; "
+                "single-match roles are observed, but individual formation-fit/coach-fit "
+                "probabilities are UNAVAILABLE without multi-match calibrated evidence."
+            )
+            lines.append("#### CHELSEA PLAYER PROCESS (UNDERSTAT SEASON GW1-GW6, VERIFIED IDs)")
+            lines.extend(_markdown_table(
+                ("Player", "Pos", "Matches", "Minutes", "Goals", "Assists",
+                 "xG", "xA", "xGI/90", "Evidence"),
+                [(
+                    r.get("name"), r.get("position"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("games"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("time"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("goals"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("assists"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xg"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xa"),
+                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xgi_per90"),
+                    (r.get("provider_skill_observation") or {}).get("status"),
+                ) for r in context.get("focus_players") or []],
+            ))
+            lines.append(
+                "SKILL / TEAM FIT / OPPONENT FIT: historical event-process proxies "
+                "and exact observed opponents are visible above. Skills are not "
+                "a calibrated ability rating, scoreline is not causal team fit, and "
+                "formation/coach suitability is not inferred from a single win. "
+                "No direct xPts/xMins/P(start) mutation from this bridge."
+            )
         lines.extend(_markdown_table(
             ("Player", "Pos", "Opponent", "Pstart", "xMins", "1GW xPts", "3GW", "5GW", "Note"),
             [(

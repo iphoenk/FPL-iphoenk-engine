@@ -1239,6 +1239,44 @@ def _analytics_production_acceptance(
         "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
         "artifact_path": detail_path,
     }
+    # Advisory GW1-GW6 observational bridge. Unlike the coverage gate, this
+    # never declares provisional FPL points FINAL. Its source-native joins are
+    # cutoff-bound and not inputs to canonical projections or the optimizer.
+    if report_slot and "OCCURRENCE_BOUND_HISTORY_SOURCE_UNVERIFIED" not in reject:
+        from src.engines.v12_gw1_gw6_history_context import build_retrospective_context
+
+        factual_root = runtime_data_root / "data/v6"
+        compressed = factual_root / "history/official_detail.json.gz"
+        raw_history = {}
+        if compressed.is_file():
+            try:
+                with gzip.open(compressed, "rt", encoding="utf-8") as fh:
+                    raw_detail = json.load(fh)
+                if (
+                    raw_detail.get("report_prefetch_run_id") == detail.get("report_prefetch_run_id")
+                    and raw_detail.get("target_logical_report_slot") == detail.get("target_logical_report_slot")
+                    and raw_detail.get("generated_at") == detail.get("generated_at")
+                ):
+                    raw_history = (raw_detail.get("full_season_history") or {})
+            except (OSError, ValueError, json.JSONDecodeError):
+                raw_history = {}
+        observation = _read_json(
+            ROOT / "config/intelligence/gw6_chelsea_tactical_observation.json", {}
+        ) or {}
+        history["retrospective_context"] = build_retrospective_context(
+            bootstrap=official.get("bootstrap") or {},
+            official_fixtures=official.get("fixtures") or [],
+            full_history=raw_history or full_history,
+            understat=_read_json(factual_root / "normalized/sources/understat.json", {}) or {},
+            fotmob=_read_json(factual_root / "normalized/sources/fotmob.json", {}) or {},
+            report_slot=report_slot,
+            tactical_observation=observation,
+        )
+    else:
+        history["retrospective_context"] = {
+            "status": "UNAVAILABLE",
+            "reason": "EXACT_OCCURRENCE_HISTORY_NOT_VERIFIED",
+        }
     # Degraded integrated runs may carry the literal "UNAVAILABLE" in P(start).
     # Numeric evidence must be valid probabilities before a row is counted or
     # rounded. A missing projection is an explicit PARTIAL, never an exception.

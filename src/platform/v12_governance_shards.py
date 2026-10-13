@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail-closed deterministic sharding of the exact pre-repair V12 required suite.
 
-The prior 50-file V12 suite is expanded to 51 required files and 1382 collected
+The prior 51-file V12 suite is expanded to 52 required files and 1388 collected
 pytest node IDs, including the reviewed provisional-fixture lifecycle and active-runner S02
 history finality regression cases (13 Oct 2026) on top of the 1379-node baseline. No tests are
 skipped, deselected, or replaced by subset fixtures.
@@ -39,6 +39,7 @@ REQUIRED_FILES = [
     "tests/test_player_minutes_finite_state.py",
     "tests/test_player_events_posterior_predictive.py",
     "tests/test_integrated_report_runner.py",
+    "tests/test_historical_performance_context.py",
     "tests/test_captain_goalkeeper_tail_review.py",
     "tests/test_captain_visible_provisional_baseline.py",
     "tests/test_lineup_watchlist_and_governance.py",
@@ -72,7 +73,7 @@ REQUIRED_FILES = [
     "tests/test_data_platform_precompute_control.py",
     "tests/test_runtime_cross_cpu_proof_registry.py"
 ]
-BASELINE_TOTAL = 1382
+BASELINE_TOTAL = 1388
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

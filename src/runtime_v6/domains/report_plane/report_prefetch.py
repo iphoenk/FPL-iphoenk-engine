@@ -74,6 +74,14 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
     }
     identity_anomalies: list[dict[str, Any]] = []
     verified_fixture_rows = 0
+    # A historical slot may exist in the payload while its event remains
+    # provisional. Such slots are coverage-visible, never finalized evidence.
+    pending_historical_gws = [
+        gw for gw in historical_gws
+        if events.get(gw, {}).get("finished") is not True
+        or not fixture_by_gw.get(gw)
+        or any(row.get("finished") is not True for row in fixture_by_gw[gw])
+    ]
     for element in elements:
         element_id = int(element["id"])
         summary = summaries.get(str(element_id))
@@ -120,13 +128,13 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
         players[str(element_id)] = {"element_id": element_id, "position": element.get("element_type"), "team": element.get("team"), "history": player_records, "coverage": {"expected_gw_slots": len(historical_gws), "available_gw_slots": len(player_records), "missing_gw_slots": len(historical_gws) - len(player_records)}}
     expected = len(element_ids) * len(historical_gws)
     fixture_identity_complete = bool(fixture_ids) and not identity_anomalies
-    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing and fixture_identity_complete else "PARTIAL"
+    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing and fixture_identity_complete and not pending_historical_gws else "PARTIAL"
     return {
         "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
         "generated_at": snapshot.get("generated_at"),
         "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"},
         "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0},
-        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "fixture_identity_status": "PASS" if fixture_identity_complete else "PARTIAL", "fixture_catalog_count": len(fixture_ids), "verified_fixture_rows": verified_fixture_rows, "fixture_identity_anomalies": identity_anomalies, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
+        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "fixture_identity_status": "PASS" if fixture_identity_complete else "PARTIAL", "fixture_catalog_count": len(fixture_ids), "verified_fixture_rows": verified_fixture_rows, "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
         "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False},
         "players": players,
     }

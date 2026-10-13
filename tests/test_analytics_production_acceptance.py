@@ -13,6 +13,8 @@ def test_full_history_acceptance_preserves_production_gate():
                 "universe": {"expected_players": 667, "covered_players": 667},
                 "coverage_gate": {
                     "status": "PASS",
+                    "fixture_identity_status": "PASS",
+                    "all_historical_gws_finalized": True,
                     "available_gw_slots": 4002,
                     "expected_player_slots": 4002,
                     "pending_never_coerced_to_zero": True,
@@ -90,3 +92,53 @@ def test_report_architecture_binds_owned_player_minutes_evidence():
             "signals": ["season_start_rate", "role_start_probability"],
         },
     }]
+
+
+def test_gw7_history_rejects_v6_gw1_to_gw5_nominal_pass():
+    source = {
+        "full_season_history": {
+            "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+            "as_of": {"planning_gw": 6, "historical_gws": [1, 2, 3, 4, 5]},
+            "coverage_gate": {
+                "status": "PASS",
+                "fixture_identity_status": "PASS",
+                "all_historical_gws_finalized": True,
+            },
+            "universe": {"expected_players": 667, "covered_players": 667},
+        },
+    }
+    out = _full_season_history_acceptance(source, 7)
+    assert out["status"] == "PARTIAL"
+    assert out["source_planning_gw"] == 6
+    assert out["required_planning_gw"] == 7
+    assert out["historical_range_matches_target"] is False
+    assert "PLANNING_GW_HISTORY_RANGE_MISMATCH" in out["coverage_rejection_reasons"]
+
+
+def test_gw7_history_rejects_unsettled_gw6_even_when_all_slots_present():
+    source = {
+        "full_season_history": {
+            "as_of": {"planning_gw": 7, "historical_gws": [1, 2, 3, 4, 5, 6]},
+            "coverage_gate": {
+                "status": "PASS",
+                "fixture_identity_status": "PASS",
+                "all_historical_gws_finalized": False,
+                "pending_historical_gws": [6],
+            },
+        },
+    }
+    out = _full_season_history_acceptance(source, 7)
+    assert out["status"] == "PARTIAL"
+    assert "HISTORICAL_GW_NOT_FINALIZED" in out["coverage_rejection_reasons"]
+
+
+def test_gw7_history_rejects_legacy_missing_fixture_identity():
+    source = {
+        "full_season_history": {
+            "as_of": {"planning_gw": 7, "historical_gws": [1, 2, 3, 4, 5, 6]},
+            "coverage_gate": {"status": "PASS", "all_historical_gws_finalized": True},
+        },
+    }
+    out = _full_season_history_acceptance(source, 7)
+    assert out["status"] == "PARTIAL"
+    assert "OFFICIAL_FIXTURE_IDENTITY_UNVERIFIED" in out["coverage_rejection_reasons"]

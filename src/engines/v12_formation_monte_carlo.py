@@ -200,6 +200,10 @@ def run_formation_monte_carlo(
         metric = dict((metrics.get(route_id) or {}).get(str(HORIZON_GWS)) or {})
         if metric.get("status") != "READY":
             raise FormationMonteCarloError(f"missing six-GW MC metric for {formation}")
+        if metric.get("p10") is None or metric.get("p90") is None:
+            raise FormationMonteCarloError(
+                f"canonical six-GW absolute point quantiles missing for {formation}"
+            )
         route_semantics = dict(semantics.get(route_id) or {})
         per_gw_semantics = dict(route_semantics.get("by_gw") or {})
         average_semantics = {
@@ -248,9 +252,9 @@ def run_formation_monte_carlo(
                 for row in route.get("p17_rows") or []
             ],
             "mean_xpts": metric.get("mean_net_utility"),
-            "p10": metric.get("Q10"),
+            "p10": metric.get("p10"),
             "p50": metric.get("median"),
-            "p90": metric.get("Q90"),
+            "p90": metric.get("p90"),
             "variance": float(metric.get("standard_deviation") or 0.0) ** 2,
             "captain_haul_probability": average_semantics["captain_haul_probability"],
             "captain_blank_probability": average_semantics["captain_blank_probability"],

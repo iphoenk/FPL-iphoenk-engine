@@ -520,10 +520,40 @@ def _full_season_history_acceptance(official: dict[str, Any], planning_gw: Any) 
     status = str(gate.get("status") or "UNAVAILABLE").upper()
     if status not in {"PASS", "PARTIAL"}:
         status = "UNAVAILABLE"
+    # V12 planning GW7 requires finalized GW1..GW6, not a nominally complete
+    # V6 GW1..GW5 artifact with source planning GW6. Preserve source identity.
+    try:
+        required_planning_gw = int(planning_gw)
+        source_planning_gw = int(as_of.get("planning_gw"))
+    except (TypeError, ValueError):
+        required_planning_gw = source_planning_gw = 0
+    historical_slots_match = (
+        required_planning_gw >= 2
+        and source_planning_gw == required_planning_gw
+        and isinstance(expected_gw, list)
+        and expected_gw == list(range(1, required_planning_gw))
+    )
+    fixture_identity_status = str(gate.get("fixture_identity_status") or "UNVERIFIED")
+    historical_finality = gate.get("all_historical_gws_finalized") is True
+    rejection_reasons = []
+    if not historical_slots_match:
+        rejection_reasons.append("PLANNING_GW_HISTORY_RANGE_MISMATCH")
+    if not historical_finality:
+        rejection_reasons.append("HISTORICAL_GW_NOT_FINALIZED")
+    if fixture_identity_status != "PASS":
+        rejection_reasons.append("OFFICIAL_FIXTURE_IDENTITY_UNVERIFIED")
+    if status == "PASS" and rejection_reasons:
+        status = "PARTIAL"
     return {
         "contract": raw.get("contract") or "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
         "status": status,
         "planning_gw": as_of.get("planning_gw", planning_gw),
+        "required_planning_gw": required_planning_gw,
+        "source_planning_gw": source_planning_gw,
+        "historical_range_matches_target": historical_slots_match,
+        "fixture_identity_status": fixture_identity_status,
+        "all_historical_gws_finalized": historical_finality,
+        "coverage_rejection_reasons": rejection_reasons,
         "historical_gws": expected_gw or [],
         "historical_range": (
             f"GW1-GW{max(expected_gw)}" if isinstance(expected_gw, list) and expected_gw

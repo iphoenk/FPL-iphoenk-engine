@@ -52,8 +52,8 @@ def _fake_simulator(projections, route_defs, **kwargs):
                 "mean_net_utility": 100.0,
                 "median": 99.0,
                 "standard_deviation": 12.0,
-                "Q10": 80.0,
-                "Q90": 120.0,
+                "p10": 80.0,
+                "p90": 120.0,
             }
         }
         path_semantics[route_id] = {
@@ -90,6 +90,7 @@ def test_all_eight_formations_are_executed_on_one_six_gw_contract():
     assert [row["formation"] for row in payload["formations"]] == list(FORMATIONS)
     assert all(row["actual_paths"] == 500_000 for row in payload["formations"])
     assert all(row["convergence"] == "PASS" for row in payload["formations"])
+    assert all(row["p10"] == 80.0 and row["p90"] == 120.0 for row in payload["formations"])
     assert payload["integrity"] == {
         "formation_count": 8,
         "all_legal_formations": True,
@@ -168,3 +169,20 @@ def test_formation_mc_renderer_exposes_all_rows_and_route_separation():
     assert "| 500000 |" in rendered
     assert "no_route_mc_substitution=True" in rendered
 
+
+
+def test_formation_mc_fails_closed_if_absolute_quantiles_missing():
+    def bad_quantiles(projections, route_defs, **kwargs):
+        result = _fake_simulator(projections, route_defs, **kwargs)
+        for route in result["metrics"].values():
+            del route["6"]["p90"]
+        return result
+
+    with pytest.raises(FormationMonteCarloError, match="absolute point quantiles missing"):
+        run_formation_monte_carlo(
+            {"planning_gw": 7},
+            current15=list(range(1, 16)),
+            input_snapshot_id="private-full-master:gw7",
+            route_builder=lambda **_: _routes(),
+            simulator=bad_quantiles,
+        )

@@ -56,7 +56,9 @@ def test_analytics_acceptance_separates_evidence_from_resolution_and_lock():
         },
     )
     assert out["p_start"]["evidence_status"] == "PASS"
-    assert out["p_start"]["resolution_status"] == "FULL"
+    assert out["p_start"]["resolution_status"] == "LIMITED_RESOLUTION"
+    assert out["p_start"]["resolution_audit"]["individual_evidence_rows"] == 0
+    assert out["p_start"]["acceptance_layers"]["CALIBRATION"] == "NO_SETTLED_SAMPLE"
     assert out["s08_captain"]["evidence_status"] == "PASS"
     assert out["s08_captain"]["decision_state"] == "PREPARE"
     assert out["full_history"]["evidence_status"] == "PASS"

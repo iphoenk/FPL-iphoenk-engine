@@ -130,13 +130,15 @@ def render_match_locked_text(report: Mapping[str, Any]) -> str:
             lines.extend([
                 f"Scoring GW: {_scalar(content.get('scoring_gw'))}",
                 f"Fixtures live: {_scalar(live)}",
+                f"Fixtures provisional 90: {_scalar(provisional)}",
                 f"Fixtures FT: {_scalar(ft)}",
                 f"Fixtures not started: {_scalar(ns)}",
                 f"As of: {_scalar(content.get('timestamp'))}",
                 f"Lifecycle / current phase: {_scalar(content.get('lifecycle_mode'))}",
                 (
                     f"{_scalar(live)} pertandingan sedang berjalan, "
-                    f"{_scalar(ft)} selesai, {_scalar(ns)} belum mulai."
+                    f"{_scalar(provisional)} provisional (bukan final), "
+                    f"{_scalar(ft)} selesai resmi, {_scalar(ns)} belum mulai."
                 ),
                 "Weather: MATCH CURRENT",
             ])

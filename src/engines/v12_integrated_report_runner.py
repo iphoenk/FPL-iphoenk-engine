@@ -1243,7 +1243,10 @@ def _analytics_production_acceptance(
     # never declares provisional FPL points FINAL. Its source-native joins are
     # cutoff-bound and not inputs to canonical projections or the optimizer.
     if report_slot and "OCCURRENCE_BOUND_HISTORY_SOURCE_UNVERIFIED" not in reject:
-        from src.engines.v12_gw1_gw6_history_context import build_retrospective_context
+        from src.engines.v12_gw1_gw6_history_context import (
+            build_retrospective_context,
+            load_verified_v6_provider_asof,
+        )
 
         factual_root = runtime_data_root / "data/v6"
         compressed = factual_root / "history/official_detail.json.gz"
@@ -1267,8 +1270,16 @@ def _analytics_production_acceptance(
             bootstrap=official.get("bootstrap") or {},
             official_fixtures=official.get("fixtures") or [],
             full_history=raw_history or full_history,
-            understat=_read_json(factual_root / "normalized/sources/understat.json", {}) or {},
-            fotmob=_read_json(factual_root / "normalized/sources/fotmob.json", {}) or {},
+            understat=load_verified_v6_provider_asof(
+                runtime_data_root,
+                source_name="understat",
+                report_slot=report_slot,
+            ),
+            fotmob=load_verified_v6_provider_asof(
+                runtime_data_root,
+                source_name="fotmob",
+                report_slot=report_slot,
+            ),
             report_slot=report_slot,
             tactical_observation=observation,
         )

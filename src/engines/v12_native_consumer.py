@@ -110,6 +110,7 @@ def consume_native_content(
     transport_status: str,
     remote_readback: str,
     native_host_receipt: Mapping[str, Any] | None = None,
+    native_host_verification_key: bytes | None = None,
 ) -> dict[str, Any]:
     expected = list(manifest.get("section_ids") or [])
     rendered_ids: list[str] = []
@@ -159,6 +160,7 @@ def consume_native_content(
         files=files if valid else {},
         canonical_body=canonical_body,
         native_host_receipt=native_host_receipt,
+        native_host_verification_key=native_host_verification_key,
     )
     return {
         "section_count": len(rendered_ids),

@@ -199,36 +199,49 @@ jobs:
           SOURCE_RUN_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
         run: |
           set -euo pipefail
+          # Provenance must bind to the original natural publish generation;
+          # the mutable runtime-data-v6 branch may have advanced meanwhile.
           gh api "/repos/${GITHUB_REPOSITORY}/branches/runtime-data-v6" > "$RUNNER_TEMP/runtime-branch.json"
-          runtime_sha="$(python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-branch.json").read_text(encoding="utf-8"))
-          print(str(((payload.get("commit") or {}).get("sha") or "")))
-          PY
-          )"
-          if [[ ! "$runtime_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::runtime-data-v6 did not resolve to a full commit SHA"
-            exit 1
-          fi
-          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/candidate_freeze.lock?ref=${runtime_sha}" > "$RUNNER_TEMP/runtime-freeze-content.json"
-          RUNTIME_SHA="$runtime_sha" python - <<'PY'
+          gh api "/repos/${GITHUB_REPOSITORY}/commits?sha=runtime-data-v6&path=data/v6/health/candidate_freeze.lock&per_page=100" > "$RUNNER_TEMP/runtime-freeze-history.json"
+          python - <<'PY'
           import base64
           import json
           import os
+          import subprocess
           from pathlib import Path
 
-          envelope = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-freeze-content.json").read_text(encoding="utf-8"))
-          raw = base64.b64decode(str(envelope.get("content") or "").replace("\n", ""))
-          freeze = json.loads(raw.decode("utf-8"))
-          if str(freeze.get("run_id")) != str(os.environ["SOURCE_RUN_ID"]):
-              raise SystemExit("runtime branch no longer points to the source run generation")
-          if str(freeze.get("run_attempt")) != str(os.environ["SOURCE_RUN_ATTEMPT"]):
-              raise SystemExit("runtime branch run_attempt does not match source publication")
+          from src.runtime_v6.wave3_artifact_provenance import resolve_published_runtime_commit
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          branch = json.loads((temp / "runtime-branch.json").read_text(encoding="utf-8"))
+          branch_sha = str(((branch.get("commit") or {}).get("sha") or ""))
+          commits = json.loads((temp / "runtime-freeze-history.json").read_text(encoding="utf-8"))
+          if not isinstance(commits, list) or not commits or str(commits[0].get("sha")) != branch_sha:
+              # A branch may advance with an unrelated commit which did not
+              # change the freeze. The exact commit history still decides;
+              # validate the branch SHA separately without assuming equality.
+              if not (len(branch_sha) == 40 and all(c in "0123456789abcdef" for c in branch_sha.lower())):
+                  raise SystemExit("runtime-data-v6 did not resolve to a full commit SHA")
+          freeze_path = temp / "v6-wave3-source-tree/data/v6/health/candidate_freeze.lock"
+          source_bytes = freeze_path.read_bytes()
+
+          def read_remote_freeze(sha: str) -> bytes:
+              url = f"/repos/{os.environ['GITHUB_REPOSITORY']}/contents/data/v6/health/candidate_freeze.lock?ref={sha}"
+              envelope = json.loads(subprocess.check_output(["gh", "api", url], text=True))
+              return base64.b64decode(str(envelope.get("content") or "").replace("\\n", ""))
+
+          runtime_sha = resolve_published_runtime_commit(
+              candidate_commits=commits,
+              expected_freeze_bytes=source_bytes,
+              source_run_id=int(os.environ["SOURCE_RUN_ID"]),
+              source_run_attempt=int(os.environ["SOURCE_RUN_ATTEMPT"]),
+              read_remote_freeze_bytes=read_remote_freeze,
+          )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"sha={os.environ['RUNTIME_SHA']}\n")
-          print({"published_runtime_sha": os.environ["RUNTIME_SHA"], "run_id": freeze.get("run_id"), "run_attempt": freeze.get("run_attempt")})
+              handle.write(f"sha={runtime_sha}\\n")
+          print({"published_runtime_sha": runtime_sha, "source_run_id": os.environ["SOURCE_RUN_ID"],
+                 "source_run_attempt": os.environ["SOURCE_RUN_ATTEMPT"],
+                 "current_branch_sha": branch_sha, "branch_advanced_after_publication": runtime_sha != branch_sha})
           PY
 
       - name: Build Wave 3 natural slot proof

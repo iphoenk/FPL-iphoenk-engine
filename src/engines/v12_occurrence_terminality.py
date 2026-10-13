@@ -12,6 +12,7 @@ from typing import Any, Mapping
 
 READY_FULL = "READY_FULL"
 READY_DEGRADED = "READY_DEGRADED"
+READY_DEGRADED_PUBLIC_FIRST = "READY_DEGRADED_PUBLIC_FIRST"
 FAILED_VERIFY = "FAILED_VERIFY"
 
 _ALLOWED_RUNNER_STATES = {"PASS", "PARTIAL"}
@@ -19,6 +20,7 @@ _ALLOWED_DEGRADED_REASONS = {
     "ANALYTICS_INCOMPLETE",
     "BLOCKED_UPSTREAM",
     "PREFETCH_NOT_TERMINAL",
+    "PUBLIC_FIRST_PERSONAL_UNAVAILABLE",
 }
 
 
@@ -145,7 +147,8 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
     engineering_blocks = stage3.get("engineering_closure_blocks_report") is True
     engineering_status = "DEGRADED" if stage3_status == "DEGRADED" else stage3_status or "UNKNOWN"
 
-    if delivery_status not in {READY_FULL, READY_DEGRADED}:
+    degraded_delivery = delivery_status in {READY_DEGRADED, READY_DEGRADED_PUBLIC_FIRST}
+    if delivery_status not in {READY_FULL, READY_DEGRADED, READY_DEGRADED_PUBLIC_FIRST}:
         _add(failures, "DELIVERY_TERMINALITY_INVALID")
 
     if delivery_status == READY_FULL:
@@ -153,7 +156,7 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
             _add(failures, "READY_FULL_WITHOUT_RUNNER_PASS")
         if stage3_status not in {"PASS", "NOT_APPLICABLE"}:
             _add(failures, "READY_FULL_WITHOUT_STAGE3_PASS")
-    elif delivery_status == READY_DEGRADED:
+    elif degraded_delivery:
         if runner_status != "PARTIAL":
             _add(failures, "READY_DEGRADED_WITHOUT_PARTIAL_RUNNER")
         if not root_failure or root_failure not in _ALLOWED_DEGRADED_REASONS:
@@ -167,7 +170,7 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
         if stage3_status not in {"DEGRADED", "NOT_APPLICABLE"}:
             _add(failures, "READY_DEGRADED_WITHOUT_GOVERNED_STAGE3_STATE")
 
-    terminality = READY_FULL if delivery_status == READY_FULL else READY_DEGRADED
+    terminality = READY_FULL if delivery_status == READY_FULL else delivery_status
     if failures:
         terminality = FAILED_VERIFY
 

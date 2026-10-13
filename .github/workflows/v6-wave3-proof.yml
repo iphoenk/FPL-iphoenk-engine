@@ -185,6 +185,12 @@ jobs:
           rm -rf "$RUNNER_TEMP/v6-wave3-source"
           mkdir -p "$RUNNER_TEMP/v6-wave3-source"
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$ARTIFACT_NAME" --dir "$RUNNER_TEMP/v6-wave3-source"
+          artifact_sha256="$(sha256sum "$RUNNER_TEMP/v6-wave3-source/v6-runtime-data.tar" | awk '{print $1}')"
+          if [[ ! "$artifact_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "::error::immutable source artifact SHA256 is invalid"
+            exit 1
+          fi
+          echo "artifact_sha256=$artifact_sha256" >> "$GITHUB_ENV"
           rm -rf "$RUNNER_TEMP/v6-wave3-source-tree"
           mkdir -p "$RUNNER_TEMP/v6-wave3-source-tree"
           tar -xf "$RUNNER_TEMP/v6-wave3-source/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-wave3-source-tree"
@@ -245,6 +251,7 @@ jobs:
             --publish-job-id "${{ steps.promotion.outputs.publish_job_id }}" \
             --fulfillment-job-id "${{ steps.promotion.outputs.fulfillment_job_id }}" \
             --published-runtime-sha "${{ steps.runtime.outputs.sha }}" \
+            --artifact-sha256 "$artifact_sha256" \
             --output "$RUNNER_TEMP/wave3-slot-proof.json" \
             --production-validated \
             --promotion-verified

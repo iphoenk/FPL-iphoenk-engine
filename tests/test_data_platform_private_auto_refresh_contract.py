@@ -38,16 +38,13 @@ def test_rotating_oidc_only_in_protected_private_job():
 
 def test_private_refresh_remains_public_nonblocking_and_finance_fail_closed():
     collect, private = _jobs()
-    assert 'PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK' in private
+    assert 'PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT' in private
+    assert 'SAVED_VALIDATED_SNAPSHOT' not in private
+    assert 'shutil.copytree(saved_personal' not in private
     assert 'PUBLIC_CURRENT15_FALLBACK=OFFICIAL_SUBMITTED_PICKS' in private
-    assert 'snapshot["bank"] = None' in private
-    assert 'snapshot["free_transfers"] = None' in private
-    assert 'snapshot["free_transfers_source"] = "NOT_SUPPORTED"' in private
-    assert 'snapshot["hit_cost"] = None' in private
-    assert 'row["purchase_price"] = None' in private
-    assert 'row["selling_price"] = None' in private
-    assert '"free_transfers": "NOT_SUPPORTED"' in private
-    assert 'saved_generated >= slot' in private
+    assert 'PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT' in private
+    assert 'saved_generated >= slot' not in private
+    assert 'stale_snapshot_fallback' not in private
     assert 'PRIVATE_PERSONAL_REFRESH=PASS' in private
     assert 'private personal 15/15 purchase and selling prices not verified' in private
     assert 'private free transfers not verified by authenticated official evidence' in private

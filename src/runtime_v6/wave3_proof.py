@@ -30,6 +30,35 @@ class Wave3ProofError(RuntimeError):
     pass
 
 
+def validate_immutable_natural_proof_binding(
+    proof: dict[str, Any],
+    *,
+    branch_head: str | None,
+    artifact_sha256: str,
+) -> dict[str, Any]:
+    """Validate immutable occurrence identity independently of a moving branch head."""
+    receipt = proof.get("publication_receipt")
+    if not isinstance(receipt, dict):
+        raise Wave3ProofError("immutable_proof_binding_failed:publication_receipt_missing")
+    checks = {
+        "run_id": str(receipt.get("run_id") or "") == str(proof.get("run_id") or ""),
+        "run_attempt": str(proof.get("run_attempt") or "") == str(receipt.get("run_attempt") or proof.get("run_attempt") or ""),
+        "logical_slot": str(receipt.get("logical_slot") or "") == str(proof.get("logical_slot") or ""),
+        "artifact_sha256": str(receipt.get("artifact_sha256") or "") == str(artifact_sha256 or ""),
+        "source_commit": len(str(proof.get("source_commit") or "")) == 40,
+        "candidate_generation": bool(str(proof.get("candidate_generation_id") or "").strip()),
+    }
+    failed = [key for key, value in checks.items() if not value]
+    if failed:
+        raise Wave3ProofError("immutable_proof_binding_failed:" + ",".join(failed))
+    return {
+        "status": "PASS",
+        "checks": checks,
+        "branch_head_ignored_for_identity": True,
+        "observed_branch_head": str(branch_head or "") or None,
+    }
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -69,6 +98,7 @@ def build_slot_proof(
     fulfillment_job_id: str | None = None,
     verified_at: datetime | None = None,
     published_runtime_sha: str | None = None,
+    artifact_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Build immutable post-publish evidence without mutating the frozen runtime tree."""
     manifest = _read_json(root / "manifest.json")
@@ -126,6 +156,25 @@ def build_slot_proof(
     publication_generation_id = (
         f"v6-publication:{actual_run_id}:{actual_run_attempt}:{candidate_generation_id}"
     )
+    publication_receipt = {
+        "run_id": actual_run_id,
+        "run_attempt": actual_run_attempt,
+        "logical_slot": logical_slot,
+        "artifact_sha256": str(artifact_sha256 or ""),
+    }
+    if artifact_sha256:
+        validate_immutable_natural_proof_binding(
+            {
+                "run_id": actual_run_id,
+                "run_attempt": actual_run_attempt,
+                "logical_slot": logical_slot,
+                "source_commit": source_commit,
+                "candidate_generation_id": candidate_generation_id,
+                "publication_receipt": publication_receipt,
+            },
+            branch_head=published_runtime_sha,
+            artifact_sha256=artifact_sha256,
+        )
 
     stages = {
         "TRIGGERED": _stage("PASS", at=observed_at, evidence="runtime_control.governed trigger event proof"),
@@ -164,6 +213,8 @@ def build_slot_proof(
         "registry_epoch": freeze.get("registry_epoch"),
         "candidate_tree_sha256": freeze.get("candidate_tree_sha256"),
         "published_tree_sha256": integrity.get("tree_sha256"),
+        "publication_receipt": publication_receipt,
+        "immutable_artifact_sha256": str(artifact_sha256 or "") or None,
         "publisher_mode": "dedicated_v6_github_app",
         "stages": stages,
         "core_chain_pass": all(stages[name]["state"] == "PASS" for name in CORE_STAGES),
@@ -351,6 +402,7 @@ def main() -> int:
     parser.add_argument("--publish-job-id", required=True)
     parser.add_argument("--fulfillment-job-id", required=True)
     parser.add_argument("--published-runtime-sha")
+    parser.add_argument("--artifact-sha256")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--production-validated", action="store_true")
     parser.add_argument("--promotion-verified", action="store_true")
@@ -366,6 +418,7 @@ def main() -> int:
         publish_job_id=args.publish_job_id,
         fulfillment_job_id=args.fulfillment_job_id,
         published_runtime_sha=args.published_runtime_sha,
+        artifact_sha256=args.artifact_sha256,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(proof, indent=2, sort_keys=True) + "\n", encoding="utf-8")

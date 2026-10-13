@@ -19,6 +19,8 @@ def _body():
                        "Formation: 4-4-2\nGK: Keeper\nDEF: A, B, C, D\n"
                        "MID: E, F, G, H\nFWD: I, J\n"
                        "Bench GK: GK2\nBench 1: K\nBench 2: L\nBench 3: M\n")
+        elif section_id == "S08":
+            content = "Current C: I; Current VC: Keeper; state LOCK.\n"
         elif section_id == "S15B":
             content = "| Player | Owned | EO |\n| --- | --- | --- |\n" + "".join(
                 f"| Player {i} | {i}/58 | {i}.0% |\n" for i in range(58)
@@ -54,6 +56,9 @@ def test_native_consumer_renders_every_section_row_profile_and_pitch_surface():
     assert result["consumed_chunk_paths"] == [item["path"] for item in manifest["chunks"]]
     assert result["native_component_count"] == 22
     assert result["native_pitch"]["formation"] == "4-4-2"
+    assert result["native_pitch"]["captain"] == "I"
+    assert result["native_pitch"]["vice_captain"] == "Keeper"
+    assert result["native_pitch"]["captain_vice_in_xi"] is True
     assert result["native_pitch"]["rows"][0]["players"] == ["I", "J"]
     assert all("<style>" not in str(block) for block in result["pitch"]["native_blocks"])
     assert result["rendered_section_ids"] == list(DEEP_MANDATORY_SECTIONS)

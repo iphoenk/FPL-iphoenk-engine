@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Wave 3 natural proof branch-advance race closure (13 Oct 2026):** natural source publication proof now pins a verified immutable reachable runtime commit by comparing exact publisher candidate-freeze bytes from the source-run artifact against bounded branch commit history. An intervening controlled report prefetch may advance `runtime-data-v6` without invalidating an earlier natural source; missing source commits still fail closed. Synthetic tests cover branch advance, missing source and forged source identity. No new scheduler, synthetic acceptance, manual pointer or fabricated provenance.
+
 - **Formation MC sampling-evidence recovery (13 Oct 2026):** the eight legal formation MC500K views now bind canonical `sampling_diagnostics.route_path_semantics.by_gw` (not `performance`, which contains timing data). Captain haul/blank, vice activation, autosub and per-GW expected autosub value are validated across all six GWs; missing or invalid sampled rates fail closed, never display fictitious `0.0`. GW7 XI mean P(DNP) derives from sampler `state_frequencies`, never from an absent `players.p_dnp` field. Two synthetic regressions cover missing GW and missing metric. MC500K, P1.7, official-history, native-host evidence boundary, authority and scheduling are unchanged; production remains non-GREEN until post-merge fresh receipt and real native UI acknowledgment.
 
 - **Active integrated S02 GW7 history acceptance (13 Oct 2026):** the actual V12 integrated runner now requires same-occurrence V6 `full_master` evidence, exact source/target planning-GW range, finalized Official historical events and fixtures and verified fixture IDs before full-history PASS. Stale GW1–GW5 for GW7, provisional GW6 and mismatched occurrence produce PARTIAL with explicit reasons. Required governance suite expands to 1,381 nodes including this synthetic active-runner regression; no scheduler, decision-model or history receipt changes.
@@ -34,7 +36,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-13T13:23:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T13:38:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

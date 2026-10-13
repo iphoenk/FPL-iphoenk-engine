@@ -88,7 +88,7 @@ def test_history_reconciliation_requires_authoritative_team_id(monkeypatch, tmp_
 
 
 def test_full_season_history_covers_all_slots_and_aggregates_dgw():
-    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
+    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "fixtures": [{"id": 101, "event": 1}, {"id": 102, "event": 2}, {"id": 103, "event": 2}], "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
     detail = {"element_summaries": {"10": {"history": [{"event": 1, "fixture": 101, "minutes": 90, "total_points": 6, "saves": 3}, {"event": 2, "fixture": 102, "minutes": 0, "total_points": 0, "saves": 0}, {"event": 2, "fixture": 103, "minutes": 90, "total_points": 8, "saves": 6}], "fixtures": [{"event": 1, "id": 101, "finished": True}, {"event": 2, "id": 102, "finished": True}, {"event": 2, "id": 103, "finished": True}]}}}
     out = mod.build_full_season_history(snapshot=snapshot, detail=detail)
     assert out["coverage_gate"]["status"] == "PASS"
@@ -96,6 +96,8 @@ def test_full_season_history_covers_all_slots_and_aggregates_dgw():
     assert out["players"]["10"]["history"]["2"]["status"] == "FINAL"
     assert out["players"]["10"]["history"]["2"]["aggregate"]["minutes"] == 90
     assert out["players"]["10"]["history"]["2"]["fixture_count"] == 2
+    assert out["coverage_gate"]["verified_fixture_rows"] == 3
+    assert out["coverage_gate"]["fixture_identity_status"] == "PASS"
 
 def test_full_season_history_marks_missing_detail_without_zero_fill():
     snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 3}, "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}], "elements": [{"id": 10}]}}
@@ -134,3 +136,65 @@ def test_full_history_fetch_retries_per_player_and_isolates_failure(monkeypatch)
     assert calls[11] == 3
     assert set(artifact["element_summaries"]) == {"10"}
     assert artifact["enrichment"]["health"]["11"]["status"] == "UNAVAILABLE"
+
+
+def test_full_history_identity_gate_rejects_mismatched_fixture_event():
+    snapshot = {
+        "generated_at": "2026-10-13T00:00:00Z",
+        "phase": {"current_gw": 3},
+        "fixtures": [{"id": 101, "event": 2}],
+        "bootstrap": {
+            "events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}],
+            "elements": [{"id": 10, "element_type": 3, "team": 1}],
+        },
+    }
+    detail = {"element_summaries": {"10": {
+        "history": [{"event": 1, "fixture": 101, "minutes": 90, "total_points": 5}],
+        "fixtures": [],
+    }}}
+    result = mod.build_full_season_history(snapshot=snapshot, detail=detail)
+    assert result["coverage_gate"]["status"] == "PARTIAL"
+    assert result["coverage_gate"]["fixture_identity_status"] == "PARTIAL"
+    assert result["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "OFFICIAL_FIXTURE_GW_MISMATCH"
+    assert result["players"]["10"]["history"]["1"]["fixtures"][0]["minutes"] == 90
+
+
+def test_full_history_identity_gate_fails_closed_without_fixture_catalog():
+    snapshot = {
+        "phase": {"current_gw": 2},
+        "bootstrap": {
+            "events": [{"id": 1, "finished": True}],
+            "elements": [{"id": 10, "element_type": 1, "team": 1}],
+        },
+    }
+    detail = {"element_summaries": {"10": {
+        "history": [{"event": 1, "fixture": 101, "minutes": 90}],
+        "fixtures": [],
+    }}}
+    result = mod.build_full_season_history(snapshot=snapshot, detail=detail)
+    assert result["coverage_gate"]["status"] == "PARTIAL"
+    assert result["coverage_gate"]["fixture_catalog_count"] == 0
+    assert result["coverage_gate"]["verified_fixture_rows"] == 0
+
+
+def test_full_history_identity_gate_rejects_duplicate_player_fixture():
+    snapshot = {
+        "phase": {"current_gw": 2},
+        "fixtures": [{"id": 101, "event": 1}],
+        "bootstrap": {
+            "events": [{"id": 1, "finished": True}],
+            "elements": [{"id": 10, "element_type": 2, "team": 1}],
+        },
+    }
+    detail = {"element_summaries": {"10": {
+        "history": [
+            {"event": 1, "fixture": 101, "minutes": 45},
+            {"event": 1, "fixture": 101, "minutes": 45},
+        ],
+        "fixtures": [],
+    }}}
+    result = mod.build_full_season_history(snapshot=snapshot, detail=detail)
+    assert result["coverage_gate"]["status"] == "PARTIAL"
+    assert result["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "DUPLICATE_PLAYER_FIXTURE_ID"
+    # Preserve raw rows for diagnosis; do not silently drop or fabricate.
+    assert len(result["players"]["10"]["history"]["1"]["fixtures"]) == 2

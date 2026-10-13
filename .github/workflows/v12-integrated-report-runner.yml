@@ -143,6 +143,9 @@ jobs:
         with:
           ref: runtime-data-v6
           path: runtime-data
+          # Read-only immutable ancestry permits exact as-of external
+          # observations when the fresh V6 prefetch completes after its slot.
+          fetch-depth: 96
 
       - name: Checkout private report serving surface only
         uses: actions/checkout@v4

@@ -648,6 +648,7 @@ def walk_forward_pstart_validate(
     deadlines_by_gw: Mapping[int | str, str] | None = None,
     min_sample_size: int = 200,
     min_position_sample_size: int = 25,
+    expected_player_count: int | None = None,
 ) -> dict[str, Any]:
     """Evidence-only, paired P(start) walk-forward against canonical V12 owner.
 
@@ -820,6 +821,8 @@ def walk_forward_pstart_validate(
         and delta["brier"] <= 0.01
         and delta["log_loss"] <= 0.02
         and delta["xmins_mae"] <= 1.0
+        and delta["dnp_brier"] <= 0.02
+        and delta["cameo_brier"] <= 0.02
     )
     sample_count = len(reliability["individualized"])
     pos_summary = {
@@ -827,11 +830,30 @@ def walk_forward_pstart_validate(
               "n": len(bundle.get("individualized_brier") or [])}
         for key, bundle in by_position.items()
     }
+    expected = expected_player_count if expected_player_count and expected_player_count > 0 else None
+    observed_players = len(by_player)
+    universe_ratio = (round(observed_players / expected, 6) if expected else None)
+    enough_universe = bool(universe_ratio is not None and universe_ratio >= 0.95)
+    position_regressions = {
+        position: round(
+            (pos_summary.get(position, {}).get("individualized_brier") or 0)
+            - (pos_summary.get(position, {}).get("baseline_brier") or 0),
+            6,
+        )
+        for position in ("GK", "DEF", "MID", "FWD")
+        if pos_summary.get(position, {}).get("n", 0) >= min_position_sample_size
+    }
+    positional_noninferior = bool(
+        len(position_regressions) == 4
+        and all(value <= 0.03 for value in position_regressions.values())
+    )
     enough_samples = bool(
         sample_count >= min_sample_size
+        and enough_universe
         and all(pos_summary.get(p, {}).get("n", 0) >= min_position_sample_size
                 for p in ("GK", "DEF", "MID", "FWD"))
     )
+    noninferior = bool(noninferior and positional_noninferior)
     gw_temporal_only = chronology_errors == 0
     source_temporal = gw_temporal_only and provenance_gaps == 0 and bool(deadlines_by_gw)
     if not sample_count:
@@ -851,7 +873,13 @@ def walk_forward_pstart_validate(
         "samples": sample_count,
         "tested_fixture_rows": candidate_test,
         "no_prior_history": no_prior_history,
-        "unique_players_tested": len(by_player),
+        "unique_players_tested": observed_players,
+        "expected_player_count": expected,
+        "source_player_coverage_ratio": universe_ratio,
+        "source_universe_coverage": "PASS" if enough_universe else "PARTIAL_OR_UNVERIFIED",
+        "position_brier_deltas": position_regressions,
+        "position_noninferiority": "PASS" if positional_noninferior else "FAIL_OR_INSUFFICIENT",
+
         "rejected_rows": dict(rejected),
         "future_leakage": chronology_errors > 0,
         "gw_split_integrity": "PASS" if gw_temporal_only else "FAIL",

@@ -1156,6 +1156,8 @@ def _analytics_production_acceptance(
     official: Mapping[str, Any],
     rows: Sequence[Mapping[str, Any]],
     captain_surface: Mapping[str, Any],
+    target_planning_gw: int | None = None,
+    report_slot: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Bind analytics evidence to the exact integrated report occurrence."""
     detail, detail_path = _load_official_detail(runtime_data_root)
@@ -1170,15 +1172,62 @@ def _analytics_production_acceptance(
     as_of = dict(full_history.get("as_of") or {})
     universe = dict(full_history.get("universe") or {})
     historical_gws = as_of.get("historical_gws") or []
+    # Check the *actual* integrated V12 runner, not the legacy serving
+    # materializer. An exact-slot source for GW6 (GW1..5) is insufficient
+    # for the V12 GW7 planning decision even when its V6 coverage is PASS.
+    prefetch = _read_json(runtime_data_root / "data/v6/report_prefetch/latest.json", {}) or {}
+    try:
+        source_gw = int(as_of.get("planning_gw") or 0)
+        required_gw = int(target_planning_gw if target_planning_gw is not None else source_gw)
+    except (TypeError, ValueError):
+        source_gw = required_gw = 0
+    reject = []
+    if (
+        required_gw <= 1
+        or source_gw != required_gw
+        or not isinstance(historical_gws, list)
+        or historical_gws != list(range(1, required_gw))
+    ):
+        reject.append("PLANNING_GW_HISTORY_RANGE_MISMATCH")
+    if gate.get("all_historical_gws_finalized") is not True:
+        reject.append("HISTORICAL_GW_NOT_FINALIZED")
+    if gate.get("fixture_identity_status") != "PASS":
+        reject.append("OFFICIAL_FIXTURE_IDENTITY_UNVERIFIED")
+    if report_slot is not None:
+        expected_slot = _parse_aware(report_slot)
+        source_slot = _parse_aware(detail.get("target_logical_report_slot"))
+        current_slot = _parse_aware(prefetch.get("target_logical_report_slot"))
+        if not (
+            detail_path
+            and expected_slot is not None
+            and source_slot is not None
+            and current_slot is not None
+            and source_slot == current_slot == expected_slot
+            and detail.get("report_kind") == prefetch.get("report_kind") == "full_master"
+            and bool(detail.get("report_prefetch_run_id"))
+            and detail.get("report_prefetch_run_id") == prefetch.get("report_prefetch_run_id")
+            and _parse_aware(detail.get("generated_at")) == _parse_aware(prefetch.get("generated_at"))
+        ):
+            reject.append("OCCURRENCE_BOUND_HISTORY_SOURCE_UNVERIFIED")
+    source_status = str(gate.get("status") or "UNAVAILABLE").upper()
+    effective_status = (
+        "PARTIAL" if source_status == "PASS" and reject
+        else source_status
+    )
     history = {
         "contract": full_history.get("contract") or "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
-        "status": str(gate.get("status") or "UNAVAILABLE").upper(),
+        "status": effective_status,
         "planning_gw": as_of.get("planning_gw"),
+        "target_planning_gw": required_gw,
+        "source_planning_gw": source_gw,
+        "coverage_rejection_reasons": reject,
+        "fixture_identity_status": gate.get("fixture_identity_status") or "UNVERIFIED",
+        "all_historical_gws_finalized": gate.get("all_historical_gws_finalized") is True,
         "historical_range": f"GW1-GW{max(historical_gws)}" if isinstance(historical_gws, list) and historical_gws else "UNAVAILABLE",
         "historical_gws": historical_gws,
         "covered_players": universe.get("covered_players"),
         "expected_players": universe.get("expected_players"),
-        "coverage_gate": gate.get("status") or "UNAVAILABLE",
+        "coverage_gate": effective_status,
         "expected_gw_slots": gate.get("expected_gw_slots"),
         "available_gw_slots": gate.get("available_gw_slots"),
         "expected_player_slots": gate.get("expected_player_slots"),
@@ -6594,6 +6643,8 @@ def refresh_price_only_state(
         official=official,
         rows=all15_rows,
         captain_surface=captain_surface,
+        target_planning_gw=int(warm.get("planning_gw") or bundle.get("planning_gw") or 0),
+        report_slot=report_slot,
     )
     s02["full_season_history"] = history_acceptance
     s02["analytics_acceptance"] = analytics_acceptance
@@ -7337,6 +7388,8 @@ def refresh_mini_league_only_state(
         official=official,
         rows=all15_rows,
         captain_surface=captain_surface,
+        target_planning_gw=planning_gw,
+        report_slot=report_slot,
     )
     s02["full_season_history"] = history_acceptance
     s02["analytics_acceptance"] = analytics_acceptance

@@ -10,8 +10,12 @@ points into FINAL, and season totals are never mislabelled per-match evidence.
 
 from collections import Counter
 from datetime import datetime, timezone
+import hashlib
+import json
 import math
+from pathlib import Path
 import re
+import subprocess
 from typing import Any, Mapping, Sequence
 
 CONTRACT = "V12_GW1_GW6_RETROSPECTIVE_CONTEXT_V1"
@@ -61,6 +65,77 @@ def _source_is_eligible(source: Mapping[str, Any] | None, as_of: str | None) -> 
     observed = _aware(source.get("effective_at"))
     cutoff = _aware(as_of)
     return observed is not None and (cutoff is None or observed <= cutoff)
+
+
+def load_verified_v6_provider_asof(
+    runtime_data_root: Path,
+    *,
+    source_name: str,
+    report_slot: str,
+    max_revisions: int = 96,
+) -> dict[str, Any]:
+    """Read an immutable public V6 provider version that existed before the slot.
+
+    A fresh report-prefetch may finish AFTER its logical report slot. Reading
+    that new snapshot is future leakage; calling it UNAVAILABLE when an older,
+    independently verified V6 Git version already existed is unnecessary data
+    loss. Read ONLY a committed, source-effective ancestor at or before the
+    slot. No content, timestamp, current pointer, or factual source is edited.
+    """
+    if source_name not in {"understat", "fotmob"}:
+        raise ValueError("provider as-of lookup is restricted to approved public sources")
+    cutoff = _aware(report_slot)
+    if cutoff is None:
+        raise ValueError("provider as-of report_slot must be timezone-aware")
+    root = Path(runtime_data_root)
+    relative = f"data/v6/normalized/sources/{source_name}.json"
+    if not (root / ".git").exists():
+        return {}
+
+    def git(*argv: str) -> bytes | None:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(root), *argv],
+                check=True, capture_output=True, timeout=15,
+            )
+            return result.stdout
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            return None
+
+    history = git(
+        "log", "--format=%H%x09%cI",
+        "--max-count=" + str(max(1, min(256, max_revisions))),
+        "HEAD", "--", relative,
+    )
+    if not history:
+        return {}
+    for line in history.decode("utf-8", errors="replace").splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-f]{40}", parts[0]):
+            continue
+        commit_sha, commit_timestamp = parts
+        committed_at = _aware(commit_timestamp)
+        if committed_at is None or committed_at > cutoff:
+            continue
+        blob = git("show", f"{commit_sha}:{relative}")
+        if blob is None:
+            continue
+        try:
+            content = json.loads(blob)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not _source_is_eligible(content, report_slot):
+            continue
+        bound = dict(content)
+        bound["_v12_asof"] = {
+            "source_commit_sha": commit_sha,
+            "source_commit_at": commit_timestamp,
+            "source_sha256": hashlib.sha256(blob).hexdigest(),
+            "authority": "IMMUTABLE_V6_GIT_ANCESTOR_BEFORE_SLOT",
+            "report_slot": report_slot,
+        }
+        return bound
+    return {}
 
 
 def _official_player_rows(
@@ -118,7 +193,8 @@ def _attach_understat(
 ) -> dict[str, Any]:
     eligible = _source_is_eligible(understat, as_of)
     summary = {"source": "understat", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
-               "verified_join_count": 0, "unmapped_provider_count": 0, "season_aggregate_only": True}
+               "verified_join_count": 0, "unmapped_provider_count": 0, "season_aggregate_only": True,
+               "asof_provenance": (understat or {}).get("_v12_asof") if eligible else None}
     if not eligible:
         return summary
     raw = ((understat or {}).get("record_groups") or {}).get("players") or []
@@ -182,7 +258,8 @@ def _fotmob_matches(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     eligible = _source_is_eligible(fotmob, as_of)
     status = {"source": "fotmob", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
-              "verified_match_count": 0, "rejected_or_ambiguous": 0}
+              "verified_match_count": 0, "rejected_or_ambiguous": 0,
+              "asof_provenance": (fotmob or {}).get("_v12_asof") if eligible else None}
     if not eligible:
         return [], status
     groups = (fotmob or {}).get("record_groups") or {}

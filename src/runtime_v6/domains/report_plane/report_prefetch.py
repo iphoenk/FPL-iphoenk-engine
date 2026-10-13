@@ -66,10 +66,45 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
     players: dict[str, Any] = {}
     missing: list[dict[str, int]] = []
     available = 0
+    # Validate source-native fixture IDs against the exact acquisition's
+    # Official FPL fixture catalog. Slot presence alone is not coverage.
+    fixture_ids = {
+        int(row["id"]): int(row.get("event") or row.get("round") or 0)
+        for row in fixtures if row.get("id") is not None
+    }
+    identity_anomalies: list[dict[str, Any]] = []
+    verified_fixture_rows = 0
     for element in elements:
         element_id = int(element["id"])
         summary = summaries.get(str(element_id))
         history = [row for row in (summary or {}).get("history") or [] if isinstance(row, dict)]
+        seen_fixtures: set[int] = set()
+        for row in history:
+            raw_id = row.get("fixture")
+            raw_gw = row.get("round") or row.get("event")
+            try:
+                fixture_id = int(raw_id) if raw_id is not None else None
+                row_gw = int(raw_gw) if raw_gw is not None else None
+            except (TypeError, ValueError):
+                fixture_id, row_gw = None, None
+            reason = None
+            if not fixture_id or not row_gw:
+                reason = "MISSING_GW_OR_FIXTURE_ID"
+            elif fixture_id in seen_fixtures:
+                reason = "DUPLICATE_PLAYER_FIXTURE_ID"
+            elif fixture_ids and fixture_id not in fixture_ids:
+                reason = "UNKNOWN_OFFICIAL_FIXTURE_ID"
+            elif fixture_ids and fixture_ids[fixture_id] != row_gw:
+                reason = "OFFICIAL_FIXTURE_GW_MISMATCH"
+            if reason:
+                identity_anomalies.append({
+                    "element": element_id, "gw": row_gw,
+                    "fixture_id": fixture_id, "reason": reason,
+                })
+            elif fixture_ids:
+                verified_fixture_rows += 1
+            if fixture_id is not None:
+                seen_fixtures.add(fixture_id)
         player_records: dict[str, Any] = {}
         for gw in historical_gws:
             rows = [row for row in history if int(row.get("round") or row.get("event") or 0) == gw]
@@ -84,13 +119,14 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
             available += 1
         players[str(element_id)] = {"element_id": element_id, "position": element.get("element_type"), "team": element.get("team"), "history": player_records, "coverage": {"expected_gw_slots": len(historical_gws), "available_gw_slots": len(player_records), "missing_gw_slots": len(historical_gws) - len(player_records)}}
     expected = len(element_ids) * len(historical_gws)
-    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing else "PARTIAL"
+    fixture_identity_complete = bool(fixture_ids) and not identity_anomalies
+    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing and fixture_identity_complete else "PARTIAL"
     return {
         "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
         "generated_at": snapshot.get("generated_at"),
         "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"},
         "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0},
-        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
+        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "fixture_identity_status": "PASS" if fixture_identity_complete else "PARTIAL", "fixture_catalog_count": len(fixture_ids), "verified_fixture_rows": verified_fixture_rows, "fixture_identity_anomalies": identity_anomalies, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
         "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False},
         "players": players,
     }

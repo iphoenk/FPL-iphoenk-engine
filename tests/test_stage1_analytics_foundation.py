@@ -97,6 +97,15 @@ def test_pstart_walk_forward_is_strict_and_reports_baseline_delta():
     assert result["baseline"]["brier"] is not None
     assert result["individualized"]["brier"] is not None
     assert "xmins_mae" in result["delta_individualized_minus_baseline"]
+    assert result["status"] == "RETROSPECTIVE_DIAGNOSTIC_ONLY"
+    assert result["predeadline_source_lineage"] == "UNVERIFIED"
+    assert result["samples"] > 0
+    assert "reliability_bins" in result
+    assert "dnp_brier" in result["individualized"]
+    assert "cameo_brier" in result["individualized"]
+    assert result["noninferiority"] in {"PASS", "FAIL_OR_INSUFFICIENT"}
+    assert result["automatic_parameter_retuning"] is False
+
 
 
 def test_regime_change_publishes_role_stability_probability():
@@ -2170,3 +2179,73 @@ def test_stagec_env_override_validated_against_config(monkeypatch):
     monkeypatch.setenv("V12_STAGEC_SCANNER_ENABLED", "invalid")
     with pytest.raises(ValueError, match="invalid V12_STAGEC"):
         _stagec_scanner_enabled()
+
+
+def test_pstart_walkforward_rejects_unsettled_and_future_match_rows():
+    rows = _rows()
+    extra = dict(rows[0])
+    extra.update({"gw": 6, "match_id": 999, "official_status": "PROVISIONAL"})
+    out = walk_forward_pstart_validate(rows + [extra])
+    assert out["rejected_rows"]["NONFINAL_OUTCOME"] == 1
+    assert out["target_gws"] == [2, 3, 4, 5]
+    assert out["future_leakage"] is False
+    assert out["status"] != "PASS"
+
+
+def test_pstart_walkforward_requires_archived_predeadline_finality():
+    # Even genuine Official FPL past-GW observations cannot be promoted to
+    # calibration PASS without proof they were finalized predeadline.
+    rows = [dict(r) for r in _rows()]
+    for row in rows:
+        row["finalized_at"] = "2026-10-13T12:00:00+00:00"
+    deadlines = {gw: "2026-10-01T12:00:00+00:00" for gw in range(2, 6)}
+    out = walk_forward_pstart_validate(rows, deadlines_by_gw=deadlines)
+    assert out["status"] == "RETROSPECTIVE_DIAGNOSTIC_ONLY"
+    assert out["future_leakage"] is True
+    assert out["predeadline_source_lineage"] == "UNVERIFIED"
+
+
+def test_pstart_resolution_accepts_equality_only_if_input_evidence_matches():
+    from src.engines.v12_pstart_resolution import assess_pstart_resolution
+
+    rows = [
+        {
+            "element_id": i + 1, "p_start": .83,
+            "p_start_evidence": {
+                "signals": [
+                    "neutral_prior", "player_selection_posterior",
+                    "role_start_probability",
+                ],
+                "model_probability_agrees": True,
+                "signal_values": [
+                    {"signal": "neutral_prior", "probability": .72, "weight": .8},
+                    {"signal": "player_selection_posterior", "probability": .8712, "weight": 1.8},
+                    {"signal": "role_start_probability", "probability": .86, "weight": 1.1},
+                ],
+                "selection_evidence": {
+                    "status": "AVAILABLE", "observed_matches": 6,
+                    "starts": 6, "recent_starts": 3,
+                    "selection_posterior": .8712,
+                },
+            },
+        }
+        for i in range(15)
+    ]
+    good = assess_pstart_resolution(rows, calibration_status="PASS")
+    assert good["status"] == "FULL_RESOLUTION"
+    assert good["unique_rounded_probabilities"] == 1
+    assert good["equal_probability_pairs_with_identical_evidence"] == 105
+    assert good["equal_probability_pairs_with_different_evidence"] == 0
+    changed = [dict(r) for r in rows]
+    changed[0] = dict(changed[0])
+    changed[0]["p_start_evidence"] = dict(rows[0]["p_start_evidence"])
+    changed[0]["p_start_evidence"]["selection_evidence"] = {
+        **rows[0]["p_start_evidence"]["selection_evidence"],
+        "starts": 4,
+    }
+    mismatch = assess_pstart_resolution(changed, calibration_status="PASS")
+    assert mismatch["status"] == "LIMITED_RESOLUTION"
+    assert mismatch["equal_probability_pairs_with_different_evidence"] == 14
+    missing = assess_pstart_resolution(rows, calibration_status="UNVERIFIED")
+    assert missing["status"] == "LIMITED_RESOLUTION"
+    assert "PREDEADLINE_CALIBRATION_NOT_PASS" in missing["reasons"]

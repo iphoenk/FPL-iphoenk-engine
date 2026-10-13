@@ -12,6 +12,7 @@ from src.models.v12_stage1_analytics import (
     opponent_adjust_match_rows,
     probabilistic_tactical_states,
     walk_forward_validate,
+    walk_forward_pstart_validate,
 )
 
 JOINABLE = {"EXACT", "VERIFIED", "VERIFIED_MANUAL"}
@@ -607,6 +608,10 @@ def load_v6_analytics_foundation(
     hierarchy = build_hierarchical_priors(adjusted)
     distributions = distribution_selection_matrix(adjusted)
     validation = walk_forward_validate(adjusted)
+    pstart_backtest = walk_forward_pstart_validate(
+        adjusted,
+        expected_player_count=len(bootstrap.get("elements") or []),
+    )
     tactical_states = probabilistic_tactical_states(
         bootstrap,
         adjusted,
@@ -658,6 +663,7 @@ def load_v6_analytics_foundation(
             "stage1_hierarchical_priors": hierarchy.get("players") or {},
             "stage1_distribution_selection": distributions,
             "stage1_walk_forward_validation": validation,
+            "pstart_walk_forward_diagnostic": pstart_backtest,
             "stage1_tactical_states": tactical_states,
             "players": supplemental_players,
             "supplemental_v6_read_only": {
@@ -683,6 +689,7 @@ def load_v6_analytics_foundation(
         "hierarchical_bayesian": hierarchy,
         "distribution_selection": distributions,
         "walk_forward_validation": validation,
+        "pstart_walk_forward_diagnostic": pstart_backtest,
         "probabilistic_tactical_states": tactical_states,
         "governance": {
             "v6_only_factual_input": True,

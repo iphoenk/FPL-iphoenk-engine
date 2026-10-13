@@ -645,83 +645,261 @@ def walk_forward_pstart_validate(
     rows: Sequence[Mapping[str, Any]],
     *,
     neutral_prior: float = 0.72,
+    deadlines_by_gw: Mapping[int | str, str] | None = None,
+    min_sample_size: int = 200,
+    min_position_sample_size: int = 25,
+    expected_player_count: int | None = None,
 ) -> dict[str, Any]:
-    """Compare legacy aggregate inputs with player-conditioned P1.1 inputs.
+    """Evidence-only, paired P(start) walk-forward against canonical V12 owner.
 
-    Every target gameweek is scored from rows strictly before its deadline.
-    This is diagnostic calibration evidence and never retunes production
-    parameters automatically.
+    GW N consumes only outcomes from lower GWs. That numerical split alone
+    does not prove source-as-of availability: archived finalized_at provenance
+    must precede the real GW-N deadline for a promoted calibration verdict.
+    Neither predictions nor the configured V12_PLAYER_MINUTES weights are
+    mutated by this diagnostic.
     """
-    clean = [dict(row) for row in rows if _i(row.get("gw")) > 0]
-    gws = sorted({_i(row.get("gw")) for row in clean})
+    from datetime import datetime
+
+    def aware(value: Any) -> datetime | None:
+        if not value:
+            return None
+        try:
+            out = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+        return out if out.tzinfo is not None else None
+
+    clean: list[dict[str, Any]] = []
+    rejected = Counter()
+    unique = set()
+    for raw in rows:
+        if not isinstance(raw, Mapping):
+            rejected["NON_MAPPING"] += 1
+            continue
+        row = dict(raw)
+        pid = _i(row.get("player_id"), _i(row.get("element")))
+        gw = _i(row.get("gw"))
+        fixture = _i(row.get("match_id"), _i(row.get("fixture")))
+        status = str(row.get("official_status") or row.get("status") or "FINAL").upper()
+        if pid <= 0 or gw <= 0 or fixture <= 0:
+            rejected["UNVERIFIED_IDENTITY_OR_GW"] += 1
+            continue
+        if status not in {"FINAL", "DNP", "BLANK"}:
+            rejected["NONFINAL_OUTCOME"] += 1
+            continue
+        if not isinstance(row.get("starter"), bool):
+            rejected["STARTER_NOT_BOOLEAN"] += 1
+            continue
+        minutes = _f(row.get("minutes_played"), _f(row.get("minutes"), -1))
+        if minutes < 0 or minutes > 130 or (row["starter"] and minutes <= 0):
+            rejected["INVALID_MINUTES"] += 1
+            continue
+        key = (pid, gw, fixture)
+        if key in unique:
+            rejected["DUPLICATE_PLAYER_FIXTURE"] += 1
+            continue
+        unique.add(key)
+        row["player_id"] = pid
+        row["gw"] = gw
+        row["match_id"] = fixture
+        row["minutes"] = minutes
+        clean.append(row)
+
     by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in clean:
-        by_player[_i(row.get("player_id"), _i(row.get("element")))].append(row)
-    metrics: dict[str, dict[str, list[float]]] = {
-        "baseline": {"brier": [], "log_loss": [], "xmins_mae": []},
-        "individualized": {"brier": [], "log_loss": [], "xmins_mae": []},
+        by_player[row["player_id"]].append(row)
+    for player_rows in by_player.values():
+        player_rows.sort(key=lambda x: (x["gw"], x["match_id"]))
+    gws = sorted({row["gw"] for row in clean})
+    buckets = {
+        label: defaultdict(list)
+        for label in ("baseline", "individualized")
     }
     by_position: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     by_team: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-    folds = 0
-    for target_gw in gws:
-        train = [row for row in clean if _i(row.get("gw")) < target_gw]
-        test = [row for row in clean if _i(row.get("gw")) == target_gw]
-        if not train or not test:
+    reliability: dict[str, list[tuple[float, int]]] = {"baseline": [], "individualized": []}
+    candidate_test = 0
+    no_prior_history = 0
+    chronology_errors = 0
+    provenance_gaps = 0
+    folds_with_predictions = set()
+    for gw in gws:
+        test = [row for row in clean if row["gw"] == gw]
+        if gw == gws[0]:
             continue
-        folds += 1
+        target_deadline = aware(
+            (deadlines_by_gw or {}).get(gw)
+            or (deadlines_by_gw or {}).get(str(gw))
+        )
         for actual in test:
-            pid = _i(actual.get("player_id"), _i(actual.get("element")))
-            history = [row for row in by_player.get(pid, []) if _i(row.get("gw")) < target_gw]
+            candidate_test += 1
+            history = [row for row in by_player[actual["player_id"]] if row["gw"] < gw]
             if not history:
+                no_prior_history += 1
                 continue
-            evidence = build_player_selection_evidence({"id": pid}, history, neutral_prior=neutral_prior)
+            if any(row["gw"] >= gw for row in history):
+                chronology_errors += 1
+                continue
+            # Strictly verify source availability at the target deadline; a
+            # retrospective refresh timestamp is NOT an archived predeadline
+            # snapshot. Missing proof remains a blocker to calibration PASS.
+            for past in history:
+                final_at = aware(past.get("finalized_at"))
+                if not target_deadline or not final_at:
+                    provenance_gaps += 1
+                elif final_at > target_deadline:
+                    chronology_errors += 1
+            evidence = build_player_selection_evidence(
+                {"id": actual["player_id"]}, history, neutral_prior=neutral_prior
+            )
             if evidence.get("status") != "AVAILABLE":
                 continue
             player = {
-                "id": pid, "starts": evidence["starts"], "minutes": evidence["minutes"],
-                "status": "a", "chance_of_playing_next_round": 100,
+                "id": actual["player_id"], "starts": evidence["starts"],
+                "minutes": evidence["minutes"], "status": "a",
+                "chance_of_playing_next_round": 100,
             }
             context = {"team_matches_played": evidence["observed_matches"]}
-            baseline = estimate_player_minutes(player, context)
-            individualized = estimate_player_minutes(player, {**context, "selection_evidence": evidence})
-            y_start = 1.0 if actual.get("starter") else 0.0
-            y_minutes = max(0.0, _f(actual.get("minutes_played"), _f(actual.get("minutes"))))
-            for label, prediction in (("baseline", baseline), ("individualized", individualized)):
-                p = _clamp(_f(prediction.get("start_probability")), 1e-6, 1.0 - 1e-6)
-                metrics[label]["brier"].append((p - y_start) ** 2)
-                metrics[label]["log_loss"].append(-(y_start * math.log(p) + (1 - y_start) * math.log(1 - p)))
-                metrics[label]["xmins_mae"].append(abs(_f(prediction.get("expected_minutes")) - y_minutes))
-            position = _position(actual.get("position")) or "UNKNOWN"
+            predictions = {
+                "baseline": estimate_player_minutes(player, context),
+                "individualized": estimate_player_minutes(
+                    player, {**context, "selection_evidence": evidence}
+                ),
+            }
+            y_start = int(actual["starter"])
+            y_minutes = actual["minutes"]
+            y_dnp = int(y_minutes == 0)
+            y_cameo = int(not y_start and y_minutes > 0)
+            pos = _position(actual.get("position")) or "UNKNOWN"
             team = str(actual.get("team_id") or "UNKNOWN")
-            by_position[position]["baseline_brier"].append(metrics["baseline"]["brier"][-1])
-            by_position[position]["individualized_brier"].append(metrics["individualized"]["brier"][-1])
-            by_team[team]["baseline_brier"].append(metrics["baseline"]["brier"][-1])
-            by_team[team]["individualized_brier"].append(metrics["individualized"]["brier"][-1])
+            folds_with_predictions.add(gw)
+            for label, prediction in predictions.items():
+                p = _clamp(_f(prediction.get("start_probability")), 1e-6, 1 - 1e-6)
+                pd = _clamp(_f(prediction.get("dnp_probability")), 0, 1)
+                pc = _clamp(_f(prediction.get("cameo_probability")), 0, 1)
+                part = (prediction.get("derived_probabilities") or {})
+                if abs(p + _f(part.get("p_regular_cameo")) + _f(part.get("p_late_cameo")) + pd - 1) > 0.002:
+                    chronology_errors += 1
+                scores = {
+                    "brier": (p - y_start) ** 2,
+                    "log_loss": -(y_start * math.log(p) + (1 - y_start) * math.log(1 - p)),
+                    "xmins_mae": abs(_f(prediction.get("expected_minutes")) - y_minutes),
+                    "dnp_brier": (pd - y_dnp) ** 2,
+                    "cameo_brier": (pc - y_cameo) ** 2,
+                }
+                for key, value in scores.items():
+                    buckets[label][key].append(value)
+                reliability[label].append((p, y_start))
+                by_position[pos][f"{label}_brier"].append(scores["brier"])
+                by_team[team][f"{label}_brier"].append(scores["brier"])
 
     def avg(values: Sequence[float]) -> float | None:
         return round(sum(values) / len(values), 6) if values else None
-    summary = {
-        label: {metric: avg(values) for metric, values in bundle.items()}
-        for label, bundle in metrics.items()
+
+    metrics = {
+        label: {k: avg(v) for k, v in scores.items()}
+        for label, scores in buckets.items()
     }
+    bins: dict[str, list[dict[str, Any]]] = {}
+    for label, entries in reliability.items():
+        groups: dict[int, list[tuple[float, int]]] = defaultdict(list)
+        for p, y in entries:
+            groups[min(9, int(p * 10))].append((p, y))
+        bins[label] = [{
+            "range": f"{index / 10:.1f}-{(index + 1) / 10:.1f}",
+            "n": len(group), "mean_predicted": avg([v[0] for v in group]),
+            "observed_start_rate": avg([v[1] for v in group]),
+        } for index, group in sorted(groups.items())]
+    delta = {
+        k: (
+            None if metrics["baseline"].get(k) is None or metrics["individualized"].get(k) is None
+            else round(metrics["individualized"][k] - metrics["baseline"][k], 6)
+        ) for k in ("brier", "log_loss", "xmins_mae", "dnp_brier", "cameo_brier")
+    }
+    noninferior = bool(
+        delta["brier"] is not None
+        and delta["brier"] <= 0.01
+        and delta["log_loss"] <= 0.02
+        and delta["xmins_mae"] <= 1.0
+        and delta["dnp_brier"] <= 0.02
+        and delta["cameo_brier"] <= 0.02
+    )
+    sample_count = len(reliability["individualized"])
+    pos_summary = {
+        key: {**{k: avg(v) for k, v in bundle.items()},
+              "n": len(bundle.get("individualized_brier") or [])}
+        for key, bundle in by_position.items()
+    }
+    expected = expected_player_count if expected_player_count and expected_player_count > 0 else None
+    observed_players = len(by_player)
+    universe_ratio = (round(observed_players / expected, 6) if expected else None)
+    enough_universe = bool(universe_ratio is not None and universe_ratio >= 0.95)
+    position_regressions = {
+        position: round(
+            (pos_summary.get(position, {}).get("individualized_brier") or 0)
+            - (pos_summary.get(position, {}).get("baseline_brier") or 0),
+            6,
+        )
+        for position in ("GK", "DEF", "MID", "FWD")
+        if pos_summary.get(position, {}).get("n", 0) >= min_position_sample_size
+    }
+    positional_noninferior = bool(
+        len(position_regressions) == 4
+        and all(value <= 0.03 for value in position_regressions.values())
+    )
+    enough_samples = bool(
+        sample_count >= min_sample_size
+        and enough_universe
+        and all(pos_summary.get(p, {}).get("n", 0) >= min_position_sample_size
+                for p in ("GK", "DEF", "MID", "FWD"))
+    )
+    noninferior = bool(noninferior and positional_noninferior)
+    gw_temporal_only = chronology_errors == 0
+    source_temporal = gw_temporal_only and provenance_gaps == 0 and bool(deadlines_by_gw)
+    if not sample_count:
+        status = "INSUFFICIENT_COMPLETED_FOLDS"
+    elif not source_temporal:
+        status = "RETROSPECTIVE_DIAGNOSTIC_ONLY"
+    elif not enough_samples:
+        status = "INSUFFICIENT_POSITION_SAMPLES"
+    elif not noninferior:
+        status = "REGRESSION_BLOCKED"
+    else:
+        status = "PASS"
     return {
-        "status": "PASS" if folds > 0 and metrics["individualized"]["brier"] else "INSUFFICIENT_COMPLETED_FOLDS",
-        "folds": folds,
-        "samples": len(metrics["individualized"]["brier"]),
-        "future_leakage": False,
+        "status": status,
+        "folds": len(folds_with_predictions),
+        "target_gws": sorted(folds_with_predictions),
+        "samples": sample_count,
+        "tested_fixture_rows": candidate_test,
+        "no_prior_history": no_prior_history,
+        "unique_players_tested": observed_players,
+        "expected_player_count": expected,
+        "source_player_coverage_ratio": universe_ratio,
+        "source_universe_coverage": "PASS" if enough_universe else "PARTIAL_OR_UNVERIFIED",
+        "position_brier_deltas": position_regressions,
+        "position_noninferiority": "PASS" if positional_noninferior else "FAIL_OR_INSUFFICIENT",
+
+        "rejected_rows": dict(rejected),
+        "future_leakage": chronology_errors > 0,
+        "gw_split_integrity": "PASS" if gw_temporal_only else "FAIL",
+        "predeadline_source_lineage": "PASS" if source_temporal else "UNVERIFIED",
+        "missing_predeadline_source_proofs": provenance_gaps,
         "split": "EXPANDING_WINDOW_BY_GW_STRICTLY_PRE_DEADLINE",
-        "baseline": summary["baseline"],
-        "individualized": summary["individualized"],
-        "delta_individualized_minus_baseline": {
-            metric: None if summary["baseline"][metric] is None or summary["individualized"][metric] is None else round(summary["individualized"][metric] - summary["baseline"][metric], 6)
-            for metric in summary["baseline"]
-        },
-        "by_position": {key: {metric: avg(values) for metric, values in bundle.items()} for key, bundle in by_position.items()},
-        "by_team": {key: {metric: avg(values) for metric, values in bundle.items()} for key, bundle in by_team.items()},
-        "promotion_rule": "PROMOTE_ONLY_IF_NO_MATERIAL_REGRESSION_AND_EVIDENCE_COVERAGE_PASS",
+        "split_precision": "GW_ORDER_ONLY_WITHOUT_ARCHIVED_FINALIZATION_TIMESTAMPS" if not source_temporal else "AS_OF_ARCHIVED",
+        "baseline": metrics["baseline"],
+        "individualized": metrics["individualized"],
+        "delta_individualized_minus_baseline": delta,
+        "noninferiority": "PASS" if noninferior else "FAIL_OR_INSUFFICIENT",
+        "minimum_sample_satisfied": enough_samples,
+        "reliability_bins": bins,
+        "by_position": pos_summary,
+        "by_team": {k: {metric: avg(v) for metric, v in b.items()} for k, b in by_team.items()},
+        "promotion_rule": "PASS_ONLY_WITH_PREDEADLINE_SOURCE_LINEAGE_POSITION_COVERAGE_AND_NONINFERIORITY",
         "automatic_parameter_retuning": False,
+        "mathematical_owner": "V12_PLAYER_MINUTES",
     }
+
 
 
 def probabilistic_tactical_states(

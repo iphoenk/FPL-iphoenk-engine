@@ -604,16 +604,21 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any])
         and historical_coverage.get("all_finalized") is True else "PARTIAL"
     )
     calibration_status = str(user.get("calibration_status") or "NO_SETTLED_SAMPLE").upper()
-    resolution = "FULL" if any(
-        len((row.get("p_start_evidence") or {}).get("signals") or []) >= 2
-        for row in pstart_evidence
-    ) else "LIMITED_RESOLUTION"
+    from src.engines.v12_pstart_resolution import assess_pstart_resolution
+    diagnostic = dict(user.get("pstart_walk_forward_diagnostic") or {})
+    calibration_status = str(diagnostic.get("status") or calibration_status).upper()
+    audit = assess_pstart_resolution(
+        pstart_rows, calibration_status=calibration_status
+    )
+    resolution = audit["status"]
     captain_state = str(captaincy.get("captain_state") or "UNAVAILABLE").upper()
     return {
         "contract": "V12_ANALYTICS_PRODUCTION_ACCEPTANCE_V1",
         "p_start": {
             "evidence_status": pstart_status,
             "resolution_status": resolution,
+            "resolution_audit": audit,
+            "calibration_diagnostic": diagnostic,
             "rows_with_probability": len(pstart_rows),
             "rows_with_evidence": len(pstart_evidence),
             "formula_owner": "V12_PLAYER_MINUTES",

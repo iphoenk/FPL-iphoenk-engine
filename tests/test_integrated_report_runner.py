@@ -1772,3 +1772,69 @@ def test_stage2_acceptance_ignores_ad_hoc_latest_when_full_master_occurrence_exi
     assert out["current_public_squad_available"] is True
     assert out["mini_league_public_available"] is True
     assert out["prefetch_source"] == "OCCURRENCE_FULL_MASTER"
+
+
+def test_active_v12_s02_exact_slot_gw7_finality_identity_gate(tmp_path):
+    slot = "2026-10-13T12:10:00+07:00"
+    generated = "2026-10-13T05:10:29+00:00"
+    root = tmp_path / "runtime"
+    latest = {
+        "report_kind": "full_master",
+        "target_logical_report_slot": slot,
+        "report_prefetch_run_id": "prefetch-1047",
+        "generated_at": generated,
+    }
+    full_history = {
+        "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "as_of": {"planning_gw": 7, "historical_gws": [1, 2, 3, 4, 5, 6]},
+        "universe": {"expected_players": 667, "covered_players": 667},
+        "coverage_gate": {
+            "status": "PASS", "fixture_identity_status": "PASS",
+            "all_historical_gws_finalized": True,
+        },
+    }
+    detail = {
+        "contract": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1",
+        **latest,
+        "full_season_history": full_history,
+    }
+    _write(root / "data/v6/report_prefetch/latest.json", latest)
+    _write(root / "data/v6/history/official_detail.json", detail)
+
+    def read():
+        return runner._analytics_production_acceptance(
+            runtime_data_root=root,
+            official={}, rows=[], captain_surface={},
+            target_planning_gw=7, report_slot=slot,
+        )
+
+    accepted, acceptance = read()
+    assert accepted["status"] == "PASS"
+    assert acceptance["full_history"]["evidence_status"] == "PASS"
+
+    # Nominal V6 PASS for source GW6/GW1-GW5 cannot satisfy target GW7.
+    detail["full_season_history"]["as_of"] = {
+        "planning_gw": 6, "historical_gws": [1, 2, 3, 4, 5],
+    }
+    _write(root / "data/v6/history/official_detail.json", detail)
+    mismatched, _ = read()
+    assert mismatched["status"] == "PARTIAL"
+    assert "PLANNING_GW_HISTORY_RANGE_MISMATCH" in mismatched["coverage_rejection_reasons"]
+
+    # Even a six-GW payload is partial while any official fixture is provisional.
+    detail["full_season_history"]["as_of"] = {
+        "planning_gw": 7, "historical_gws": [1, 2, 3, 4, 5, 6],
+    }
+    detail["full_season_history"]["coverage_gate"]["all_historical_gws_finalized"] = False
+    _write(root / "data/v6/history/official_detail.json", detail)
+    provisional, _ = read()
+    assert provisional["status"] == "PARTIAL"
+    assert "HISTORICAL_GW_NOT_FINALIZED" in provisional["coverage_rejection_reasons"]
+
+    # Neither mismatched issue-comment occurrence nor stale full history promotes PASS.
+    detail["full_season_history"]["coverage_gate"]["all_historical_gws_finalized"] = True
+    detail["target_logical_report_slot"] = "2026-10-13T07:55:00+07:00"
+    _write(root / "data/v6/history/official_detail.json", detail)
+    old_slot, _ = read()
+    assert old_slot["status"] == "PARTIAL"
+    assert "OCCURRENCE_BOUND_HISTORY_SOURCE_UNVERIFIED" in old_slot["coverage_rejection_reasons"]

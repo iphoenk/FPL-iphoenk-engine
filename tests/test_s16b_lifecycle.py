@@ -187,7 +187,7 @@ def test_i_missing_advanced_metric_does_not_block_readiness():
 def test_prospective_migration_does_not_manufacture_historical_delivery():
     state = normalize_delivery_state(None, completed_gw=6)
     assert state["baseline_completed_gw"] == 6
-    assert state["last_delivered_gw"] == 6
+    assert state["last_delivered_gw"] == 0
     assert state["delivered_occurrence"] is None
     assert state["migration"] == "PROSPECTIVE_BASELINE_NO_HISTORICAL_INVENTION"
 
@@ -199,4 +199,63 @@ def test_prospective_migration_does_not_manufacture_historical_delivery():
         prior_delivery_state=None,
     )
     assert context["s16b_due"] is False
-    assert context["due_reason"] == "ALREADY_DELIVERED_FOR_COMPLETED_GW"
+    assert context["due_reason"] == "BASELINE_WITHOUT_DELIVERY_RECEIPT"
+    assert context["baseline_without_receipt"] is True
+    assert context["delivery_receipt_proven"] is False
+
+
+def test_missing_receipt_does_not_mark_old_baseline_delivered():
+    legacy = {
+        "schema": STATE_SCHEMA,
+        "baseline_completed_gw": 6,
+        "last_delivered_gw": 6,
+        "delivered_occurrence": None,
+        "body_fingerprint": None,
+        "migration": "PROSPECTIVE_BASELINE_NO_HISTORICAL_INVENTION",
+    }
+    normalized = normalize_delivery_state(legacy, completed_gw=6)
+    assert normalized["last_delivered_gw"] == 0
+    assert normalized["migration"] == "RECEIPT_MISSING_REQUIRES_RECONCILIATION"
+    context = resolve_s16b_context(
+        report_slot="2026-10-13T04:30:00+07:00",
+        report_mode="DEEP",
+        fixtures=_fixtures(),
+        player_match_rows=_settled_rows(),
+        prior_delivery_state=legacy,
+    )
+    assert context["s16b_due"] is False
+    assert context["due_reason"] == "BASELINE_WITHOUT_DELIVERY_RECEIPT"
+    assert context["delivery_receipt_proven"] is False
+
+
+def test_prospective_baseline_can_deliver_newly_completed_gw_naturally():
+    baseline = normalize_delivery_state(None, completed_gw=5)
+    context = resolve_s16b_context(
+        report_slot="2026-10-13T04:30:00+07:00",
+        report_mode="DEEP",
+        fixtures=_fixtures(gw=6),
+        player_match_rows=_settled_rows(gw=6),
+        prior_delivery_state=baseline,
+    )
+    assert context["completed_gw"] == 6
+    assert context["s16b_due"] is True
+    delivered = state_after_occurrence(
+        context, occurrence_id="DEEP|2026-10-13T04:30:00+07:00",
+        generated_at="2026-10-13T04:35:00+07:00",
+        body_fingerprint="verified-report-body-fingerprint",
+    )
+    assert delivered["last_delivered_gw"] == 6
+    assert delivered["delivered_occurrence"] == "DEEP|2026-10-13T04:30:00+07:00"
+
+
+def test_prospective_migration_never_backfills_controlled_occurrence():
+    baseline = normalize_delivery_state(None, completed_gw=5)
+    context = resolve_s16b_context(
+        report_slot="2026-10-13T07:55:00+07:00",
+        report_mode="DEEP",
+        fixtures=_fixtures(gw=6),
+        player_match_rows=_settled_rows(gw=6),
+        prior_delivery_state=baseline,
+    )
+    assert context["s16b_due"] is False
+    assert context["due_reason"] == "NOT_04_30_ASIA_JAKARTA"

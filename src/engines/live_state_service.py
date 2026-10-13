@@ -613,6 +613,7 @@ def run() -> dict:
         "match_checkpoint": {
             "scoring_gw": scoring_gw,
             "fixtures_live": lifecycle.get("fixtures_live"),
+            "fixtures_provisional": lifecycle.get("fixtures_provisional"),
             "fixtures_ft": lifecycle.get("fixtures_ft"),
             "fixtures_not_started": lifecycle.get("fixtures_not_started"),
             "generated_at": iso_now(),

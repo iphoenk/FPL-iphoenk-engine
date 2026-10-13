@@ -79,7 +79,7 @@ def _native_blocks(source: str) -> list[dict[str, Any]]:
     return blocks
 
 
-def _native_pitch(source: str) -> dict[str, Any]:
+def _native_pitch(source: str, captain_source: str | None = None) -> dict[str, Any]:
     """Use the canonical textual XI/bench fields, never the source HTML."""
     fields: dict[str, str] = {}
     for line in source.splitlines():
@@ -87,8 +87,23 @@ def _native_pitch(source: str) -> dict[str, Any]:
             if line.startswith(key + ":"):
                 fields[key] = line[len(key) + 1:].strip()
                 break
+    current = re.search(
+        r"(?m)^Current C:\\s*([^;\\n]+);\\s*Current VC:\\s*([^;\\n]+)",
+        captain_source or "",
+    )
+    captain = current.group(1).strip() if current else None
+    vice_captain = current.group(2).strip() if current else None
+    xi_players = {
+        name.strip()
+        for role in ("GK", "DEF", "MID", "FWD")
+        for name in fields.get(role, "").split(",")
+        if name.strip()
+    }
     return {
         "kind": "pitch",
+        "captain": captain,
+        "vice_captain": vice_captain,
+        "captain_vice_in_xi": bool(captain and vice_captain and captain != vice_captain and captain in xi_players and vice_captain in xi_players),
         "formation": fields.get("Formation"),
         "rows": [
             {"position": position, "players": [p.strip() for p in fields.get(position, "").split(",") if p.strip()]}
@@ -167,7 +182,7 @@ def consume_native_content(
         "rendered_section_ids": rendered_ids,
         "components": components,
         "pitch": next((item for item in components if item["section_id"] == "S06"), None),
-        "native_pitch": _native_pitch(sources["S06"]) if "S06" in sources and valid else None,
+        "native_pitch": _native_pitch(sources["S06"], sources.get("S08")) if "S06" in sources and valid else None,
         "consumed_chunk_paths": [str(e["path"]) for e in manifest.get("chunks") or []] if valid else [],
         "native_component_count": len(components),
         "tables": tables,

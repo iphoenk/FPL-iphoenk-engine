@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.engines.v12_price_delivery import (
     PRICE_SECTION_IDS,
+    _public_first_personal_projection,
     classify_price_personal_mode,
 )
 from src.runtime_v6.domains.report_plane.prefetch_contract import (
@@ -69,6 +70,28 @@ def test_price_public_first_degraded_is_complete_but_non_executable():
     assert result["free_transfers"] == "UNAVAILABLE"
     assert result["purchase_price"] == "UNAVAILABLE"
     assert result["selling_price"] == "UNAVAILABLE"
+
+
+def test_degraded_projection_keeps_last_known_roster_historical_only():
+    result = _public_first_personal_projection(
+        {
+            "state": "STALE",
+            "supportable": True,
+            "source_class": "LAST_GOOD_CURRENT15",
+            "gw": 6,
+            "observed_at": "2026-10-13T23:08:46+00:00",
+            "rows": [{"element_id": 1, "purchase_price": 50, "selling_price": 51}],
+        },
+        execution_mode="PUBLIC_FIRST_DEGRADED",
+    )
+
+    assert result["rows"] == []
+    assert result["element_ids"] == []
+    assert result["supportable"] is False
+    assert result["historical_rows"][0]["element_id"] == 1
+    assert result["historical_gw"] == 6
+    assert result["finance_status"] == "UNAVAILABLE"
+    assert result["personal_data_fabricated"] is False
 
 
 def test_public_integrity_failure_is_fail_closed():

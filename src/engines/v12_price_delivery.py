@@ -866,10 +866,13 @@ def build_price_delivery_report(
             ),
             "content": {
                 "rows": list(our15.get("rows") or []),
+                "historical_rows": list(team_resolution.get("historical_rows") or []),
                 "ownership_state": team_resolution.get("state"),
                 "source_class": team_resolution.get("source_class"),
                 "gw": team_resolution.get("gw"),
                 "observed_at": team_resolution.get("observed_at"),
+                "historical_gw": team_resolution.get("historical_gw"),
+                "historical_observed_at": team_resolution.get("historical_observed_at"),
             },
             "available_count": len(our15.get("rows") or []),
             "expected_count": 15,
@@ -1165,6 +1168,7 @@ def render_price_report(report: Mapping[str, Any]) -> str:
             ])
         elif index == 2:
             rows = list(content.get("rows") or [])
+            historical_rows = list(content.get("historical_rows") or [])
             sell_available = sum(
                 row.get("authenticated_sell_value") not in {None, "", "UNAVAILABLE"}
                 for row in rows
@@ -1178,9 +1182,12 @@ def render_price_report(report: Mapping[str, Any]) -> str:
                 lines.append(f"Squad completeness: {len(rows)}/15")
             else:
                 lines.append("Current squad completeness: Unavailable")
-                if rows:
+                if historical_rows:
                     lines.append(
-                        f"Historical ownership evidence: {len(rows)}/15 player IDs from GW{content.get('gw')}; not treated as current."
+                        f"Historical ownership evidence: {len(historical_rows)}/15 player IDs from GW{content.get('historical_gw') or content.get('gw')}; not treated as current."
+                    )
+                    lines.append(
+                        "Historical roster is reference-only; no current ownership, purchase price, selling price, bank, or FT is inferred."
                     )
             lines.append(
                 f"Selling-value availability: {sell_available}/{len(rows) if rows else 15}"
@@ -1568,16 +1575,26 @@ def _public_first_personal_projection(
     projected = dict(resolution or {})
     if execution_mode == "FULL":
         return projected
-    if str(projected.get("source_class") or "").upper() == "AUTHENTICATED_CURRENT_TEAM" and projected.get("stale") is True:
-        projected = {
-            "state": "UNAVAILABLE",
-            "supportable": False,
-            "rows": [],
-            "element_ids": [],
-            "source_class": "PUBLIC_FIRST_DEGRADED",
-            "reason": "STALE_PERSONAL_EVIDENCE_NOT_CURRENT_AUTHORITY",
-            "finance": {},
-        }
+    # Last-known personal rows are historical reference only in degraded mode.
+    # Do not pass them to PRICE2, whose rows are rendered as current ownership.
+    historical_rows = [
+        dict(row) for row in projected.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    projected["historical_rows"] = historical_rows
+    projected["historical_element_ids"] = [
+        row.get("element_id") for row in historical_rows
+        if row.get("element_id") is not None
+    ]
+    projected["historical_gw"] = projected.get("gw")
+    projected["historical_observed_at"] = projected.get("observed_at")
+    projected["rows"] = []
+    projected["element_ids"] = []
+    projected["state"] = "UNAVAILABLE"
+    projected["supportable"] = False
+    projected["source_class"] = "PUBLIC_FIRST_DEGRADED"
+    projected["reason"] = projected.get("reason") or "PRIVATE_PERSONAL_UNAVAILABLE"
+    projected["finance"] = {}
     projected["finance"] = {}
     projected["finance_status"] = "UNAVAILABLE"
     projected["finance_authority"] = "UNAVAILABLE"

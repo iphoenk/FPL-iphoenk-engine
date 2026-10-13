@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -83,6 +85,68 @@ def _dependency_payloads(source: dict[str, Any], results: dict[str, dict[str, An
     }
 
 
+def _carry_verified_observation_time(
+    source_id: str,
+    candidate: dict[str, Any],
+    previous_path: Any,
+) -> dict[str, Any]:
+    """Preserve source observation time only for byte-equivalent normalized facts.
+
+    V6 atomically replaces its runtime orphan branch. The hydrated last-good
+    tree exists locally before each collection, so that is the only valid
+    previous-snapshot authority. Identical normalized records were provably
+    observed before the new acquisition; changed records use the fresh time.
+    """
+    if source_id not in {"understat", "fotmob"} or not previous_path.is_file():
+        return candidate
+    try:
+        prior = json.loads(previous_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return candidate
+    if not isinstance(prior, dict):
+        return candidate
+    comparable = (
+        candidate.get("source_id") == prior.get("source_id") == source_id
+        and candidate.get("normalization_version") == prior.get("normalization_version")
+        and candidate.get("normalization_status") == prior.get("normalization_status") == "NORMALIZED"
+        and candidate.get("source_health") == prior.get("source_health") == "GREEN"
+        and candidate.get("semantic_class") == prior.get("semantic_class")
+        and candidate.get("authority") == prior.get("authority")
+        and candidate.get("record_count") == prior.get("record_count")
+        and candidate.get("record_groups") == prior.get("record_groups")
+        and bool(candidate.get("record_groups"))
+    )
+    if not comparable:
+        return candidate
+
+    def when(value: Any) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    previous_at = when(prior.get("effective_at"))
+    current_at = when(candidate.get("effective_at"))
+    if previous_at is None or current_at is None or previous_at > current_at:
+        return candidate
+    record_blob = json.dumps(
+        candidate["record_groups"], sort_keys=True,
+        ensure_ascii=False, separators=(",", ":"),
+    ).encode("utf-8")
+    bound = dict(candidate)
+    bound["effective_at"] = prior["effective_at"]
+    bound["historical_observation_binding"] = {
+        "status": "VERIFIED_UNCHANGED_NORMALIZED_FACTS",
+        "authority": "V6_HYDRATED_PREVIOUS_SNAPSHOT",
+        "previous_effective_at": prior["effective_at"],
+        "latest_check_at": candidate.get("effective_at"),
+        "normalized_record_groups_sha256": hashlib.sha256(record_blob).hexdigest(),
+        "future_or_changed_records_admitted": False,
+    }
+    return bound
+
+
 def _publish_source_native_datasets(
     results: dict[str, dict[str, Any]], identity_map: dict[str, Any]
 ) -> tuple[list[str], dict[str, dict[str, Any]]]:
@@ -103,6 +167,8 @@ def _publish_source_native_datasets(
     artifacts: list[str] = []
     for source_id, dataset in sorted(datasets.items()):
         path = target / f"{source_id}.json"
+        dataset = _carry_verified_observation_time(source_id, dataset, path)
+        datasets[source_id] = dataset
         write_json(path, dataset)
         artifacts.append(f"data/v6/normalized/sources/{source_id}.json")
     return artifacts, datasets

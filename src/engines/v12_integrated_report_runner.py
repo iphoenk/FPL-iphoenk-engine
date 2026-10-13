@@ -1158,6 +1158,7 @@ def _analytics_production_acceptance(
     captain_surface: Mapping[str, Any],
     target_planning_gw: int | None = None,
     report_slot: str | None = None,
+    calibration_diagnostic: Mapping[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Bind analytics evidence to the exact integrated report occurrence."""
     detail, detail_path = _load_official_detail(runtime_data_root)
@@ -1299,14 +1300,17 @@ def _analytics_production_acceptance(
         }
     ]
     individual_missing = [row for row in p_rows if row not in individual_rows]
-    # A single outlier does not establish player-conditioned start resolution.
-    # GW7 currently has 14/15 identically rounded P(start) estimates; classify
-    # low resolution explicitly even though two unique values technically exist.
-    rounded = [str(round(float(row["p_start"]), 4)) for row in p_rows]
-    counts = {value: rounded.count(value) for value in set(rounded)}
-    modal_count = max(counts.values(), default=0)
-    minimum_majority = max(10, (7 * len(rounded) + 9) // 10)
-    low_resolution = modal_count >= minimum_majority or len(counts) < 2
+    from src.engines.v12_pstart_resolution import assess_pstart_resolution
+
+    calibration = dict(calibration_diagnostic or {})
+    # A computed diagnostic is not automatically a calibrated model. Without
+    # authentic predeadline source snapshots, label retrospective-only.
+    calibration_status = str(calibration.get("status") or "UNVERIFIED").upper()
+    resolution_audit = assess_pstart_resolution(
+        p_rows, calibration_status=calibration_status
+    )
+    modal_count = resolution_audit["modal_probability_count"]
+    low_resolution = resolution_audit["status"] != "FULL_RESOLUTION"
     historical_range = str(history.get("historical_range") or "")
     historical_coverage_status = (
         "PASS" if historical_range == "GW1-GW6" and history.get("all_historical_gws_finalized") is True
@@ -1330,15 +1334,13 @@ def _analytics_production_acceptance(
             "EVIDENCE_BINDING": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
             "HISTORICAL_COVERAGE": historical_coverage_status,
             "INDIVIDUAL_EVIDENCE": "PASS" if len(individual_rows) == len(p_rows) else "PARTIAL",
-            "MODEL_RESOLUTION": "FULL" if not low_resolution else "LIMITED_RESOLUTION",
-            "CALIBRATION": str(
-                (captain_surface.get("calibration_summary") or {}).get(
-                    "status", "NO_SETTLED_SAMPLE"
-                )
-            ).upper(),
+            "MODEL_RESOLUTION": resolution_audit["status"],
+            "CALIBRATION": calibration_status,
             "TEMPORAL_INTEGRITY": temporal_status,
             "PRODUCTION_VERIFICATION": "PENDING_CONTROLLED_RUN",
         },
+        "resolution_audit": resolution_audit,
+        "calibration_diagnostic": calibration,
         "individual_evidence_rows": len(individual_rows),
         "individual_evidence_missing_rows": len(individual_missing),
         "individual_evidence_missing_elements": [row.get("element") for row in individual_missing],
@@ -9858,6 +9860,9 @@ def run_deep(
         captain_surface=captain_surface,
         target_planning_gw=planning_gw,
         report_slot=report_slot,
+        calibration_diagnostic=(foundation or {}).get(
+            "pstart_walk_forward_diagnostic"
+        ),
     )
     for evidence_section_id in ("S02", "S19"):
         evidence_section = sections.get(evidence_section_id)

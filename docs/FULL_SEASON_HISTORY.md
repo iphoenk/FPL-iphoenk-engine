@@ -89,3 +89,18 @@ names used for a different paired-delta distribution. The adapter now reads
 the canonical lower-case absolute quantiles and fails closed if either is
 missing. This does not change sampling, convergence, MC500K, P1.7 XI or
 transfer-route Monte Carlo.
+
+
+## Active integrated V12 S02 source-range acceptance (13 October 2026)
+
+The occurrence-bound `v12_integrated_report_runner._analytics_production_acceptance`
+is the **active** S02 producer. In addition to the serving materializer, the
+integrated runner now checks the target planning GW against the V6 source's
+GW1..N-1 range, all-historical-GW Official FINAL evidence, validated fixture
+identities, and same-report-slot/full_master run ID and generation timestamp.
+A V6 source GW6 / GW1-GW5 payload cannot certify V12 GW7 historical coverage,
+even when V6 legitimately marks those five previous gameweeks complete.
+Violations are surfaced as `PARTIAL` with explicit rejection reasons. Missing
+and provisional GW6 facts remain missing or provisional; no result is
+retroactively invented, no receipt is rewritten and S16B natural-only
+eligibility is unchanged.

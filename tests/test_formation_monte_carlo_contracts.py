@@ -57,10 +57,16 @@ def _fake_simulator(projections, route_defs, **kwargs):
             }
         }
         path_semantics[route_id] = {
-            "autosub_path_rate": 0.1,
-            "captain_takeover_path_rate": 0.2,
-            "captain_blank_probability": 0.3,
-            "captain_haul_probability": 0.4,
+            "by_gw": {
+                str(gw): {
+                    "autosub_path_rate": 0.1,
+                    "captain_takeover_path_rate": 0.2,
+                    "captain_blank_probability": 0.3,
+                    "captain_haul_probability": 0.4,
+                    "expected_autosub_value": 0.5,
+                }
+                for gw in range(7, 13)
+            }
         }
     return {
         "status": "PASS",
@@ -71,7 +77,15 @@ def _fake_simulator(projections, route_defs, **kwargs):
         "correlated": True,
         "convergence_evidence": {"status": "PASS"},
         "metrics": metrics,
-        "performance": {"route_path_semantics": path_semantics},
+        # performance is timing metadata, never a sampling source.
+        "performance": {"route_path_semantics": {"HOLD": {"by_gw": {}}}},
+        "sampling_diagnostics": {
+            "route_path_semantics": path_semantics,
+            "state_frequencies": {
+                f"{element}:gw7": {"DNP": 0.09}
+                for element in range(1, 16)
+            },
+        },
         "output_fingerprint": "mc-fingerprint",
     }
 
@@ -91,6 +105,12 @@ def test_all_eight_formations_are_executed_on_one_six_gw_contract():
     assert all(row["actual_paths"] == 500_000 for row in payload["formations"])
     assert all(row["convergence"] == "PASS" for row in payload["formations"])
     assert all(row["p10"] == 80.0 and row["p90"] == 120.0 for row in payload["formations"])
+    assert all(row["captain_haul_probability"] == 0.4 for row in payload["formations"])
+    assert all(row["captain_blank_probability"] == 0.3 for row in payload["formations"])
+    assert all(row["vice_activation_probability"] == 0.2 for row in payload["formations"])
+    assert all(row["autosub_probability"] == 0.1 for row in payload["formations"])
+    assert all(row["minutes_risk"]["status"] == "MC500K_SAMPLED_DNP_BOUND" for row in payload["formations"])
+    assert all(abs(row["minutes_risk"]["mean_p_dnp_xi"] - 0.09) < 1e-12 for row in payload["formations"])
     assert payload["integrity"] == {
         "formation_count": 8,
         "all_legal_formations": True,
@@ -185,4 +205,38 @@ def test_formation_mc_fails_closed_if_absolute_quantiles_missing():
             input_snapshot_id="private-full-master:gw7",
             route_builder=lambda **_: _routes(),
             simulator=bad_quantiles,
+        )
+
+
+def test_formation_mc_fails_closed_if_sampling_semantics_are_missing():
+    def missing_sampled_semantics(projections, route_defs, **kwargs):
+        result = _fake_simulator(projections, route_defs, **kwargs)
+        result["sampling_diagnostics"]["route_path_semantics"]["HOLD"]["by_gw"].pop("7")
+        return result
+
+    with pytest.raises(FormationMonteCarloError, match="six-GW sampling semantics unavailable"):
+        run_formation_monte_carlo(
+            {"planning_gw": 7},
+            current15=list(range(1, 16)),
+            input_snapshot_id="private-full-master:gw7",
+            route_builder=lambda **_: _routes(),
+            simulator=missing_sampled_semantics,
+        )
+
+
+def test_formation_mc_fails_closed_if_a_rate_is_missing():
+    def missing_rate(projections, route_defs, **kwargs):
+        result = _fake_simulator(projections, route_defs, **kwargs)
+        result["sampling_diagnostics"]["route_path_semantics"]["HOLD"]["by_gw"]["7"].pop(
+            "captain_haul_probability"
+        )
+        return result
+
+    with pytest.raises(FormationMonteCarloError, match="captain_haul_probability unavailable"):
+        run_formation_monte_carlo(
+            {"planning_gw": 7},
+            current15=list(range(1, 16)),
+            input_snapshot_id="private-full-master:gw7",
+            route_builder=lambda **_: _routes(),
+            simulator=missing_rate,
         )

@@ -9,6 +9,7 @@ bench-order and C/VC resolution to P1.7. It is not a transfer-route MC.
 
 import hashlib
 import json
+from math import isfinite
 from copy import deepcopy
 from typing import Any, Callable, Mapping, Sequence
 
@@ -192,7 +193,7 @@ def run_formation_monte_carlo(
     ):
         raise FormationMonteCarloError("formation MC did not pass canonical 500K correlated acceptance")
     metrics = dict(run.get("metrics") or {})
-    semantics = dict((run.get("performance") or {}).get("route_path_semantics") or {})
+    semantics = dict((run.get("sampling_diagnostics") or {}).get("route_path_semantics") or {})
     rows = []
     for route in routes:
         formation = str(route["formation"])
@@ -205,38 +206,69 @@ def run_formation_monte_carlo(
                 f"canonical six-GW absolute point quantiles missing for {formation}"
             )
         route_semantics = dict(semantics.get(route_id) or {})
-        per_gw_semantics = dict(route_semantics.get("by_gw") or {})
-        average_semantics = {
-            key: (
-                sum(float(values.get(key) or 0.0) for values in per_gw_semantics.values())
-                / max(1, len(per_gw_semantics))
-            )
-            for key in (
-                "autosub_path_rate",
-                "captain_takeover_path_rate",
-                "captain_blank_probability",
-                "captain_haul_probability",
-                "expected_autosub_value",
-            )
+        per_gw_semantics = {
+            str(gw): dict(values)
+            for gw, values in (route_semantics.get("by_gw") or {}).items()
+            if isinstance(values, Mapping)
         }
-        projection_players = {
-            int(player.get("element") or 0): player
-            for player in projections.get("players") or []
-            if isinstance(player, Mapping)
-        }
-        dnp_values = [
-            projection_players[element].get("p_dnp")
-            for element in route["per_gw"][0]["starting_xi"]
-            if element in projection_players
-            and projection_players[element].get("p_dnp") is not None
-        ]
+        expected_gws = {str(gw) for gw in range(start_gw, start_gw + HORIZON_GWS)}
+        if set(per_gw_semantics) != expected_gws:
+            raise FormationMonteCarloError(
+                f"canonical six-GW sampling semantics unavailable for {formation}"
+            )
+        average_semantics = {}
+        for key in (
+            "autosub_path_rate",
+            "captain_takeover_path_rate",
+            "captain_blank_probability",
+            "captain_haul_probability",
+            "expected_autosub_value",
+        ):
+            values = [per_gw_semantics[str(gw)].get(key) for gw in range(start_gw, start_gw + HORIZON_GWS)]
+            if any(value is None for value in values):
+                raise FormationMonteCarloError(
+                    f"canonical sampled {key} unavailable for {formation}"
+                )
+            try:
+                samples = [float(value) for value in values]
+            except (TypeError, ValueError, OverflowError) as exc:
+                raise FormationMonteCarloError(
+                    f"canonical sampled {key} invalid for {formation}"
+                ) from exc
+            if not all(isfinite(value) for value in samples):
+                raise FormationMonteCarloError(
+                    f"canonical sampled {key} non-finite for {formation}"
+                )
+            if key != "expected_autosub_value" and any(value < 0 or value > 1 for value in samples):
+                raise FormationMonteCarloError(
+                    f"canonical sampled {key} out of probability range for {formation}"
+                )
+            average_semantics[key] = sum(samples) / HORIZON_GWS
+
+        # The P1.4 sampler owns START/DNP event frequencies. Bind the actual
+        # sampled first-GW XI DNP rate, never infer it from a missing projection
+        # player.p_dnp field and never substitute zero for absent evidence.
+        frequencies = (run.get("sampling_diagnostics") or {}).get("state_frequencies") or {}
+        dnp_values = []
+        for element in route["per_gw"][0]["starting_xi"]:
+            row = frequencies.get(f"{int(element)}:gw{start_gw}") or {}
+            probability = row.get("DNP") if isinstance(row, Mapping) else None
+            if probability is None:
+                break
+            try:
+                value = float(probability)
+            except (TypeError, ValueError, OverflowError):
+                break
+            if not isfinite(value) or not 0 <= value <= 1:
+                break
+            dnp_values.append(value)
         minutes_risk = (
             {
-                "status": "P1_1_PROJECTION_BOUND",
-                "mean_p_dnp_xi": sum(float(value) for value in dnp_values) / len(dnp_values),
+                "status": "MC500K_SAMPLED_DNP_BOUND",
+                "mean_p_dnp_xi": sum(dnp_values) / len(dnp_values),
             }
             if len(dnp_values) == 11
-            else {"status": "UNAVAILABLE_P1_1_DNP_EVIDENCE", "mean_p_dnp_xi": None}
+            else {"status": "UNAVAILABLE_SAMPLED_DNP_EVIDENCE", "mean_p_dnp_xi": None}
         )
         row = {
             "formation": formation,

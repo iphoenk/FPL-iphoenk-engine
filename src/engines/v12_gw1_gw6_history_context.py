@@ -155,8 +155,13 @@ def _attach_understat(
             if xg is not None and xa is not None:
                 observations["xgi"] = round(xg + xa, 5)
                 observations["xgi_per90"] = round(90 * (xg + xa) / minutes, 5)
+        source_teams = [team.strip() for team in str(p.get("team_title") or "").split(",") if team.strip()]
+        mixed_team_season = len(set(source_teams)) > 1
         row["provider_skill_observation"] = {
             "status": "OBSERVED_VERIFIED_ID",
+            "source_team_titles": source_teams,
+            "mixed_team_season": mixed_team_season,
+            "club_specific_team_fit": "UNAVAILABLE_MIXED_TEAM_SEASON" if mixed_team_season else "NOT_CALIBRATED",
             "source": "UNDERSTAT_2026_27",
             "source_native_id": p.get("source_native_id"),
             "effective_at": understat.get("effective_at"),

@@ -88,7 +88,7 @@ def test_history_reconciliation_requires_authoritative_team_id(monkeypatch, tmp_
 
 
 def test_full_season_history_covers_all_slots_and_aggregates_dgw():
-    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "fixtures": [{"id": 101, "event": 1}, {"id": 102, "event": 2}, {"id": 103, "event": 2}], "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
+    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "fixtures": [{"id": 101, "event": 1, "finished": True}, {"id": 102, "event": 2, "finished": True}, {"id": 103, "event": 2, "finished": True}, {"id": 104, "event": 3, "finished": True}], "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
     detail = {"element_summaries": {"10": {"history": [{"event": 1, "fixture": 101, "minutes": 90, "total_points": 6, "saves": 3}, {"event": 2, "fixture": 102, "minutes": 0, "total_points": 0, "saves": 0}, {"event": 2, "fixture": 103, "minutes": 90, "total_points": 8, "saves": 6}], "fixtures": [{"event": 1, "id": 101, "finished": True}, {"event": 2, "id": 102, "finished": True}, {"event": 2, "id": 103, "finished": True}]}}}
     out = mod.build_full_season_history(snapshot=snapshot, detail=detail)
     assert out["coverage_gate"]["status"] == "PASS"
@@ -245,3 +245,39 @@ def test_v6_production_reconciliation_fails_closed_without_catalog_and_on_cross_
     wrong_gw = report_prefetch._reconcile_full_history(snapshot, summaries)
     assert wrong_gw["coverage_gate"]["status"] == "PARTIAL"
     assert wrong_gw["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "OFFICIAL_FIXTURE_GW_MISMATCH"
+
+
+def test_v6_history_fails_closed_on_provisional_or_unfinished_official_gw():
+    snapshot = {
+        "generated_at": "2026-10-13T05:00:00Z",
+        "phase": {"current_gw": 7},
+        "bootstrap": {
+            "elements": [{"id": 10, "element_type": 3, "team": 1}],
+            "events": [{"id": gw, "finished": gw < 6} for gw in range(1, 7)],
+        },
+        "fixtures": [
+            {"id": 100 + gw, "event": gw, "finished": gw < 6, "finished_provisional": gw == 6}
+            for gw in range(1, 7)
+        ],
+    }
+    summaries = {"10": {"history": [
+        {"fixture": 100 + gw, "round": gw, "minutes": 90, "total_points": 5}
+        for gw in range(1, 7)
+    ]}}
+    v6 = report_prefetch._reconcile_full_history(snapshot, summaries)
+    secondary = mod.build_full_season_history(snapshot=snapshot, detail={"element_summaries": summaries})
+    for result in (v6, secondary):
+        assert result["coverage_gate"]["status"] == "PARTIAL"
+        assert result["coverage_gate"]["pending_historical_gws"] == [6]
+        assert result["coverage_gate"]["all_historical_gws_finalized"] is False
+        assert result["as_of"]["historical_gws"] == [1, 2, 3, 4, 5, 6]
+
+    snapshot["bootstrap"]["events"][-1]["finished"] = True
+    snapshot["fixtures"][-1]["finished"] = True
+    for result in (
+        report_prefetch._reconcile_full_history(snapshot, summaries),
+        mod.build_full_season_history(snapshot=snapshot, detail={"element_summaries": summaries}),
+    ):
+        assert result["coverage_gate"]["status"] == "PASS"
+        assert result["coverage_gate"]["pending_historical_gws"] == []
+        assert result["coverage_gate"]["all_historical_gws_finalized"] is True

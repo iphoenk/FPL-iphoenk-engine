@@ -1239,12 +1239,34 @@ def _analytics_production_acceptance(
         "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
         "artifact_path": detail_path,
     }
-    p_rows = [row for row in rows if isinstance(row, Mapping) and row.get("p_start") is not None]
+    # Degraded integrated runs may carry the literal "UNAVAILABLE" in P(start).
+    # Numeric evidence must be valid probabilities before a row is counted or
+    # rounded. A missing projection is an explicit PARTIAL, never an exception.
+    def _valid_start_probability(value: Any) -> bool:
+        try:
+            probability = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return False
+        return probability == probability and 0.0 <= probability <= 1.0
+
+    p_rows = [
+        row for row in rows
+        if isinstance(row, Mapping) and _valid_start_probability(row.get("p_start"))
+    ]
     p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
-    unique_values = {str(row.get("p_start")) for row in p_rows}
+    # A single outlier does not establish player-conditioned start resolution.
+    # GW7 currently has 14/15 identically rounded P(start) estimates; classify
+    # low resolution explicitly even though two unique values technically exist.
+    rounded = [str(round(float(row["p_start"]), 4)) for row in p_rows]
+    counts = {value: rounded.count(value) for value in set(rounded)}
+    modal_count = max(counts.values(), default=0)
+    minimum_majority = max(10, (7 * len(rounded) + 9) // 10)
+    low_resolution = modal_count >= minimum_majority or len(counts) < 2
     pstart = {
         "evidence_status": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
-        "resolution_status": "FULL_RESOLUTION" if len(unique_values) > 1 else "LIMITED_RESOLUTION",
+        "resolution_status": "LIMITED_RESOLUTION" if low_resolution else "FULL_RESOLUTION",
+        "modal_probability_count": modal_count,
+        "total_probability_rows": len(rounded),
         "rows_with_probability": len(p_rows),
         "rows_with_evidence": len(p_evidence),
         "formula_owner": "V12_PLAYER_MINUTES",
@@ -9735,6 +9757,28 @@ def run_deep(
         report_timestamp=checkpoint_time,
         target_fixture_ids=[],
     )
+
+    # This is the active production DEEP path. The earlier materialization
+    # helpers bind analytics metadata too, but they are not the report run
+    # that publishes latest/deep.json. Without this exact binding S02
+    # misleadingly prints UNAVAILABLE and 0/0 despite 15 CURRENT15 rows.
+    history_acceptance, analytics_acceptance = _analytics_production_acceptance(
+        runtime_data_root=runtime_data_root,
+        official=official,
+        rows=all15_rows,
+        captain_surface=captain_surface,
+        target_planning_gw=planning_gw,
+        report_slot=report_slot,
+    )
+    for evidence_section_id in ("S02", "S19"):
+        evidence_section = sections.get(evidence_section_id)
+        if not isinstance(evidence_section, Mapping):
+            continue
+        evidence_content = dict(evidence_section.get("content") or {})
+        if evidence_section_id == "S02":
+            evidence_content["full_season_history"] = dict(history_acceptance)
+        evidence_content["analytics_acceptance"] = dict(analytics_acceptance)
+        evidence_section["content"] = evidence_content
 
     # Bind decision-critical visible sections to the exact producer payload
     # before rendering. Renderer never manufactures this metadata.

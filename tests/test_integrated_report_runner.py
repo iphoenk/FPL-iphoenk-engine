@@ -1838,3 +1838,26 @@ def test_active_v12_s02_exact_slot_gw7_finality_identity_gate(tmp_path):
     old_slot, _ = read()
     assert old_slot["status"] == "PARTIAL"
     assert "OCCURRENCE_BOUND_HISTORY_SOURCE_UNVERIFIED" in old_slot["coverage_rejection_reasons"]
+
+
+def test_active_deep_report_binds_hist_and_pstart_before_section_fingerprints():
+    from pathlib import Path
+
+    source = Path(runner.__file__).read_text(encoding="utf-8")
+    anchor = source.index("    # Bind decision-critical visible sections to the exact producer payload")
+    active = source.rfind("    sections = attach_report_provenance(", 0, anchor)
+    assert active > 0
+    execution_path = source[active:anchor]
+    assert "history_acceptance, analytics_acceptance = _analytics_production_acceptance(" in execution_path
+    assert "runtime_data_root=runtime_data_root" in execution_path
+    assert "rows=all15_rows" in execution_path
+    assert "target_planning_gw=planning_gw" in execution_path
+    assert "report_slot=report_slot" in execution_path
+    assert 'evidence_content["full_season_history"] = dict(history_acceptance)' in execution_path
+    assert 'evidence_content["analytics_acceptance"] = dict(analytics_acceptance)' in execution_path
+    assert execution_path.index("history_acceptance, analytics_acceptance") < execution_path.index(
+        'evidence_section["content"] = evidence_content'
+    )
+    assert source.index("    # Bind decision-critical visible sections to the exact producer payload", active) < source.index(
+        "    report = materialize_deep_report(", anchor
+    )

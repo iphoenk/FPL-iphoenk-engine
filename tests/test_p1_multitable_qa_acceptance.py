@@ -60,6 +60,53 @@ def test_s02_has_one_roster_and_one_ordered_identity_matched_audit():
     assert not errors
     assert names == [f"P{index}" for index in range(15)]
 
+    # Chelsea retrospective context is supplementary; its observations must
+    # not displace either of the locked S02 15-player tables.
+    rich_context = {
+        "contract": "V12_GW1_GW6_RETROSPECTIVE_CONTEXT_V1",
+        "official_players_in_universe": 667,
+        "official_gw_slots_present": 6,
+        "expected_official_gw_slots": 6,
+        "official_points_finalized": False,
+        "source_health": {"understat": {"verified_join_count": 1},
+                          "fotmob": {"verified_match_count": 1}},
+        "focus_team": {
+            "form_gw1_gw6": {
+                "wins": 1, "draws": 0, "losses": 0,
+                "goals_for": 5, "goals_against": 1,
+                "matches": [{"gw": 6, "opponent": "Bournemouth", "home": True,
+                             "goals_for": 5, "goals_against": 1,
+                             "result": "W", "fpl_points_settlement": "PROVISIONAL"}],
+            },
+            "tactical_observation": {
+                "manager": "Xabi Alonso", "formation": "3-4-2-1",
+                "status": "OBSERVED",
+            },
+        },
+        "focus_players": [{
+            "name": "Cole Palmer", "position": "MID",
+            "provider_skill_observation": {
+                "status": "VERIFIED",
+                "metrics": {"games": 6, "time": 430, "goals": 3,
+                            "assists": 2, "xg": 2.3, "xa": 1.4,
+                            "xgi_per90": 0.77},
+            },
+        }],
+    }
+    rich_rendered = _visible(
+        "S02", {"rows": _our15_rows(),
+                "full_season_history": {"retrospective_context": rich_context}}
+    )
+    rich_tables = _rendered_tables(rich_rendered)
+    rich_count, _, rich_names, rich_failures = _s02_primary_visible_tables(rich_rendered)
+    assert len(rich_tables) == 2
+    assert [len(table["rows"]) for table in rich_tables] == [15, 15]
+    assert rich_count == 15 and not rich_failures
+    assert rich_names == names
+    assert "CHELSEA GW OBSERVATION: GW=6" in rich_rendered
+    assert "FPL_status=PROVISIONAL" in rich_rendered
+    assert "CHELSEA PLAYER PROCESS: Player=Cole Palmer" in rich_rendered
+
 
 def test_s02_rejects_audit_player_identity_drift_not_a_false_30_player_squad():
     rendered = _visible("S02", {"rows": _our15_rows()})

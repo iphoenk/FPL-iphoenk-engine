@@ -4340,14 +4340,17 @@ def _render_deep_visible_contract_lines(
                 f"goals {form.get('goals_for')}-{form.get('goals_against')}; "
                 "retrospective match results, NOT projected team fit."
             )
-            lines.extend(_markdown_table(
-                ("GW", "Opponent", "H/A", "GF", "GA", "Result", "FPL status"),
-                [(
-                    r.get("gw"), r.get("opponent"), "H" if r.get("home") else "A",
-                    r.get("goals_for"), r.get("goals_against"), r.get("result"),
-                    r.get("fpl_points_settlement"),
-                ) for r in form.get("matches") or []],
-            ))
+            # Preserve GW-level facts as readable observations, not extra
+            # Markdown tables. S02's locked two tables are reserved for OUR15.
+            for match in form.get("matches") or []:
+                lines.append(
+                    "CHELSEA GW OBSERVATION: "
+                    f"GW={match.get('gw')}; opponent={match.get('opponent')}; "
+                    f"home={match.get('home')}; goals_for={match.get('goals_for')}; "
+                    f"goals_against={match.get('goals_against')}; "
+                    f"result={match.get('result')}; "
+                    f"FPL_status={match.get('fpl_points_settlement')}."
+                )
             tactical = team.get("tactical_observation") or {}
             lines.append(
                 "CHELSEA COACH / FORMATION OBSERVATION: "
@@ -4358,21 +4361,21 @@ def _render_deep_visible_contract_lines(
                 "probabilities are UNAVAILABLE without multi-match calibrated evidence."
             )
             lines.append("#### CHELSEA PLAYER PROCESS (UNDERSTAT SEASON GW1-GW6, VERIFIED IDs)")
-            lines.extend(_markdown_table(
-                ("Player", "Pos", "Matches", "Minutes", "Goals", "Assists",
-                 "xG", "xA", "xGI/90", "Evidence"),
-                [(
-                    r.get("name"), r.get("position"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("games"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("time"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("goals"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("assists"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xg"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xa"),
-                    ((r.get("provider_skill_observation") or {}).get("metrics") or {}).get("xgi_per90"),
-                    (r.get("provider_skill_observation") or {}).get("status"),
-                ) for r in context.get("focus_players") or []],
-            ))
+            # Keep all verified season-process columns without shifting the
+            # locked OUR15 roster and P(start) audit table identities.
+            for focus_player in context.get("focus_players") or []:
+                observation = focus_player.get("provider_skill_observation") or {}
+                metrics = observation.get("metrics") or {}
+                lines.append(
+                    "CHELSEA PLAYER PROCESS: "
+                    f"Player={focus_player.get('name')}; "
+                    f"Pos={focus_player.get('position')}; "
+                    f"Matches={metrics.get('games')}; Minutes={metrics.get('time')}; "
+                    f"Goals={metrics.get('goals')}; Assists={metrics.get('assists')}; "
+                    f"xG={metrics.get('xg')}; xA={metrics.get('xa')}; "
+                    f"xGI/90={metrics.get('xgi_per90')}; "
+                    f"Evidence={observation.get('status')}."
+                )
             lines.append(
                 "SKILL / TEAM FIT / OPPONENT FIT: historical event-process proxies "
                 "and exact observed opponents are visible above. Skills are not "

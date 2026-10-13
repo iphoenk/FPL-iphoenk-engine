@@ -1,5 +1,8 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Formation MC absolute P10/P90 schema repair (13 Oct 2026):** canonical correlated MC500K returns absolute outcome fields `p10` and `p90`, while the formation adapter incorrectly requested `Q10` / `Q90` (paired-delta fields), displaying UNAVAILABLE. The adapter now binds the canonical absolute quantiles, rejects missing values, and has real-schema regression tests. No simulation or P1.7 authority changes.
+
+
 - **GW7 full-history finality / source-target range closure (13 Oct 2026):** V6 coverage PASS now requires every historical GW official event and every corresponding fixture to be FINAL, with provisional GW states exposed as PARTIAL. V12 S02 acceptance independently checks required planning GW, exact GW1..N−1, finality and fixture identity; it cannot promote V6 GW1–GW5 into GW7 full-history PASS. No manual GW6 finalization, backfill, alternate scheduler or P1.7/MC change.
 
 
@@ -26,7 +29,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-13T12:13:42+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T12:16:32+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

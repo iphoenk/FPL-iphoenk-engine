@@ -113,9 +113,11 @@ def classify_scoring_gw_lifecycle(
             "scoring_gw": None,
             "fixture_count": 0,
             "fixtures_live": 0,
+            "fixtures_provisional": 0,
             "fixtures_ft": 0,
             "fixtures_not_started": 0,
             "live_fixture_ids": [],
+            "provisional_fixture_ids": [],
             "completed_fixture_ids": [],
             "not_started_fixture_ids": [],
             "completed_since_previous": [],
@@ -139,19 +141,25 @@ def classify_scoring_gw_lifecycle(
             return -(index + 1)
 
     live_ids: list[int] = []
+    provisional_ids: list[int] = []
     completed_ids: list[int] = []
     not_started_ids: list[int] = []
     for index, row in enumerate(gw_rows):
         identity = fixture_id(row, index)
-        if row.get("finished") is True:
+        state = classify_fixture_state(row)["state"]
+        if state == "FINAL":
             completed_ids.append(identity)
-        elif row.get("started") is True:
+        elif state == "PROVISIONAL_90":
+            provisional_ids.append(identity)
+        elif state == "LIVE":
             live_ids.append(identity)
         else:
+            # Missing/inconsistent Official lifecycle evidence is never
+            # silently certified final or currently in-progress.
             not_started_ids.append(identity)
 
     fixture_count = len(gw_rows)
-    any_started = bool(live_ids or completed_ids)
+    any_started = bool(live_ids or provisional_ids or completed_ids)
     all_complete = fixture_count > 0 and len(completed_ids) == fixture_count
     if all_complete:
         primary_mode = "POST_ALL_MATCH"
@@ -185,9 +193,11 @@ def classify_scoring_gw_lifecycle(
         "scoring_gw": int(scoring_gw),
         "fixture_count": fixture_count,
         "fixtures_live": len(live_ids),
+        "fixtures_provisional": len(provisional_ids),
         "fixtures_ft": len(completed_ids),
         "fixtures_not_started": len(not_started_ids),
         "live_fixture_ids": live_ids,
+        "provisional_fixture_ids": provisional_ids,
         "completed_fixture_ids": completed_ids,
         "not_started_fixture_ids": not_started_ids,
         "completed_since_previous": newly_completed,

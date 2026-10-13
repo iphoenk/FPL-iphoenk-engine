@@ -68,9 +68,9 @@ noninferior on all specified paired metrics. Without those facts:
 calculation or entire 667-player dataset completed successfully.
 
 Explicit tolerances, fixed in the diagnostic (not optimized on holdout):
-Brier delta <= +0.01, log loss <= +0.02, xMins MAE <= +1.0.
+Brier delta <= +0.01, log loss <= +0.02, xMins MAE <= +1.0, DNP/cameo Brier delta each <= +0.02, and per-position GK/DEF/MID/FWD Brier delta <= +0.03.
 Diagnostic eligibility requires >=200 paired fixtures and >=25 per position,
-plus predeadline lineage and zero temporal/partition errors. Report
+plus >=95% player-universe coverage, predeadline lineage and zero temporal/partition errors. Report
 `NONINFERIORITY` separately from `SOURCE_AS_OF`.
 
 This is an evidence and promotion-gating change, not an asserted accuracy

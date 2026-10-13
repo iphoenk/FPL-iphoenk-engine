@@ -12,6 +12,7 @@ from src.models.v12_stage1_analytics import (
     distribution_selection_matrix,
     opponent_adjust_match_rows,
     regime_change_evidence,
+    walk_forward_pstart_validate,
     walk_forward_validate,
 )
 
@@ -87,6 +88,15 @@ def test_walk_forward_is_expanding_window_without_future_leakage():
     assert result["folds"] >= 1
     assert result["status"] == "PASS"
     assert result["starter_brier"]
+
+
+def test_pstart_walk_forward_is_strict_and_reports_baseline_delta():
+    result = walk_forward_pstart_validate(opponent_adjust_match_rows(_rows(), _strength()))
+    assert result["future_leakage"] is False
+    assert result["split"] == "EXPANDING_WINDOW_BY_GW_STRICTLY_PRE_DEADLINE"
+    assert result["baseline"]["brier"] is not None
+    assert result["individualized"]["brier"] is not None
+    assert "xmins_mae" in result["delta_individualized_minus_baseline"]
 
 
 def test_regime_change_publishes_role_stability_probability():

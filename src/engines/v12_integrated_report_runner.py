@@ -1292,6 +1292,13 @@ def _analytics_production_acceptance(
         if isinstance(row, Mapping) and _valid_start_probability(row.get("p_start"))
     ]
     p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
+    individual_rows = [
+        row for row in p_evidence
+        if "player_selection_posterior" in {
+            str(signal) for signal in (row.get("p_start_evidence") or {}).get("signals") or []
+        }
+    ]
+    individual_missing = [row for row in p_rows if row not in individual_rows]
     # A single outlier does not establish player-conditioned start resolution.
     # GW7 currently has 14/15 identically rounded P(start) estimates; classify
     # low resolution explicitly even though two unique values technically exist.
@@ -1300,6 +1307,15 @@ def _analytics_production_acceptance(
     modal_count = max(counts.values(), default=0)
     minimum_majority = max(10, (7 * len(rounded) + 9) // 10)
     low_resolution = modal_count >= minimum_majority or len(counts) < 2
+    historical_range = str(history.get("historical_range") or "")
+    historical_coverage_status = (
+        "PASS" if historical_range == "GW1-GW6" and history.get("all_historical_gws_finalized") is True
+        else "PARTIAL"
+    )
+    temporal_status = "PASS" if not any(
+        "future" in str(reason).lower() or "leak" in str(reason).lower()
+        for reason in history.get("coverage_rejection_reasons") or []
+    ) else "FAIL"
     pstart = {
         "evidence_status": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
         "resolution_status": "LIMITED_RESOLUTION" if low_resolution else "FULL_RESOLUTION",
@@ -1310,6 +1326,23 @@ def _analytics_production_acceptance(
         "formula_owner": "V12_PLAYER_MINUTES",
         "probability_recomputed_in_materializer": False,
         "production_bound": True,
+        "acceptance_layers": {
+            "EVIDENCE_BINDING": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
+            "HISTORICAL_COVERAGE": historical_coverage_status,
+            "INDIVIDUAL_EVIDENCE": "PASS" if len(individual_rows) == len(p_rows) else "PARTIAL",
+            "MODEL_RESOLUTION": "FULL" if not low_resolution else "LIMITED_RESOLUTION",
+            "CALIBRATION": str(
+                (captain_surface.get("calibration_summary") or {}).get(
+                    "status", "NO_SETTLED_SAMPLE"
+                )
+            ).upper(),
+            "TEMPORAL_INTEGRITY": temporal_status,
+            "PRODUCTION_VERIFICATION": "PENDING_CONTROLLED_RUN",
+        },
+        "individual_evidence_rows": len(individual_rows),
+        "individual_evidence_missing_rows": len(individual_missing),
+        "individual_evidence_missing_elements": [row.get("element") for row in individual_missing],
+        "equality_requires_evidence_identity_audit": True,
     }
     frontier = (
         captain_surface.get("captain_frontier")
@@ -3056,6 +3089,13 @@ def _enrich_all15_rows(
                 "signals": signal_names,
                 "signal_count": len(start_signals),
                 "model_probability_agrees": start_value_agrees,
+                "selection_evidence": {
+                    "status": (xm.get("selection_evidence") or {}).get("status"),
+                    "observed_matches": (xm.get("selection_evidence") or {}).get("observed_matches"),
+                    "starts": (xm.get("selection_evidence") or {}).get("starts"),
+                    "recent_starts": (xm.get("selection_evidence") or {}).get("recent_starts"),
+                    "selection_posterior": (xm.get("selection_evidence") or {}).get("selection_posterior"),
+                },
             },
             "gw_availability": gw_availability,
             "gw_availability_confidence": (

@@ -12,8 +12,11 @@
     "prior_start_probability": 1.2,
     "role_start_probability": 1.1,
     "manager_start_probability": 1.3,
+    "player_selection_posterior": 1.8,
     "normalized_availability_start_signal": 1
   },
+  "selection_prior_strength": 4,
+  "recent_selection_weight": 0.35,
   "season_start_rate_shrinkage_matches": 4,
   "rotation_risk_strength": 0.55,
   "bench_share_when_not_start": 0.65,

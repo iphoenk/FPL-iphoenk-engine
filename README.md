@@ -1,5 +1,8 @@
 # FPL iphoenk Engine v3.39.0
 
+- **GW7 full-history finality / source-target range closure (13 Oct 2026):** V6 coverage PASS now requires every historical GW official event and every corresponding fixture to be FINAL, with provisional GW states exposed as PARTIAL. V12 S02 acceptance independently checks required planning GW, exact GW1..N−1, finality and fixture identity; it cannot promote V6 GW1–GW5 into GW7 full-history PASS. No manual GW6 finalization, backfill, alternate scheduler or P1.7/MC change.
+
+
 - **GW1–GW(N−1) fixture identity / S16B lifecycle hardening (13 Oct 2026):** V6 full-season coverage is PARTIAL if Official element-summary fixture IDs cannot be reconciled against the same-occurrence fixture catalog; raw rows are preserved. V12 S16B prospective baseline markers without receipt/body fingerprint are no longer asserted delivered. Natural 04:30 eligibility, controlled exclusion and receipt-aware migration are regression-tested. Additionally, MATCH separates Official FPL `PROVISIONAL_90` fixture counts from LIVE and FINAL, so GW6 cannot claim 10 games LIVE when they are finished-provisional; `finished=true` remains the only FINAL evidence. Historical GW1–GW6 production coverage and a genuine natural S16B still require remote evidence; no GREEN claim is implied.
 
 - **Native ChatGPT host acknowledgement boundary (13 Oct 2026):** the V12 DEEP consumer now emits typed native blocks, a canonical-text S06 pitch, and a full chunk-path ledger. The old self-attested `user_visible_acceptance=True` cannot elevate a report to `VERIFIED`: only a trusted, signed, same-occurrence ChatGPT-native host event covering every section and chunk may do so. The 07:55 controlled report retains `REMOTE_READBACK_PASS` / `native_ui_acceptance=UNVERIFIED` until that real host event exists. Synthetic unit tests prove gate logic, not production user-visible acceptance. No scheduler, MC500K, P1.7 or historical receipt changes.
@@ -23,7 +26,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-13T11:48:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T12:13:42+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

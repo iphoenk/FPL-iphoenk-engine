@@ -88,7 +88,7 @@ def _native_pitch(source: str, captain_source: str | None = None) -> dict[str, A
                 fields[key] = line[len(key) + 1:].strip()
                 break
     current = re.search(
-        r"(?m)^Current C:\\s*([^;\\n]+);\\s*Current VC:\\s*([^;\\n]+)",
+        r"(?m)^Current C:\s*([^;\n]+);\s*Current VC:\s*([^;\n]+)",
         captain_source or "",
     )
     captain = current.group(1).strip() if current else None

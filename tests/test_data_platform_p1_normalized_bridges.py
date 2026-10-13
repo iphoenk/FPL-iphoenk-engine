@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+
+from src.runtime_v6.domains.acquisition.collector import _carry_verified_observation_time
 
 from src.runtime_v6.identity import build_player_identity_map
 from src.runtime_v6.source_native import build_source_native_datasets
@@ -176,7 +179,7 @@ def test_vaastav_shared_fixture_id_keeps_identity_when_only_kickoff_is_reschedul
     assert link["provenance"]["verification"]["kickoff_matches_current_official"] is False
 
 
-def test_source_specific_normalizers_publish_typed_source_native_records():
+def test_source_specific_normalizers_publish_typed_source_native_records(tmp_path):
     results = _results()
     identity = _identity(results)
     datasets = build_source_native_datasets(results, identity)
@@ -210,6 +213,33 @@ def test_source_specific_normalizers_publish_typed_source_native_records():
     assert fotmob["record_groups"]["teams"][0]["official_team_id"] is None
     assert fotmob["record_groups"]["teams"][0]["identity_status"] == "UNMAPPED"
     assert fotmob["governance"]["cross_source_synthesis"] is False
+
+    # V6 orphan publication retains its hydrated previous snapshot on disk.
+    # Only EXACTLY identical normalized observations can inherit that old time.
+    prior_path = tmp_path / "fotmob.json"
+    previous = deepcopy(fotmob)
+    previous["effective_at"] = "2026-10-13T20:35:00+00:00"
+    prior_path.write_text(json.dumps(previous), encoding="utf-8")
+    current = deepcopy(fotmob)
+    current["effective_at"] = "2026-10-13T21:35:00+00:00"
+    current["source_snapshot_ids"] = ["fresh-request-id"]
+    unchanged = _carry_verified_observation_time("fotmob", current, prior_path)
+    assert unchanged["effective_at"] == previous["effective_at"]
+    assert unchanged["source_snapshot_ids"] == ["fresh-request-id"]
+    assert unchanged["historical_observation_binding"]["status"] == "VERIFIED_UNCHANGED_NORMALIZED_FACTS"
+    assert len(unchanged["historical_observation_binding"]["normalized_record_groups_sha256"]) == 64
+    changed = deepcopy(current)
+    changed["record_groups"]["teams"][0]["source_native_id"] = 99999
+    assert _carry_verified_observation_time("fotmob", changed, prior_path)["effective_at"] == current["effective_at"]
+    bad_health = {**current, "source_health": "AMBER"}
+    assert _carry_verified_observation_time("fotmob", bad_health, prior_path)["effective_at"] == current["effective_at"]
+    bad_identity = {**current, "source_id": "understat"}
+    assert _carry_verified_observation_time("fotmob", bad_identity, prior_path)["effective_at"] == current["effective_at"]
+    bad_prior_time = {**previous, "effective_at": "2026-10-13T22:35:00+00:00"}
+    prior_path.write_text(json.dumps(bad_prior_time), encoding="utf-8")
+    assert _carry_verified_observation_time("fotmob", current, prior_path)["effective_at"] == current["effective_at"]
+    assert _carry_verified_observation_time("rotowire", current, prior_path)["effective_at"] == current["effective_at"]
+
 
 
 def test_no_name_matching_turns_understat_or_fotmob_green():

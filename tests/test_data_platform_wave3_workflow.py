@@ -2,6 +2,7 @@ from pathlib import Path
 
 
 WORKFLOW = Path(".github/workflows/v6-wave3-proof.yml")
+INVENTORY = Path("src/runtime_v6/wave3_artifact_inventory.py")
 
 
 def test_wave3_observer_uses_natural_issue_title_event_not_scheduler_or_workflow_chaining():
@@ -81,7 +82,9 @@ def test_wave3_observer_binds_source_generation_to_exact_published_runtime_commi
 def test_wave3_observer_aggregates_only_immutable_prior_slot_proof_artifacts():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Collect prior immutable Wave 3 slot proofs" in text
-    assert 'name.startswith("v6-wave3-slot-proof-")' in text
+    inventory = INVENTORY.read_text(encoding="utf-8")
+    assert '"prior": "v6-wave3-slot-proof-"' in inventory
+    assert "wave3_artifact_inventory prior" in text
     assert "rows = rows[:64]" not in text
     assert "accepted_proof_count=0" in text
     assert "accepted_proof_count=$((accepted_proof_count + 1))" in text

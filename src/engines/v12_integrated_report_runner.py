@@ -1324,7 +1324,7 @@ def _analytics_production_acceptance(
         "evidence_status": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
         "resolution_status": "LIMITED_RESOLUTION" if low_resolution else "FULL_RESOLUTION",
         "modal_probability_count": modal_count,
-        "total_probability_rows": len(rounded),
+        "total_probability_rows": len(p_rows),
         "rows_with_probability": len(p_rows),
         "rows_with_evidence": len(p_evidence),
         "formula_owner": "V12_PLAYER_MINUTES",

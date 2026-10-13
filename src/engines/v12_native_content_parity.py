@@ -8,6 +8,7 @@ actual native rendering separately. All source bytes remain reconstructable.
 """
 
 from hashlib import sha256
+import hmac
 import json
 import re
 from pathlib import PurePosixPath
@@ -333,6 +334,7 @@ def _valid_native_host_receipt(
     receipt: Mapping[str, Any] | None,
     *,
     rendered_section_ids: Sequence[str],
+    verification_key: bytes | None,
 ) -> bool:
     """Verify the *shape and occurrence binding* of a host-render event.
 
@@ -340,7 +342,24 @@ def _valid_native_host_receipt(
     tests, Python component construction, source Markdown/HTML, and a caller's
     boolean cannot substitute for an observed user-visible host event.
     """
-    if not isinstance(receipt, Mapping):
+    if not isinstance(receipt, Mapping) or not isinstance(verification_key, bytes) or len(verification_key) < 16:
+        return False
+    fields = (
+        "source", "render_surface", "user_visible", "host_render_event_id",
+        "report_slot", "occurrence_path", "canonical_body_sha256",
+        "rendered_section_ids", "consumed_chunk_paths",
+        "native_section_component_count", "native_chunk_count",
+    )
+    if any(field not in receipt for field in fields):
+        return False
+    message = json.dumps(
+        {field: receipt[field] for field in fields},
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+    candidate = receipt.get("signature_sha256")
+    if not isinstance(candidate, str) or not hmac.compare_digest(
+        hmac.new(verification_key, message, sha256).hexdigest(), candidate,
+    ):
         return False
     expected_sections = list(manifest.get("section_ids") or [])
     expected_paths = [
@@ -353,6 +372,8 @@ def _valid_native_host_receipt(
         and receipt.get("user_visible") is True
         and isinstance(event_id, str)
         and bool(event_id.strip())
+        and isinstance(receipt.get("occurrence_path"), str)
+        and bool(receipt.get("occurrence_path"))
         and receipt.get("report_slot") == manifest.get("report_slot")
         and receipt.get("occurrence_path") == manifest.get("occurrence_path")
         and receipt.get("canonical_body_sha256") == manifest.get("canonical_body_sha256")
@@ -372,6 +393,7 @@ def build_native_ui_acceptance(
     transport_status: str = "UNVERIFIED", remote_readback: str = "UNVERIFIED",
     files: Mapping[str, str] | None = None, canonical_body: str | None = None,
     native_host_receipt: Mapping[str, Any] | None = None,
+    native_host_verification_key: bytes | None = None,
 ) -> dict[str, Any]:
     """Fail closed unless the native UI host actually acknowledges this occurrence.
 
@@ -394,6 +416,7 @@ def build_native_ui_acceptance(
         manifest,
         native_host_receipt,
         rendered_section_ids=rendered_section_ids,
+        verification_key=native_host_verification_key,
     )
     status = "PASS" if (
         user_visible_acceptance

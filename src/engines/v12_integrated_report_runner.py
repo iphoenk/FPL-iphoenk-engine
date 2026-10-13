@@ -3089,6 +3089,11 @@ def _enrich_all15_rows(
                 "quality": start_evidence_quality,
                 "confidence": xm.get("confidence") or "UNAVAILABLE",
                 "signals": signal_names,
+                "signal_values": [
+                    {"signal": e.get("signal"), "probability": e.get("probability"),
+                     "weight": e.get("weight")}
+                    for e in start_signals
+                ],
                 "signal_count": len(start_signals),
                 "model_probability_agrees": start_value_agrees,
                 "selection_evidence": {

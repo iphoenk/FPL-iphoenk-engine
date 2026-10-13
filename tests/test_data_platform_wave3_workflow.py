@@ -71,10 +71,13 @@ def test_wave3_observer_binds_source_generation_to_exact_published_runtime_commi
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Resolve exact published runtime commit" in text
     assert "/branches/runtime-data-v6" in text
-    assert "candidate_freeze.lock?ref=${runtime_sha}" in text
+    assert "candidate_freeze.lock?ref={sha}" in text
+    assert "runtime-freeze-history.json" in text
+    assert "resolve_published_runtime_commit" in text
+    assert "branch_advanced_after_publication" in text
     assert 'freeze.get("run_id")' in text
     assert 'freeze.get("run_attempt")' in text
-    assert "runtime branch no longer points to the source run generation" in text
+    assert "expected_freeze_bytes=source_bytes" in text
     assert "--published-runtime-sha \"${{ steps.runtime.outputs.sha }}\"" in text
 
 
@@ -131,3 +134,47 @@ def test_wave3_observer_noops_on_idempotent_source_publish_skip():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Source natural slot was an idempotent no-op; no new publication proof is counted." in text
     assert "if: steps.promotion.outputs.countable == 'false'" in text
+
+
+def test_wave3_immutable_runtime_publication_lookup_survives_newer_branch_generation():
+    import json
+    from src.runtime_v6.wave3_artifact_provenance import resolve_published_runtime_commit
+
+    source = json.dumps({"run_id": 101, "run_attempt": 1}, sort_keys=True).encode()
+    other = json.dumps({"run_id": 202, "run_attempt": 1}, sort_keys=True).encode()
+    current = "b" * 40
+    natural = "a" * 40
+    result = resolve_published_runtime_commit(
+        candidate_commits=[{"sha": current}, {"sha": natural}],
+        expected_freeze_bytes=source,
+        source_run_id=101,
+        source_run_attempt=1,
+        read_remote_freeze_bytes=lambda sha: {current: other, natural: source}[sha],
+    )
+    assert result == natural
+
+
+def test_wave3_immutable_runtime_publication_fails_closed_if_natural_commit_missing():
+    import json
+    import pytest
+    from src.runtime_v6.wave3_artifact_provenance import (
+        NaturalProofProvenanceError, resolve_published_runtime_commit,
+    )
+
+    source = json.dumps({"run_id": 101, "run_attempt": 1}).encode()
+    with pytest.raises(NaturalProofProvenanceError, match="no immutable source commit"):
+        resolve_published_runtime_commit(
+            candidate_commits=[{"sha": "b" * 40}],
+            expected_freeze_bytes=source,
+            source_run_id=101,
+            source_run_attempt=1,
+            read_remote_freeze_bytes=lambda _: b'{"run_id":202,"run_attempt":1}',
+        )
+    with pytest.raises(NaturalProofProvenanceError, match="lock identity mismatch"):
+        resolve_published_runtime_commit(
+            candidate_commits=[{"sha": "a" * 40}],
+            expected_freeze_bytes=source,
+            source_run_id=999,
+            source_run_attempt=1,
+            read_remote_freeze_bytes=lambda _: source,
+        )

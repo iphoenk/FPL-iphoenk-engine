@@ -1,6 +1,6 @@
 # P0 P(start) individualization
 
-Status: implementation candidate, 2026-10-13 UTC.
+Status: implementation candidate, 2026-10-13 UTC. Documentation timestamp: 2026-10-13T21:10:00+07:00.
 
 ## Change
 

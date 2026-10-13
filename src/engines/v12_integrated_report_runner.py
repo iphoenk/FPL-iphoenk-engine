@@ -1239,7 +1239,20 @@ def _analytics_production_acceptance(
         "production_evidence": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY",
         "artifact_path": detail_path,
     }
-    p_rows = [row for row in rows if isinstance(row, Mapping) and row.get("p_start") is not None]
+    # Degraded integrated runs may carry the literal "UNAVAILABLE" in P(start).
+    # Numeric evidence must be valid probabilities before a row is counted or
+    # rounded. A missing projection is an explicit PARTIAL, never an exception.
+    def _valid_start_probability(value: Any) -> bool:
+        try:
+            probability = float(value)
+        except (TypeError, ValueError, OverflowError):
+            return False
+        return probability == probability and 0.0 <= probability <= 1.0
+
+    p_rows = [
+        row for row in rows
+        if isinstance(row, Mapping) and _valid_start_probability(row.get("p_start"))
+    ]
     p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
     # A single outlier does not establish player-conditioned start resolution.
     # GW7 currently has 14/15 identically rounded P(start) estimates; classify

@@ -15,6 +15,7 @@ from src.engines.v12_integrated_report_runner import (
     _lineup_content,
     _personal_evidence_resolution,
     _route_execution_economics_state,
+    _s16b_review_cardinality_pass,
     _three_gw_staging,
     run_deep,
 )
@@ -675,6 +676,28 @@ def test_k_due_s16b_requires_match_review_exact15_and_universe_denominator():
     assert "AFTER-GW REASSESSMENT" in body
     assert "Full-universe denominator: 667" in body
     assert validate_deep_decision_content_delivery(report, body) == []
+    # Production GW6 post-match review must ACCEPT 0 duplicate fixtures.
+    # Legacy `int(0 or -1)` caused unconditional S16B failure here.
+    cardinality = {
+        "fixtures_expected": 10,
+        "fixtures_reviewed": 10,
+        "unique_fixture_count": 10,
+        "duplicate_fixture_count": 0,
+        "after_gw_reassessment": {"owned15_review": [{} for _ in range(15)]},
+    }
+    assert _s16b_review_cardinality_pass(cardinality, expected_fixtures=10)
+    assert not _s16b_review_cardinality_pass(
+        {**cardinality, "duplicate_fixture_count": 1},
+        expected_fixtures=10,
+    )
+    assert not _s16b_review_cardinality_pass(
+        {**cardinality, "duplicate_fixture_count": None},
+        expected_fixtures=10,
+    )
+    assert not _s16b_review_cardinality_pass(
+        {**cardinality, "unique_fixture_count": 9},
+        expected_fixtures=10,
+    )
 
 
 def test_l_canonical_mc_500k_must_reach_visible_probability_and_tails():

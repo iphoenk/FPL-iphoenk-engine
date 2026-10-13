@@ -5847,6 +5847,31 @@ def _three_gw_staging(
     }
 
 
+def _s16b_review_cardinality_pass(
+    post_match_review: Mapping[str, Any],
+    *,
+    expected_fixtures: int,
+) -> bool:
+    """Keep a valid zero-duplicate count at its actual value, never -1."""
+    def count(field: str) -> int:
+        value = post_match_review.get(field)
+        try:
+            return int(value) if value is not None else -1
+        except (TypeError, ValueError):
+            return -1
+
+    reassessment = post_match_review.get("after_gw_reassessment") or {}
+    review = reassessment.get("owned15_review") if isinstance(reassessment, Mapping) else None
+    return (
+        count("fixtures_expected") == expected_fixtures
+        and count("fixtures_reviewed") == expected_fixtures
+        and count("unique_fixture_count") == expected_fixtures
+        and count("duplicate_fixture_count") == 0
+        and isinstance(review, list)
+        and len(review) == 15
+    )
+
+
 def _post_match_review(
     *,
     projections: Mapping[str, Any] | None,
@@ -8352,22 +8377,8 @@ def run_deep(
             )
             or 0
         )
-        if (
-            int(post_match_review.get("fixtures_expected") or -1)
-            != expected_fixtures
-            or int(post_match_review.get("fixtures_reviewed") or -1)
-            != expected_fixtures
-            or int(post_match_review.get("unique_fixture_count") or -1)
-            != expected_fixtures
-            or int(post_match_review.get("duplicate_fixture_count") or -1)
-            != 0
-            or len(
-                (
-                    post_match_review.get("after_gw_reassessment") or {}
-                ).get("owned15_review")
-                or []
-            )
-            != 15
+        if not _s16b_review_cardinality_pass(
+            post_match_review, expected_fixtures=expected_fixtures
         ):
             raise IntegratedRunnerError(
                 "S16B_DUE_CONTENT_INCOMPLETE: fixture/exact15 contract failed"

@@ -352,3 +352,40 @@ def test_locked_match_golden_surface_runs_in_required_lifecycle_ci(tmp_path, mon
     assert "When to reassess\nafter fixture 101 FT" in body
     assert "element_id" not in body
     assert "LOCKED_SUBMITTED_PICKS" not in body
+
+
+def test_gw_fixture_provisional_not_counted_live_or_final():
+    provisional = [
+        {"id": 6000 + i, "event": 6, "started": True,
+         "finished": False, "finished_provisional": True}
+        for i in range(1, 11)
+    ]
+    life = service.classify_scoring_gw_lifecycle(
+        provisional, 6, previous_completed_fixture_ids=[],
+    )
+    assert life["fixtures_live"] == 0
+    assert life["fixtures_provisional"] == 10
+    assert life["fixtures_ft"] == 0
+    assert life["fixture_count"] == 10
+    assert life["primary_mode"] == "MATCH"
+    assert life["incremental_post_match_due"] is False
+
+    provisional[0]["finished"] = True
+    progressed = service.classify_scoring_gw_lifecycle(
+        provisional, 6, previous_completed_fixture_ids=[],
+    )
+    assert progressed["fixtures_provisional"] == 9
+    assert progressed["fixtures_ft"] == 1
+    assert progressed["incremental_post_match_due"] is True
+    assert progressed["transition"] == "POST_MATCH_THEN_MATCH"
+
+    for row in provisional:
+        row["finished"] = True
+    final = service.classify_scoring_gw_lifecycle(
+        provisional, 6, previous_completed_fixture_ids=list(range(6001, 6010)),
+    )
+    assert final["fixtures_provisional"] == 0
+    assert final["fixtures_ft"] == 10
+    assert final["fixtures_live"] == 0
+    assert final["primary_mode"] == "POST_ALL_MATCH"
+    assert final["transition"] == "POST_MATCH_THEN_POST_ALL_MATCH"

@@ -608,7 +608,10 @@ def load_v6_analytics_foundation(
     hierarchy = build_hierarchical_priors(adjusted)
     distributions = distribution_selection_matrix(adjusted)
     validation = walk_forward_validate(adjusted)
-    pstart_backtest = walk_forward_pstart_validate(adjusted)
+    pstart_backtest = walk_forward_pstart_validate(
+        adjusted,
+        expected_player_count=len(bootstrap.get("elements") or []),
+    )
     tactical_states = probabilistic_tactical_states(
         bootstrap,
         adjusted,

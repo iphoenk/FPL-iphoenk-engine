@@ -49,6 +49,36 @@ from .prefetch_contract import (
 from .security import safe_error
 
 
+def _official_history_planning_gw(bootstrap: dict[str, Any], selected_gw: int | None) -> int:
+    """Align factual GW1..N-1 history with the V12 next-deadline planning GW.
+
+    This changes the historical acquisition horizon only, never the selected
+    live/current GW, mini-league GW, or any V12 forecast/decision authority.
+    An explicitly marked Official FPL is_next event wins. If unavailable, an
+    Official is_current event establishes the next GW, as in the V12 runner.
+    Missing or conflicting event identity fails closed.
+    """
+    events = [row for row in (bootstrap.get("events") or [])
+              if isinstance(row, dict) and row.get("id") is not None]
+    next_events = [row for row in events if row.get("is_next") is True]
+    current_events = [row for row in events if row.get("is_current") is True]
+    if len(next_events) > 1 or len(current_events) > 1:
+        raise ValueError("AMBIGUOUS_OFFICIAL_PLANNING_GW")
+    if len(next_events) == 1:
+        target = int(next_events[0]["id"])
+    elif len(current_events) == 1:
+        target = int(current_events[0]["id"]) + 1
+    else:
+        raise ValueError("OFFICIAL_NEXT_GW_UNAVAILABLE")
+    if target <= 1 or not any(int(row["id"]) == target for row in events):
+        raise ValueError("OFFICIAL_NEXT_GW_INVALID")
+    if selected_gw is not None and target < int(selected_gw):
+        raise ValueError("OFFICIAL_NEXT_GW_BEFORE_CURRENT")
+    if current_events and target != int(current_events[0]["id"]) + 1:
+        raise ValueError("OFFICIAL_CURRENT_NEXT_GW_MISMATCH")
+    return target
+
+
 def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any]) -> dict[str, Any]:
     """V6-local full-season reconciler; keeps acquisition inside the V6 boundary."""
     bootstrap = snapshot.get("bootstrap") or {}
@@ -1068,12 +1098,26 @@ class PrefetchService:
                 fixture_result = fixture_method() if callable(fixture_method) else {}
                 if fixture_result.get("status") == "LIVE" and isinstance(fixture_result.get("payload"), list):
                     fixtures_for_history = [dict(row) for row in fixture_result["payload"] if isinstance(row, dict)]
+                # select_gw() remains the current/live GW (GW6), whereas the
+                # forward-looking DEEP report plans the next Official GW (GW7).
+                # Capture GW1..GW6 even if GW6 is still provisional; the
+                # coverage gate must remain PARTIAL until Official finality.
+                history_planning_gw = _official_history_planning_gw(bootstrap_payload, gw)
                 detail_artifact, history_health = _build_full_history_artifact(
                     client=client, bootstrap_payload=bootstrap_payload,
-                    fixtures=fixtures_for_history, planning_gw=gw,
+                    fixtures=fixtures_for_history, planning_gw=history_planning_gw,
                     generated_at=generated_at,
                     workers=int(self.config.get("element_summary_workers", 12)),
                 )
+                # The original full-fidelity archive AND small acceptance
+                # sidecar must bind to this exact prefetch occurrence, before
+                # any serialization, hashing, or remote publication.
+                detail_artifact.update({
+                    "report_kind": report_kind,
+                    "target_logical_report_slot": slot.isoformat(),
+                    "slot_identity": slot_identity,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                })
                 full_history_status = history_health.get("status", "UNAVAILABLE")
                 # The full-universe artifact is intentionally compressed: the
                 # official element-summary payload can exceed GitHub's 100 MB

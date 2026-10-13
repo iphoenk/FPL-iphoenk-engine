@@ -8,7 +8,8 @@ the artifact to the exact governed Wave 3 observer workflow run, and that
 producer run is a completed successful natural issue event in this repository.
 """
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
+import json
 from typing import Any
 
 
@@ -205,3 +206,43 @@ def validate_natural_proof_artifact_provenance(
         "repository": repository_name,
         "head_sha": producer_head_sha,
     }
+
+
+def resolve_published_runtime_commit(
+    *,
+    candidate_commits: Iterable[Mapping[str, Any]],
+    expected_freeze_bytes: bytes,
+    source_run_id: int,
+    source_run_attempt: int,
+    read_remote_freeze_bytes: Callable[[str], bytes],
+) -> str:
+    """Bind a source artifact to its immutable *historical* runtime commit.
+
+    A later controlled prefetch may advance runtime-data-v6 while the natural
+    observer is still running. The current branch head is therefore NOT the
+    correct authority for an earlier, successfully published natural run.
+    Only a reachable repository commit containing the byte-identical source
+    publication lock is accepted. Missing history fails closed.
+    """
+    try:
+        expected = json.loads(expected_freeze_bytes)
+    except (TypeError, ValueError, UnicodeDecodeError) as exc:
+        raise NaturalProofProvenanceError("source artifact freeze is invalid") from exc
+    if not isinstance(expected, Mapping):
+        raise NaturalProofProvenanceError("source artifact freeze must be an object")
+    if (str(expected.get("run_id")) != str(_integer(source_run_id, "source run_id"))
+            or str(expected.get("run_attempt")) != str(_integer(source_run_attempt, "source run_attempt"))):
+        raise NaturalProofProvenanceError("source artifact publication lock identity mismatch")
+
+    seen: set[str] = set()
+    for candidate in candidate_commits:
+        sha = _sha(_mapping(candidate, "runtime commit").get("sha"), "runtime commit sha")
+        if sha in seen:
+            continue
+        seen.add(sha)
+        if read_remote_freeze_bytes(sha) == expected_freeze_bytes:
+            return sha
+    raise NaturalProofProvenanceError(
+        "runtime branch no longer points to the source run generation " 
+        "and no immutable source commit could be verified within the bounded history"
+    )

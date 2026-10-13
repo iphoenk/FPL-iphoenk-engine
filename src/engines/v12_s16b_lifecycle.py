@@ -150,21 +150,26 @@ def normalize_delivery_state(
         and _int(state.get("last_delivered_gw"), -1) >= 0
     )
     if valid:
+        # A GW marker is not proof that S16B was actually delivered.
+        # Older prospective migrations could store last_delivered_gw without
+        # an occurrence receipt; never promote those markers to delivery.
+        has_receipt = bool(state.get("delivered_occurrence") and state.get("body_fingerprint"))
         return {
             "schema": STATE_SCHEMA,
             "baseline_completed_gw": _int(state.get("baseline_completed_gw")),
-            "last_delivered_gw": _int(state.get("last_delivered_gw")),
+            "last_delivered_gw": _int(state.get("last_delivered_gw")) if has_receipt else 0,
             "delivered_occurrence": state.get("delivered_occurrence"),
             "body_fingerprint": state.get("body_fingerprint"),
             "generated_at": state.get("generated_at"),
-            "migration": str(state.get("migration") or "ESTABLISHED"),
+            "migration": (str(state.get("migration") or "ESTABLISHED") if has_receipt
+                          else "RECEIPT_MISSING_REQUIRES_RECONCILIATION"),
         }
 
     baseline = max(0, _int(completed_gw, 0))
     return {
         "schema": STATE_SCHEMA,
         "baseline_completed_gw": baseline,
-        "last_delivered_gw": baseline,
+        "last_delivered_gw": 0,
         "delivered_occurrence": None,
         "body_fingerprint": None,
         "generated_at": None,
@@ -200,9 +205,17 @@ def resolve_s16b_context(
 
     mode_has_deep = "DEEP" in str(report_mode or "").upper()
     eligible_time = local.hour == 4 and local.minute == 30
+    has_receipt = bool(state.get("delivered_occurrence") and state.get("body_fingerprint"))
     delivered = (
-        _int(completed_gw, 0) > 0
+        has_receipt and _int(completed_gw, 0) > 0
         and _int(state.get("last_delivered_gw"), 0) >= _int(completed_gw, 0)
+    )
+    # A pre-existing baseline with no receipt must not be re-labelled as
+    # delivered, nor retrospectively backfilled as a natural 04:30 delivery.
+    baseline_without_receipt = (
+        not has_receipt
+        and _int(completed_gw, 0) > 0
+        and _int(completed_gw, 0) <= _int(state.get("baseline_completed_gw"), 0)
     )
     due = bool(
         mode_has_deep
@@ -210,6 +223,7 @@ def resolve_s16b_context(
         and completion_proof.get("fully_finished") is True
         and readiness.get("ready") is True
         and not delivered
+        and not baseline_without_receipt
     )
 
     if not mode_has_deep:
@@ -222,6 +236,8 @@ def resolve_s16b_context(
         due_reason = str(readiness.get("reason") or "POST_MATCH_EVIDENCE_NOT_READY")
     elif delivered:
         due_reason = "ALREADY_DELIVERED_FOR_COMPLETED_GW"
+    elif baseline_without_receipt:
+        due_reason = "BASELINE_WITHOUT_DELIVERY_RECEIPT"
     else:
         due_reason = "DUE"
 
@@ -235,6 +251,8 @@ def resolve_s16b_context(
         "gw_completion": completion_proof,
         "post_match_evidence": readiness,
         "delivery_state_before": state,
+        "delivery_receipt_proven": has_receipt,
+        "baseline_without_receipt": baseline_without_receipt,
         "s16b_due": due,
         "due_reason": due_reason,
         "expected_section_count": 23 if due else 22,

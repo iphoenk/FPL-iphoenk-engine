@@ -45,3 +45,20 @@ Acceptance sidecar note: the uncompressed `history/official_detail.json` contain
 ## Current V12 serving binding (12 October 2026)
 
 The V12 materializer reads the occurrence-bound V6 artifact at `data/v6/history/official_detail.json` or its lossless `.gz` form only when `report_kind=full_master`, the target logical slot matches, and the artifact generation timestamp matches `data/v6/report_prefetch/latest.json`. A stale legacy `data/official_detail.json` cannot promote S02 full-history or P(start) evidence to production PASS.
+
+
+## Fixture-identity acceptance gate (13 October 2026)
+
+For every player-match history row, V6 validates the Official FPL element ID
+(from the containing element-summary), the row's official fixture ID, and its
+gameweek against the same-occurrence Official fixture catalog. A missing
+catalog, missing fixture identifier, duplicate player/fixture record, unknown
+official fixture, or gameweek disagreement makes the full-season coverage
+status PARTIAL even if every player has a nominal GW slot. Unmodified raw rows
+are retained for diagnostics. The gate exposes `fixture_identity_status`,
+`verified_fixture_rows`, `fixture_catalog_count`, and
+`fixture_identity_anomalies`; it does not convert missing statistics to zero.
+
+This is an evidence-integrity improvement, not evidence that the production
+GW1-GW6 acquisition has completed. Production still needs current occurrence
+readback and actual OUR15/full-universe coverage.

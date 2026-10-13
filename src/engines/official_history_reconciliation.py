@@ -127,9 +127,19 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
     planning_gw = _gw(phase.get("current_gw")) or (max((_gw(row.get("event")) or 0 for row in (snapshot.get("history") or {}).get("current") or []), default=0) + 1)
     historical_gws = list(range(1, max(1, planning_gw)))
     catalog = _event_catalog(snapshot)
+    # Fixture-level identity must be checked against the same Official FPL
+    # occurrence as the element-summary rows. A populated slot alone is not
+    # sufficient evidence of a valid player-match record.
+    fixture_catalog = {
+        int(row["id"]): _gw(row.get("event"))
+        for row in (snapshot.get("fixtures") or [])
+        if isinstance(row, Mapping) and _gw(row.get("id")) is not None
+    }
     summaries = detail.get("element_summaries") or {}
     players: dict[str, Any] = {}
     missing_slots: list[dict[str, int]] = []
+    identity_anomalies: list[dict[str, Any]] = []
+    verified_fixture_rows = 0
     for element in elements:
         element_id = _gw(element.get("id"))
         if element_id is None:
@@ -139,8 +149,28 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
         fixture_rows = [dict(row) for row in (summary or {}).get("fixtures") or [] if isinstance(row, Mapping)]
         history_by_gw: dict[int, list[dict[str, Any]]] = defaultdict(list)
         fixtures_by_gw: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        seen_player_fixtures: set[int] = set()
         for row in history_rows:
             row_gw = _gw(row.get("round") or row.get("event"))
+            fixture_id = _gw(row.get("fixture"))
+            anomaly = None
+            if row_gw is None or fixture_id is None:
+                anomaly = "MISSING_GW_OR_FIXTURE_ID"
+            elif fixture_id in seen_player_fixtures:
+                anomaly = "DUPLICATE_PLAYER_FIXTURE_ID"
+            elif fixture_catalog and fixture_id not in fixture_catalog:
+                anomaly = "UNKNOWN_OFFICIAL_FIXTURE_ID"
+            elif fixture_catalog and fixture_catalog[fixture_id] != row_gw:
+                anomaly = "OFFICIAL_FIXTURE_GW_MISMATCH"
+            if anomaly:
+                identity_anomalies.append({
+                    "element": element_id, "gw": row_gw,
+                    "fixture_id": fixture_id, "reason": anomaly,
+                })
+            elif fixture_catalog:
+                verified_fixture_rows += 1
+            if fixture_id is not None:
+                seen_player_fixtures.add(fixture_id)
             if row_gw is not None:
                 history_by_gw[row_gw].append(row)
         for row in fixture_rows:
@@ -158,8 +188,9 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
         players[str(element_id)] = {"element_id": element_id, "position": element.get("element_type"), "team": element.get("team"), "history": records, "coverage": {"expected_gw_slots": len(historical_gws), "available_gw_slots": len(records), "missing_gw_slots": len(historical_gws) - len(records)}}
     expected_slots = len(element_ids) * len(historical_gws)
     available_slots = sum(int((row.get("coverage") or {}).get("available_gw_slots") or 0) for row in players.values())
-    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots else "PARTIAL"
-    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
+    identity_complete = bool(fixture_catalog) and not identity_anomalies
+    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots and identity_complete else "PARTIAL"
+    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "fixture_identity_status": "PASS" if identity_complete else "PARTIAL", "verified_fixture_rows": verified_fixture_rows, "fixture_catalog_count": len(fixture_catalog), "fixture_identity_anomalies": identity_anomalies, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
 
 
 def run() -> dict[str, Any]:

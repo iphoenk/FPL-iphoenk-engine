@@ -12,6 +12,11 @@ import math
 from statistics import NormalDist
 from typing import Any, Mapping, Sequence
 
+from src.engines.v12_player_minutes import (
+    build_player_selection_evidence,
+    estimate_player_minutes,
+)
+
 Z90 = NormalDist().inv_cdf(0.95)
 GOAL_POINTS = {"GK": 10.0, "DEF": 6.0, "MID": 5.0, "FWD": 4.0}
 
@@ -633,6 +638,89 @@ def walk_forward_validate(
         "xgi_selected_variant": min(valid_xgi, key=valid_xgi.get) if valid_xgi else None,
         "starter_selected_variant": min(valid_start, key=valid_start.get) if valid_start else None,
         "complex_model_survives_only_if_metric_improves": True,
+    }
+
+
+def walk_forward_pstart_validate(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    neutral_prior: float = 0.72,
+) -> dict[str, Any]:
+    """Compare legacy aggregate inputs with player-conditioned P1.1 inputs.
+
+    Every target gameweek is scored from rows strictly before its deadline.
+    This is diagnostic calibration evidence and never retunes production
+    parameters automatically.
+    """
+    clean = [dict(row) for row in rows if _i(row.get("gw")) > 0]
+    gws = sorted({_i(row.get("gw")) for row in clean})
+    by_player: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in clean:
+        by_player[_i(row.get("player_id"), _i(row.get("element")))].append(row)
+    metrics: dict[str, dict[str, list[float]]] = {
+        "baseline": {"brier": [], "log_loss": [], "xmins_mae": []},
+        "individualized": {"brier": [], "log_loss": [], "xmins_mae": []},
+    }
+    by_position: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    by_team: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+    folds = 0
+    for target_gw in gws:
+        train = [row for row in clean if _i(row.get("gw")) < target_gw]
+        test = [row for row in clean if _i(row.get("gw")) == target_gw]
+        if not train or not test:
+            continue
+        folds += 1
+        for actual in test:
+            pid = _i(actual.get("player_id"), _i(actual.get("element")))
+            history = [row for row in by_player.get(pid, []) if _i(row.get("gw")) < target_gw]
+            if not history:
+                continue
+            evidence = build_player_selection_evidence({"id": pid}, history, neutral_prior=neutral_prior)
+            if evidence.get("status") != "AVAILABLE":
+                continue
+            player = {
+                "id": pid, "starts": evidence["starts"], "minutes": evidence["minutes"],
+                "status": "a", "chance_of_playing_next_round": 100,
+            }
+            context = {"team_matches_played": evidence["observed_matches"]}
+            baseline = estimate_player_minutes(player, context)
+            individualized = estimate_player_minutes(player, {**context, "selection_evidence": evidence})
+            y_start = 1.0 if actual.get("starter") else 0.0
+            y_minutes = max(0.0, _f(actual.get("minutes_played"), _f(actual.get("minutes"))))
+            for label, prediction in (("baseline", baseline), ("individualized", individualized)):
+                p = _clamp(_f(prediction.get("start_probability")), 1e-6, 1.0 - 1e-6)
+                metrics[label]["brier"].append((p - y_start) ** 2)
+                metrics[label]["log_loss"].append(-(y_start * math.log(p) + (1 - y_start) * math.log(1 - p)))
+                metrics[label]["xmins_mae"].append(abs(_f(prediction.get("expected_minutes")) - y_minutes))
+            position = _position(actual.get("position")) or "UNKNOWN"
+            team = str(actual.get("team_id") or "UNKNOWN")
+            by_position[position]["baseline_brier"].append(metrics["baseline"]["brier"][-1])
+            by_position[position]["individualized_brier"].append(metrics["individualized"]["brier"][-1])
+            by_team[team]["baseline_brier"].append(metrics["baseline"]["brier"][-1])
+            by_team[team]["individualized_brier"].append(metrics["individualized"]["brier"][-1])
+
+    def avg(values: Sequence[float]) -> float | None:
+        return round(sum(values) / len(values), 6) if values else None
+    summary = {
+        label: {metric: avg(values) for metric, values in bundle.items()}
+        for label, bundle in metrics.items()
+    }
+    return {
+        "status": "PASS" if folds > 0 and metrics["individualized"]["brier"] else "INSUFFICIENT_COMPLETED_FOLDS",
+        "folds": folds,
+        "samples": len(metrics["individualized"]["brier"]),
+        "future_leakage": False,
+        "split": "EXPANDING_WINDOW_BY_GW_STRICTLY_PRE_DEADLINE",
+        "baseline": summary["baseline"],
+        "individualized": summary["individualized"],
+        "delta_individualized_minus_baseline": {
+            metric: None if summary["baseline"][metric] is None or summary["individualized"][metric] is None else round(summary["individualized"][metric] - summary["baseline"][metric], 6)
+            for metric in summary["baseline"]
+        },
+        "by_position": {key: {metric: avg(values) for metric, values in bundle.items()} for key, bundle in by_position.items()},
+        "by_team": {key: {metric: avg(values) for metric, values in bundle.items()} for key, bundle in by_team.items()},
+        "promotion_rule": "PROMOTE_ONLY_IF_NO_MATERIAL_REGRESSION_AND_EVIDENCE_COVERAGE_PASS",
+        "automatic_parameter_retuning": False,
     }
 
 

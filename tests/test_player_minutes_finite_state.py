@@ -6,7 +6,10 @@ from pathlib import Path
 import pytest
 
 from src.engines.v12_model_evidence import build_model_run_binding
-from src.engines.v12_player_minutes import estimate_player_minutes
+from src.engines.v12_player_minutes import (
+    build_player_selection_evidence,
+    estimate_player_minutes,
+)
 from src.models.xmins_v3 import estimate_xmins as legacy_estimate_xmins
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -229,6 +232,55 @@ def test_identical_input_is_deterministic():
     player={"starts":4,"minutes":330,"status":"a","chance_of_playing_next_round":100}
     context={"team_matches_played":5,"prior_start_probability":0.81,"prior_evidence_minutes":1200}
     assert estimate_player_minutes(player,context) == estimate_player_minutes(player,context)
+
+
+def test_player_specific_selection_evidence_changes_canonical_pstart():
+    player = {"starts": 5, "minutes": 420, "status": "a"}
+    common = {"team_matches_played": 6}
+    stable_rows = [
+        {"gw": gw, "match_id": f"m{gw}", "starter": True, "minutes": 90,
+         "official_status": "FINAL"}
+        for gw in range(1, 7)
+    ]
+    rotation_rows = [
+        {"gw": 1, "match_id": "m1", "starter": True, "minutes": 90, "official_status": "FINAL"},
+        {"gw": 2, "match_id": "m2", "starter": False, "minutes": 0, "official_status": "DNP"},
+        {"gw": 3, "match_id": "m3", "starter": True, "minutes": 62, "official_status": "FINAL"},
+        {"gw": 4, "match_id": "m4", "starter": False, "minutes": 18, "official_status": "FINAL"},
+        {"gw": 5, "match_id": "m5", "starter": True, "minutes": 75, "official_status": "FINAL"},
+        {"gw": 6, "match_id": "m6", "starter": False, "minutes": 0, "official_status": "DNP"},
+    ]
+    stable = build_player_selection_evidence(player, stable_rows)
+    rotating = build_player_selection_evidence(player, rotation_rows)
+    assert stable["status"] == rotating["status"] == "AVAILABLE"
+    assert stable["starts"] != rotating["starts"]
+    stable_out = estimate_player_minutes(
+        {**player, "starts": stable["starts"], "minutes": stable["minutes"]},
+        {**common, "selection_evidence": stable},
+    )
+    rotating_out = estimate_player_minutes(
+        {**player, "starts": rotating["starts"], "minutes": rotating["minutes"]},
+        {**common, "selection_evidence": rotating},
+    )
+    assert stable_out["start_probability"] > rotating_out["start_probability"]
+    assert any(row["signal"] == "player_selection_posterior" for row in stable_out["evidence"])
+    assert stable_out["evidence_lineage"]["player_selection"] ["available"] is True
+
+
+def test_selection_evidence_excludes_provisional_rows_and_reports_missing_reason():
+    evidence = build_player_selection_evidence(
+        {"id": 1, "starts": 5, "minutes": 420},
+        [
+            {"gw": 1, "match_id": "m1", "starter": True, "minutes": 90, "official_status": "FINAL"},
+            {"gw": 2, "match_id": "m2", "starter": True, "minutes": 90, "official_status": "PROVISIONAL"},
+        ],
+    )
+    assert evidence["observed_matches"] == 1
+    assert evidence["provisional_rows_excluded"] == 1
+    assert evidence["status"] == "AVAILABLE"
+    missing = build_player_selection_evidence({"id": 2}, [])
+    assert missing["status"] == "MISSING"
+    assert missing["missing_evidence_reason"] == "NO_VERIFIED_MATCH_LEVEL_ROWS"
 
 
 def _binding(snapshot="snap-a", model="minutes-1", calibration="cal-1"):

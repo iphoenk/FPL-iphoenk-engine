@@ -16,6 +16,7 @@ from src.engines.v12_player_events import (
     project_player_fixture,
 )
 from src.engines.v12_player_minutes import estimate_xmins
+from src.engines.v12_player_minutes import build_player_selection_evidence
 from src.engines.v12_injury_availability import derive_gw_availability
 from src.engines.v12_position_probability_components import (
     build_dynamic_matchup_vector,
@@ -312,9 +313,22 @@ def build(
         matches_played = int(
             (team_rows.get(team_id) or {}).get("matches_played") or 0
         )
+        selection_evidence = build_player_selection_evidence(
+            player,
+            match_rows_by_player.get(element, []),
+            neutral_prior=_f(load_event_config().get("neutral_start_prior"), 0.72),
+        )
+        model_player = dict(player)
+        if selection_evidence.get("status") == "AVAILABLE":
+            # Current official aggregates can lag the exact GW history. For
+            # P1.1, verified match-level observations are the player-specific
+            # current-season input; no future or provisional row is admitted.
+            model_player["starts"] = selection_evidence.get("starts")
+            model_player["minutes"] = selection_evidence.get("minutes")
         context: dict[str, Any] = {
             "team_matches_played": matches_played,
             "player_match_rows": match_rows_by_player.get(element, []),
+            "selection_evidence": selection_evidence,
         }
         availability_state = availability_state_for(element, team_id)
         if availability_state is not None:
@@ -335,7 +349,7 @@ def build(
                 }
             )
         xmins = estimate_xmins(
-            player,
+            model_player,
             context,
             calibration_summary=calibration_summary,
             model_evidence_binding=model_evidence_binding,
@@ -726,14 +740,15 @@ def build(
                 "status": player.get("status"),
                 "ownership_pct": _f(player.get("selected_by_percent")),
                 "current_season": {
-                    "starts": int(player.get("starts") or 0),
-                    "minutes": int(player.get("minutes") or 0),
+                    "starts": int(model_player.get("starts") or 0),
+                    "minutes": int(model_player.get("minutes") or 0),
                 },
                 "historical_prior": historical or None,
                 "tactical_role": tactical_role,
                 "system_context": system_context,
                 "xmins": xmins,
                 "availability_evidence": availability_state,
+                "selection_evidence": selection_evidence,
                 "position_engine": primary_fixture_projection.get(
                     "position_engine"
                 ),

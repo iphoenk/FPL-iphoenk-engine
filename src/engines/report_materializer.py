@@ -592,6 +592,18 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any])
     ]
     frontier = captaincy.get("captain_frontier") or []
     pstart_status = "PASS" if len(pstart_rows) == 15 and len(pstart_evidence) == len(pstart_rows) else "PARTIAL"
+    individual_evidence = [
+        row for row in pstart_evidence
+        if "player_selection_posterior" in {
+            str(signal) for signal in (row.get("p_start_evidence") or {}).get("signals") or []
+        }
+    ]
+    historical_coverage = dict(user.get("historical_coverage") or {})
+    historical_status = (
+        "PASS" if historical_coverage.get("range") == "GW1-GW6"
+        and historical_coverage.get("all_finalized") is True else "PARTIAL"
+    )
+    calibration_status = str(user.get("calibration_status") or "NO_SETTLED_SAMPLE").upper()
     resolution = "FULL" if any(
         len((row.get("p_start_evidence") or {}).get("signals") or []) >= 2
         for row in pstart_evidence
@@ -606,6 +618,17 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any])
             "rows_with_evidence": len(pstart_evidence),
             "formula_owner": "V12_PLAYER_MINUTES",
             "probability_recomputed_in_materializer": False,
+            "acceptance_layers": {
+                "EVIDENCE_BINDING": pstart_status,
+                "HISTORICAL_COVERAGE": historical_status,
+                "INDIVIDUAL_EVIDENCE": "PASS" if len(individual_evidence) == len(pstart_rows) else "PARTIAL",
+                "MODEL_RESOLUTION": resolution,
+                "CALIBRATION": calibration_status,
+                "TEMPORAL_INTEGRITY": "FAIL" if user.get("future_leakage") is True else "PASS",
+                "PRODUCTION_VERIFICATION": str(user.get("production_verification") or "PENDING_CONTROLLED_RUN"),
+            },
+            "individual_evidence_rows": len(individual_evidence),
+            "individual_evidence_missing_rows": max(0, len(pstart_rows) - len(individual_evidence)),
         },
         "s08_captain": {
             "evidence_status": "PASS" if isinstance(frontier, list) and frontier and captain_state in {"LOCK", "PREPARE"} else "PARTIAL",

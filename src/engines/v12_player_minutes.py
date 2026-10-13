@@ -46,6 +46,92 @@ def load_historical_policy() -> dict[str, Any]:
     return json.loads(HISTORICAL_POLICY_PATH.read_text(encoding="utf-8"))
 
 
+def build_player_selection_evidence(
+    player: Mapping[str, Any],
+    match_rows: list[Mapping[str, Any]] | None = None,
+    *,
+    neutral_prior: float | None = None,
+) -> dict[str, Any]:
+    """Turn verified match-level selection outcomes into P1.1 evidence.
+
+    This is factual player-conditioned evidence, not a second minutes model.
+    Provisional or ambiguous rows are excluded and coach/tactical claims are
+    intentionally not converted into probabilities here.
+    """
+    cfg = load_config()
+    neutral = clamp(_f(neutral_prior, _f(cfg.get("neutral_start_prior"), 0.72)), 0.01, 0.99)
+    excluded = 0
+    accepted_statuses = {"", "FINAL", "DNP", "BLANK"}
+    raw_rows: list[dict[str, Any]] = []
+    for raw in match_rows or []:
+        if not isinstance(raw, Mapping):
+            continue
+        status = str(raw.get("official_status") or raw.get("status") or "").upper()
+        if status in {"PROVISIONAL", "PENDING", "UNAVAILABLE", "UNKNOWN"} or status not in accepted_statuses:
+            excluded += 1
+            continue
+        match_id = str(raw.get("match_id") or raw.get("fixture") or raw.get("id") or "")
+        gw = _i(raw.get("gw"), _i(raw.get("event"), _i(raw.get("gameweek"), 0)))
+        if not match_id or gw <= 0:
+            excluded += 1
+            continue
+        starter_value = raw.get("starter") if raw.get("starter") is not None else raw.get("started")
+        if starter_value is None:
+            excluded += 1
+            continue
+        row = dict(raw)
+        row["_match_id"] = match_id
+        row["_gw"] = gw
+        row["_starter"] = bool(starter_value)
+        row["_minutes"] = max(0.0, _f(raw.get("minutes_played"), _f(raw.get("minutes"))))
+        raw_rows.append(row)
+    deduped: dict[str, dict[str, Any]] = {}
+    for row in raw_rows:
+        previous = deduped.get(row["_match_id"])
+        if previous is None or row["_minutes"] > previous["_minutes"]:
+            deduped[row["_match_id"]] = row
+    rows = sorted(deduped.values(), key=lambda row: (row["_gw"], row["_match_id"]))
+    if not rows:
+        return {
+            "status": "MISSING", "observed_matches": 0, "starts": 0,
+            "bench_or_dnp": 0, "dnp": 0, "minutes": 0.0,
+            "recent_window": 0, "provisional_rows_excluded": excluded,
+            "missing_evidence_reason": "NO_VERIFIED_MATCH_LEVEL_ROWS",
+            "source": "V6_NORMALIZED_PLAYER_MATCH_ROWS",
+        }
+    starts = sum(1 for row in rows if row["_starter"])
+    bench_or_dnp = len(rows) - starts
+    dnp = sum(1 for row in rows if not row["_starter"] and row["_minutes"] <= 0)
+    minutes = sum(row["_minutes"] for row in rows)
+    recent = rows[-min(3, len(rows)):]
+    recent_starts = sum(1 for row in recent if row["_starter"])
+    prior_strength = max(1.0, _f(cfg.get("selection_prior_strength"), 4.0))
+    alpha0, beta0 = neutral * prior_strength, (1.0 - neutral) * prior_strength
+    posterior = (alpha0 + starts) / (alpha0 + beta0 + len(rows))
+    recent_posterior = (alpha0 + recent_starts) / (alpha0 + beta0 + len(recent))
+    recent_weight = clamp(_f(cfg.get("recent_selection_weight"), 0.35), 0.0, 1.0)
+    selection_posterior = clamp(
+        posterior * (1.0 - recent_weight) + recent_posterior * recent_weight,
+        0.01, 0.99,
+    )
+    started_minutes = [row["_minutes"] for row in rows if row["_starter"] and row["_minutes"] > 0]
+    return {
+        "status": "AVAILABLE", "observed_matches": len(rows), "starts": starts,
+        "bench_or_dnp": bench_or_dnp, "dnp": dnp, "minutes": round(minutes, 3),
+        "recent_window": len(recent), "recent_starts": recent_starts,
+        "start_rate": round(starts / len(rows), 6),
+        "recent_start_rate": round(recent_starts / len(recent), 6),
+        "avg_minutes_when_start": round(sum(started_minutes) / len(started_minutes), 3) if started_minutes else None,
+        "p60_plus_when_start": round(sum(value >= 60.0 for value in started_minutes) / len(started_minutes), 6) if started_minutes else None,
+        "historical_posterior": round(posterior, 6), "recent_posterior": round(recent_posterior, 6),
+        "selection_posterior": round(selection_posterior, 6),
+        "prior": {"mean": round(neutral, 6), "strength": round(prior_strength, 3)},
+        "provisional_rows_excluded": excluded, "missing_evidence_reason": None,
+        "source": "V6_NORMALIZED_PLAYER_MATCH_ROWS",
+        "identity": {"official_element_id": player.get("id") or player.get("element"), "join": "OFFICIAL_ELEMENT_ID_EXACT"},
+    }
+
+
 def _availability(
     player: dict[str, Any],
     cfg: dict[str, Any],
@@ -113,7 +199,11 @@ def _estimate_core(
 
     starts = max(0.0, _f(player.get("starts")))
     matches = max(0.0, _f(context.get("team_matches_played")))
-    if matches > 0:
+    selection_available = bool(
+        isinstance(context.get("selection_evidence"), Mapping)
+        and (context.get("selection_evidence") or {}).get("status") == "AVAILABLE"
+    )
+    if matches > 0 and not selection_available:
         observed_rate = clamp(starts / max(1.0, matches), 0.0, 1.0)
         shrink = max(
             0.0,
@@ -134,6 +224,11 @@ def _estimate_core(
         "prior_start_probability": context.get("prior_start_probability"),
         "role_start_probability": context.get("role_start_probability"),
         "manager_start_probability": context.get("manager_start_probability"),
+        "player_selection_posterior": (
+            (context.get("selection_evidence") or {}).get("selection_posterior")
+            if isinstance(context.get("selection_evidence"), Mapping)
+            else None
+        ),
     }
     for name, value in optional_signals.items():
         if value is not None:
@@ -620,6 +715,7 @@ def _estimate_core(
             "gw_availability_is_start_probability": False,
             "availability_confidence_is_start_probability": False,
         },
+        "selection_evidence": dict(context.get("selection_evidence") or {}),
         "rotation_risk": round(rotation_risk, 4),
         "congestion_factor": round(congestion_factor, 4),
         "small_sample_guard": small_sample,
@@ -836,6 +932,14 @@ def estimate_player_minutes(
         },
         "manager_start_probability": {
             "available": context.get("manager_start_probability") is not None,
+        },
+        "player_selection": {
+            "available": bool(
+                isinstance(context.get("selection_evidence"), Mapping)
+                and (context.get("selection_evidence") or {}).get("status") == "AVAILABLE"
+            ),
+            "source": (context.get("selection_evidence") or {}).get("source"),
+            "observed_matches": (context.get("selection_evidence") or {}).get("observed_matches"),
         },
     }
     out["calibration_hook"] = _calibration_hook(calibration_summary)

@@ -124,6 +124,7 @@ def render_match_locked_text(report: Mapping[str, Any]) -> str:
 
         if sid == "MATCH1":
             live = content.get("fixtures_live")
+            provisional = content.get("fixtures_provisional")
             ft = content.get("fixtures_ft")
             ns = content.get("fixtures_not_started")
             lines.extend([

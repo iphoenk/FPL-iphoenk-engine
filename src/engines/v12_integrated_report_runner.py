@@ -1241,10 +1241,19 @@ def _analytics_production_acceptance(
     }
     p_rows = [row for row in rows if isinstance(row, Mapping) and row.get("p_start") is not None]
     p_evidence = [row for row in p_rows if isinstance(row.get("p_start_evidence"), Mapping)]
-    unique_values = {str(row.get("p_start")) for row in p_rows}
+    # A single outlier does not establish player-conditioned start resolution.
+    # GW7 currently has 14/15 identically rounded P(start) estimates; classify
+    # low resolution explicitly even though two unique values technically exist.
+    rounded = [str(round(float(row["p_start"]), 4)) for row in p_rows]
+    counts = {value: rounded.count(value) for value in set(rounded)}
+    modal_count = max(counts.values(), default=0)
+    minimum_majority = max(10, (7 * len(rounded) + 9) // 10)
+    low_resolution = modal_count >= minimum_majority or len(counts) < 2
     pstart = {
         "evidence_status": "PASS" if len(p_rows) == 15 and len(p_evidence) == len(p_rows) else "PARTIAL",
-        "resolution_status": "FULL_RESOLUTION" if len(unique_values) > 1 else "LIMITED_RESOLUTION",
+        "resolution_status": "LIMITED_RESOLUTION" if low_resolution else "FULL_RESOLUTION",
+        "modal_probability_count": modal_count,
+        "total_probability_rows": len(rounded),
         "rows_with_probability": len(p_rows),
         "rows_with_evidence": len(p_evidence),
         "formula_owner": "V12_PLAYER_MINUTES",

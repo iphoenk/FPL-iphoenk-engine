@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **Native ChatGPT host acknowledgement boundary (13 Oct 2026):** the V12 DEEP consumer now emits typed native blocks, a canonical-text S06 pitch, and a full chunk-path ledger. The old self-attested `user_visible_acceptance=True` cannot elevate a report to `VERIFIED`: only a trusted, signed, same-occurrence ChatGPT-native host event covering every section and chunk may do so. The 07:55 controlled report retains `REMOTE_READBACK_PASS` / `native_ui_acceptance=UNVERIFIED` until that real host event exists. Synthetic unit tests prove gate logic, not production user-visible acceptance. No scheduler, MC500K, P1.7 or historical receipt changes.
+
 - **Public auth source separation (13 October 2026):** V6 prefetch now preserves its legacy credential result and labels that result as PUBLIC_LEGACY_CREDENTIALS. The separately protected rotating-auth state is NOT_EVALUATED_IN_PUBLIC_PLANE until verified by the protected publisher; no public result may imply protected credential expiry or protected authentication success. The existing data boundary and scheduler are unchanged. Required governance suite: 1,379 test nodes.
 
 - **Final persisted receipt proof and latest native parity (13 Oct 2026):** controlled DEEP 06:11 published remote readback PASS but issue proof hashed the pre-readback receipt rather than the byte-identical final private receipt; occurrence manifest showed REMOTE_READBACK_PASS while latest manifest stayed TRANSPORT_PASS. The integrated publisher now rereads the final immutable remote receipt before public proof and updates latest native manifest from the same validated occurrence with full byte parity and hash gate. Required V12 suite is ratcheted to 1,377 cases across 51 files. This does not assert user-visible native rendering or change canonical MC, P1.7, scheduler or past occurrence history.
@@ -19,7 +21,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-13T06:27:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-13T09:22:00+07:00`
 - **S15 cross-section evidence quality (12 Oct 2026):** S15 now consumes exact S02 full-history and P(start) acceptance state; unavailable or limited binding downgrades availability evidence to Partial instead of overstating Strong/HIGH.
 - **S10 actionable ETA evidence (12 Oct 2026):** unsupported price-change crossings are rendered with an explicit governed state/reason; producer-bound WIB dates remain visible and no missing ETA becomes a forecast or probability.
 - **S15B scope integrity (12 Oct 2026):** LEAGUE, RIVALS and COMPETITIVE denominator completeness is now shown as an independent PASS/PARTIAL gate; league coverage cannot mask missing rival evidence.

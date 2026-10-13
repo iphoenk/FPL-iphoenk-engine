@@ -450,8 +450,7 @@ def run(runtime_data_root: Path, report_slot: str, output_dir: Path) -> dict[str
         )
         # Match row status must agree with Official fixture settlement:
         # finished_provisional is neither currently live nor final.
-        from src.engines.live_state_service import classify_fixture_state
-        fixture_state = classify_fixture_state(fixture)["state"]
+        fixture_state = live_state_service.classify_fixture_state(fixture)["state"]
         status = {
             "FINAL": "FT", "LIVE": "LIVE",
             "PROVISIONAL_90": "PROVISIONAL_90",

@@ -235,7 +235,12 @@ class _FactPrefetchClient:
                         "id": 5,
                         "is_current": True,
                         "deadline_time": "2026-09-18T17:30:00+00:00",
-                    }
+                    },
+                    {
+                        "id": 6,
+                        "is_next": True,
+                        "deadline_time": "2026-09-27T17:30:00+00:00",
+                    },
                 ],
                 "teams": [],
                 "element_types": [],

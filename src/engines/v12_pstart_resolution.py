@@ -23,7 +23,7 @@ def assess_pstart_resolution(
 ) -> dict[str, Any]:
     by_probability: dict[float, list[tuple[Any, ...]]] = defaultdict(list)
     missing, mismatches = [], []
-    conditioned = contextual = 0
+    conditioned = contextual = quantified = 0
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
             missing.append(index)
@@ -52,13 +52,27 @@ def assess_pstart_resolution(
         )
         conditioned += int(is_conditioned)
         contextual += int(bool(signals & CONTEXT_SIGNALS))
+        raw_values = evidence.get("signal_values") or []
+        quantitative_vector = tuple(
+            sorted(
+                (str(r.get("signal")), r.get("probability"), r.get("weight"))
+                for r in raw_values if isinstance(r, Mapping)
+            )
+        )
+        has_quantified = bool(
+            quantitative_vector
+            and len(quantitative_vector) == len(signals)
+            and all(isinstance(q, (int, float)) for _, p, w in quantitative_vector
+                    for q in (p, w))
+        )
+        quantified += int(has_quantified)
         if evidence.get("model_probability_agrees") is False:
             mismatches.append(row.get("element_id") or row.get("element") or index)
         # Player identity/position are intentionally not used as evidence.
         signature = (
             selection.get("observed_matches"), selection.get("starts"),
             selection.get("recent_starts"), selection.get("selection_posterior"),
-            tuple(sorted(signals)),
+            tuple(sorted(signals)), quantitative_vector,
         )
         by_probability[round(p, 4)].append(signature)
 
@@ -73,7 +87,7 @@ def assess_pstart_resolution(
     individual_pass = bool(complete and conditioned == len(rows))
     calibrated = calibration_status == "PASS"
     full = bool(individual_pass and contextual == len(rows)
-                and calibrated and different == 0)
+                and quantified == len(rows) and calibrated and different == 0)
     blockers = []
     if not complete:
         blockers.append("CANONICAL_EVIDENCE_BINDING_INCOMPLETE")
@@ -81,6 +95,8 @@ def assess_pstart_resolution(
         blockers.append("INDIVIDUAL_SELECTION_INCOMPLETE")
     if contextual != len(rows):
         blockers.append("ADDITIONAL_ROLE_MANAGER_AVAILABILITY_CONTEXT_INCOMPLETE")
+    if quantified != len(rows):
+        blockers.append("QUANTIFIED_SIGNAL_INPUTS_INCOMPLETE")
     if not calibrated:
         blockers.append("PREDEADLINE_CALIBRATION_NOT_PASS")
     if different:
@@ -92,6 +108,7 @@ def assess_pstart_resolution(
         "expected_current15": 15, "actual_rows": len(rows),
         "individual_evidence_rows": conditioned,
         "contextual_evidence_rows": contextual,
+        "quantified_input_rows": quantified,
         "missing_rows": missing, "binding_mismatch_elements": mismatches,
         "modal_probability_count": max((len(v) for v in by_probability.values()), default=0),
         "unique_rounded_probabilities": len(by_probability),

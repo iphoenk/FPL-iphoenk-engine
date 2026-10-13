@@ -78,3 +78,14 @@ the target planning GW, the exact GW1..N-1 range, finalized event/fixture
 evidence, and `fixture_identity_status=PASS`. Thus a V6 GW1-GW5
 snapshot for planning GW6 cannot claim six-GW full history for V12
 planning GW7. A previous source PASS does not override these mismatches.
+
+
+## Formation MC absolute quantile correction
+
+The same production audit identified a schema mismatch: canonical P1.4's
+absolute formation outcome metrics are `p10` and `p90`, but the
+formation adapter previously read uppercase `Q10` / `Q90`, which are
+names used for a different paired-delta distribution. The adapter now reads
+the canonical lower-case absolute quantiles and fails closed if either is
+missing. This does not change sampling, convergence, MC500K, P1.7 XI or
+transfer-route Monte Carlo.

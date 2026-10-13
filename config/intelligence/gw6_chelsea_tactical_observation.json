@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "scope": "GW6_CHELSEA_VS_BOURNEMOUTH_MATCH_ONLY",
+  "source_class": "OFFICIAL_PREMIER_LEAGUE_MATCH_LINEUP",
+  "evidence_state": "OBSERVED",
+  "team_id": 6,
+  "gw": 6,
+  "fixture_id": 53,
+  "manager": "Xabi Alonso",
+  "formation": "3-4-2-1",
+  "player_roles": {
+    "40": "attacking_midfielder_behind_striker",
+    "154": "attacking_midfielder_behind_striker",
+    "165": "central_striker"
+  },
+  "reference_url": "https://www.premierleague.com/en/clubs/8/chelsea",
+  "corroboration_url": "https://weaintgotnohistory.sbnation.com/premier-league/172926/chelsea-vs-afc-bournemouth-premier-league-confirmed-lineups-how-to-watch",
+  "observed_at": "2026-10-13T12:35:00+00:00",
+  "limitations": [
+    "MATCH_SPECIFIC_NOT_ALL_SEASON",
+    "POSITIONAL_ROLE_OBSERVATION_NOT_CAUSAL_COACH_FIT",
+    "NO_FORMATION_COMPATIBILITY_PROBABILITY_INFERRED",
+    "REQUIRES_FURTHER_LINEUP_EVIDENCE_ACROSS_GW1_GW6"
+  ],
+  "decision_authority": "NONE",
+  "direct_projection_mutation": false
+}

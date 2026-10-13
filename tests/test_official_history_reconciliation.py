@@ -198,3 +198,50 @@ def test_full_history_identity_gate_rejects_duplicate_player_fixture():
     assert result["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "DUPLICATE_PLAYER_FIXTURE_ID"
     # Preserve raw rows for diagnosis; do not silently drop or fabricate.
     assert len(result["players"]["10"]["history"]["1"]["fixtures"]) == 2
+
+
+def test_v6_production_reconciliation_rejects_bad_fixture_identity():
+    snapshot = {
+        "generated_at": "2026-10-13T04:00:00Z",
+        "bootstrap": {
+            "elements": [{"id": 10, "element_type": 3, "team": 1}],
+            "events": [{"id": 1, "finished": True}],
+        },
+        "fixtures": [{"id": 101, "event": 1, "finished": True}],
+        "phase": {"current_gw": 2},
+    }
+    valid = {"10": {"history": [
+        {"fixture": 101, "round": 1, "minutes": 90, "total_points": 6},
+    ]}}
+    result = report_prefetch._reconcile_full_history(snapshot, valid)
+    assert result["coverage_gate"]["status"] == "PASS"
+    assert result["coverage_gate"]["verified_fixture_rows"] == 1
+
+    invalid = {"10": {"history": [
+        {"fixture": 101, "round": 1, "minutes": 90},
+        {"fixture": 101, "round": 1, "minutes": 0},
+    ]}}
+    duplicate = report_prefetch._reconcile_full_history(snapshot, invalid)
+    assert duplicate["coverage_gate"]["status"] == "PARTIAL"
+    assert duplicate["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "DUPLICATE_PLAYER_FIXTURE_ID"
+    assert len(duplicate["players"]["10"]["history"]["1"]["fixtures"]) == 2
+
+
+def test_v6_production_reconciliation_fails_closed_without_catalog_and_on_cross_gw_mismatch():
+    snapshot = {
+        "generated_at": "2026-10-13T04:00:00Z",
+        "bootstrap": {
+            "elements": [{"id": 10, "element_type": 2, "team": 1}],
+            "events": [{"id": 1, "finished": True}],
+        },
+        "fixtures": [],
+        "phase": {"current_gw": 2},
+    }
+    summaries = {"10": {"history": [{"fixture": 101, "round": 1, "minutes": 90}]}}
+    without_catalog = report_prefetch._reconcile_full_history(snapshot, summaries)
+    assert without_catalog["coverage_gate"]["status"] == "PARTIAL"
+    assert without_catalog["coverage_gate"]["fixture_catalog_count"] == 0
+    snapshot["fixtures"] = [{"id": 101, "event": 2}]
+    wrong_gw = report_prefetch._reconcile_full_history(snapshot, summaries)
+    assert wrong_gw["coverage_gate"]["status"] == "PARTIAL"
+    assert wrong_gw["coverage_gate"]["fixture_identity_anomalies"][0]["reason"] == "OFFICIAL_FIXTURE_GW_MISMATCH"

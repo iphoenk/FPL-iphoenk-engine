@@ -106,6 +106,30 @@ def test_s02_has_one_roster_and_one_ordered_identity_matched_audit():
     assert "CHELSEA GW OBSERVATION: GW=6" in rich_rendered
     assert "FPL_status=PROVISIONAL" in rich_rendered
     assert "CHELSEA PLAYER PROCESS: Player=Cole Palmer" in rich_rendered
+    missing_context = dict(rich_context)
+    missing_context["focus_team"] = dict(rich_context["focus_team"])
+    missing_context["focus_team"]["form_gw1_gw6"] = {
+        "observed_match_count": 0, "wins": 0, "draws": 0,
+        "losses": 0, "goals_for": 0, "goals_against": 0, "matches": [],
+    }
+    absent = _visible("S02", {
+        "rows": _our15_rows(),
+        "full_season_history": {"retrospective_context": missing_context},
+    })
+    assert "CHELSEA GW1-GW6 OBSERVED RESULTS: UNAVAILABLE" in absent
+    assert "not a 0W-0D-0L season record" in absent
+    assert "CHELSEA GW1-GW6 OBSERVED RESULTS: 0W" not in absent
+    conditioned_rows = _our15_rows()
+    for row in conditioned_rows:
+        row["p_start_evidence"]["signals"] = [
+            "neutral_prior", "player_selection_posterior",
+        ]
+    conditioned = _visible("S02", {"rows": conditioned_rows})
+    assert "15/15 shared rows have player-conditioned historical selection evidence" in conditioned
+    assert "15/15 lack additional role/manager/normalized-availability" in conditioned
+    assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" in conditioned
+    assert [len(x["rows"]) for x in _rendered_tables(conditioned)] == [15, 15]
+
 
 
 def test_s02_rejects_audit_player_identity_drift_not_a_false_30_player_squad():

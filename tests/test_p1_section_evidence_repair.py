@@ -195,8 +195,9 @@ def test_s02_warns_about_uniform_cohort_without_recomputing_odds():
     text = _visible("S02", {"rows": rows})
     assert "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION" in text
     assert "14/15 players share P(start)=0.8299" in text
-    assert "14/14 shared rows lack supplementary" in text
-    assert "published equality does NOT prove equal individual starting odds" in text
+    assert "0/14 shared rows have player-conditioned historical selection evidence" in text
+    assert "14/14 lack additional role/manager/normalized-availability" in text
+    assert "do NOT prove identical true starting odds or calibrated confidence" in text
     assert "| Player 0 |" in text and "| Player 14 |" in text
 
 

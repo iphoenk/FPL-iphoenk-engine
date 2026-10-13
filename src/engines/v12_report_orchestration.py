@@ -4334,12 +4334,21 @@ def _render_deep_visible_contract_lines(
             )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
-            lines.append(
-                "CHELSEA GW1-GW6 OBSERVED RESULTS: "
-                f"{form.get('wins')}W {form.get('draws')}D {form.get('losses')}L, "
-                f"goals {form.get('goals_for')}-{form.get('goals_against')}; "
-                "retrospective match results, NOT projected team fit."
-            )
+            observed_matches = form.get("matches") or []
+            if observed_matches:
+                lines.append(
+                    "CHELSEA GW1-GW6 OBSERVED RESULTS: "
+                    f"{form.get('wins')}W {form.get('draws')}D {form.get('losses')}L, "
+                    f"goals {form.get('goals_for')}-{form.get('goals_against')}; "
+                    f"{len(observed_matches)} verified match observations; "
+                    "retrospective match results, NOT projected team fit."
+                )
+            else:
+                lines.append(
+                    "CHELSEA GW1-GW6 OBSERVED RESULTS: UNAVAILABLE; "
+                    "0 verified match observations; not a 0W-0D-0L season record. "
+                    "Official FPL fixture results remain separate from provider observations."
+                )
             # Preserve GW-level facts as readable observations, not extra
             # Markdown tables. S02's locked two tables are reserved for OUR15.
             for match in form.get("matches") or []:
@@ -4433,15 +4442,24 @@ def _render_deep_visible_contract_lines(
                     r for r in rows
                     if round(float(r["p_start"]), 4) == common_probability
                 ]
-                extra_signal_names = {
-                    "prior_start_probability",
+                # Distinguish match-specific player evidence from independently
+                # calibrated context. The selection posterior already IS a
+                # historical signal: do not report it as missing.
+                conditioned = sum(
+                    "player_selection_posterior" in {
+                        str(signal) for signal in
+                        (r.get("p_start_evidence") or {}).get("signals") or []
+                    }
+                    for r in common_rows
+                )
+                contextual_signals = {
                     "role_start_probability",
                     "manager_start_probability",
                     "normalized_availability_start_signal",
                 }
-                without_extra = sum(
-                    not extra_signal_names.intersection(
-                        str(name) for name in
+                without_context = sum(
+                    not contextual_signals.intersection(
+                        str(signal) for signal in
                         (r.get("p_start_evidence") or {}).get("signals") or []
                     )
                     for r in common_rows
@@ -4449,10 +4467,13 @@ def _render_deep_visible_contract_lines(
                 lines.append(
                     "PSTART DIFFERENTIATION AUDIT: LIMITED_RESOLUTION; "
                     f"{common_count}/{len(rows)} players share P(start)={common_probability:.4f}; "
-                    f"{without_extra}/{common_count} shared rows lack supplementary "
-                    "historical/role/manager/normalized-availability start signals; "
-                    "published equality does NOT prove equal individual starting odds. "
-                    "Canonical probabilities remain unchanged pending grounded evidence."
+                    f"{conditioned}/{common_count} shared rows have player-conditioned "
+                    "historical selection evidence; "
+                    f"{without_context}/{common_count} lack additional "
+                    "role/manager/normalized-availability start signals. "
+                    "Equal rounded estimates may be evidence-supported but do NOT prove "
+                    "identical true starting odds or calibrated confidence. "
+                    "Canonical probabilities remain unchanged."
                 )
         authority = dict(payload.get("current15_authority") or {})
         if str(authority.get("source_class") or "").upper() == "OFFICIAL_SUBMITTED_PICKS":

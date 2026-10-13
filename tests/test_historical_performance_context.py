@@ -137,3 +137,14 @@ def test_context_keeps_coach_fit_and_formation_fit_uncalibrated():
     assert observed["cross_match_generalization_allowed"] is False
     assert ctx["coach_fit_requires_multiple_observed_role_and_manager_matches"] is True
     assert all(row["coach_fit"]["status"] == "UNAVAILABLE" for row in ctx["focus_players"])
+
+
+def test_transferred_player_is_never_assumed_to_have_one_club_season_stats():
+    mixed = deepcopy(UNDERSTAT)
+    mixed["record_groups"]["players"][0]["team_title"] = "Chelsea,Manchester City"
+    ctx = build(understat=mixed)
+    palmer = next(row for row in ctx["players"] if row["official_element_id"] == 154)
+    source = palmer["provider_skill_observation"]
+    assert source["mixed_team_season"] is True
+    assert source["club_specific_team_fit"] == "UNAVAILABLE_MIXED_TEAM_SEASON"
+    assert source["season_aggregate_only"] is True

@@ -135,6 +135,16 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
         for row in (snapshot.get("fixtures") or [])
         if isinstance(row, Mapping) and _gw(row.get("id")) is not None
     }
+    fixtures_by_event: dict[int, list[Mapping[str, Any]]] = defaultdict(list)
+    for row in (snapshot.get("fixtures") or []):
+        if isinstance(row, Mapping) and _gw(row.get("event")) is not None:
+            fixtures_by_event[_gw(row.get("event"))].append(row)
+    pending_historical_gws = [
+        gw for gw in historical_gws
+        if catalog.get(gw, {}).get("finished") is not True
+        or not fixtures_by_event.get(gw)
+        or any(row.get("finished") is not True for row in fixtures_by_event[gw])
+    ]
     summaries = detail.get("element_summaries") or {}
     players: dict[str, Any] = {}
     missing_slots: list[dict[str, int]] = []
@@ -189,8 +199,8 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
     expected_slots = len(element_ids) * len(historical_gws)
     available_slots = sum(int((row.get("coverage") or {}).get("available_gw_slots") or 0) for row in players.values())
     identity_complete = bool(fixture_catalog) and not identity_anomalies
-    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots and identity_complete else "PARTIAL"
-    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "fixture_identity_status": "PASS" if identity_complete else "PARTIAL", "verified_fixture_rows": verified_fixture_rows, "fixture_catalog_count": len(fixture_catalog), "fixture_identity_anomalies": identity_anomalies, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
+    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots and identity_complete and not pending_historical_gws else "PARTIAL"
+    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "fixture_identity_status": "PASS" if identity_complete else "PARTIAL", "verified_fixture_rows": verified_fixture_rows, "fixture_catalog_count": len(fixture_catalog), "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
 
 
 def run() -> dict[str, Any]:

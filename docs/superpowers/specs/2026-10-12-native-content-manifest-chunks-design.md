@@ -27,3 +27,40 @@ Missing, empty, oversized, corrupted, duplicated, reordered, or incomplete chunk
 ## Scope
 
 Changes are limited to the native-content parity module, private publisher/receipt, integrated runner remote readback, native consumer acceptance contract, and regression tests. No scheduler, trigger, Monte Carlo contract, P1.7, or PR #809 changes are allowed.
+
+
+## ChatGPT native host acceptance boundary (13 Oct 2026)
+
+The Python `v12_native_consumer` now emits host-ready native block descriptors
+(heading, paragraph, table, list item) and an S06 XI/bench pitch model extracted
+from canonical **text fields**, never by claiming that source HTML/CSS rendered
+natively. It also reports the exact consumed chunk-path ledger. The lossless
+source and canonical hashes remain unchanged.
+
+**No self-certification:** a Python unit test passing
+`user_visible_acceptance=True`, a rendered-section list, or a 26/26 transport
+readback is insufficient for `VERIFIED`. The acceptance function requires an
+actual host-observed receipt for the *same* report slot and occurrence path,
+with all 22 native section components, the exact 26 chunk paths in order,
+canonical SHA256 and an actual visible render event identifier. The trusted host
+must HMAC-sign the receipt using a dedicated verification key not available to
+the producer or the model. Missing key, missing signature, invalid signature,
+mismatched occurrence, or omitted/reordered chunks fail closed.
+
+The HMAC key is a **host integration boundary**, not a GitHub secret that this
+repository provisions or a fabricated fixture to insert in a report. The
+synthetic unit-test key proves only validator behavior and is never operational
+acceptance. No existing `delivery_receipt.json` should be rewritten on the
+strength of a test fixture. Until a trusted ChatGPT host integration observes the
+actual rendered content, the terminal status remains
+`REMOTE_READBACK_PASS / native_ui_acceptance=UNVERIFIED`; it must not be
+promoted by CI, markdown summaries, or manual receipt edits.
+
+**Acceptance evidence for future host integration:**
+- exact immutable occurrence path and private remote commit;
+- 22 native sections in canonical order, with S06 native pitch and full tables;
+- all 26 chunk paths consumed, in the manifest order;
+- content identity and canonical hash matches, including all S16 parts;
+- host-observed visible render event and signed acknowledgement;
+- a governed, separate receipt write with readback (not a replacement for
+  the already-final remote delivery receipt or the canonical latest pointer).

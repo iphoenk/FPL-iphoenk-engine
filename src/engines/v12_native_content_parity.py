@@ -8,6 +8,7 @@ actual native rendering separately. All source bytes remain reconstructable.
 """
 
 from hashlib import sha256
+import hmac
 import json
 import re
 from pathlib import PurePosixPath
@@ -328,28 +329,103 @@ def validate_manifest_chunks(
         raise NativeContentParityError("canonical SHA256 mismatch")
 
 
+def _valid_native_host_receipt(
+    manifest: Mapping[str, Any],
+    receipt: Mapping[str, Any] | None,
+    *,
+    rendered_section_ids: Sequence[str],
+    verification_key: bytes | None,
+) -> bool:
+    """Verify the *shape and occurrence binding* of a host-render event.
+
+    Only the actual ChatGPT native UI host may issue this receipt. Backend
+    tests, Python component construction, source Markdown/HTML, and a caller's
+    boolean cannot substitute for an observed user-visible host event.
+    """
+    if not isinstance(receipt, Mapping) or not isinstance(verification_key, bytes) or len(verification_key) < 16:
+        return False
+    fields = (
+        "source", "render_surface", "user_visible", "host_render_event_id",
+        "report_slot", "occurrence_path", "canonical_body_sha256",
+        "rendered_section_ids", "consumed_chunk_paths",
+        "native_section_component_count", "native_chunk_count",
+    )
+    if any(field not in receipt for field in fields):
+        return False
+    message = json.dumps(
+        {field: receipt[field] for field in fields},
+        ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+    ).encode("utf-8")
+    candidate = receipt.get("signature_sha256")
+    if not isinstance(candidate, str) or not hmac.compare_digest(
+        hmac.new(verification_key, message, sha256).hexdigest(), candidate,
+    ):
+        return False
+    expected_sections = list(manifest.get("section_ids") or [])
+    expected_paths = [
+        str(entry.get("path") or "") for entry in (manifest.get("chunks") or [])
+    ]
+    event_id = receipt.get("host_render_event_id")
+    return (
+        receipt.get("source") == "CHATGPT_NATIVE_HOST"
+        and receipt.get("render_surface") == "CHATGPT_NATIVE_COMPONENTS"
+        and receipt.get("user_visible") is True
+        and isinstance(event_id, str)
+        and bool(event_id.strip())
+        and isinstance(receipt.get("occurrence_path"), str)
+        and bool(receipt.get("occurrence_path"))
+        and receipt.get("report_slot") == manifest.get("report_slot")
+        and receipt.get("occurrence_path") == manifest.get("occurrence_path")
+        and receipt.get("canonical_body_sha256") == manifest.get("canonical_body_sha256")
+        and receipt.get("rendered_section_ids") == expected_sections
+        and list(rendered_section_ids) == expected_sections
+        and receipt.get("consumed_chunk_paths") == expected_paths
+        and receipt.get("native_section_component_count") == len(expected_sections)
+        and receipt.get("native_chunk_count") == len(expected_paths)
+        and len(expected_paths) == manifest.get("chunk_count")
+        and len(set(expected_paths)) == len(expected_paths)
+    )
+
+
 def build_native_ui_acceptance(
     manifest: Mapping[str, Any], *, rendered_section_ids: Sequence[str],
     rendered_content: str, user_visible_acceptance: bool,
     transport_status: str = "UNVERIFIED", remote_readback: str = "UNVERIFIED",
     files: Mapping[str, str] | None = None, canonical_body: str | None = None,
+    native_host_receipt: Mapping[str, Any] | None = None,
+    native_host_verification_key: bytes | None = None,
 ) -> dict[str, Any]:
-    """Create a receipt only after an actual native consumer readback."""
+    """Fail closed unless the native UI host actually acknowledges this occurrence.
+
+    The host receipt is a required external integration boundary, not an
+    artefact this Python producer or its unit tests can generate in production.
+    """
     expected = list(manifest.get("section_ids") or [])
-    manifest_valid = True
+    manifest_valid = False
     if files is not None and canonical_body is not None:
         try:
             validate_manifest_chunks(manifest, files, canonical_body=canonical_body)
-        except NativeContentParityError:
-            manifest_valid = False
+            manifest_valid = True
+        except (NativeContentParityError, KeyError, TypeError, ValueError):
+            pass
+    reconstructed_hash_valid = (
+        sha256(rendered_content.encode("utf-8")).hexdigest()
+        == manifest.get("canonical_body_sha256")
+    )
+    host_acknowledged = _valid_native_host_receipt(
+        manifest,
+        native_host_receipt,
+        rendered_section_ids=rendered_section_ids,
+        verification_key=native_host_verification_key,
+    )
     status = "PASS" if (
         user_visible_acceptance
+        and host_acknowledged
         and str(transport_status).upper() == "PASS"
         and str(remote_readback).upper() == "PASS"
         and manifest_valid
         and list(rendered_section_ids) == expected
-        and sha256(rendered_content.encode("utf-8")).hexdigest()
-        == manifest.get("canonical_body_sha256")
+        and reconstructed_hash_valid
     ) else "UNVERIFIED"
     return {
         "native_ui_consumer": "PASS" if status == "PASS" else "UNVERIFIED",
@@ -358,6 +434,7 @@ def build_native_ui_acceptance(
         "native_ui_content_hash": sha256(rendered_content.encode("utf-8")).hexdigest(),
         "native_ui_matches_manifest": "PASS" if status == "PASS" else "UNVERIFIED",
         "native_ui_all_chunks_consumed": "PASS" if status == "PASS" else "UNVERIFIED",
-        "native_ui_user_visible_acceptance": "PASS" if user_visible_acceptance else "UNVERIFIED",
+        "native_ui_user_visible_acceptance": "PASS" if status == "PASS" else "UNVERIFIED",
+        "native_ui_host_receipt": "PASS" if host_acknowledged and status == "PASS" else "UNVERIFIED",
         "verification_status": "VERIFIED" if status == "PASS" else "UNVERIFIED",
     }

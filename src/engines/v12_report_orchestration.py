@@ -3493,6 +3493,7 @@ def materialize_match_report(
             "content": {
                 "scoring_gw": live.get("scoring_gw"),
                 "fixtures_live": checkpoint.get("fixtures_live", lifecycle.get("fixtures_live")),
+                "fixtures_provisional": checkpoint.get("fixtures_provisional", lifecycle.get("fixtures_provisional")),
                 "fixtures_ft": checkpoint.get("fixtures_ft", lifecycle.get("fixtures_ft")),
                 "fixtures_not_started": checkpoint.get(
                     "fixtures_not_started",

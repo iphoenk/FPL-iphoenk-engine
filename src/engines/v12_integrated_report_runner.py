@@ -9736,6 +9736,28 @@ def run_deep(
         target_fixture_ids=[],
     )
 
+    # This is the active production DEEP path. The earlier materialization
+    # helpers bind analytics metadata too, but they are not the report run
+    # that publishes latest/deep.json. Without this exact binding S02
+    # misleadingly prints UNAVAILABLE and 0/0 despite 15 CURRENT15 rows.
+    history_acceptance, analytics_acceptance = _analytics_production_acceptance(
+        runtime_data_root=runtime_data_root,
+        official=official,
+        rows=all15_rows,
+        captain_surface=captain_surface,
+        target_planning_gw=planning_gw,
+        report_slot=report_slot,
+    )
+    for evidence_section_id in ("S02", "S19"):
+        evidence_section = sections.get(evidence_section_id)
+        if not isinstance(evidence_section, Mapping):
+            continue
+        evidence_content = dict(evidence_section.get("content") or {})
+        if evidence_section_id == "S02":
+            evidence_content["full_season_history"] = dict(history_acceptance)
+        evidence_content["analytics_acceptance"] = dict(analytics_acceptance)
+        evidence_section["content"] = evidence_content
+
     # Bind decision-critical visible sections to the exact producer payload
     # before rendering. Renderer never manufactures this metadata.
     producer_by_section = {

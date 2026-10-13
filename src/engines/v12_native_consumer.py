@@ -34,6 +34,73 @@ def _section_sources(manifest: Mapping[str, Any], files: Mapping[str, str]) -> d
     }
 
 
+
+def _native_blocks(source: str) -> list[dict[str, Any]]:
+    """Parse report prose into host-ready component descriptors.
+
+    HTML/CSS remains in the canonical source for byte parity, but is never
+    treated as a native component or as evidence of user-visible rendering.
+    """
+    blocks: list[dict[str, Any]] = []
+    lines = source.splitlines()
+    cursor = 0
+    while cursor < len(lines):
+        line = lines[cursor]
+        stripped = line.strip()
+        if not stripped:
+            cursor += 1
+            continue
+        if stripped.startswith("<style") or stripped.startswith("<section"):
+            cursor += 1
+            continue
+        if _TABLE_LINE.match(line):
+            rows: list[list[str]] = []
+            while cursor < len(lines) and _TABLE_LINE.match(lines[cursor]):
+                rows.append([cell.strip() for cell in lines[cursor].strip().strip("|").split("|")])
+                cursor += 1
+            if len(rows) > 1 and all(
+                set(cell.replace(":", "").replace("-", "")) == set()
+                for cell in rows[1]
+            ):
+                rows.pop(1)
+            blocks.append({"kind": "table", "rows": rows})
+            continue
+        if stripped.startswith("#### "):
+            blocks.append({"kind": "subheading", "level": 4, "text": stripped[5:]})
+        elif stripped.startswith("### "):
+            blocks.append({"kind": "subheading", "level": 3, "text": stripped[4:]})
+        elif stripped.startswith("## "):
+            blocks.append({"kind": "heading", "text": stripped[3:]})
+        elif stripped.startswith("- "):
+            blocks.append({"kind": "list_item", "text": stripped[2:]})
+        else:
+            blocks.append({"kind": "paragraph", "text": line})
+        cursor += 1
+    return blocks
+
+
+def _native_pitch(source: str) -> dict[str, Any]:
+    """Use the canonical textual XI/bench fields, never the source HTML."""
+    fields: dict[str, str] = {}
+    for line in source.splitlines():
+        for key in ("Formation", "GK", "DEF", "MID", "FWD", "Bench GK", "Bench 1", "Bench 2", "Bench 3", "C/VC decision authority"):
+            if line.startswith(key + ":"):
+                fields[key] = line[len(key) + 1:].strip()
+                break
+    return {
+        "kind": "pitch",
+        "formation": fields.get("Formation"),
+        "rows": [
+            {"position": position, "players": [p.strip() for p in fields.get(position, "").split(",") if p.strip()]}
+            for position in ("FWD", "MID", "DEF", "GK")
+        ],
+        "bench_gk": fields.get("Bench GK"),
+        "bench": [fields.get(f"Bench {i}") for i in range(1, 4)],
+        "captain_authority": fields.get("C/VC decision authority"),
+        "source": "CANONICAL_S06_TEXT",
+    }
+
+
 def consume_native_content(
     manifest: Mapping[str, Any],
     files: Mapping[str, str],
@@ -42,6 +109,7 @@ def consume_native_content(
     user_visible_acceptance: bool,
     transport_status: str,
     remote_readback: str,
+    native_host_receipt: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     expected = list(manifest.get("section_ids") or [])
     rendered_ids: list[str] = []
@@ -72,6 +140,7 @@ def consume_native_content(
             "component": "native_section",
             "content": source,
             "blocks": source.splitlines(keepends=True),
+            "native_blocks": _native_blocks(source),
         })
 
     rendered_content = str(manifest.get("prefix") or "") + "".join(
@@ -89,12 +158,16 @@ def consume_native_content(
         remote_readback=remote_readback,
         files=files if valid else {},
         canonical_body=canonical_body,
+        native_host_receipt=native_host_receipt,
     )
     return {
         "section_count": len(rendered_ids),
         "rendered_section_ids": rendered_ids,
         "components": components,
         "pitch": next((item for item in components if item["section_id"] == "S06"), None),
+        "native_pitch": _native_pitch(sources["S06"]) if "S06" in sources and valid else None,
+        "consumed_chunk_paths": [str(e["path"]) for e in manifest.get("chunks") or []] if valid else [],
+        "native_component_count": len(components),
         "tables": tables,
         "profiles": profiles,
         "typed_panels": typed_panels,

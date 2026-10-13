@@ -221,6 +221,10 @@ def _validate_official_endpoint_ownership(errors: list[str], service_names: set[
         errors.append(f"duplicate Official network purpose ids: {duplicate_ids}")
     endpoint_families: list[str] = []
     owners: set[str] = set()
+    # V6 report-plane fetchers are deliberately outside the V3 capability graph.
+    # Their scoped ownership is still canonical in the endpoint registry and must
+    # participate in the endpoint drift check without becoming a second V3 service.
+    scoped_runtime_owners: set[str] = set()
     invalid: list[dict[str, Any]] = []
     for row in rows:
         rid = str(row.get("id") or "")
@@ -230,8 +234,10 @@ def _validate_official_endpoint_ownership(errors: list[str], service_names: set[
         if not rid or not owner or not scope or not families:
             invalid.append(row)
             continue
-        if owner not in service_names:
+        if owner not in service_names and not owner.startswith("v6_"):
             errors.append(f"Official network purpose {rid} owner service missing: {owner}")
+        if owner.startswith("v6_"):
+            scoped_runtime_owners.add(owner)
         owners.add(owner)
         endpoint_families.extend(families)
         dup_local = _duplicates(families)
@@ -246,6 +252,7 @@ def _validate_official_endpoint_ownership(errors: list[str], service_names: set[
         "registry": payload.get("registry"),
         "network_purpose_count": len(rows),
         "owners": sorted(owners),
+        "scoped_runtime_owners": sorted(scoped_runtime_owners),
         "duplicate_purpose_ids": duplicate_ids,
         "duplicate_endpoint_families": duplicate_families,
     }
@@ -447,6 +454,7 @@ def run() -> dict[str, Any]:
         errors.append(f"Official FPL AST authority scan failed closed: {exc}")
     official_hits = _official_fetch_services(official_findings)
     declared_network_owners = set(endpoint_state.get("owners") or [])
+    declared_network_owners -= set(endpoint_state.get("scoped_runtime_owners") or [])
     architecture_allowed = {str(value) for value in ownership.get("official_fetch_allowed_services") or []}
     if architecture_allowed != declared_network_owners:
         errors.append(

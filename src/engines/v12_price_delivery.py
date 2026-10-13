@@ -30,6 +30,61 @@ from src.engines.v12_report_orchestration import (
 
 
 PRICE_SECTION_IDS = tuple(f"PRICE{index}" for index in range(1, 13))
+
+
+def classify_price_personal_mode(
+    *,
+    public_official_available: bool,
+    public_league_available: bool,
+    personal_resolution: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Classify PRICE without treating stale personal data as current finance."""
+    resolution = dict(personal_resolution or {})
+    reasons: list[str] = []
+    if not public_official_available:
+        reasons.append("PUBLIC_OFFICIAL_UNAVAILABLE")
+    if not public_league_available:
+        reasons.append("PUBLIC_LEAGUE_UNAVAILABLE")
+
+    finance_allowed = bool(
+        resolution.get("finance_allowed") is True
+        and resolution.get("stale") is not True
+        and str(resolution.get("source_class") or "").upper()
+        in {"AUTHENTICATED_CURRENT_TEAM", "USER_CONFIRMED"}
+    )
+    if resolution.get("stale") is True:
+        reasons.append("STALE_PERSONAL_EVIDENCE")
+    elif not finance_allowed:
+        reasons.append("PRIVATE_PERSONAL_UNAVAILABLE")
+
+    public_usable = bool(public_official_available)
+    if not public_usable:
+        return {
+            "mode": "FAILED",
+            "finance_status": "UNAVAILABLE",
+            "public_facts_usable": False,
+            "executable_transfer_economics": False,
+            "degradation_reasons": reasons,
+            "section_ids": list(PRICE_SECTION_IDS),
+            "bank": "UNAVAILABLE",
+            "free_transfers": "UNAVAILABLE",
+            "purchase_price": "UNAVAILABLE",
+            "selling_price": "UNAVAILABLE",
+        }
+
+    mode = "FULL" if finance_allowed and not reasons else "PUBLIC_FIRST_DEGRADED"
+    return {
+        "mode": mode,
+        "finance_status": "AVAILABLE" if finance_allowed else "UNAVAILABLE",
+        "public_facts_usable": True,
+        "executable_transfer_economics": finance_allowed,
+        "degradation_reasons": reasons,
+        "section_ids": list(PRICE_SECTION_IDS),
+        "bank": "AVAILABLE" if finance_allowed else "UNAVAILABLE",
+        "free_transfers": "AVAILABLE" if finance_allowed else "UNAVAILABLE",
+        "purchase_price": "AVAILABLE" if finance_allowed else "UNAVAILABLE",
+        "selling_price": "AVAILABLE" if finance_allowed else "UNAVAILABLE",
+    }
 ACTION_BOARD_FIELDS = (
     "NOW",
     "NEXT",
@@ -1504,6 +1559,37 @@ def _load_personal_inputs(
     return {"current_team": payload, "submitted_picks": {}}
 
 
+def _public_first_personal_projection(
+    resolution: Mapping[str, Any],
+    *,
+    execution_mode: str,
+) -> dict[str, Any]:
+    """Strip private finance from a degraded PRICE identity projection."""
+    projected = dict(resolution or {})
+    if execution_mode == "FULL":
+        return projected
+    if str(projected.get("source_class") or "").upper() == "AUTHENTICATED_CURRENT_TEAM" and projected.get("stale") is True:
+        projected = {
+            "state": "UNAVAILABLE",
+            "supportable": False,
+            "rows": [],
+            "element_ids": [],
+            "source_class": "PUBLIC_FIRST_DEGRADED",
+            "reason": "STALE_PERSONAL_EVIDENCE_NOT_CURRENT_AUTHORITY",
+            "finance": {},
+        }
+    projected["finance"] = {}
+    projected["finance_status"] = "UNAVAILABLE"
+    projected["finance_authority"] = "UNAVAILABLE"
+    projected["personal_data_fabricated"] = False
+    for row in projected.get("rows") or []:
+        if isinstance(row, dict):
+            row["purchase_price"] = None
+            row["selling_price"] = None
+            row["sell_value"] = None
+    return projected
+
+
 def _planning_gw_from_bootstrap(bootstrap: Mapping[str, Any]) -> int:
     events = [
         dict(row)
@@ -1523,6 +1609,35 @@ def _planning_gw_from_bootstrap(bootstrap: Mapping[str, Any]) -> int:
     ]
     unfinished = [gw for gw in unfinished if gw > 0]
     return min(unfinished) if unfinished else 1
+
+
+def _price_prefetch_manifest(runtime_data_root: Path, report_slot: str) -> dict[str, Any]:
+    """Load the immutable PRICE prefetch occurrence, never a DEEP latest pointer."""
+    occurrence_root = runtime_data_root / "data/v6/report_prefetch/occurrences"
+    requested = _aware(report_slot)
+    if requested is None:
+        raise PriceDeliveryError("PRICE report slot must be timezone-aware")
+    candidates: list[dict[str, Any]] = []
+    for path in sorted(occurrence_root.glob("*.json")):
+        payload = _read_json(path, {}) or {}
+        target = _aware(payload.get("target_logical_report_slot"))
+        if (
+            payload.get("report_kind") == "05:30_price"
+            and target is not None
+            and target == requested
+        ):
+            candidates.append(payload)
+    if len(candidates) != 1:
+        raise PriceDeliveryError(
+            "PRICE_PREFETCH_PROVENANCE_INVALID:exact_occurrence_count="
+            + str(len(candidates))
+        )
+    manifest = candidates[0]
+    domains = dict(manifest.get("source_domains") or {})
+    official = str((domains.get("PUBLIC_OFFICIAL") or {}).get("status") or "").upper()
+    if official != "AVAILABLE":
+        raise PriceDeliveryError("PUBLIC_OFFICIAL_INTEGRITY_FAILED:PREFETCH_DOMAIN")
+    return manifest
 
 
 def _expected_core_slot(report_slot: str) -> str | None:
@@ -1622,6 +1737,7 @@ def run_price_occurrence(
     if not isinstance(fixtures, list):
         fixtures = []
     planning_gw = _planning_gw_from_bootstrap(bootstrap)
+    prefetch_manifest = _price_prefetch_manifest(runtime_data_root, report_slot)
 
     personal_inputs = _load_personal_inputs(
         runtime_data_root=runtime_data_root,
@@ -1693,6 +1809,26 @@ def run_price_occurrence(
         runtime_data_root / "data/v6/current/official_price_predictor.json", {}
     ) or {}
     standings = _load_priority_mini_league(runtime_data_root)
+    price_mode = classify_price_personal_mode(
+        public_official_available=bool(bootstrap.get("elements") and fixtures),
+        public_league_available=(
+            str(
+                ((prefetch_manifest.get("source_domains") or {}).get("PUBLIC_LEAGUE") or {}).get("status")
+                or "UNAVAILABLE"
+            ).upper()
+            == "AVAILABLE"
+        ),
+        personal_resolution=resolution,
+    )
+    if price_mode["mode"] == "FAILED":
+        raise PriceDeliveryError(
+            "PUBLIC_OFFICIAL_INTEGRITY_FAILED:"
+            + ",".join(price_mode["degradation_reasons"])
+        )
+    resolution = _public_first_personal_projection(
+        resolution,
+        execution_mode=price_mode["mode"],
+    )
     publish_integrity = _read_json(
         runtime_data_root / "data/v6/health/publish_integrity.json", {}
     ) or {}
@@ -1705,6 +1841,12 @@ def run_price_occurrence(
     )
     lineage["analytics_reason"] = analytics_error
     lineage["next_checkpoint"] = "NEXT PRICE CYCLE / next mandatory decision checkpoint"
+    lineage["price_execution_mode"] = price_mode["mode"]
+    lineage["personal_finance_status"] = price_mode["finance_status"]
+    lineage["degradation_reasons"] = list(price_mode["degradation_reasons"])
+    lineage["prefetch_run_id"] = prefetch_manifest.get("report_prefetch_run_id")
+    lineage["prefetch_source_domains"] = prefetch_manifest.get("source_domains") or {}
+    lineage["prefetch_generated_at"] = prefetch_manifest.get("generated_at")
 
     report = build_price_delivery_report(
         canonical_text=canonical_text,
@@ -1715,7 +1857,11 @@ def run_price_occurrence(
         predictor_artifact=predictor,
         evaluated_universe=evaluated_universe,
         universe_authority=universe_authority,
-        transfer_routes=_scenario_routes(state),
+        transfer_routes=(
+            _scenario_routes(state)
+            if price_mode["executable_transfer_economics"]
+            else ()
+        ),
         mini_league=standings,
         source_lineage=lineage,
         previous_price_evidence=None,
@@ -1734,6 +1880,8 @@ def run_price_occurrence(
         and human_facing_status == "PASS"
         else "FAIL"
     )
+    if runner_status == "PASS" and price_mode["mode"] == "PUBLIC_FIRST_DEGRADED":
+        runner_status = "PARTIAL"
 
     output_dir.mkdir(parents=True, exist_ok=True)
     canonical_sha = hashlib.sha256(
@@ -1753,6 +1901,10 @@ def run_price_occurrence(
         "top_level_section_count": len(report.get("sections") or []),
         "current15_state": resolution.get("state"),
         "current15_supportable": resolution.get("supportable"),
+        "price_execution_mode": price_mode["mode"],
+        "personal_finance_status": price_mode["finance_status"],
+        "personal_data_fabricated": False,
+        "degradation_reasons": list(price_mode["degradation_reasons"]),
         "watchlist20_state": (report.get("watchlist20") or {}).get("state"),
         "rise20_state": (report.get("rise20") or {}).get("state"),
         "fall20_state": (report.get("fall20") or {}).get("state"),
@@ -1776,6 +1928,18 @@ def run_price_occurrence(
         "report_slot": report_slot,
         "planning_gw": planning_gw,
         "runner_status": runner_status,
+        "delivery_status": (
+            "READY_FULL"
+            if price_mode["mode"] == "FULL" and runner_status == "PASS"
+            else "READY_DEGRADED_PUBLIC_FIRST"
+            if price_mode["mode"] == "PUBLIC_FIRST_DEGRADED" and runner_status == "PARTIAL"
+            else "FAILED"
+        ),
+        "price_execution_mode": price_mode["mode"],
+        "personal_finance_status": price_mode["finance_status"],
+        "personal_data_fabricated": False,
+        "section_count": len(report.get("sections") or []),
+        "qa_status": "PASS" if not model_failures and not visible_failures else "FAIL",
         "report": report,
         "visible_body": body,
         "human_facing_validation": {

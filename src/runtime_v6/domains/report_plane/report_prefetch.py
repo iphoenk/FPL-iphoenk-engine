@@ -39,6 +39,8 @@ from .prefetch_contract import (
     lineage,
     load_consumer_context,
     parse_slot,
+    price_source_domains,
+    classify_prefetch_state,
     read_json,
     resolve_scope,
     reusable,
@@ -994,6 +996,7 @@ class PrefetchService:
             "auth_action_required": auth_action_required,
             "auth_action": auth_action,
             "league_status": manifest.get("mini_league_status"),
+            "source_domains": manifest.get("source_domains") or {},
             "live_status": manifest.get("live_status"),
             "expected_managers": manifest.get("expected_manager_count"),
             "collected_managers": manifest.get("collected_manager_count"),
@@ -1731,6 +1734,23 @@ class PrefetchService:
             "mini_league_status": mini_status,
             "live_requested": scope.live,
             "live_status": live_status,
+            "source_domains": (
+                price_source_domains(
+                    report_kind=report_kind,
+                    official_status=(
+                        "AVAILABLE"
+                        if bootstrap_result is not None
+                        and bootstrap_result.get("status") == "LIVE"
+                        and public_core_complete
+                        else "UNAVAILABLE"
+                    ),
+                    league_status=mini_status if scope.mini_league else "NOT_REQUESTED",
+                    personal_requested=scope.personal,
+                    personal_auth_state=personal_auth_state,
+                )
+                if report_kind == "05:30_price"
+                else {}
+            ),
             "gw": gw,
             "gw_deadline_time": deadline_time,
             "entry_id": entry_id,
@@ -1797,6 +1817,7 @@ class PrefetchService:
                 "set_piece_notes_direct_model_override_forbidden": True,
             },
         }
+        manifest["prefetch_state"] = classify_prefetch_state(manifest)
         # Keep an immutable occurrence-bound producer record. latest.json remains a
         # convenience pointer, but DEEP and PRICE may be prefetched close together;
         # downstream consumers must never bind the other mode latest pointer.

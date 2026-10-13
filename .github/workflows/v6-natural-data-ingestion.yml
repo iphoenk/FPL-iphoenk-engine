@@ -715,11 +715,9 @@ jobs:
             exit 0
           fi
           work="$RUNNER_TEMP/v6-private-acquisition"
-          saved_personal="$RUNNER_TEMP/v6-saved-private-personal"
           refresh_status="$RUNNER_TEMP/v6-private-refresh-status.json"
-          rm -rf "$work" "$saved_personal" "$refresh_status"
+          rm -rf "$work" "$refresh_status"
           mkdir -p "$work"
-          cp -a private-reports/personal "$saved_personal"
           tar -xf "$RUNNER_TEMP/v6-runtime-publication/v6-runtime-data.tar" -C "$work"
           private_log="$RUNNER_TEMP/v6-private-personal-refresh.log"
           set +e
@@ -740,17 +738,11 @@ jobs:
           fi
           refreshed_team="$work/data/v6/personal/current_team.json"
           if [[ ! -s "$refreshed_team" ]]; then
-            # A bearer-token refresh can terminate without a personal artifact
-            # when FPL rejects or expires the credential. Preserve the public
-            # occurrence and use only the previously validated private snapshot.
-            # The snapshot remains explicitly unauthenticated/stale for finance
-            # and chip authority; it must never be promoted to AUTH_AVAILABLE.
-            mkdir -p "$work/data/v6/personal"
-            cp "$saved_personal/current_team.json" "$refreshed_team"
             cat >"$refresh_status" <<'JSON'
-          {"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"SAVED_VALIDATED_SNAPSHOT"}
+          {"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"NONE"}
           JSON
-            echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK"
+            echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT"
+            exit 0
           else
           V6_REFRESHED_TEAM_PATH="$refreshed_team" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
           import json
@@ -778,23 +770,30 @@ jobs:
           status = json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text())
           print("PRIVATE_PERSONAL_REFRESH_AUTH_STATE=" + str(status.get("auth_state") or "UNAVAILABLE"))
           PY
+          refresh_auth_state="$(V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          print(str(json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text()).get("auth_state") or "AUTH_UNAVAILABLE").upper())
+          PY
+          )"
+          if [[ "$refresh_auth_state" != "AUTH_AVAILABLE" ]]; then
+            echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT"
+            exit 0
+          fi
           python -m src.runtime_v6.domains.report_plane.private_boundary \
             --public-root "$work/data/v6" \
             --private-root private-reports \
             >/dev/null
-          V6_PRIVATE_WORK="$work" V6_SAVED_PRIVATE_PERSONAL="$saved_personal" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
+          V6_PRIVATE_WORK="$work" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'
           import json
           import os
-          import shutil
           from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
           root = Path(os.environ["V6_PRIVATE_WORK"])
           manifest = json.loads((root / "data/v6/report_prefetch/latest.json").read_text())
           refresh_status = json.loads(Path(os.environ["V6_REFRESH_STATUS_PATH"]).read_text())
-          saved_personal = Path(os.environ["V6_SAVED_PRIVATE_PERSONAL"])
-          # private_boundary moves the freshly fetched personal artifact here.
-          # Saved snapshot is fallback only, never auth validator input.
           team = json.loads((Path("private-reports/personal") / "current_team.json").read_text())
           def fail(message):
               raise SystemExit(message)
@@ -832,72 +831,6 @@ jobs:
               fail("private personal team identity mismatch")
           if len(element_ids) != 15 or len(set(element_ids)) != 15 or any(value <= 0 for value in element_ids):
               fail("private personal artifact must contain 15 unique canonical element IDs")
-          if refresh_auth_state in {"AUTH_EXPIRED", "AUTH_UNAVAILABLE"}:
-              # The fresh artifact records the failed authentication attempt at
-              # the current slot. Its generated_at must not be used to judge the
-              # age of the last-good fallback snapshot.
-              saved_snapshot = json.loads(
-                  (saved_personal / "current_team.json").read_text(encoding="utf-8")
-              )
-              saved_generated = instant(saved_snapshot.get("generated_at"))
-              if saved_generated >= slot or saved_generated > now + timedelta(minutes=2):
-                  fail("saved personal snapshot is not older than the expired-auth refresh")
-              live_personal = Path("private-reports/personal")
-              # Preserve fresh public submitted picks before replacing the
-              # private/authenticated tree with the validated last-good
-              # fallback. Current-GW submitted picks are public authority and
-              # must remain available to MATCH delivery even when finance and
-              # authenticated state are unavailable.
-              public_submitted = live_personal / "submitted_picks.json"
-              public_submitted_payload = None
-              if public_submitted.is_file():
-                  candidate = json.loads(public_submitted.read_text(encoding="utf-8"))
-                  if (
-                      str(candidate.get("authority") or "").upper() == "OFFICIAL_FPL"
-                      and int(candidate.get("gw") or 0) == manifest_gw
-                      and len(candidate.get("picks") or []) == 15
-                  ):
-                      public_submitted_payload = candidate
-              shutil.rmtree(live_personal)
-              shutil.copytree(saved_personal, live_personal)
-              if public_submitted_payload is not None:
-                  public_submitted.write_text(
-                      json.dumps(public_submitted_payload, sort_keys=True, indent=2) + "\n",
-                      encoding="utf-8",
-                  )
-              current = live_personal / "current_team.json"
-              snapshot = json.loads(current.read_text(encoding="utf-8"))
-              snapshot["auth_state"] = "AUTH_UNAVAILABLE"
-              availability = dict(snapshot.get("availability") or {})
-              availability.update({
-                  "authenticated_state": "AUTH_UNAVAILABLE",
-                  "bank": "UNAVAILABLE",
-                  "free_transfers": "NOT_SUPPORTED",
-                  "chips": "UNAVAILABLE",
-                  "purchase_price": "UNAVAILABLE",
-                  "selling_price": "UNAVAILABLE",
-              })
-              snapshot["availability"] = availability
-              snapshot["bank"] = None
-              snapshot["free_transfers"] = None
-              snapshot["free_transfers_source"] = "NOT_SUPPORTED"
-              snapshot["transfers_made"] = None
-              snapshot["hit_cost"] = None
-              snapshot["chips"] = []
-              # Private economics from a saved snapshot have no authority
-              # after the current live auth attempt failed.
-              for row in snapshot.get("players") or []:
-                  if isinstance(row, dict):
-                      row["purchase_price"] = None
-                      row["selling_price"] = None
-              snapshot["governance"] = {
-                  **dict(snapshot.get("governance") or {}),
-                  "auth_bypass_used": True,
-                  "stale_snapshot_fallback": True,
-              }
-              current.write_text(json.dumps(snapshot, sort_keys=True), encoding="utf-8")
-              print("PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_SAVED_SNAPSHOT_FALLBACK")
-              raise SystemExit(0)
           if auth_state != "AUTH_AVAILABLE":
               fail("authoritative personal authentication is unavailable")
           # Do not promote AUTH_AVAILABLE into finance-green unless the

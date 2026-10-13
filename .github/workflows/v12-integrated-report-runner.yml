@@ -603,12 +603,16 @@ jobs:
             --runtime-data-root "../runtime-data"
             --private-data-root "$private_input_root"
             --disable-legacy-private-sources
-            --require-private-personal
             --report-mode "$REPORT_MODE"
             --report-slot "$REPORT_SLOT"
-            --warm-state-out "artifacts/v12-report/gw6-warm-state.json"
             --output-dir "artifacts/v12-report"
           )
+          if [ "$REPORT_MODE" = "DEEP" ]; then
+            args+=(
+              --require-private-personal
+              --warm-state-out "artifacts/v12-report/gw6-warm-state.json"
+            )
+          fi
           if [ -n "$CHECKPOINT_TIME" ]; then
             args+=(--checkpoint-time "$CHECKPOINT_TIME")
           fi

@@ -18,6 +18,67 @@ DEFAULT_CONFIG = Path("config/v6/consumer_context.json")
 DEFAULT_OUTPUT = Path("data/v6")
 PRICE_REPORT = "05:30_price"
 REPORT_KINDS = frozenset({"full_master", "match_mode", "deadline_review", "ad_hoc", PRICE_REPORT})
+PREFETCH_FULL = "PREFETCH_FULL"
+PREFETCH_PUBLIC_FIRST = "PREFETCH_PUBLIC_FIRST"
+PREFETCH_FAILED = "PREFETCH_FAILED"
+RUNNER_READY_FULL = "RUNNER_READY_FULL"
+RUNNER_READY_DEGRADED = "RUNNER_READY_DEGRADED"
+PUBLISH_VERIFIED = "PUBLISH_VERIFIED"
+PUBLISH_FAILED = "PUBLISH_FAILED"
+
+
+def price_source_domains(
+    *,
+    report_kind: str,
+    official_status: str,
+    league_status: str,
+    personal_requested: bool,
+    personal_auth_state: str,
+) -> dict[str, dict[str, str]]:
+    """Expose PRICE source availability without collapsing auth states.
+
+    The three domains are intentionally independent. In particular, a PRICE
+    occurrence may use public Official and public league evidence while the
+    private personal plane is not requested or unavailable. This function is
+    observational only and never upgrades an auth state.
+    """
+    if report_kind != PRICE_REPORT:
+        raise PrefetchContractError("price source domains require the PRICE report kind")
+    official = str(official_status or "UNAVAILABLE").strip().upper()
+    league = str(league_status or "UNAVAILABLE").strip().upper()
+    auth = str(personal_auth_state or "UNAVAILABLE").strip().upper()
+    if not personal_requested:
+        private_status = "NOT_REQUESTED"
+        finance = "UNAVAILABLE"
+        auth = "NOT_REQUESTED"
+    elif auth == "AUTH_AVAILABLE":
+        private_status = "AVAILABLE"
+        finance = "AVAILABLE"
+    else:
+        private_status = "UNAVAILABLE"
+        finance = "UNAVAILABLE"
+    return {
+        "PUBLIC_OFFICIAL": {"status": official},
+        "PUBLIC_LEAGUE": {"status": league},
+        "PRIVATE_PERSONAL": {
+            "status": private_status,
+            "auth_state": auth,
+            "finance_authority": finance,
+        },
+    }
+
+
+def classify_prefetch_state(manifest: dict[str, Any]) -> str:
+    """Classify acquisition state without treating private auth as public failure."""
+    if manifest.get("public_core_complete") is not True:
+        return PREFETCH_FAILED
+    if str(manifest.get("report_kind") or "") == PRICE_REPORT:
+        private = (manifest.get("source_domains") or {}).get("PRIVATE_PERSONAL") or {}
+        if str(private.get("status") or "").upper() != "AVAILABLE":
+            return PREFETCH_PUBLIC_FIRST
+    if manifest.get("complete") is True:
+        return PREFETCH_FULL
+    return PREFETCH_FAILED
 
 
 class PrefetchContractError(RuntimeError):

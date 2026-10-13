@@ -200,6 +200,7 @@ jobs:
             > "$comments_file"
           if grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_FULL" "$comments_file" >/dev/null ||
              grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_DEGRADED" "$comments_file" >/dev/null ||
+             grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_DEGRADED_PUBLIC_FIRST" "$comments_file" >/dev/null ||
              grep -F "FPL_MASTER_RECEIPT occurrence_id=${OCCURRENCE_ID} status=READY_REUSED" "$comments_file" >/dev/null; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "reuse_source=EXISTING_RECEIPT" >> "$GITHUB_OUTPUT"
@@ -225,7 +226,7 @@ jobs:
           generated_at = datetime.fromisoformat(str(obj.get("generated_at") or ""))
           ok = (
               obj.get("occurrence_id") == os.environ["OCCURRENCE_ID"]
-              and obj.get("delivery_status") in {"READY_FULL", "READY_DEGRADED"}
+              and obj.get("delivery_status") in {"READY_FULL", "READY_DEGRADED", "READY_DEGRADED_PUBLIC_FIRST"}
               and generated_at >= report_slot
           )
           if (
@@ -518,7 +519,7 @@ jobs:
                   (root / "latest-mode.json").read_text(encoding="utf-8")
               )
               latest_sha = str(latest_mode.get("canonical_body_sha256") or "")
-              root_failure = ""
+              root_failure = str(serving.get("root_failure") or "").strip().upper()
               delivery_status = str(
                   serving.get("delivery_status")
                   or ("READY_FULL" if str(serving.get("runner_status") or "").upper() == "PASS" else "READY_DEGRADED")
@@ -602,9 +603,18 @@ jobs:
               },
               "degradation": {
                   "governed": (
-                      delivery_status == "READY_DEGRADED"
-                      and root_failure in {"ANALYTICS_INCOMPLETE", "BLOCKED_UPSTREAM", "PREFETCH_NOT_TERMINAL"}
-                      and stage3_status == "DEGRADED"
+                      delivery_status in {"READY_DEGRADED", "READY_DEGRADED_PUBLIC_FIRST"}
+                      and (
+                          root_failure in {"ANALYTICS_INCOMPLETE", "BLOCKED_UPSTREAM", "PREFETCH_NOT_TERMINAL"}
+                          or (
+                              delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
+                              and root_failure == "PUBLIC_FIRST_PERSONAL_UNAVAILABLE"
+                          )
+                      )
+                      and (
+                          stage3_status in {"DEGRADED", "NOT_APPLICABLE"}
+                          or delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
+                      )
                       and stage3.get("engineering_closure_blocks_report") is not True
                   ),
                   "attributable": bool(root_failure),
@@ -690,6 +700,6 @@ jobs:
           gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body-file "$body"
 
           case "$status" in
-            READY_FULL|READY_DEGRADED|READY_REUSED) exit 0 ;;
+            READY_FULL|READY_DEGRADED|READY_DEGRADED_PUBLIC_FIRST|READY_REUSED) exit 0 ;;
             *) exit 1 ;;
           esac

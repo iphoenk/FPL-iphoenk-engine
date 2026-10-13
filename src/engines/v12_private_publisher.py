@@ -26,6 +26,35 @@ class PrivatePublishError(RuntimeError):
     pass
 
 
+def validate_price_publish_classification(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the explicit FULL/degraded PRICE publication classes."""
+    mode = str(bundle.get("report_mode") or "").upper()
+    if mode != "PRICE":
+        return {"status": "NOT_APPLICABLE"}
+    delivery = str(bundle.get("delivery_status") or "").upper()
+    execution = str(bundle.get("price_execution_mode") or "").upper()
+    runner = str(bundle.get("runner_status") or "").upper()
+    if delivery == "READY_FULL":
+        if execution != "FULL" or runner != "PASS":
+            raise PrivatePublishError("PRICE_FULL_CLASSIFICATION_INVALID")
+        return {"status": "PASS", "classification": "READY_FULL"}
+    if delivery != "READY_DEGRADED_PUBLIC_FIRST":
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if execution != "PUBLIC_FIRST_DEGRADED":
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if runner != "PARTIAL":
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if str(bundle.get("personal_finance_status") or "").upper() != "UNAVAILABLE":
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if bundle.get("personal_data_fabricated") is not False:
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if int(bundle.get("section_count") or 0) != 12:
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    if str(bundle.get("qa_status") or "").upper() != "PASS":
+        raise PrivatePublishError("PRICE_DEGRADED_CLASSIFICATION_INVALID")
+    return {"status": "PASS", "classification": "READY_DEGRADED_PUBLIC_FIRST"}
+
+
 def classify_private_publish_error(error: BaseException) -> dict[str, Any]:
     """Return an allowlisted, non-sensitive publisher failure diagnostic."""
     message = str(error or "").strip()
@@ -211,7 +240,7 @@ def build_private_digest(
     ) or execution_proof.get("human_facing_qa_status")
     delivery_status = str(bundle.get("delivery_status") or "").upper()
     if not delivery_status and report_mode == "PRICE":
-        delivery_status = "READY_FULL" if runner_status == "PASS" else "READY_DEGRADED"
+        delivery_status = "READY_FULL" if runner_status == "PASS" else "READY_DEGRADED_PUBLIC_FIRST"
 
     return {
         "schema_version": 2,
@@ -221,6 +250,16 @@ def build_private_digest(
         or f"{report_mode}|{bundle.get('report_slot')}",
         "planning_gw": bundle.get("planning_gw"),
         "delivery_status": delivery_status,
+        "price_execution_mode": bundle.get("price_execution_mode"),
+        "personal_finance_status": bundle.get("personal_finance_status"),
+        "personal_data_fabricated": bundle.get("personal_data_fabricated"),
+        "section_count": bundle.get("section_count"),
+        "qa_status": bundle.get("qa_status"),
+        "root_failure": (
+            "PUBLIC_FIRST_PERSONAL_UNAVAILABLE"
+            if delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
+            else None
+        ),
         "runner_status": runner_status,
         "pre_render_status": pre_render_status,
         "post_render_status": post_render_status,
@@ -376,6 +415,8 @@ def publish_private_output(
     bundle = _read_json(canonical_dir / "report_bundle.json")
     proof = _read_json(canonical_dir / "execution_proof.json")
     stage3 = _read_json(canonical_dir / "stage3_acceptance.json")
+
+    validate_price_publish_classification(bundle)
 
     report_mode = str(bundle.get("report_mode") or "").upper()
     report_slot = str(bundle.get("report_slot") or "")

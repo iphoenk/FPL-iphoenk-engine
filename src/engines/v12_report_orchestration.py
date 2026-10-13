@@ -4305,6 +4305,37 @@ def _render_deep_visible_contract_lines(
             "V12_PLAYER_MINUTES evidence; resolution "
             f"{pstart_acceptance.get('resolution_status', 'UNAVAILABLE')}."
         )
+        resolution_audit = dict(pstart_acceptance.get("resolution_audit") or {})
+        calibration = dict(pstart_acceptance.get("calibration_diagnostic") or {})
+        if resolution_audit:
+            lines.append(
+                "PSTART INPUT IDENTITY AUDIT: "
+                f"player-conditioned={resolution_audit.get('individual_evidence_rows')}/15; "
+                f"additional context={resolution_audit.get('contextual_evidence_rows')}/15; "
+                f"equal-probability pairs with identical evidence="
+                f"{resolution_audit.get('equal_probability_pairs_with_identical_evidence')}; "
+                f"equal-probability pairs requiring review="
+                f"{resolution_audit.get('equal_probability_pairs_with_different_evidence')}; "
+                f"limitations={','.join(resolution_audit.get('reasons') or []) or 'NONE'}."
+            )
+        if calibration:
+            baseline = calibration.get("baseline") or {}
+            model = calibration.get("individualized") or {}
+            lines.append(
+                "PSTART WALK-FORWARD (FULL UNIVERSE DIAGNOSTIC): "
+                f"status={calibration.get('status')}; "
+                f"folds={calibration.get('folds')}; "
+                f"samples={calibration.get('samples')}; "
+                f"baseline Brier={baseline.get('brier')}; "
+                f"individualized Brier={model.get('brier')}; "
+                f"baseline logloss={baseline.get('log_loss')}; "
+                f"individualized logloss={model.get('log_loss')}; "
+                f"xMins MAE baseline={baseline.get('xmins_mae')}; "
+                f"new={model.get('xmins_mae')}; "
+                f"as-of source lineage={calibration.get('predeadline_source_lineage')}; "
+                f"noninferiority={calibration.get('noninferiority')}; "
+                "retrospective GW split is not proof of archived predeadline facts."
+            )
         # Numerical forecasts remain visible but are not proof of bound evidence.
         # Never promote an estimate into a fully evidenced production claim.
         if (

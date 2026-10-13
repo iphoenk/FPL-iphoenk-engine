@@ -281,3 +281,82 @@ def test_v6_history_fails_closed_on_provisional_or_unfinished_official_gw():
         assert result["coverage_gate"]["status"] == "PASS"
         assert result["coverage_gate"]["pending_historical_gws"] == []
         assert result["coverage_gate"]["all_historical_gws_finalized"] is True
+
+
+def test_v6_gw1_to_gw6_target_is_next_official_event_not_current_gw():
+    bootstrap = {
+        "events": [
+            {"id": gw, "finished": gw < 6, "is_current": gw == 6,
+             "is_next": gw == 7}
+            for gw in range(1, 8)
+        ],
+        "elements": [{"id": 10, "element_type": 3, "team": 1}],
+    }
+    assert report_prefetch._official_history_planning_gw(bootstrap, 6) == 7
+    fixture_rows = [
+        {"id": 100 + gw, "event": gw, "finished": gw < 6,
+         "finished_provisional": gw == 6}
+        for gw in range(1, 7)
+    ]
+    snapshot = {
+        "generated_at": "2026-10-13T07:00:00Z",
+        "phase": {"current_gw": report_prefetch._official_history_planning_gw(bootstrap, 6)},
+        "bootstrap": bootstrap,
+        "fixtures": fixture_rows,
+    }
+    summary = {"10": {"history": [
+        {"fixture": 100 + gw, "round": gw, "minutes": 90, "total_points": 5}
+        for gw in range(1, 7)
+    ]}}
+    out = report_prefetch._reconcile_full_history(snapshot, summary)
+    assert out["as_of"] == {
+        "canonical_timestamp": "2026-10-13T07:00:00Z",
+        "planning_gw": 7,
+        "historical_gws": [1, 2, 3, 4, 5, 6],
+        "source": "OFFICIAL_FPL_ELEMENT_SUMMARY",
+    }
+    assert out["coverage_gate"]["expected_player_slots"] == 6
+    assert out["coverage_gate"]["available_gw_slots"] == 6
+    assert out["coverage_gate"]["pending_historical_gws"] == [6]
+    assert out["coverage_gate"]["fixture_identity_status"] == "PASS"
+    assert out["coverage_gate"]["status"] == "PARTIAL"
+    assert out["players"]["10"]["history"]["6"]["status"] == "PENDING"
+    bootstrap["events"][5]["finished"] = True
+    fixture_rows[-1]["finished"] = True
+    accepted = report_prefetch._reconcile_full_history(snapshot, summary)
+    assert accepted["coverage_gate"]["status"] == "PASS"
+    assert accepted["coverage_gate"]["available_gw_slots"] == 6
+    assert accepted["coverage_gate"]["all_historical_gws_finalized"] is True
+
+
+def test_history_target_falls_back_to_unambiguous_official_current_event():
+    bootstrap = {
+        "events": [
+            {"id": 6, "is_current": True},
+            {"id": 7},
+        ],
+    }
+    assert report_prefetch._official_history_planning_gw(bootstrap, 6) == 7
+
+
+@pytest.mark.parametrize("events, error", [
+    ([{"id": 6, "is_current": True}], "OFFICIAL_NEXT_GW_INVALID"),
+    ([{"id": 6, "is_current": True}, {"id": 7, "is_next": True},
+      {"id": 8, "is_next": True}], "AMBIGUOUS_OFFICIAL_PLANNING_GW"),
+    ([{"id": 6, "is_current": True}, {"id": 8, "is_next": True}],
+     "OFFICIAL_CURRENT_NEXT_GW_MISMATCH"),
+    ([{"id": 6}, {"id": 7}], "OFFICIAL_NEXT_GW_UNAVAILABLE"),
+])
+def test_history_target_fails_closed_on_ambiguous_or_invalid_official_identity(events, error):
+    with pytest.raises(ValueError, match=error):
+        report_prefetch._official_history_planning_gw({"events": events}, 6)
+
+
+def test_prefetch_production_path_embeds_exact_history_occurrence_metadata():
+    import inspect
+    source = inspect.getsource(report_prefetch.ReportPrefetch) if hasattr(report_prefetch, "ReportPrefetch") else inspect.getsource(report_prefetch)
+    assert '"target_logical_report_slot": slot.isoformat()' in source
+    assert '"report_prefetch_run_id": report_prefetch_run_id' in source
+    assert '"report_kind": report_kind' in source
+    assert 'planning_gw=history_planning_gw' in source
+    assert 'detail_artifact.update({' in source

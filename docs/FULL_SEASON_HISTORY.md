@@ -62,3 +62,19 @@ are retained for diagnostics. The gate exposes `fixture_identity_status`,
 This is an evidence-integrity improvement, not evidence that the production
 GW1-GW6 acquisition has completed. Production still needs current occurrence
 readback and actual OUR15/full-universe coverage.
+
+
+## Finalized-range gate and GW7 serving (13 October 2026)
+
+The V6 full-history collector now distinguishes nominal element-summary coverage
+from authoritative settlement. A GW has finalized coverage only when the
+Official FPL bootstrap event is finished and **every** corresponding Official
+fixture carries finished=true. Official finished_provisional is not FINAL.
+Unsettled historical GWs are listed as `pending_historical_gws` and force
+coverage `PARTIAL`, while raw fixture-level rows remain lossless.
+
+The V12 serving acceptance independently requires source planning GW to equal
+the target planning GW, the exact GW1..N-1 range, finalized event/fixture
+evidence, and `fixture_identity_status=PASS`. Thus a V6 GW1-GW5
+snapshot for planning GW6 cannot claim six-GW full history for V12
+planning GW7. A previous source PASS does not override these mismatches.

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from src.runtime_v6.source_native import build_source_native_datasets
 from scripts.v6_rotowire_identity_review import build_review
 
@@ -103,3 +106,18 @@ def test_rotowire_source_native_dataset_is_advisory_and_never_v6_authored_predic
     rotowire["record_groups"]["lineups"][0]["player_name"] = "Other Pickford"
     unmatched = build_review(rotowire, official_players, official_teams, official_fixtures)
     assert unmatched["players"][0]["review_status"] == "NAME_TEAM_UNRESOLVED"
+
+
+    # Frozen observed V6 snapshot: 312 provider-native IDs; only candidates,
+    # never silently a live verified-crosswalk catalog.
+    root = Path(__file__).resolve().parents[1]
+    observed = json.loads((root / "docs/audits/P0_ROTOWIRE_IDENTITY_CANDIDATES_20261014.json").read_text())
+    assert observed["unique_provider_ids"] == 312
+    assert observed["candidate_counts"]["IDENTITY_CANDIDATE_REVIEW"] == 273
+    assert observed["candidate_counts"]["NAME_TEAM_UNRESOLVED"] == 39
+    assert observed["fixture_candidate_matches"] == 11
+    assert observed["fixture_count"] == 12
+    assert len({row["rotowire_native_id"] for row in observed["players"]}) == 312
+    assert all(row["verification_status"] == "UNMAPPED" for row in observed["players"])
+    assert all(row["joinable"] is False and row["numeric_pstart_authority"] is False
+               for row in observed["players"])

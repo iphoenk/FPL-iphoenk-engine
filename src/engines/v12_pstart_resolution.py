@@ -24,6 +24,7 @@ def assess_pstart_resolution(
     by_probability: dict[float, list[tuple[Any, ...]]] = defaultdict(list)
     missing, mismatches = [], []
     conditioned = contextual = quantified = model_agreed = 0
+    official_availability = no_numeric_adjustment = advisory_role = missing_manager = 0
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
             missing.append(index)
@@ -51,9 +52,38 @@ def assess_pstart_resolution(
             and selection.get("selection_posterior") is not None
         )
         conditioned += int(is_conditioned)
-        # All of prior, role, manager and availability must be present for
-        # contextual acceptance. One contextual signal is not enough.
-        contextual += int(CONTEXT_SIGNALS.issubset(signals))
+        context_evidence = row.get("pstart_context_evidence") or {}
+        if not isinstance(context_evidence, Mapping):
+            context_evidence = {}
+        avail = context_evidence.get("availability") or {}
+        role = context_evidence.get("role") or {}
+        manager = context_evidence.get("manager") or {}
+        if not isinstance(avail, Mapping):
+            avail = {}
+        if not isinstance(role, Mapping):
+            role = {}
+        if not isinstance(manager, Mapping):
+            manager = {}
+        observed_status = avail.get("official_status_observed") is True
+        normal_without_numeric = (
+            observed_status
+            and avail.get("normal_status_no_numeric_adjustment") is True
+            and avail.get("authority") == "OFFICIAL_FPL_BOOTSTRAP"
+            and avail.get("fpl_status") == "a"
+        )
+        official_availability += int(observed_status)
+        no_numeric_adjustment += int(normal_without_numeric)
+        advisory_role += int(role.get("status") == "PROFILE_ADVISORY_UNCALIBRATED")
+        missing_manager += int(manager.get("status") == "NO_VERIFIED_MANAGER_TIMELINE")
+        # Normal official FPL status is an observation, not a numerical
+        # medical/start probability. No DOUBT probability should be
+        # invented solely to satisfy a mandatory signal count.
+        required_nonavailability = CONTEXT_SIGNALS - {"normalized_availability_start_signal"}
+        contextual += int(
+            required_nonavailability.issubset(signals)
+            and ("normalized_availability_start_signal" in signals
+                 or normal_without_numeric)
+        )
         raw_values = evidence.get("signal_values") or []
         quantitative_vector = tuple(
             sorted(
@@ -132,7 +162,14 @@ def assess_pstart_resolution(
         "contextual_evidence_rows": contextual,
         "quantified_input_rows": quantified,
         "model_agreement_rows": model_agreed,
+        "official_availability_observation_rows": official_availability,
+        "normal_status_numeric_adjustment_not_applicable_rows": no_numeric_adjustment,
+        "advisory_role_profile_rows": advisory_role,
+        "missing_verified_manager_timeline_rows": missing_manager,
+        "normal_official_status_is_not_medical_probability": True,
+        "availability_probability_signal_is_conditional": True,
         "complete_context_requires_all_signals": sorted(CONTEXT_SIGNALS),
+        "normal_availability_exemption_requires_official_observation": True,
         "missing_rows": missing, "binding_mismatch_elements": mismatches,
         "modal_probability_count": max((len(v) for v in by_probability.values()), default=0),
         "unique_rounded_probabilities": len(by_probability),

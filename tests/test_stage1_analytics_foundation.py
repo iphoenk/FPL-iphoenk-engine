@@ -2190,6 +2190,19 @@ def test_pstart_walkforward_rejects_unsettled_and_future_match_rows():
     assert out["target_gws"] == [2, 3, 4, 5]
     assert out["future_leakage"] is False
     assert out["status"] != "PASS"
+    assert out["historical_asof_status"] == "HISTORICAL_AS_OF_UNAVAILABLE"
+    assert out["position_noninferiority_tolerances"] == {
+        "brier": 0.03, "log_loss": 0.02, "xmins_mae": 1.0,
+        "dnp_brier": 0.02, "cameo_brier": 0.02,
+    }
+    for metrics in out["position_metric_deltas"].values():
+        assert set(metrics) == set(out["position_noninferiority_tolerances"])
+    for cohort in ("by_position", "by_team"):
+        assert out[cohort]
+        for metrics in out[cohort].values():
+            for label in ("baseline", "individualized"):
+                for metric in ("brier", "log_loss", "xmins_mae", "dnp_brier", "cameo_brier"):
+                    assert f"{label}_{metric}" in metrics
 
 
 def test_pstart_walkforward_requires_archived_predeadline_finality():
@@ -2280,12 +2293,42 @@ def test_pstart_asof_bridge_uses_only_historical_finalization_and_real_deadlines
         tmp_path, bootstrap=bootstrap, planning_gw=4, strength=_strength(),
     )
     backtest = out["pstart_walk_forward_diagnostic"]
-    assert backtest["predeadline_source_lineage"] == "PASS"
     assert backtest["missing_predeadline_source_proofs"] == 0
-    assert backtest["future_leakage"] is False
-    # This tiny fixture is *not* eligible for production calibration.
-    assert backtest["status"] == "INSUFFICIENT_POSITION_SAMPLES"
-    assert backtest["minimum_sample_satisfied"] is False
+    assert backtest["predeadline_source_lineage"] == "UNVERIFIED"
+    assert backtest["historical_asof_status"] == "HISTORICAL_AS_OF_UNAVAILABLE"
+    assert backtest["missing_original_archival_witnesses"] > 0
+    assert backtest["status"] == "RETROSPECTIVE_DIAGNOSTIC_ONLY"
+
+    # A synthetic V6 original-object readback fixture (not real production
+    # evidence) demonstrates the *only* permitted source-as-of ingress.
+    original_commit = {1: "2026-08-11T12:00:00+00:00",
+                       2: "2026-08-19T12:00:00+00:00",
+                       3: "2026-08-25T12:00:00+00:00"}
+    for row in rows:
+        row["verified_source_archive"] = {
+            "verifier": "V6_ORIGINAL_ARCHIVE_READBACK",
+            "remote_readback_verified": True,
+            "original_commit_sha": "a" * 40,
+            "original_commit_at": original_commit[row["gw"]],
+            "source_sha256": "b" * 64,
+            "source_sha256_remote_readback": "b" * 64,
+            "source_id": "official_fpl",
+            "source_snapshot_id": "official_fpl:snapshot",
+        }
+    _write_normalized(
+        tmp_path, "official_fpl",
+        _normalized_history("official_fpl", rows),
+    )
+    verified = load_v6_analytics_foundation(
+        tmp_path, bootstrap=bootstrap, planning_gw=4, strength=_strength(),
+    )["pstart_walk_forward_diagnostic"]
+    assert verified["predeadline_source_lineage"] == "PASS"
+    assert verified["missing_original_archival_witnesses"] == 0
+    assert verified["historical_asof_status"] == "PASS"
+    assert verified["future_leakage"] is False
+    # This tiny fixture cannot be promoted for insufficient position coverage.
+    assert verified["status"] == "INSUFFICIENT_POSITION_SAMPLES"
+    assert verified["minimum_sample_satisfied"] is False
 
 
 def test_pstart_asof_bridge_never_uses_current_check_time_as_historical_proof(tmp_path):

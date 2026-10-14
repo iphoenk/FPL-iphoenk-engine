@@ -71,3 +71,16 @@ The large Official FPL source blobs were confirmed as immutable Git tree entries
 Change timestamp: 2026-10-14T15:23:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+### Additional original September 8–9 objects for the GW4 candidate pool
+
+Two earlier original V6 root commits also survive and were independently returned by GitHub Git Tree APIs. The original `artifact_catalog.json` was read back at each exact commit and contains the corresponding original Official FPL source snapshot identities:
+
+- Natural run `34286506638` published `ed5c910aee9bf808aa7007a080da3b0654338841` at 2026-09-08T22:34:02Z; original Official FPL Git blob `f64a1f1836b135d8abbfcf17bfbc8fdd640be894`, catalog SHA256 `cc11e734bd93c200e0fb8920e65b843cd736e42250804870094ec0167ff5e56c`.
+- Natural run `34417093599` published `e7b7ded8aebc19a115ddbf2ef16946986c26bdb9` at 2026-09-09T23:29:05Z; original Official FPL Git blob `4261175f3e25bdc86304ef74df291ddaa431e256`, catalog SHA256 `768e11092ac6a2c99199ec9597b753632a0afc08caa7c82c74cd0cec7ae57176`.
+
+These are **potential** original input snapshots for evaluating a later target GW, not confirmed source-as-of admission for any GW. Existing retrospective match rows must be compared to the original archived bytes and the actual target deadline before issuance of a trusted per-row witness. Do not extrapolate earlier GW2/GW3 provenance from a September archive.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00

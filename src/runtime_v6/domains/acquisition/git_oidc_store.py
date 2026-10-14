@@ -29,8 +29,15 @@ def _git(repo: Path, *args: str, allow_missing: bool = False) -> bytes:
         completed = subprocess.run(
             ["git", "-C", str(repo), *args],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            check=False, timeout=35, stdin=subprocess.DEVNULL,
+            # Remote read/write on the large private repository can exceed
+            # 35s; do not retry an OIDC grant if Git persistence is uncertain.
+            check=False, timeout=90 if args and args[0] in {"fetch", "push"} else 35,
+            stdin=subprocess.DEVNULL,
         )
+    except subprocess.TimeoutExpired:
+        # This is a secret-free diagnostic. A timed-out Git push is uncertain;
+        # CAS readback must verify remote state before any refresh grant.
+        raise RotationBlocked("CREDENTIAL_STORE_GIT_TIMEOUT") from None
     except Exception:
         raise RotationBlocked("CREDENTIAL_STORE_GIT_UNAVAILABLE") from None
     if completed.returncode != 0:

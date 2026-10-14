@@ -152,3 +152,13 @@ Calibration promotion remains blocked until independently verified predeadline e
 Change timestamp: 2026-10-14T15:59:22+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:59:22+07:00
+
+## Prospective context-feature freeze (14 October 2026)
+
+The existing V12_PSTART_PROSPECTIVE_PREDEADLINE_V1 producer now captures, in each new future occurrence before the Official FPL deadline, the canonical projection's role/manager/availability observability alongside the 667-player paired baseline/individualized probabilities. Each feature receipt is bound to the same immutable Official FPL source Git readback, and the complete row array remains SHA256 protected by the original forecast_rows_sha256 scheme. A field labelled original Git verified applies only to the canonical Official FPL source; external tactical role and manager timelines are explicitly UNVERIFIED and **never** admitted as numerical probabilities. The deterministic summary separately reports official status and advisory role counts. This is shadow observation, not a calibrated third model.
+
+Existing immutable GW7 private forecast objects and receipts remain unchanged. Only new predeadline occurrences may carry the added context receipt. No scheduler, source authority, P1.7, Stage3 or correlated MC500K changes. MODEL_RESOLUTION remains LIMITED until verifiable original predeadline manager/role lineages and future settled position-wise non-inferiority exist.
+
+Change timestamp: 2026-10-14T16:36:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T16:36:00+07:00

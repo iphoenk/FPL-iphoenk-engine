@@ -82,6 +82,23 @@ def test_prospective_capture_is_full_universe_and_paired(tmp_path, monkeypatch):
     assert rows[0]["baseline"]["start_probability"] == .70
     assert rows[0]["individualized"]["start_probability"] == .83
     assert rows[0]["role_manager_fit"] == "ADVISORY_UNCALIBRATED"
+    for row in rows:
+        proof = row["context_evidence"]
+        assert proof["availability"]["fpl_status"] == "a"
+        assert proof["availability"]["authority"] == "OFFICIAL_FPL_BOOTSTRAP"
+        assert proof["availability"]["normal_status_no_numeric_adjustment"] is True
+        assert proof["role"]["status"] == "UNAVAILABLE"
+        assert proof["manager"]["status"] == "NO_VERIFIED_MANAGER_TIMELINE"
+        assert proof["readiness"]["official_fpl_source_original_git_readback"] == "PASS"
+        assert proof["readiness"]["external_role_asof_git_readback"] == "UNVERIFIED"
+        assert proof["readiness"]["external_manager_asof_git_readback"] == "UNVERIFIED"
+        assert proof["readiness"]["numeric_shadow_prediction_created"] is False
+        assert proof["readiness"]["changes_to_canonical_pstart"] is False
+    summary = result["context_evidence_summary"]
+    assert summary["official_status_original_git_verified"] == 2
+    assert summary["advisory_role_profiles"] == 0
+    assert summary["manager_timeline_eligible"] == 0
+    assert summary["may_promote_context_probability"] is False
     assert result["source"]["identity_verified_by_original_git_readback"] is True
     assert result["source"]["original_git_evidence"]["git_object_readback"] == "PASS"
     assert result["source"]["original_git_evidence"]["private_remote_readback"] == "UNVERIFIED"

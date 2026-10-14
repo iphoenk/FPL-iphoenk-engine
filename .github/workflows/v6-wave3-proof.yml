@@ -195,7 +195,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/v6-wave3-source-tree"
           tar -xf "$RUNNER_TEMP/v6-wave3-source/v6-runtime-data.tar" -C "$RUNNER_TEMP/v6-wave3-source-tree"
 
-      - name: Resolve exact published runtime commit
+      - name: Resolve exact published runtime commit from original job and immutable Git objects
         if: steps.promotion.outputs.countable == 'true'
         id: runtime
         shell: bash
@@ -203,39 +203,33 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           SOURCE_RUN_ID: ${{ steps.source.outputs.run_id }}
           SOURCE_RUN_ATTEMPT: ${{ steps.source.outputs.run_attempt }}
+          SOURCE_PUBLISH_JOB_ID: ${{ steps.promotion.outputs.publish_job_id }}
         run: |
           set -euo pipefail
-          gh api "/repos/${GITHUB_REPOSITORY}/branches/runtime-data-v6" > "$RUNNER_TEMP/runtime-branch.json"
-          runtime_sha="$(python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          payload = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-branch.json").read_text(encoding="utf-8"))
-          print(str(((payload.get("commit") or {}).get("sha") or "")))
-          PY
-          )"
+          # Branch HEAD is mutable and must never decide admission of an
+          # earlier successful natural source run. Read the exact successful
+          # source publisher job (verified in the preceding step).
+          gh run view --repo "$GITHUB_REPOSITORY" --job "$SOURCE_PUBLISH_JOB_ID" --log > "$RUNNER_TEMP/original-source-publish.log"
+          runtime_sha="$(python -m src.runtime_v6.wave3_runtime_pin extract \
+            --log "$RUNNER_TEMP/original-source-publish.log" \
+            --source-run-id "$SOURCE_RUN_ID" \
+            --source-attempt "$SOURCE_RUN_ATTEMPT")"
           if [[ ! "$runtime_sha" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::runtime-data-v6 did not resolve to a full commit SHA"
+            echo "::error::Original source publisher SHA was not uniquely verified"
             exit 1
           fi
-          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/candidate_freeze.lock?ref=${runtime_sha}" > "$RUNNER_TEMP/runtime-freeze-content.json"
-          RUNTIME_SHA="$runtime_sha" python - <<'PY'
-          import base64
-          import json
-          import os
-          from pathlib import Path
-
-          envelope = json.loads((Path(os.environ["RUNNER_TEMP"]) / "runtime-freeze-content.json").read_text(encoding="utf-8"))
-          raw = base64.b64decode(str(envelope.get("content") or "").replace("\n", ""))
-          freeze = json.loads(raw.decode("utf-8"))
-          if str(freeze.get("run_id")) != str(os.environ["SOURCE_RUN_ID"]):
-              raise SystemExit("runtime branch no longer points to the source run generation")
-          if str(freeze.get("run_attempt")) != str(os.environ["SOURCE_RUN_ATTEMPT"]):
-              raise SystemExit("runtime branch run_attempt does not match source publication")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"sha={os.environ['RUNTIME_SHA']}\n")
-          print({"published_runtime_sha": os.environ["RUNTIME_SHA"], "run_id": freeze.get("run_id"), "run_attempt": freeze.get("run_attempt")})
-          PY
+          gh api "/repos/${GITHUB_REPOSITORY}/git/commits/${runtime_sha}" > "$RUNNER_TEMP/original-runtime-commit.json"
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/candidate_freeze.lock?ref=${runtime_sha}" > "$RUNNER_TEMP/original-runtime-freeze.json"
+          gh api "/repos/${GITHUB_REPOSITORY}/contents/data/v6/health/publish_integrity.json?ref=${runtime_sha}" > "$RUNNER_TEMP/original-runtime-integrity.json"
+          python -m src.runtime_v6.wave3_runtime_pin verify \
+            --log "$RUNNER_TEMP/original-source-publish.log" \
+            --source-run-id "$SOURCE_RUN_ID" \
+            --source-attempt "$SOURCE_RUN_ATTEMPT" \
+            --git-commit "$RUNNER_TEMP/original-runtime-commit.json" \
+            --freeze-envelope "$RUNNER_TEMP/original-runtime-freeze.json" \
+            --integrity-envelope "$RUNNER_TEMP/original-runtime-integrity.json" \
+            --archive-root "$RUNNER_TEMP/v6-wave3-source-tree/data/v6"
+          echo "sha=$runtime_sha" >> "$GITHUB_OUTPUT"
 
       - name: Build Wave 3 natural slot proof
         if: steps.promotion.outputs.countable == 'true'

@@ -44,3 +44,13 @@ Latest S02 numerical retrospective diagnostics: starter Brier 0.242833 baseline 
 ## Explicit nonchanges
 
 No changes to PR #1065, PR #809, V6 data authority, V12_PLAYER_MINUTES mathematics, correlated MC500K, eight legal formations, Stage3 temporal integrity, or ChatGPT scheduler. Role/coach/fixture-fit evidence remains advisory unless independently calibrated.
+
+## Addendum: additional public Actions retention check, 14 October 2026
+
+The GitHub API reports empty artifact inventories for inspected completed V6 hourly acquisition runs `34725699713`, `34722950239`, `34720145902` (12 September) and `35476739571` (19 September), and inspected skipped runs `36198244096`, `36156578313` (25 September). Previously sampled `33452812166` and `35670033021` also return empty inventories. The public repository main tree at original 25 September commit `31c912345d17b9225cfbe2b6dae5c2de3649a6e6` contains no `data/v6` source snapshot blobs. The private repository's inspected commit history starts on 26 September, and early GW6 manual captures are **team state**, not full-player predeadline model inputs.
+
+These results narrow the archive recovery search. They do not prove that unreachable Git objects, other older workflow artifacts, GitHub caches or additional trusted archives never existed. No GW1–GW6 fold may be promoted without authentic immutable predeadline readback, original source SHA256, source identity, official deadline and independent original finalization/first-seen evidence. Keep historical gate UNAVAILABLE where evidence is absent. Historical snapshots cannot be recreated retroactively from current Official FPL data.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00

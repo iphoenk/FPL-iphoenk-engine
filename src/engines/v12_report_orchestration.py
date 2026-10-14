@@ -108,6 +108,23 @@ class ReportOrchestrationError(ValueError):
     pass
 
 
+def _format_source_rejections(rejections: Mapping[str, Any] | None) -> str:
+    """Human-readable counts; never render the raw Python mapping repr."""
+    if not isinstance(rejections, Mapping):
+        return "UNVERIFIED"
+    parts = []
+    for key, value in sorted(rejections.items(), key=lambda pair: str(pair[0])):
+        try:
+            count = int(value)
+        except (TypeError, ValueError):
+            continue
+        if count < 0:
+            continue
+        reason = re.sub(r"[^A-Z0-9_]", "_", str(key).upper())
+        parts.append(f"{reason}={count}")
+    return ", ".join(parts) if parts else "NONE"
+
+
 def _status(value: Any, *, label: str) -> str:
     out = str(value or "").strip().upper()
     if out not in SECTION_STATES:
@@ -4385,14 +4402,14 @@ def _render_deep_visible_contract_lines(
                 f"eligible={u.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"consumed={u.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={u.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={u.get('rejected_reasons', {})}; "
+                f"rejected={_format_source_rejections(u.get('rejected_reasons'))}; "
                 f"FotMob raw={f.get('source_records', 'UNVERIFIED')} "
                 f"verified={f.get('verified_source_identity_rows', 'UNVERIFIED')} "
                 f"eligible={f.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"GW1-GW6 scoped={f.get('historical_scope_rows', 'UNVERIFIED')} "
                 f"consumed={f.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={f.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={f.get('rejected_reasons', {})}. "
+                f"rejected={_format_source_rejections(f.get('rejected_reasons'))}. "
                 "Consumed means retrospective advisory context only, not canonical Pstart input."
             )
             team = (context.get("focus_team") or {})

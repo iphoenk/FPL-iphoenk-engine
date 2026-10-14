@@ -4432,16 +4432,16 @@ def _render_deep_visible_contract_lines(
                 "single-match roles are observed, but individual formation-fit/coach-fit "
                 "probabilities are UNAVAILABLE without multi-match calibrated evidence."
             )
-            lines.append("#### CHELSEA PLAYER PROCESS (UNDERSTAT SEASON GW1-GW6, VERIFIED IDs)")
+            lines.append("#### FOCUS PLAYER PROCESS (UNDERSTAT SEASON GW1-GW6, VERIFIED IDs)")
             # Keep all verified season-process columns without shifting the
             # locked OUR15 roster and P(start) audit table identities.
             for focus_player in context.get("focus_players") or []:
                 observation = focus_player.get("provider_skill_observation") or {}
                 metrics = observation.get("metrics") or {}
                 lines.append(
-                    "CHELSEA PLAYER PROCESS: "
+                    "FOCUS PLAYER PROCESS: "
                     f"Player={focus_player.get('name')}; "
-                    f"Pos={focus_player.get('position')}; "
+                    f"Pos={focus_player.get('position')}; OfficialTeamId={focus_player.get('team_id')}; 
                     f"Matches={metrics.get('games')}; Minutes={metrics.get('time')}; "
                     f"Goals={metrics.get('goals')}; Assists={metrics.get('assists')}; "
                     f"xG={metrics.get('xg')}; xA={metrics.get('xa')}; "

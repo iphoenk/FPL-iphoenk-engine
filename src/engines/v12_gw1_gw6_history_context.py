@@ -335,6 +335,7 @@ def _verified_tactical_matches(
     official_matches: Sequence[Mapping[str, Any]],
     historical_gws: Sequence[int],
     as_of: str,
+    official_player_teams: Mapping[int, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Admit only same-source, verified match details within report cutoff.
 
@@ -355,7 +356,7 @@ def _verified_tactical_matches(
         fixture_id = _id(row.get("official_fixture_id"))
         match = fixtures.get(fixture_id)
         digest = str(row.get("source_snapshot_sha256") or "")
-        if (not match or native_id != _id(match.get("source_native_id"))
+        if (not re.fullmatch(r"[0-9a-f]{64}", digest) or not match or native_id != _id(match.get("source_native_id"))
                 or _id(row.get("gw")) != match.get("gw")
                 or match.get("gw") not in historical_gws
                 or row.get("fixture_join") != "VERIFIED_NATIVE_TO_OFFICIAL"
@@ -392,7 +393,8 @@ def _verified_tactical_matches(
                 if not isinstance(p, Mapping) or p.get("identity_status") not in _VERIFIED:
                     continue
                 pid = _id(p.get("official_element_id"))
-                if not pid or pid in seen_players:
+                if (not pid or pid in seen_players or
+                        (official_player_teams is not None and official_player_teams.get(pid) != team_id)):
                     continue
                 seen_players.add(pid)
                 roles[str(pid)] = {
@@ -581,7 +583,10 @@ def build_retrospective_context(
     players, available = _official_player_rows(bootstrap, full_history, gw_ids)
     understat_source = _attach_understat(players, understat, source_cutoff)
     matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, source_cutoff)
-    tactical_matches = _verified_tactical_matches(fotmob, matches, gw_ids, source_cutoff)
+    official_player_teams = {row["official_element_id"]: row["team_id"] for row in players}
+    tactical_matches = _verified_tactical_matches(
+        fotmob, matches, gw_ids, source_cutoff, official_player_teams
+    )
     context_ledger = _verified_context_ledger(
         bootstrap, official_fixtures, full_history, tactical_matches, gw_ids, source_cutoff
     )

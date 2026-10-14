@@ -23,7 +23,7 @@ def assess_pstart_resolution(
 ) -> dict[str, Any]:
     by_probability: dict[float, list[tuple[Any, ...]]] = defaultdict(list)
     missing, mismatches = [], []
-    conditioned = contextual = quantified = 0
+    conditioned = contextual = quantified = model_agreed = 0
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
             missing.append(index)
@@ -51,7 +51,9 @@ def assess_pstart_resolution(
             and selection.get("selection_posterior") is not None
         )
         conditioned += int(is_conditioned)
-        contextual += int(bool(signals & CONTEXT_SIGNALS))
+        # All of prior, role, manager and availability must be present for
+        # contextual acceptance. One contextual signal is not enough.
+        contextual += int(CONTEXT_SIGNALS.issubset(signals))
         raw_values = evidence.get("signal_values") or []
         quantitative_vector = tuple(
             sorted(
@@ -59,13 +61,27 @@ def assess_pstart_resolution(
                 for r in raw_values if isinstance(r, Mapping)
             )
         )
+        # Vectors must match signals one-for-one; duplicate/undeclared
+        # signals, nonfinite values or out-of-range probabilities are invalid.
         has_quantified = bool(
             quantitative_vector
             and len(quantitative_vector) == len(signals)
-            and all(isinstance(q, (int, float)) for _, p, w in quantitative_vector
-                    for q in (p, w))
+            and {name for name, _, _ in quantitative_vector} == signals
+            and all(
+                isinstance(probability, (int, float))
+                and not isinstance(probability, bool)
+                and isfinite(probability)
+                and 0.0 <= probability <= 1.0
+                and isinstance(weight, (int, float))
+                and not isinstance(weight, bool)
+                and isfinite(weight)
+                and weight >= 0.0
+                for _, probability, weight in quantitative_vector
+            )
         )
         quantified += int(has_quantified)
+        agrees = evidence.get("model_probability_agrees") is True
+        model_agreed += int(agrees)
         if evidence.get("model_probability_agrees") is False:
             mismatches.append(row.get("element_id") or row.get("element") or index)
         # Player identity/position are intentionally not used as evidence.
@@ -86,8 +102,11 @@ def assess_pstart_resolution(
     complete = len(rows) == 15 and not missing and not mismatches
     individual_pass = bool(complete and conditioned == len(rows))
     calibrated = calibration_status == "PASS"
+    # Equal rounded output with different valid inputs is not by itself
+    # a contradiction. Keep explicit model agreement and as-of calibration.
     full = bool(individual_pass and contextual == len(rows)
-                and quantified == len(rows) and calibrated and different == 0)
+                and quantified == len(rows) and model_agreed == len(rows)
+                and calibrated)
     blockers = []
     if not complete:
         blockers.append("CANONICAL_EVIDENCE_BINDING_INCOMPLETE")
@@ -99,8 +118,8 @@ def assess_pstart_resolution(
         blockers.append("QUANTIFIED_SIGNAL_INPUTS_INCOMPLETE")
     if not calibrated:
         blockers.append("PREDEADLINE_CALIBRATION_NOT_PASS")
-    if different:
-        blockers.append("EQUAL_OUTPUT_WITH_DIFFERENT_INPUT_REQUIRES_REVIEW")
+    if model_agreed != len(rows):
+        blockers.append("MODEL_OUTPUT_AGREEMENT_UNVERIFIED")
     return {
         "contract": "V12_PSTART_RESOLUTION_AUDIT_V1",
         "status": "FULL_RESOLUTION" if full else "LIMITED_RESOLUTION",
@@ -109,11 +128,16 @@ def assess_pstart_resolution(
         "individual_evidence_rows": conditioned,
         "contextual_evidence_rows": contextual,
         "quantified_input_rows": quantified,
+        "model_agreement_rows": model_agreed,
+        "complete_context_requires_all_signals": sorted(CONTEXT_SIGNALS),
         "missing_rows": missing, "binding_mismatch_elements": mismatches,
         "modal_probability_count": max((len(v) for v in by_probability.values()), default=0),
         "unique_rounded_probabilities": len(by_probability),
         "equal_probability_pairs_with_identical_evidence": identical,
         "equal_probability_pairs_with_different_evidence": different,
+        "rounded_collision_status": (
+            "REVIEW_ONLY_NOT_A_FAIL_GATE" if different else "NO_DIFFERENT_INPUT_COLLISIONS"
+        ),
         "calibration_status": calibration_status, "reasons": blockers,
         "equality_alone_is_not_failure": True,
         "mathematical_owner": "V12_PLAYER_MINUTES",

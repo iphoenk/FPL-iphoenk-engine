@@ -790,8 +790,9 @@ def walk_forward_pstart_validate(
                 for key, value in scores.items():
                     buckets[label][key].append(value)
                 reliability[label].append((p, y_start))
-                by_position[pos][f"{label}_brier"].append(scores["brier"])
-                by_team[team][f"{label}_brier"].append(scores["brier"])
+                for metric, score in scores.items():
+                    by_position[pos][f"{label}_{metric}"].append(score)
+                    by_team[team][f"{label}_{metric}"].append(score)
 
     def avg(values: Sequence[float]) -> float | None:
         return round(sum(values) / len(values), 6) if values else None
@@ -884,6 +885,11 @@ def walk_forward_pstart_validate(
         "future_leakage": chronology_errors > 0,
         "gw_split_integrity": "PASS" if gw_temporal_only else "FAIL",
         "predeadline_source_lineage": "PASS" if source_temporal else "UNVERIFIED",
+        # Absence of independently archived source finalization must remain
+        # explicit; report READY_FULL is not a calibration promotion gate.
+        "historical_asof_status": (
+            "PASS" if source_temporal else "HISTORICAL_AS_OF_UNAVAILABLE"
+        ),
         "missing_predeadline_source_proofs": provenance_gaps,
         "split": "EXPANDING_WINDOW_BY_GW_STRICTLY_PRE_DEADLINE",
         "split_precision": "GW_ORDER_ONLY_WITHOUT_ARCHIVED_FINALIZATION_TIMESTAMPS" if not source_temporal else "AS_OF_ARCHIVED",

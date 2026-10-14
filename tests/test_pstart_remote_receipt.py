@@ -68,6 +68,7 @@ def _accept(monkeypatch, receipt, objects):
 def test_remote_forecast_and_original_v6_bytes_pass(monkeypatch):
     receipt, objects = _snapshot()
     result = _accept(monkeypatch, receipt, objects)
+    assert result["pstart_prospective_status"] == "IMMUTABLE_REMOTE_READBACK_VERIFIED"
     assert result["pstart_prospective_remote_readback"] == "PASS"
     assert result["pstart_prospective_source_sha256_readback"] == "PASS"
     assert result["pstart_prospective_private_commit"] == "c" * 40

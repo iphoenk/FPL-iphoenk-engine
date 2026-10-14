@@ -2191,6 +2191,12 @@ def test_pstart_walkforward_rejects_unsettled_and_future_match_rows():
     assert out["future_leakage"] is False
     assert out["status"] != "PASS"
     assert out["historical_asof_status"] == "HISTORICAL_AS_OF_UNAVAILABLE"
+    assert out["position_noninferiority_tolerances"] == {
+        "brier": 0.03, "log_loss": 0.02, "xmins_mae": 1.0,
+        "dnp_brier": 0.02, "cameo_brier": 0.02,
+    }
+    for metrics in out["position_metric_deltas"].values():
+        assert set(metrics) == set(out["position_noninferiority_tolerances"])
     for cohort in ("by_position", "by_team"):
         assert out[cohort]
         for metrics in out[cohort].values():

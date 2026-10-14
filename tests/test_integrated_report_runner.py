@@ -1861,3 +1861,16 @@ def test_active_deep_report_binds_hist_and_pstart_before_section_fingerprints():
     assert source.index("    # Bind decision-critical visible sections to the exact producer payload", active) < source.index(
         "    report = materialize_deep_report(", anchor
     )
+
+
+def test_s02_source_rejection_text_is_human_readable_not_raw_mapping():
+    from src.engines.v12_report_orchestration import _format_source_rejections
+
+    result = _format_source_rejections({
+        "SOURCE_AFTER_REPORT_CUTOFF": 436,
+        "SOURCE_IDENTITY_UNVERIFIED": 12,
+    })
+    assert result == "SOURCE_AFTER_REPORT_CUTOFF=436, SOURCE_IDENTITY_UNVERIFIED=12"
+    assert "{" not in result and "'" not in result
+    assert _format_source_rejections({}) == "NONE"
+    assert _format_source_rejections(None) == "UNVERIFIED"

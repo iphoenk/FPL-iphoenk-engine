@@ -338,6 +338,7 @@ def build_retrospective_context(
     understat: Mapping[str, Any] | None,
     fotmob: Mapping[str, Any] | None,
     report_slot: str | None,
+    observation_cutoff_at: str | None = None,
     focus_team_id: int = 6,
     focus_player_ids: Sequence[int] = (154, 40, 165),
     tactical_observation: Mapping[str, Any] | None = None,
@@ -345,10 +346,16 @@ def build_retrospective_context(
     """Enrich GW1..6 without changing canonical projections or FPL finality."""
     if not _aware(report_slot):
         raise ValueError("report_slot must be timezone-aware to prevent future leakage")
+    # Report slot identifies the immutable logical occurrence. Sources acquired
+    # before that occurrence's verified prefetch completion may be later than
+    # its nominal clock slot; admit them only as current-report advisory.
+    if observation_cutoff_at is not None and not _aware(observation_cutoff_at):
+        raise ValueError("observation_cutoff_at must be timezone-aware")
+    source_cutoff = observation_cutoff_at or report_slot
     gw_ids = list(range(1, 7))
     players, available = _official_player_rows(bootstrap, full_history, gw_ids)
-    understat_source = _attach_understat(players, understat, report_slot)
-    matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, report_slot)
+    understat_source = _attach_understat(players, understat, source_cutoff)
+    matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, source_cutoff)
     by_id = {row["official_element_id"]: row for row in players}
     focused = [by_id[player_id] for player_id in focus_player_ids if player_id in by_id]
     formation = {"status": "UNAVAILABLE", "coach_fit_score": None, "formation_fit_score": None}
@@ -397,5 +404,11 @@ def build_retrospective_context(
         "season_stats_are_not_match_stats": True,
         "coach_fit_requires_multiple_observed_role_and_manager_matches": True,
         "opponent_fit_is_retrospective_not_forward_forecast": True,
-        "source_cutoff_at": report_slot,
+        "source_cutoff_at": source_cutoff,
+        "report_logical_slot": report_slot,
+        "observation_cutoff_mode": (
+            "OCCURRENCE_BOUND_PREFETCH_GENERATED_AT"
+            if observation_cutoff_at is not None else "LOGICAL_SLOT"
+        ),
+        "historical_predeadline_source_asof_admission": "NOT_ASSERTED",
     }

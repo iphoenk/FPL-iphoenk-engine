@@ -10326,7 +10326,6 @@ def run_deep(
         ProspectiveCaptureError,
         build_prospective_capture,
     )
-    import os
     try:
         if scenario_overrides:
             raise ProspectiveCaptureError("SCENARIO_OVERRIDE_IS_NOT_PROSPECTIVE_PRODUCTION")

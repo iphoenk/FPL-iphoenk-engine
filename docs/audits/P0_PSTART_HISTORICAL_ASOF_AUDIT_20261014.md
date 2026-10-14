@@ -84,3 +84,22 @@ These are **potential** original input snapshots for evaluating a later target G
 Change timestamp: 2026-10-14T15:23:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+## Original Official FPL source byte-level SHA256 verification (14 October 2026)
+
+**This newer readback supersedes the earlier 'large blobs not independently rehashed' observation above.** The exact archived Git blob bytes were fetched by blob SHA from GitHub Git object storage, re-encoded to UTF-8, independently hashed using SHA256, and compared with the SHA256 on each archived original `data/v6/evidence/artifact_catalog.json` read from its original commit. All four raw source files independently matched their original recorded SHA256.
+
+| Original run | Original root commit | Original Git blob SHA-1 | Raw file bytes | Independently verified SHA256 | Result |
+| --- | --- | --- | ---: | --- | --- |
+| 34286506638 (8 Sep) | `ed5c910aee9bf808aa7007a080da3b0654338841` | `f64a1f1836b135d8abbfcf17bfbc8fdd640be894` | 5,785,820 | `cc11e734bd93c200e0fb8920e65b843cd736e42250804870094ec0167ff5e56c` | SOURCE_BLOB_SHA256_VERIFIED |
+| 34417093599 (9 Sep) | `e7b7ded8aebc19a115ddbf2ef16946986c26bdb9` | `4261175f3e25bdc86304ef74df291ddaa431e256` | 5,787,551 | `768e11092ac6a2c99199ec9597b753632a0afc08caa7c82c74cd0cec7ae57176` | SOURCE_BLOB_SHA256_VERIFIED |
+| 34725699713 (12 Sep) | `d2d9ddbfc6292964240a03d60c30dbba62c3ac1f` | `8eed445a0080b0dd0265b9126a43997b0d53b305` | 5,861,271 | `cd20e4028b4e390231fece33b74b880c36d242b132b7d6e6c1ecb8e66e85057e` | SOURCE_BLOB_SHA256_VERIFIED |
+| 35476739571 (19 Sep) | `41b95421cba8fe70c94d0769e039f2208ede6b3c` | `96db450a284deffa930084313c08485d97f2b3ea` | 6,006,803 | `186077472a3514e82f860be1f7af3ac147f36cee479fa4050e3183f0b74dbfbb` | SOURCE_BLOB_SHA256_VERIFIED |
+
+The original source payload `data.bootstrap.json.events` binds Official GW4 deadline to `2026-09-12T12:30:00Z`, GW5 to `2026-09-18T17:30:00Z`, and GW6 to `2026-10-10T10:00:00Z`. Original 8 Sep snapshot has 654 players, ten finished official fixtures for each of GW1–GW3, zero finished GW4 fixtures, and original observation timestamp `2026-09-08T22:33:45.978263Z`. Original 9 Sep also has 654; 12 Sep has 657; 19 Sep has 667. The 12 Sep file was captured **after** GW4 deadline, not eligible as GW4 predeadline input; the 19 Sep file was captured **after** GW5 deadline, not eligible as GW5 predeadline input. Their source-as-of eligibility is for later GW targets only.
+
+**Strict scope of PASS:** `SOURCE_BLOB_SHA256_VERIFIED=4/4` attests to original **byte integrity**, not the historical backtest's original per-player inputs, model as-of registration, training provenance, or predictor performance. The existing 3,191 retrospective samples cannot be given `historical_asof_status=PASS` from these four blobs alone. Confirm that each paired player-match input existed in the same admissible archive before the target deadline and verify per-fold row linkage and model version; otherwise `HISTORICAL_AS_OF_UNAVAILABLE` remains. No historical forecast is fabricated.
+
+Change timestamp: 2026-10-14T08:52:39.058+00:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T08:52:39.058+00:00

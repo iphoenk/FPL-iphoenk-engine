@@ -162,3 +162,31 @@ Existing immutable GW7 private forecast objects and receipts remain unchanged. O
 Change timestamp: 2026-10-14T16:36:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T16:36:00+07:00
+
+
+## 14 October 2026: RotoWire identity discovery, quantified and fail closed
+
+Actual original V6 normalized RotoWire source snapshot as of 2026-10-14T09:33:52Z:
+- 220 lineup observations, 102 availability observations, 312 unique native player IDs.
+- 11 of 12 source fixture labels match a unique official fixture pairing and UTC kickoff; one UNKNOWN fixture has no accepted join.
+- 273/312 identities have a **candidate** based on exact source name and club (260 canonical full-name+club, 13 Official FPL web-name+club), with an independently matched fixture candidate.
+- The remaining 39 require provider-native ID/bio review; all 312 remain **UNMAPPED** as canonical V6 joins. Candidate strength is not proof of ID ownership.
+
+Machine-readable immutable snapshot is in:
+- docs/audits/P0_ROTOWIRE_IDENTITY_CANDIDATES_20261014.json
+- docs/audits/P0_ROTOWIRE_IDENTITY_CANDIDATES_20261014.csv
+
+Rebuild the read-only candidate review against normalized runtime-data-v6 artifacts:
+
+    python scripts/v6_rotowire_identity_review.py \
+      --rotowire data/v6/normalized/sources/rotowire.json \
+      --canonical-players data/v6/normalized/canonical_players.json \
+      --canonical-teams data/v6/normalized/canonical_teams.json \
+      --canonical-fixtures data/v6/normalized/canonical_fixtures.json \
+      --output /tmp/rotowire_identity_review.json
+
+The report intentionally does **not** update config/v6/verified_crosswalks.json, V6 player_identity_map.json, canonical xMins/xPts or V12_PLAYER_MINUTES. Name + club + kickoff is candidate discovery, NOT a verified crosswalk from a RotoWire native ID to an Official FPL code. A new independent provider-native bridge with identity provenance, review evidence and conflict checks is required for VERIFIED_MANUAL promotion. RotoWire predicted lineups remain external model signals and injury labels remain secondary advisory claims even after verified identity. Do not use this snapshot as historical GW1-GW6 predeadline evidence.
+
+The prior 220/103 figures were from an earlier inspected sample: this specific current snapshot has 102 availability rows. Release of the full contextual P(start) improvement still requires verified role/manager/availability as-of lineage and measured out-of-sample calibration by GK/DEF/MID/FWD. CODE GREEN alone is not MODEL_RESOLUTION FULL.
+
+Documentation sync: UPDATED (14 October 2026).

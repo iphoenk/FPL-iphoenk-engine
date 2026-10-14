@@ -344,3 +344,133 @@ def test_actual_prefetch_cutoff_still_rejects_future_source_and_naive_timestamp(
     import pytest
     with pytest.raises(ValueError, match="timezone-aware"):
         build(observation_cutoff_at="2026-10-13T12:45:00")
+
+
+def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
+    from src.runtime_v6.domains.acquisition.fotmob_tactics import normalize_match_details
+
+    fixture = {
+        "source_native_id": 5795467, "official_fixture_id": 53,
+        "round": "6", "identity_status": "VERIFIED_MANUAL",
+        "home": {"source_native_id": 8455, "official_team_id": 6,
+                 "identity_status": "VERIFIED_MANUAL"},
+        "away": {"source_native_id": 8678, "official_team_id": 3,
+                 "identity_status": "VERIFIED_MANUAL"},
+    }
+    detail = {
+        "general": {"matchId": "5795467", "leagueId": 47,
+                    "homeTeam": {"id": 8455}, "awayTeam": {"id": 8678}},
+        "content": {"lineup": {
+            "homeTeam": {"id": 8455, "formation": "3-4-2-1",
+                         "coach": {"id": 101, "name": "Xabi Alonso"},
+                         "starters": [{"id": 1001, "positionId": 10},
+                                      {"id": 9999, "positionId": 9}]},
+            "awayTeam": {"id": 8678, "formation": "4-2-3-1",
+                         "coach": {"name": "Coach B"}, "starters": []},
+        }},
+    }
+    records = normalize_match_details(
+        detail, fixture, {"1001": (154, "VERIFIED_MANUAL"),
+                          "9999": (165, "UNMAPPED")},
+    )
+    assert records is not None
+    assert records["pstart_probability_applied"] is False
+    home = records["sides"][0]
+    assert home["formation"] == "3-4-2-1"
+    assert home["coach"]["name"] == "Xabi Alonso"
+    assert home["verified_starter_count"] == 1
+    assert home["verified_official_starters"][0]["official_element_id"] == 154
+    assert home["verified_official_starters"][0]["tactical_role"] is None
+    wrong = deepcopy(detail)
+    wrong["general"]["awayTeam"]["id"] = 100
+    assert normalize_match_details(wrong, fixture, {}) is None
+    unknown = dict(fixture, identity_status="UNMAPPED")
+    assert normalize_match_details(detail, unknown, {}) is None
+
+
+def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    source = deepcopy(FOTMOB)
+    digest = "a" * 64
+    source["source_snapshot_ids"] = [digest]
+    source["record_groups"]["match_tactics"] = [{
+        "contract": "V6_FOTMOB_MATCH_TACTICS_V1",
+        "source_snapshot_sha256": digest,
+        "official_fixture_id": 53, "source_native_fixture_id": 5795467,
+        "fixture_join": "VERIFIED_NATIVE_TO_OFFICIAL", "gw": "6",
+        "sides": [
+            {"side": "home", "official_team_id": 6,
+             "coach": {"name": "Xabi Alonso"}, "formation": "3-4-2-1",
+             "verified_official_starters": [
+                {"official_element_id": 154, "identity_status": "VERIFIED_MANUAL",
+                 "provider_position_id": 10},
+             ]},
+        ],
+    }]
+    ctx = build(fotmob=source, tactical_observation={})
+    observed = ctx["focus_team"]["tactical_observation"]
+    assert observed["status"] == "MATCH_SPECIFIC_OBSERVED"
+    assert observed["manager"] == "Xabi Alonso"
+    assert observed["formation"] == "3-4-2-1"
+    assert ctx["match_tactics_verified_team_observations"] == 1
+    assert observed["coach_fit_score"] is None
+    assert observed["formation_fit_score"] is None
+    assert ctx["effect_on_projection"] == "NONE_ADVISORY_ONLY"
+    assert ctx["focus_team"]["verified_tactical_match_history"][0]["verified_player_roles"]["154"]["role"] is None
+    # A provider observation from a different immutable source object is not valid.
+    source["source_snapshot_ids"] = ["b" * 64]
+    rejected = build(fotmob=source, tactical_observation={})
+    assert rejected["match_tactics_verified_team_observations"] == 0
+    assert rejected["focus_team"]["tactical_observation"]["status"] == "UNAVAILABLE"
+
+
+def test_v6_fotmob_adapter_normalizes_declared_match_details_without_fuzzy_join():
+    from src.runtime_v6.domains.acquisition.source_native import _fotmob
+
+    def link(official_key, official, native):
+        return {official_key: official, "links": {
+            "fotmob": {"status": "VERIFIED_MANUAL", "source_native_id": native},
+        }}
+
+    identity = {
+        "mappings": {"154": link("official_fpl_element_id", 154, 1001)},
+        "entity_bridges": {
+            "fixture": {"mappings": {"53": link("official_fpl_fixture_id", 53, 5795467)}},
+            "team": {"mappings": {
+                "6": link("official_fpl_team_id", 6, 8455),
+                "3": link("official_fpl_team_id", 3, 8678),
+            }},
+        },
+    }
+    detail = {
+        "general": {"matchId": "5795467", "leagueId": 47,
+                    "homeTeam": {"id": 8455}, "awayTeam": {"id": 8678}},
+        "content": {"lineup": {
+            "homeTeam": {"id": 8455, "formation": "3-4-2-1",
+                         "coach": {"name": "Xabi Alonso"},
+                         "starters": [{"id": 1001, "positionId": 10}]},
+            "awayTeam": {"id": 8678, "formation": "4-4-2",
+                         "coach": {"name": "Coach B"}, "starters": []},
+        }},
+    }
+    source = {
+        "health": "GREEN", "checked_at": "2026-10-13T12:31:00+00:00",
+        "data": {
+            "league": {"json": {"details": {"id": 47, "selectedSeason": "2026/2027"},
+                               "matches": [{
+                                   "id": 5795467, "round": "6",
+                                   "home": {"id": 8455, "name": "Chelsea"},
+                                   "away": {"id": 8678, "name": "Bournemouth"},
+                                   "status": {"finished": True, "scoreStr": "5 - 1"},
+                               }]}},
+            "match_details_5795467": {"json": detail, "sha256": "a" * 64},
+        },
+    }
+    normalized = _fotmob(source, identity)
+    assert normalized["normalization_status"] == "NORMALIZED"
+    rows = normalized["record_groups"]["match_tactics"]
+    assert len(rows) == 1
+    assert rows[0]["source_snapshot_sha256"] == "a" * 64
+    assert rows[0]["sides"][0]["verified_official_starters"][0]["official_element_id"] == 154
+    assert rows[0]["pstart_probability_applied"] is False
+    source["data"]["match_details_5795467"]["json"]["general"]["matchId"] = "1"
+    assert _fotmob(source, identity)["record_groups"]["match_tactics"] == []

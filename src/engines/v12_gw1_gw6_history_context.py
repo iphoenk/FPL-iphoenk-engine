@@ -330,6 +330,86 @@ def _team_form(matches: Sequence[Mapping[str, Any]], team_id: int) -> dict[str, 
     }
 
 
+def _verified_tactical_matches(
+    fotmob: Mapping[str, Any] | None,
+    official_matches: Sequence[Mapping[str, Any]],
+    historical_gws: Sequence[int],
+    as_of: str,
+) -> list[dict[str, Any]]:
+    """Admit only same-source, verified match details within report cutoff.
+
+    Tactical observations are retrospective provider claims. They do not prove
+    that the information was available before an earlier FPL GW deadline.
+    """
+    if not _source_is_eligible(fotmob, as_of):
+        return []
+    ids = set((fotmob or {}).get("source_snapshot_ids") or [])
+    fixtures = {m["official_fixture_id"]: m for m in official_matches}
+    observed: list[dict[str, Any]] = []
+    used = set()
+    for row in ((fotmob or {}).get("record_groups") or {}).get("match_tactics") or []:
+        if not isinstance(row, Mapping) or row.get("contract") != "V6_FOTMOB_MATCH_TACTICS_V1":
+            continue
+        native_id = _id(row.get("source_native_fixture_id"))
+        fixture_id = _id(row.get("official_fixture_id"))
+        match = fixtures.get(fixture_id)
+        digest = str(row.get("source_snapshot_sha256") or "")
+        if (not match or native_id != _id(match.get("source_native_id"))
+                or _id(row.get("gw")) != match.get("gw")
+                or match.get("gw") not in historical_gws
+                or row.get("fixture_join") != "VERIFIED_NATIVE_TO_OFFICIAL"
+                or not digest or digest not in ids):
+            continue
+        for side in row.get("sides") or []:
+            if not isinstance(side, Mapping):
+                continue
+            team_id = _id(side.get("official_team_id"))
+            if team_id not in {match["home_team_id"], match["away_team_id"]}:
+                continue
+            expected_side = "home" if team_id == match["home_team_id"] else "away"
+            if side.get("side") != expected_side:
+                continue
+            key = (fixture_id, team_id)
+            if key in used:
+                # Ambiguous duplicates cannot become coach/formation evidence.
+                observed = [item for item in observed if (item["fixture_id"], item["team_id"]) != key]
+                continue
+            used.add(key)
+            coach = side.get("coach") or {}
+            formation = side.get("formation")
+            if not isinstance(coach, Mapping) or not isinstance(formation, str):
+                continue
+            if not str(coach.get("name") or "").strip() or not formation:
+                continue
+            seen_players = set()
+            roles: dict[str, dict[str, Any]] = {}
+            for p in side.get("verified_official_starters") or []:
+                if not isinstance(p, Mapping) or p.get("identity_status") not in _VERIFIED:
+                    continue
+                pid = _id(p.get("official_element_id"))
+                if not pid or pid in seen_players:
+                    continue
+                seen_players.add(pid)
+                roles[str(pid)] = {
+                    "provider_position_id": _id(p.get("provider_position_id")),
+                    "role": None, "role_semantics": "UNMAPPED_PROVIDER_POSITION_PROXY",
+                }
+            observed.append({
+                "fixture_id": fixture_id, "gw": match["gw"],
+                "team_id": team_id, "manager": coach["name"],
+                "manager_native_id": coach.get("source_native_id"),
+                "formation": formation,
+                "verified_player_roles": roles,
+                "verified_starter_count": len(roles),
+                "source_snapshot_sha256": digest,
+                "source_effective_at": (fotmob or {}).get("effective_at"),
+                "source": "V6_FOTMOB_MATCH_DETAILS",
+                "predeadline_asof_proven": False,
+                "numeric_start_probability_eligible": False,
+            })
+    return sorted(observed, key=lambda item: (item["gw"], item["fixture_id"], item["team_id"]))
+
+
 def build_retrospective_context(
     *,
     bootstrap: Mapping[str, Any],
@@ -356,9 +436,23 @@ def build_retrospective_context(
     players, available = _official_player_rows(bootstrap, full_history, gw_ids)
     understat_source = _attach_understat(players, understat, source_cutoff)
     matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, source_cutoff)
+    tactical_matches = _verified_tactical_matches(fotmob, matches, gw_ids, source_cutoff)
     by_id = {row["official_element_id"]: row for row in players}
     focused = [by_id[player_id] for player_id in focus_player_ids if player_id in by_id]
     formation = {"status": "UNAVAILABLE", "coach_fit_score": None, "formation_fit_score": None}
+    focus_tactics = [row for row in tactical_matches if row["team_id"] == focus_team_id]
+    if focus_tactics:
+        latest = focus_tactics[-1]
+        formation = {
+            "status": "MATCH_SPECIFIC_OBSERVED", "fixture_id": latest["fixture_id"],
+            "gw": latest["gw"], "manager": latest["manager"],
+            "formation": latest["formation"], "supporting_url": None,
+            "source": latest["source"],
+            "verified_starter_count": latest["verified_starter_count"],
+            "observed_player_roles": latest["verified_player_roles"],
+            "coach_fit_score": None, "formation_fit_score": None,
+            "cross_match_generalization_allowed": False,
+        }
     observation = dict(tactical_observation or {})
     if (observation.get("evidence_state") == "OBSERVED"
             and _id(observation.get("fixture_id")) in {x["official_fixture_id"] for x in matches}
@@ -391,12 +485,14 @@ def build_retrospective_context(
         "official_points_finalized": (full_history.get("coverage_gate") or {}).get("all_historical_gws_finalized") is True,
         "player_position_counts": dict(by_position),
         "source_health": {"understat": understat_source, "fotmob": match_source},
+        "match_tactics_verified_team_observations": len(tactical_matches),
         "players": players,
         "focus_players": focused,
         "focus_team": {
             "team_id": focus_team_id,
             "form_gw1_gw6": _team_form(matches, focus_team_id),
             "tactical_observation": formation,
+            "verified_tactical_match_history": [row for row in tactical_matches if row["team_id"] == focus_team_id],
         },
         "effect_on_projection": "NONE_ADVISORY_ONLY",
         "effect_on_fpl_finality": "NONE",

@@ -14,8 +14,8 @@
   "unique_provider_ids": 312,
   "canonical_player_count": 667,
   "candidate_counts": {
-    "IDENTITY_CANDIDATE_REVIEW": 260,
-    "NAME_TEAM_UNRESOLVED": 52
+    "IDENTITY_CANDIDATE_REVIEW": 273,
+    "NAME_TEAM_UNRESOLVED": 39
   },
   "fixture_candidate_matches": 11,
   "fixture_count": 12,
@@ -155,7 +155,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 16186,
@@ -180,7 +181,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 16872,
@@ -207,7 +209,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 16889,
@@ -236,7 +239,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17247,
@@ -261,7 +265,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17509,
@@ -288,7 +293,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17514,
@@ -313,7 +319,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17516,
@@ -338,7 +345,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17705,
@@ -363,7 +371,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17825,
@@ -390,7 +399,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17893,
@@ -415,7 +425,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17945,
@@ -442,7 +453,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 17946,
@@ -492,7 +504,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18234,
@@ -517,7 +530,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18448,
@@ -542,7 +556,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18543,
@@ -567,7 +582,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18544,
@@ -617,7 +633,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18583,
@@ -642,7 +659,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18624,
@@ -667,7 +685,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 18746,
@@ -717,7 +736,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19122,
@@ -742,7 +762,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19134,
@@ -767,7 +788,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19167,
@@ -794,7 +816,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19194,
@@ -819,7 +842,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19220,
@@ -844,7 +868,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19409,
@@ -869,7 +894,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19576,
@@ -894,7 +920,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 19912,
@@ -944,7 +971,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 20646,
@@ -1019,7 +1047,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 20822,
@@ -1044,7 +1073,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 21071,
@@ -1146,7 +1176,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 21404,
@@ -1173,7 +1204,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 21464,
@@ -1198,7 +1230,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 21911,
@@ -1223,7 +1256,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 21938,
@@ -1248,7 +1282,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 22120,
@@ -1273,7 +1308,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 22867,
@@ -1298,7 +1334,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 22869,
@@ -1323,7 +1360,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23104,
@@ -1373,7 +1411,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23173,
@@ -1400,7 +1439,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23240,
@@ -1425,7 +1465,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23245,
@@ -1452,7 +1493,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23329,
@@ -1477,7 +1519,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23369,
@@ -1504,14 +1547,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23477,
       "rotowire_name": "Gabriel",
       "rotowire_team": "Arsenal",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 4,
+      "official_fpl_code_candidate": 226597,
       "official_team_candidate": 1,
       "official_fixture_candidates": [
         69
@@ -1526,10 +1570,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23542,
@@ -1554,7 +1599,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23566,
@@ -1579,7 +1625,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23609,
@@ -1604,7 +1651,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 23618,
@@ -1629,7 +1677,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24507,
@@ -1654,7 +1703,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24512,
@@ -1679,7 +1729,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24577,
@@ -1704,7 +1755,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24952,
@@ -1731,7 +1783,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24955,
@@ -1756,7 +1809,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 24967,
@@ -1784,7 +1838,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 25196,
@@ -1859,7 +1914,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 25472,
@@ -1884,7 +1940,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 25787,
@@ -1909,7 +1966,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 25834,
@@ -1936,7 +1994,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 25973,
@@ -1961,7 +2020,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26103,
@@ -1988,7 +2048,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26124,
@@ -2013,7 +2074,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26126,
@@ -2040,7 +2102,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26138,
@@ -2065,7 +2128,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26159,
@@ -2092,7 +2156,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26412,
@@ -2117,7 +2182,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26508,
@@ -2144,7 +2210,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26569,
@@ -2171,7 +2238,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26575,
@@ -2198,14 +2266,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26581,
       "rotowire_name": "Pedro Porro",
       "rotowire_team": "Tottenham Hotspur",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 499,
+      "official_fpl_code_candidate": 441164,
       "official_team_candidate": 19,
       "official_fixture_candidates": [
         70
@@ -2222,10 +2291,11 @@
       "source_groups": [
         "availability"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26633,
@@ -2277,7 +2347,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26857,
@@ -2302,7 +2373,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26860,
@@ -2329,7 +2401,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 26886,
@@ -2354,14 +2427,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 27118,
       "rotowire_name": "Reinildo",
       "rotowire_team": "Sunderland",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 536,
+      "official_fpl_code_candidate": 434399,
       "official_team_candidate": 20,
       "official_fixture_candidates": [
         61
@@ -2376,10 +2450,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 27137,
@@ -2404,14 +2479,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 27563,
       "rotowire_name": "Joao Pedro",
       "rotowire_team": "Chelsea",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 165,
+      "official_fpl_code_candidate": 475168,
       "official_team_candidate": 6,
       "official_fixture_candidates": [
         64
@@ -2426,10 +2502,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 27615,
@@ -2481,7 +2558,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 27891,
@@ -2535,7 +2613,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 28588,
@@ -2560,7 +2639,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 28897,
@@ -2587,7 +2667,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 28920,
@@ -2612,7 +2693,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 28953,
@@ -2637,7 +2719,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29041,
@@ -2662,7 +2745,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29096,
@@ -2687,7 +2771,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29146,
@@ -2712,7 +2797,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29155,
@@ -2737,7 +2823,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29177,
@@ -2762,7 +2849,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29182,
@@ -2814,7 +2902,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29290,
@@ -2866,7 +2955,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29449,
@@ -2893,7 +2983,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29639,
@@ -2918,7 +3009,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29664,
@@ -2943,7 +3035,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29722,
@@ -2968,7 +3061,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29729,
@@ -2997,7 +3091,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29740,
@@ -3022,7 +3117,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29869,
@@ -3047,7 +3143,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29889,
@@ -3072,7 +3169,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29892,
@@ -3097,7 +3195,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 29972,
@@ -3122,7 +3221,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30434,
@@ -3147,7 +3247,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30475,
@@ -3180,8 +3281,8 @@
       "rotowire_native_id": 30584,
       "rotowire_name": "Evanilson",
       "rotowire_team": "AFC Bournemouth",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 79,
+      "official_fpl_code_candidate": 444102,
       "official_team_candidate": 3,
       "official_fixture_candidates": [
         61
@@ -3196,10 +3297,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30591,
@@ -3224,7 +3326,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30601,
@@ -3249,7 +3352,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30618,
@@ -3274,7 +3378,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30620,
@@ -3299,7 +3404,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30687,
@@ -3326,7 +3432,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30689,
@@ -3351,7 +3458,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30731,
@@ -3376,7 +3484,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30751,
@@ -3401,7 +3510,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30835,
@@ -3426,7 +3536,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30866,
@@ -3451,7 +3562,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 30875,
@@ -3478,7 +3590,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31007,
@@ -3505,7 +3618,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31009,
@@ -3530,7 +3644,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31043,
@@ -3555,7 +3670,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31046,
@@ -3580,7 +3696,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31126,
@@ -3630,7 +3747,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31246,
@@ -3655,7 +3773,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31269,
@@ -3680,7 +3799,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31282,
@@ -3707,7 +3827,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31296,
@@ -3732,7 +3853,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31306,
@@ -3757,7 +3879,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31313,
@@ -3784,7 +3907,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31322,
@@ -3809,7 +3933,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31343,
@@ -3834,7 +3959,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31344,
@@ -3859,7 +3985,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31396,
@@ -3886,7 +4013,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 31420,
@@ -3936,7 +4064,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32466,
@@ -3961,7 +4090,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32484,
@@ -3986,7 +4116,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32666,
@@ -4013,7 +4144,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32713,
@@ -4038,7 +4170,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32723,
@@ -4063,7 +4196,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32767,
@@ -4088,7 +4222,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32865,
@@ -4115,7 +4250,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32878,
@@ -4140,7 +4276,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32933,
@@ -4167,7 +4304,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 32949,
@@ -4194,7 +4332,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33114,
@@ -4219,7 +4358,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33116,
@@ -4244,7 +4384,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33122,
@@ -4269,7 +4410,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33139,
@@ -4294,7 +4436,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33148,
@@ -4319,7 +4462,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33218,
@@ -4346,7 +4490,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33338,
@@ -4371,7 +4516,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33344,
@@ -4396,7 +4542,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33359,
@@ -4421,7 +4568,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33372,
@@ -4448,7 +4596,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33418,
@@ -4475,7 +4624,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33509,
@@ -4500,7 +4650,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33528,
@@ -4525,7 +4676,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33659,
@@ -4550,7 +4702,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33701,
@@ -4575,7 +4728,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33724,
@@ -4600,7 +4754,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 33736,
@@ -4627,7 +4782,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34081,
@@ -4652,7 +4808,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34088,
@@ -4704,7 +4861,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34122,
@@ -4729,7 +4887,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34132,
@@ -4756,7 +4915,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34207,
@@ -4781,7 +4941,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34216,
@@ -4808,7 +4969,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34402,
@@ -4833,7 +4995,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34431,
@@ -4883,7 +5046,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34522,
@@ -4910,7 +5074,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34533,
@@ -4935,7 +5100,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34595,
@@ -4962,7 +5128,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 34683,
@@ -5041,7 +5208,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35017,
@@ -5066,7 +5234,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35018,
@@ -5118,7 +5287,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35296,
@@ -5143,7 +5313,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35483,
@@ -5170,7 +5341,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35512,
@@ -5197,7 +5369,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35542,
@@ -5249,7 +5422,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35610,
@@ -5274,7 +5448,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35627,
@@ -5299,7 +5474,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35654,
@@ -5324,7 +5500,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35658,
@@ -5351,7 +5528,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35679,
@@ -5405,7 +5583,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35762,
@@ -5430,7 +5609,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35770,
@@ -5455,7 +5635,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35779,
@@ -5480,7 +5661,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35797,
@@ -5505,7 +5687,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35815,
@@ -5533,7 +5716,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35818,
@@ -5585,7 +5769,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35956,
@@ -5610,7 +5795,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 35976,
@@ -5637,7 +5823,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36103,
@@ -5664,7 +5851,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36115,
@@ -5689,7 +5877,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36145,
@@ -5714,14 +5903,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36154,
       "rotowire_name": "Mateo Joseph",
       "rotowire_team": "Leeds United",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 349,
+      "official_fpl_code_candidate": 565297,
       "official_team_candidate": 13,
       "official_fixture_candidates": [
         66
@@ -5738,10 +5928,11 @@
       "source_groups": [
         "availability"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36158,
@@ -5766,7 +5957,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36419,
@@ -5791,7 +5983,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36424,
@@ -5816,7 +6009,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36571,
@@ -5841,7 +6035,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 36625,
@@ -5918,7 +6113,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37113,
@@ -5945,7 +6141,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37190,
@@ -5997,7 +6194,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37330,
@@ -6022,7 +6220,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37455,
@@ -6047,7 +6246,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37578,
@@ -6072,7 +6272,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37669,
@@ -6097,7 +6298,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37689,
@@ -6122,14 +6324,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37734,
       "rotowire_name": "Savio",
       "rotowire_team": "Tottenham Hotspur",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 403,
+      "official_fpl_code_candidate": 510281,
       "official_team_candidate": 19,
       "official_fixture_candidates": [
         70
@@ -6144,10 +6347,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37737,
@@ -6197,7 +6401,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37904,
@@ -6224,7 +6429,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37907,
@@ -6249,7 +6455,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37919,
@@ -6276,7 +6483,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37935,
@@ -6301,7 +6509,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 37965,
@@ -6357,8 +6566,8 @@
       "rotowire_native_id": 38141,
       "rotowire_name": "Chadi Riad",
       "rotowire_team": "Crystal Palace",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 206,
+      "official_fpl_code_candidate": 515621,
       "official_team_candidate": 8,
       "official_fixture_candidates": [
         63
@@ -6375,10 +6584,11 @@
       "source_groups": [
         "availability"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38145,
@@ -6407,7 +6617,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38161,
@@ -6432,7 +6643,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38336,
@@ -6457,7 +6669,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38428,
@@ -6484,7 +6697,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38472,
@@ -6509,7 +6723,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38603,
@@ -6536,7 +6751,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38617,
@@ -6561,7 +6777,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38731,
@@ -6586,7 +6803,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38732,
@@ -6611,7 +6829,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38747,
@@ -6636,7 +6855,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38798,
@@ -6661,7 +6881,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38835,
@@ -6686,7 +6907,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 38990,
@@ -6713,7 +6935,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39552,
@@ -6738,7 +6961,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39597,
@@ -6763,7 +6987,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39645,
@@ -6790,7 +7015,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39728,
@@ -6815,7 +7041,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39929,
@@ -6865,7 +7092,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 39983,
@@ -6892,7 +7120,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40194,
@@ -6919,7 +7148,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40218,
@@ -6944,14 +7174,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40313,
       "rotowire_name": "Murillo",
       "rotowire_team": "Nottingham Forest",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 472,
+      "official_fpl_code_candidate": 575476,
       "official_team_candidate": 18,
       "official_fixture_candidates": [
         69
@@ -6966,10 +7197,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40330,
@@ -6994,7 +7226,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40604,
@@ -7021,7 +7254,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40646,
@@ -7046,7 +7280,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40658,
@@ -7071,7 +7306,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40667,
@@ -7098,7 +7334,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40827,
@@ -7123,7 +7360,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40910,
@@ -7148,7 +7386,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 40953,
@@ -7173,7 +7412,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 41175,
@@ -7223,7 +7463,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 41215,
@@ -7248,7 +7489,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 41357,
@@ -7273,7 +7515,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 41367,
@@ -7325,7 +7568,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 42215,
@@ -7350,7 +7594,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 43477,
@@ -7377,7 +7622,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 43876,
@@ -7402,7 +7648,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 43917,
@@ -7427,7 +7674,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 43918,
@@ -7455,7 +7703,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44062,
@@ -7480,7 +7729,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44100,
@@ -7505,7 +7755,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44124,
@@ -7532,7 +7783,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44143,
@@ -7557,7 +7809,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44208,
@@ -7584,7 +7837,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44241,
@@ -7611,7 +7865,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44361,
@@ -7636,7 +7891,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44562,
@@ -7661,7 +7917,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44636,
@@ -7686,7 +7943,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44680,
@@ -7711,7 +7969,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 44858,
@@ -7761,7 +8020,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 45068,
@@ -7788,7 +8048,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 45073,
@@ -7815,7 +8076,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 45153,
@@ -7842,7 +8104,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46542,
@@ -7869,14 +8132,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46657,
       "rotowire_name": "Igor Jesus",
       "rotowire_team": "Nottingham Forest",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 491,
+      "official_fpl_code_candidate": 482973,
       "official_team_candidate": 18,
       "official_fixture_candidates": [
         69,
@@ -7894,17 +8158,18 @@
       "source_groups": [
         "availability"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46674,
       "rotowire_name": "Jair Cunha",
       "rotowire_team": "Nottingham Forest",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 474,
+      "official_fpl_code_candidate": 575458,
       "official_team_candidate": 18,
       "official_fixture_candidates": [
         69
@@ -7919,10 +8184,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46711,
@@ -7974,7 +8240,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46776,
@@ -7999,14 +8266,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 46898,
       "rotowire_name": "Emersonn",
       "rotowire_team": "Ipswich Town",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 316,
+      "official_fpl_code_candidate": 543968,
       "official_team_candidate": 12,
       "official_fixture_candidates": [
         67
@@ -8021,10 +8289,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 47458,
@@ -8051,14 +8320,15 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 47726,
       "rotowire_name": "Rayan",
       "rotowire_team": "AFC Bournemouth",
-      "official_fpl_element_candidate": null,
-      "official_fpl_code_candidate": null,
+      "official_fpl_element_candidate": 67,
+      "official_fpl_code_candidate": 499604,
       "official_team_candidate": 3,
       "official_fixture_candidates": [
         61
@@ -8073,10 +8343,11 @@
       "source_groups": [
         "lineups"
       ],
-      "review_status": "NAME_TEAM_UNRESOLVED",
+      "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "OFFICIAL_WEB_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 48010,
@@ -8101,7 +8372,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     },
     {
       "rotowire_native_id": 48525,
@@ -8128,7 +8400,8 @@
       "review_status": "IDENTITY_CANDIDATE_REVIEW",
       "verification_status": "UNMAPPED",
       "joinable": false,
-      "numeric_pstart_authority": false
+      "numeric_pstart_authority": false,
+      "candidate_basis": "FULL_CANONICAL_NAME_AND_CLUB"
     }
   ],
   "governance": {
@@ -8139,5 +8412,9 @@
     "source_asof_not_historical": true,
     "no_change_to_pstart_xmins_or_xpts": true,
     "source_prediction_not_official_starter_fact": true
+  },
+  "candidate_methods": {
+    "FULL_CANONICAL_NAME_AND_CLUB": 260,
+    "OFFICIAL_WEB_NAME_AND_CLUB": 13
   }
 }

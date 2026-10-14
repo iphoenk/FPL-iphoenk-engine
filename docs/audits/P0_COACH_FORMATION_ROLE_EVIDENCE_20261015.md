@@ -71,3 +71,7 @@ and (e) advisory-only, no fabricated P(start).
 
 Until independent complete data and outcome calibration exist, retain
 `LIMITED_RESOLUTION` and explicit context blockers.
+
+Change timestamp: `2026-10-15T05:56:22+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-15T05:56:22+07:00`

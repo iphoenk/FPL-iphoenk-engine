@@ -399,14 +399,46 @@ def _verified_tactical_matches(
                 seen_players.add(pid)
                 roles[str(pid)] = {
                     "provider_position_id": _id(p.get("provider_position_id")),
+                    "observed_pitch_layout": p.get("observed_pitch_layout")
+                        if isinstance(p.get("observed_pitch_layout"), Mapping) else None,
                     "role": None, "role_semantics": "UNMAPPED_PROVIDER_POSITION_PROXY",
                 }
+            def verified_auxiliary(key: str) -> dict[str, dict[str, Any]]:
+                joined: dict[str, dict[str, Any]] = {}
+                blocked: set[int] = set()
+                for item in side.get(key) or []:
+                    if not isinstance(item, Mapping) or item.get("identity_status") not in _VERIFIED:
+                        continue
+                    pid = _id(item.get("official_element_id"))
+                    if (not pid or pid in seen_players or pid in blocked or
+                            (official_player_teams is not None and official_player_teams.get(pid) != team_id)):
+                        continue
+                    blocked.add(pid)
+                    joined[str(pid)] = {
+                        "selection_class": item.get("selection_class"),
+                        "source_native_player_id": _id(item.get("source_native_player_id")),
+                        "reported_unavailability_type": item.get("reported_unavailability_type")
+                            if key == "verified_official_unavailable" else None,
+                        "reported_expected_return": item.get("reported_expected_return")
+                            if key == "verified_official_unavailable" else None,
+                        "forecast_availability_eligible": False,
+                        "historical_predeadline_asof_proven": False,
+                    }
+                return joined
+            bench = verified_auxiliary("verified_official_bench")
+            unavailable = verified_auxiliary("verified_official_unavailable")
+            for pid in set(bench).intersection(unavailable):
+                bench.pop(pid, None)
+                unavailable.pop(pid, None)
             observed.append({
                 "fixture_id": fixture_id, "gw": match["gw"],
                 "team_id": team_id, "manager": coach["name"],
                 "manager_native_id": coach.get("source_native_id"),
                 "formation": formation,
                 "verified_player_roles": roles,
+                "verified_bench_players": bench,
+                "verified_unavailable_players": unavailable,
+                "availability_observation_status": "RETROSPECTIVE_PROVIDER_REPORTED_ONLY",
                 "verified_starter_count": len(roles),
                 "source_snapshot_sha256": digest,
                 "source_effective_at": (fotmob or {}).get("effective_at"),
@@ -557,6 +589,103 @@ def _verified_context_ledger(
     }
 
 
+def _focus_team_selection_shadow(
+    tactical_matches: Sequence[Mapping[str, Any]], team_id: int,
+) -> dict[str, Any]:
+    """Describe actual selection and identical observed provider slots only.
+
+    Same-slot rivals are not expected starters or inferred true tactical roles.
+    """
+    by_player: dict[str, dict[str, Any]] = {}
+    by_slot: dict[tuple[str, str, int], dict[str, Any]] = {}
+    unavailable: list[dict[str, Any]] = []
+    bench_count = 0
+    for game in tactical_matches:
+        if game.get("team_id") != team_id:
+            continue
+        fixture = game["fixture_id"]
+        manager = str(game.get("manager_native_id") or game.get("manager") or "UNKNOWN")
+        formation = str(game.get("formation") or "UNKNOWN")
+        for raw_id, player in (game.get("verified_player_roles") or {}).items():
+            pid = _id(raw_id)
+            if pid is None:
+                continue
+            slot = _id(player.get("provider_position_id"))
+            row = by_player.setdefault(str(pid), {
+                "element_id": pid, "started_verified_fixtures": [],
+                "observed_provider_slot_ids": [], "observed_pitch_layouts": [],
+                "reported_bench_fixture_ids": [], "reported_unavailable_fixture_ids": [],
+            })
+            if fixture not in row["started_verified_fixtures"]:
+                row["started_verified_fixtures"].append(fixture)
+            if slot is not None:
+                if slot not in row["observed_provider_slot_ids"]:
+                    row["observed_provider_slot_ids"].append(slot)
+                key = (manager, formation, slot)
+                entry = by_slot.setdefault(key, {
+                    "manager_identity": manager, "formation": formation,
+                    "provider_position_id": slot, "verified_element_ids": [],
+                    "fixture_ids": [], "semantics": "OBSERVED_SAME_PROVIDER_SLOT_NOT_ROLE",
+                })
+                if pid not in entry["verified_element_ids"]:
+                    entry["verified_element_ids"].append(pid)
+                if fixture not in entry["fixture_ids"]:
+                    entry["fixture_ids"].append(fixture)
+            layout = player.get("observed_pitch_layout")
+            if isinstance(layout, Mapping):
+                row["observed_pitch_layouts"].append({
+                    "fixture_id": fixture, "x": layout.get("x"), "y": layout.get("y"),
+                    "coordinate_system": layout.get("coordinate_system"),
+                })
+        for raw_id in (game.get("verified_bench_players") or {}):
+            pid = _id(raw_id)
+            if pid is None:
+                continue
+            bench_count += 1
+            row = by_player.setdefault(str(pid), {
+                "element_id": pid, "started_verified_fixtures": [],
+                "observed_provider_slot_ids": [], "observed_pitch_layouts": [],
+                "reported_bench_fixture_ids": [], "reported_unavailable_fixture_ids": [],
+            })
+            row["reported_bench_fixture_ids"].append(fixture)
+        for raw_id, note in (game.get("verified_unavailable_players") or {}).items():
+            pid = _id(raw_id)
+            if pid is None:
+                continue
+            row = by_player.setdefault(str(pid), {
+                "element_id": pid, "started_verified_fixtures": [],
+                "observed_provider_slot_ids": [], "observed_pitch_layouts": [],
+                "reported_bench_fixture_ids": [], "reported_unavailable_fixture_ids": [],
+            })
+            row["reported_unavailable_fixture_ids"].append(fixture)
+            unavailable.append({
+                "element_id": pid, "fixture_id": fixture, "gw": game.get("gw"),
+                "reported_reason": note.get("reported_unavailability_type"),
+                "reported_expected_return": note.get("reported_expected_return"),
+                "source_snapshot_sha256": game.get("source_snapshot_sha256"),
+                "source_effective_at": game.get("source_effective_at"),
+                "historical_predeadline_asof_proven": False,
+                "forecast_availability_eligible": False,
+            })
+    contests = [row for _, row in sorted(by_slot.items())
+                if len(row["verified_element_ids"]) >= 2]
+    return {
+        "contract": "V12_RETROSPECTIVE_PROVIDER_SELECTION_SHADOW_V1",
+        "observed_team_match_count": sum(m.get("team_id") == team_id for m in tactical_matches),
+        "verified_starter_observation_count": sum(len(m.get("verified_player_roles") or {})
+            for m in tactical_matches if m.get("team_id") == team_id),
+        "verified_provider_bench_observation_count": bench_count,
+        "verified_provider_unavailable_observation_count": len(unavailable),
+        "observed_same_slot_candidate_groups": contests,
+        "per_player": [by_player[k] for k in sorted(by_player, key=int)],
+        "reported_unavailability": unavailable,
+        "semantic_tactical_roles_verified": False,
+        "pregame_availability_asof_verified": False,
+        "numeric_pstart_effect": "NONE",
+        "source_authority": "V6_VERIFIED_ADVISORY_ONLY",
+    }
+
+
 def build_retrospective_context(
     *,
     bootstrap: Mapping[str, Any],
@@ -647,6 +776,7 @@ def build_retrospective_context(
             "form_gw1_gw6": _team_form(matches, focus_team_id),
             "tactical_observation": formation,
             "verified_tactical_match_history": [row for row in tactical_matches if row["team_id"] == focus_team_id],
+            "verified_selection_and_rotation_shadow": _focus_team_selection_shadow(tactical_matches, focus_team_id),
         },
         "effect_on_projection": "NONE_ADVISORY_ONLY",
         "effect_on_fpl_finality": "NONE",

@@ -19,6 +19,7 @@ from .league_prefetch import (
     standings_artifact,
 )
 from .official_fpl_client import OfficialFPLClient
+from .official_gw_history import retrospective_gw_partition
 from .personal_prefetch import (
     discover_memberships,
     normalise_submitted_picks,
@@ -1157,6 +1158,26 @@ class PrefetchService:
                     },
                     "enrichment": dict(detail_artifact.get("enrichment") or {}),
                 }
+                # Readable, occurrence-bound GW1-GW3 Official partitions.
+                # They expose the already-acquired post-deadline match facts;
+                # never admit historical source-as-of or scheduler evidence.
+                partitions: dict[str, Any] = {}
+                for retrospective_gw in (1, 2, 3):
+                    if retrospective_gw not in (full_history.get("as_of") or {}).get("historical_gws", []):
+                        continue
+                    partition = retrospective_gw_partition(full_history, retrospective_gw)
+                    partition["report_prefetch_run_id"] = report_prefetch_run_id
+                    partition["target_logical_report_slot"] = slot.isoformat()
+                    partition_relative = f"history/official_gw_{retrospective_gw}.json"
+                    write_json(self.output_root / partition_relative, partition, secrets=secrets)
+                    artifacts.append(artifact_meta(self.output_root, partition_relative))
+                    partitions[str(retrospective_gw)] = {
+                        "path": partition_relative,
+                        "coverage": partition["coverage"],
+                        "observation_class": partition["observation_class"],
+                        "historical_predeadline_source_asof": "NOT_ATTESTED",
+                    }
+                summary_artifact["retrospective_gw_1_3"] = partitions
                 write_json(self.output_root / summary_relative, summary_artifact, secrets=secrets)
                 artifacts.append(artifact_meta(self.output_root, history_relative))
                 artifacts.append(artifact_meta(self.output_root, summary_relative))

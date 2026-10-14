@@ -191,6 +191,12 @@ class RotatingCredentialManager:
                 confirmed = self.store.load()
                 if confirmed.version != marked.version or confirmed.phase != "IN_FLIGHT":
                     raise RotationUncertain("OIDC_GRANT_MARKER_PERSISTENCE_UNVERIFIED")
+            except RotationBlocked as exc:
+                # Preserve sanitized Git CAS diagnostics, never reveal secrets
+                # or issue a refresh POST without a verified IN_FLIGHT marker.
+                if str(exc).startswith("CREDENTIAL_STORE_"):
+                    raise
+                raise RotationBlocked("OIDC_GRANT_MARKER_PERSISTENCE_FAILED") from None
             except Exception:
                 raise RotationBlocked("OIDC_GRANT_MARKER_PERSISTENCE_FAILED") from None
 

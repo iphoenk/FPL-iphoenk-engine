@@ -1271,6 +1271,9 @@ def _analytics_production_acceptance(
             understat=_read_json(factual_root / "normalized/sources/understat.json", {}) or {},
             fotmob=_read_json(factual_root / "normalized/sources/fotmob.json", {}) or {},
             report_slot=report_slot,
+            # Proven equal to the exact source-detail occurrence above.
+            # This advisory cutoff is not a GW historical predeadline witness.
+            observation_cutoff_at=prefetch.get("generated_at"),
             tactical_observation=observation,
         )
     else:

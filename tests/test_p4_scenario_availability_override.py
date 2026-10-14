@@ -31,7 +31,7 @@ def test_unknown_override_type_fails_closed():
         projection({"1":{"override_type":"POSTHOC_XPTS_HACK","p_available":0.0}})
 
 
-def test_integrated_runner_wires_private_p4_override_and_bypasses_stage2_cache():
+def test_integrated_runner_wires_private_p4_override_and_bypasses_stage2_cache(monkeypatch):
     signature = inspect.signature(integrated.run_deep)
     assert "scenario_overrides" in signature.parameters
     source = inspect.getsource(integrated.run_deep)
@@ -47,3 +47,50 @@ def test_integrated_runner_wires_private_p4_override_and_bypasses_stage2_cache()
     assert "teammate_selection_evidence = official_selection_evidence(teammate)" in model_source
     assert '"selection_evidence": teammate_selection_evidence' in model_source
     assert "teammate_model_player" in model_source
+
+    # Exercise the real projection consumer. A teammate observed to start twice
+    # must have identical verified selection evidence in both P(start) routes.
+    observed = []
+    real_estimate = historical.estimate_xmins
+
+    def capture_estimate(player_row, context, **kwargs):
+        if player_row.get("id") == 2:
+            observed.append((dict(player_row), dict(context)))
+        return real_estimate(player_row, context, **kwargs)
+
+    monkeypatch.setattr(historical, "estimate_xmins", capture_estimate)
+    teammate = {**player(), "id": 2, "web_name": "P2", "starts": 0, "minutes": 0}
+    bootstrap = {
+        "teams": [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}],
+        "elements": [player(), teammate],
+    }
+    strength = {
+        "baseline": {"home_goals": 1.3, "away_goals": 1.3},
+        "teams": [{"team_id": 1, "matches_played": 2}, {"team_id": 2, "matches_played": 2}],
+        "matchups": [{
+            "event": 3, "kickoff_time": "2026-09-20T12:00:00Z",
+            "team_h": 1, "team_a": 2, "home_expected_goals": 1.4,
+            "away_expected_goals": 1.0, "home_clean_sheet_probability": 0.35,
+            "away_clean_sheet_probability": 0.22,
+        }],
+    }
+    match_rows = [
+        {
+            "player_id": 2, "team_id": 1, "gw": gw, "match_id": 100 + gw,
+            "opponent_team_id": 2, "home": bool(gw % 2), "starter": True,
+            "minutes_played": 90, "status": "FINAL", "xg": 0.1,
+        }
+        for gw in (1, 2)
+    ]
+    historical.build(
+        bootstrap, strength, planning_gw=3,
+        prior_payload={"model": "prior", "season": "2025/26", "players": {}},
+        horizon=15, player_match_rows=match_rows,
+    )
+    assert len(observed) >= 2  # teammate-chain and target-player P(start)
+    assert all(
+        row.get("starts") == 2
+        and (context.get("selection_evidence") or {}).get("status") == "AVAILABLE"
+        and (context.get("selection_evidence") or {}).get("starts") == 2
+        for row, context in observed
+    )

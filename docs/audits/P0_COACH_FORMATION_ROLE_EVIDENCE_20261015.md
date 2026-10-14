@@ -125,7 +125,7 @@ established. Until then CHELSEA_CONTEXT=PARTIAL, not PASS.
 
 On the original V6 FotMob source poll, `fotmob_backfill.collect_fotmob()`
 reuses the **single** declared league request and performs up to eight
-supplemental `/api/matchDetails?matchId=<native>` HTTP GET requests.
+supplemental `/api/data/matchDetails?matchId=<native>` HTTP GET requests.
 Only GW1-GW6 provider-finalized, noncancelled fixtures are candidates.
 Chelsea fixtures (FotMob team 8455) are first; all teams follow.
 A daily budget of 80 reserved HTTP attempts accounts for two retries

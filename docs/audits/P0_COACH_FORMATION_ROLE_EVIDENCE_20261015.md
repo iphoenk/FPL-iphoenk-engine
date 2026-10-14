@@ -146,3 +146,40 @@ V6 occurrence and native DEEP production readback still need verification.
 Change timestamp: `2026-10-15T06:24:03+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-15T06:24:03+07:00`
+
+## T1 follow-up: verified pitch-layout and explicit matchday absence shadow
+
+Actual first postmerge FotMob backfill (PR #1093, V6 controlled run
+38655450691, main SHA 2587a01f0ae0731d2075f763dbe0d2ce1d4a9eb0)
+successfully persisted 8/60 GW1-GW6 matchDetails, including all six Chelsea
+fixtures, 53/66 verified Chelsea starter-native-to-Official FPL mappings
+and 6/6 verified retrospective manager/formation observations. The current
+crosswalk leaves 13 Chelsea starter observations unmapped; it must not
+promote names, shirt numbers or provider positions into player identity.
+
+The matchDetails payload also contains provider `horizontalLayout`
+coordinates for each starter, a matchday `subs` list and sometimes an
+explicit `unavailable` list with an injury/suspension type. This T1 patch
+preserves only validated 0..1 pitch coordinates, already independently
+verified player IDs, mutually exclusive starter/bench/unavailable states
+and provider-reported absence reasons. A raw provider positionId or
+geometric coordinate is not a calibrated true tactical role.
+
+Retrospective V12 now emits an advisory, SHA-bound team selection shadow
+with per-player observed starts/slots, provider bench and unavailability
+notes, and same-coach/formation/positionId candidates across observed
+fixtures. This is a descriptive indicator of observed slot reuse,
+NOT causal proof of competition, rotation probability, manager fit,
+future injury status, or a predeadline input. Any external absence record
+created after a historical GW must never enter an earlier forecast.
+
+The existing 54-file/1419-node required V12 test manifest is unchanged;
+the existing mandatory tactical-history node now checks source-native
+selection conflict and postdeadline refusal. Future calibration remains
+a separate gate, not authorized by these observations. The one V6 factual
+authority, one V12_PLAYER_MINUTES numeric owner, frozen GW7, PR #809,
+MC500K, P1.7 and Stage3 remain untouched.
+
+Change timestamp: 2026-10-15T06:47:16+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T06:47:16+07:00

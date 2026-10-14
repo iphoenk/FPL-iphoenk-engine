@@ -94,6 +94,39 @@ def test_resolves_source_by_immutable_event_fanout_not_mutable_display_title():
     assert result["created_at"] == "2026-09-17T08:28:06Z"
 
 
+def test_gh_sibling_workflows_one_second_apart_resolve_uniquely():
+    result = resolve_natural_source_run(
+        observer_run=_observer_run(created_at="2026-10-14T06:27:02Z"),
+        source_runs=[_source_run(created_at="2026-10-14T06:27:01Z")],
+        expected_repository=REPOSITORY,
+        expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+    )
+    assert result["id"] == 9001
+
+
+def test_fanout_outside_five_seconds_rejected():
+    with pytest.raises(NaturalProofProvenanceError, match="no exact"):
+        resolve_natural_source_run(
+            observer_run=_observer_run(created_at="2026-10-14T06:27:02Z"),
+            source_runs=[_source_run(created_at="2026-10-14T06:26:55Z")],
+            expected_repository=REPOSITORY,
+            expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+        )
+
+
+def test_fanout_two_sources_inside_skew_rejected_as_ambiguous():
+    with pytest.raises(NaturalProofProvenanceError, match="ambiguous"):
+        resolve_natural_source_run(
+            observer_run=_observer_run(created_at="2026-10-14T06:27:02Z"),
+            source_runs=[
+                _source_run(id=9001, created_at="2026-10-14T06:27:01Z"),
+                _source_run(id=9002, created_at="2026-10-14T06:27:03Z"),
+            ],
+            expected_repository=REPOSITORY,
+            expected_source_workflow_path=SOURCE_WORKFLOW_PATH,
+        )
+
+
 def test_source_resolution_fails_closed_when_event_fanout_is_ambiguous():
     with pytest.raises(NaturalProofProvenanceError, match="ambiguous"):
         resolve_natural_source_run(

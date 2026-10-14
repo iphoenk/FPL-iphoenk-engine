@@ -39,3 +39,11 @@ def test_integrated_runner_wires_private_p4_override_and_bypasses_stage2_cache()
     assert '"scenario_override_cache_bypass": True' in source
     assert "if scenario_overrides:" in source
     assert "load_or_build_stage2_projections(" in source
+    # Official-only selection evidence must feed the teammate chain as well
+    # as the target player, without unverified provider-native joins.
+    from src.models import historical_projection as historical
+    model_source = inspect.getsource(historical.build)
+    assert "selection_evidence_cache" in model_source
+    assert "teammate_selection_evidence = official_selection_evidence(teammate)" in model_source
+    assert '"selection_evidence": teammate_selection_evidence' in model_source
+    assert "teammate_model_player" in model_source

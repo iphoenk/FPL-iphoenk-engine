@@ -4441,7 +4441,7 @@ def _render_deep_visible_contract_lines(
                 lines.append(
                     "FOCUS PLAYER PROCESS: "
                     f"Player={focus_player.get('name')}; "
-                    f"Pos={focus_player.get('position')}; OfficialTeamId={focus_player.get('team_id')}; 
+                    f"Pos={focus_player.get('position')}; OfficialTeamId={focus_player.get('team_id')}; "
                     f"Matches={metrics.get('games')}; Minutes={metrics.get('time')}; "
                     f"Goals={metrics.get('goals')}; Assists={metrics.get('assists')}; "
                     f"xG={metrics.get('xg')}; xA={metrics.get('xa')}; "

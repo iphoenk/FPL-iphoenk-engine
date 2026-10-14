@@ -1112,6 +1112,12 @@ jobs:
               manifest["remote_readback"] = "PASS"
               manifest["verification_status"] = "REMOTE_READBACK_PASS"
               final_manifest_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+              # A successful non-fast-forward retry can rebase a sparse
+              # private checkout without materializing its untracked/omitted
+              # occurrence directory. Remote Git-object readback above is the
+              # evidence; restore local output parents before final receipt writes.
+              (repo / root).mkdir(parents=True, exist_ok=True)
+              (repo / "latest").mkdir(parents=True, exist_ok=True)
               (repo / root / "native_content.manifest.json").write_bytes(final_manifest_bytes)
               # Same-occurrence latest and occurrence manifests must agree byte-for-byte
               # after remote proof; the publisher owns this update, never an ad-hoc edit.

@@ -4378,6 +4378,23 @@ def _render_deep_visible_contract_lines(
                 f"(season aggregates only); FotMob verified FT fixtures="
                 f"{f.get('verified_match_count')}. Non-official FT does NOT finalize FPL points."
             )
+            lines.append(
+                "EXTERNAL SOURCE CONSUMPTION: "
+                f"Understat raw={u.get('source_records', 'UNVERIFIED')} "
+                f"verified={u.get('verified_source_identity_rows', 'UNVERIFIED')} "
+                f"eligible={u.get('eligible_verified_rows', 'UNVERIFIED')} "
+                f"consumed={u.get('consumed_rows', 'UNVERIFIED')} "
+                f"gate={u.get('source_gate', 'UNVERIFIED')} "
+                f"rejected={u.get('rejected_reasons', {})}; "
+                f"FotMob raw={f.get('source_records', 'UNVERIFIED')} "
+                f"verified={f.get('verified_source_identity_rows', 'UNVERIFIED')} "
+                f"eligible={f.get('eligible_verified_rows', 'UNVERIFIED')} "
+                f"GW1-GW6 scoped={f.get('historical_scope_rows', 'UNVERIFIED')} "
+                f"consumed={f.get('consumed_rows', 'UNVERIFIED')} "
+                f"gate={f.get('source_gate', 'UNVERIFIED')} "
+                f"rejected={f.get('rejected_reasons', {})}. "
+                "Consumed means retrospective advisory context only, not canonical Pstart input."
+            )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
             observed_matches = form.get("matches") or []

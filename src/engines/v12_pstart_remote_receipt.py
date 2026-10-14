@@ -68,6 +68,9 @@ def verify_forecast(
         if hashlib.sha256(original).hexdigest() != expected:
             raise ForecastReadbackError("ORIGINAL_V6_BLOB_SHA256_MISMATCH")
     return {
+        # Receipt is mutable delivery metadata; the signed forecast object remains frozen.
+        # Do not leave a verified occurrence stuck in CAPTURED_AWAITING... status.
+        "pstart_prospective_status": "IMMUTABLE_REMOTE_READBACK_VERIFIED",
         "pstart_prospective_remote_readback": "PASS",
         "pstart_prospective_source_sha256_readback": "PASS",
         "pstart_prospective_private_commit": private_commit,

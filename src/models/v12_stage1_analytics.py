@@ -876,18 +876,39 @@ def walk_forward_pstart_validate(
     observed_players = len(by_player)
     universe_ratio = (round(observed_players / expected, 6) if expected else None)
     enough_universe = bool(universe_ratio is not None and universe_ratio >= 0.95)
+    # Check all paired metrics in every position, not just starter Brier.
+    # The tolerances are fixed before inspecting any holdout results.
+    position_tolerances = {
+        "brier": 0.03, "log_loss": 0.02, "xmins_mae": 1.0,
+        "dnp_brier": 0.02, "cameo_brier": 0.02,
+    }
+    position_metric_deltas = {}
+    for position in ("GK", "DEF", "MID", "FWD"):
+        summary = pos_summary.get(position) or {}
+        if summary.get("n", 0) < min_position_sample_size:
+            continue
+        position_metric_deltas[position] = {
+            metric: (
+                None if summary.get(f"baseline_{metric}") is None
+                or summary.get(f"individualized_{metric}") is None
+                else round(
+                    summary[f"individualized_{metric}"]
+                    - summary[f"baseline_{metric}"], 6
+                )
+            )
+            for metric in position_tolerances
+        }
     position_regressions = {
-        position: round(
-            (pos_summary.get(position, {}).get("individualized_brier") or 0)
-            - (pos_summary.get(position, {}).get("baseline_brier") or 0),
-            6,
-        )
-        for position in ("GK", "DEF", "MID", "FWD")
-        if pos_summary.get(position, {}).get("n", 0) >= min_position_sample_size
+        position: values["brier"]
+        for position, values in position_metric_deltas.items()
     }
     positional_noninferior = bool(
-        len(position_regressions) == 4
-        and all(value <= 0.03 for value in position_regressions.values())
+        len(position_metric_deltas) == 4
+        and all(
+            delta is not None and delta <= position_tolerances[metric]
+            for values in position_metric_deltas.values()
+            for metric, delta in values.items()
+        )
     )
     enough_samples = bool(
         sample_count >= min_sample_size
@@ -923,6 +944,8 @@ def walk_forward_pstart_validate(
         "source_player_coverage_ratio": universe_ratio,
         "source_universe_coverage": "PASS" if enough_universe else "PARTIAL_OR_UNVERIFIED",
         "position_brier_deltas": position_regressions,
+        "position_metric_deltas": position_metric_deltas,
+        "position_noninferiority_tolerances": position_tolerances,
         "position_noninferiority": "PASS" if positional_noninferior else "FAIL_OR_INSUFFICIENT",
 
         "rejected_rows": dict(rejected),

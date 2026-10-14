@@ -212,3 +212,29 @@ def test_fotmob_rejections_and_out_of_scope_never_become_consumed():
     assert ledger["out_of_historical_scope"] == 1
     assert ledger["consumed_rows"] == 1
     assert ledger["rejected_reasons"]["UNVERIFIED_OR_DUPLICATE_FIXTURE"] == 1
+
+
+def test_same_occurrence_prefetch_cutoff_admits_post_slot_advisory_source_without_backdating():
+    # Logical slot 12:00Z, provider was checked at 12:31Z and the bound
+    # prefetch did not finalize until 12:45Z. Both are pre-GW7, but neither
+    # makes the source available at the historical 12:00Z logical timestamp.
+    ctx = build(report_slot="2026-10-13T19:00:00+07:00",
+                observation_cutoff_at="2026-10-13T12:45:00+00:00")
+    assert ctx["report_logical_slot"] == "2026-10-13T19:00:00+07:00"
+    assert ctx["source_cutoff_at"] == "2026-10-13T12:45:00+00:00"
+    assert ctx["observation_cutoff_mode"] == "OCCURRENCE_BOUND_PREFETCH_GENERATED_AT"
+    assert ctx["historical_predeadline_source_asof_admission"] == "NOT_ASSERTED"
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 1
+    assert ctx["source_health"]["fotmob"]["consumed_rows"] == 1
+    assert ctx["source_health"]["understat"]["report_cutoff_at"] == ctx["source_cutoff_at"]
+
+
+def test_exact_prefetch_observation_cutoff_still_rejects_future_source_and_naive_time():
+    ctx = build(report_slot="2026-10-13T19:00:00+07:00",
+                observation_cutoff_at="2026-10-13T12:30:00+00:00")
+    assert ctx["source_health"]["understat"]["source_gate"] == "SOURCE_AFTER_REPORT_CUTOFF"
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 0
+    assert ctx["source_health"]["fotmob"]["consumed_rows"] == 0
+    import pytest
+    with pytest.raises(ValueError, match="timezone-aware"):
+        build(observation_cutoff_at="2026-10-13T12:45:00")

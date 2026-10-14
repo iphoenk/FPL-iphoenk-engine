@@ -589,6 +589,9 @@ def load_v6_analytics_foundation(
                 # qualify as predeadline evidence. A current-cycle check time
                 # is never interchangeable with the original finalization.
                 "finalized_at": row.get("finalized_at"),
+                # Never fabricate a V6 readback. This only forwards a witness
+                # already issued by the original-archive verification path.
+                "verified_source_archive": row.get("verified_source_archive"),
                 "provenance": {
                     "source_id": normalized.get("source_id"),
                     "source_snapshot_ids": normalized.get(

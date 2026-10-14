@@ -23,11 +23,29 @@ def assess_pstart_resolution(
 ) -> dict[str, Any]:
     by_probability: dict[float, list[tuple[Any, ...]]] = defaultdict(list)
     missing, mismatches = [], []
+    invalid_identity, duplicate_identity, invalid_quantitative = [], [], []
+    seen_ids: set[int] = set()
     conditioned = contextual = quantified = 0
+
+    def valid_int(value: Any) -> bool:
+        return type(value) is int and value >= 0
+
+    def valid_prob(value: Any) -> bool:
+        return (type(value) in (float, int)
+                and isfinite(value) and 0 <= value <= 1)
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping):
             missing.append(index)
             continue
+        element_id = row.get("element_id")
+        if element_id is None:
+            element_id = row.get("element")
+        if type(element_id) is not int or element_id <= 0:
+            invalid_identity.append(index)
+        elif element_id in seen_ids:
+            duplicate_identity.append(element_id)
+        else:
+            seen_ids.add(element_id)
         evidence = row.get("p_start_evidence") or {}
         if not isinstance(evidence, Mapping):
             missing.append(index)
@@ -47,24 +65,36 @@ def assess_pstart_resolution(
         is_conditioned = (
             "player_selection_posterior" in signals
             and selection.get("status") == "AVAILABLE"
-            and selection.get("observed_matches") is not None
-            and selection.get("selection_posterior") is not None
+            and valid_int(selection.get("observed_matches"))
+            and selection["observed_matches"] > 0
+            and valid_int(selection.get("starts"))
+            and 0 <= selection["starts"] <= selection["observed_matches"]
+            and valid_int(selection.get("recent_starts"))
+            and selection["recent_starts"] <= selection["observed_matches"]
+            and valid_prob(selection.get("selection_posterior"))
         )
         conditioned += int(is_conditioned)
         contextual += int(bool(signals & CONTEXT_SIGNALS))
         raw_values = evidence.get("signal_values") or []
-        quantitative_vector = tuple(
-            sorted(
-                (str(r.get("signal")), r.get("probability"), r.get("weight"))
-                for r in raw_values if isinstance(r, Mapping)
-            )
-        )
+        vector_rows = [
+            (str(value.get("signal")), value.get("probability"), value.get("weight"))
+            for value in raw_values if isinstance(value, Mapping)
+        ] if isinstance(raw_values, (list, tuple)) else []
+        # Stable sort key avoids comparing malformed numeric types.
+        quantitative_vector = tuple(sorted(vector_rows, key=lambda item: item[0]))
+        signal_names = [item[0] for item in quantitative_vector]
         has_quantified = bool(
             quantitative_vector
-            and len(quantitative_vector) == len(signals)
-            and all(isinstance(q, (int, float)) for _, p, w in quantitative_vector
-                    for q in (p, w))
+            and len(quantitative_vector) == len(signals) == len(raw_values)
+            and len(signal_names) == len(set(signal_names))
+            and set(signal_names) == signals
+            and all(valid_prob(probability)
+                    and type(weight) in (float, int)
+                    and isfinite(weight) and weight > 0
+                    for _, probability, weight in quantitative_vector)
         )
+        if not has_quantified:
+            invalid_quantitative.append(element_id if type(element_id) is int else index)
         quantified += int(has_quantified)
         if evidence.get("model_probability_agrees") is False:
             mismatches.append(row.get("element_id") or row.get("element") or index)
@@ -83,7 +113,10 @@ def assess_pstart_resolution(
         same = sum(v * (v - 1) // 2 for v in counts.values())
         identical += same
         different += n * (n - 1) // 2 - same
-    complete = len(rows) == 15 and not missing and not mismatches
+    complete = bool(
+        len(rows) == 15 and not missing and not mismatches
+        and not invalid_identity and not duplicate_identity
+    )
     individual_pass = bool(complete and conditioned == len(rows))
     calibrated = calibration_status == "PASS"
     full = bool(individual_pass and contextual == len(rows)
@@ -91,6 +124,8 @@ def assess_pstart_resolution(
     blockers = []
     if not complete:
         blockers.append("CANONICAL_EVIDENCE_BINDING_INCOMPLETE")
+    if invalid_identity or duplicate_identity:
+        blockers.append("CANONICAL_PLAYER_IDENTITY_INVALID_OR_DUPLICATED")
     if not individual_pass:
         blockers.append("INDIVIDUAL_SELECTION_INCOMPLETE")
     if contextual != len(rows):
@@ -110,6 +145,11 @@ def assess_pstart_resolution(
         "contextual_evidence_rows": contextual,
         "quantified_input_rows": quantified,
         "missing_rows": missing, "binding_mismatch_elements": mismatches,
+        "invalid_identity_rows": invalid_identity,
+        "duplicate_player_elements": duplicate_identity,
+        "invalid_quantitative_input_elements": invalid_quantitative,
+        "independent_identity_check": True,
+        "quantitative_signal_domain_checked": True,
         "modal_probability_count": max((len(v) for v in by_probability.values()), default=0),
         "unique_rounded_probabilities": len(by_probability),
         "equal_probability_pairs_with_identical_evidence": identical,

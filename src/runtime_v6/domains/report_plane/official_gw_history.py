@@ -41,6 +41,8 @@ def retrospective_gw_partition(
                 "team": player.get("team"),
                 "position": player.get("position"),
                 "status": record.get("status"),
+                "fixture_count": record.get("fixture_count"),
+                "aggregate": dict(record.get("aggregate") or {}),
                 "fixtures": list(record.get("fixtures") or []),
             }
     complete = (
@@ -69,6 +71,11 @@ def retrospective_gw_partition(
             "missing_player_ids": missing,
             "gw_official_finalized": gw in final_gws,
             "fixture_identity_status": coverage.get("fixture_identity_status"),
+            "status_counts": {
+                status: sum(row["status"] == status for row in players.values())
+                for status in ("FINAL", "DNP", "BLANK")
+            },
+            "observed_fixture_rows": sum(len(row["fixtures"]) for row in players.values()),
         },
         "players": players,
     }

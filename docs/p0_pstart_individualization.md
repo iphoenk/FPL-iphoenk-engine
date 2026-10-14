@@ -90,3 +90,38 @@ Two required regression tests prove (1) valid prior archived finality and origin
 Change timestamp: 2026-10-14T09:42:32+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T09:42:32+07:00
+
+## 14 October P0 archive audit and strict original-object admission
+
+A separate read-only GW1–GW6 audit is at
+`docs/audits/P0_PSTART_HISTORICAL_ASOF_AUDIT_20261014.md`.
+The reachable `runtime-data-v6` HEAD on the audited checkpoint has zero
+parents, while the sampled older GitHub Actions runs expose no retained
+artifacts. None of the inspected material constitutes a verified original
+historical predeadline snapshot for the five evaluated folds.
+
+`walk_forward_pstart_validate()` now reports baseline and individualized
+starter Brier, log loss, xMins MAE, DNP and cameo Brier **by position and
+club**, as well as overall. It separately publishes
+`historical_asof_status=HISTORICAL_AS_OF_UNAVAILABLE` and
+`missing_original_archival_witnesses` rather than promoting timestamp-only
+rows. A `finalized_at` and an official GW deadline *alone* are never proof of
+an original immutable source object. An externally verified
+`verified_source_archive` witness must reference the original Git commit,
+its timestamp, source identity, snapshot identity, source SHA256 and exact
+remote readback. The model foundation forwards such a witness only if it
+already exists in normalized V6; it **does not create or attest one**.
+
+**Critical outstanding work:** the independent original Git-object
+verifier and immutable prospective GW7 freeze have not yet been deployed.
+A JSON field claiming `remote_readback_verified=true` cannot prove
+GitHub remote state on its own: only the trusted V6 verifier, anchored to
+an actual immutable readback and receipt, may issue it. Until then production
+`CALIBRATION` remains retrospective-only, regardless of code CI or
+`READY_FULL`. Role, coach, availability and position-specific probability
+adjustments remain advisory unless calibrated; existing V12_PLAYER_MINUTES
+mathematics, Stage3, eight formations and MC500K are unchanged.
+
+Change timestamp: 2026-10-14T10:00:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T10:00:00+07:00

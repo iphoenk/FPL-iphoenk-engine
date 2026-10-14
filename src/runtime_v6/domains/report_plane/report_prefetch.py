@@ -1158,11 +1158,11 @@ class PrefetchService:
                     },
                     "enrichment": dict(detail_artifact.get("enrichment") or {}),
                 }
-                # Readable, occurrence-bound GW1-GW3 Official partitions.
+                # Readable, occurrence-bound GW1-GW6 Official partitions.
                 # They expose the already-acquired post-deadline match facts;
                 # never admit historical source-as-of or scheduler evidence.
                 partitions: dict[str, Any] = {}
-                for retrospective_gw in (1, 2, 3):
+                for retrospective_gw in (1, 2, 3, 4, 5, 6):
                     if retrospective_gw not in (full_history.get("as_of") or {}).get("historical_gws", []):
                         continue
                     partition = retrospective_gw_partition(full_history, retrospective_gw)
@@ -1177,7 +1177,10 @@ class PrefetchService:
                         "observation_class": partition["observation_class"],
                         "historical_predeadline_source_asof": "NOT_ATTESTED",
                     }
-                summary_artifact["retrospective_gw_1_3"] = partitions
+                summary_artifact["retrospective_gw_1_3"] = {
+                    k: v for k, v in partitions.items() if int(k) <= 3
+                }
+                summary_artifact["retrospective_gw_1_6"] = partitions
                 write_json(self.output_root / summary_relative, summary_artifact, secrets=secrets)
                 artifacts.append(artifact_meta(self.output_root, history_relative))
                 artifacts.append(artifact_meta(self.output_root, summary_relative))

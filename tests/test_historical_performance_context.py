@@ -363,14 +363,21 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
         "content": {"lineup": {
             "homeTeam": {"id": 8455, "formation": "3-4-2-1",
                          "coach": {"id": 101, "name": "Xabi Alonso"},
-                         "starters": [{"id": 1001, "positionId": 10},
-                                      {"id": 9999, "positionId": 9}]},
+                         "starters": [{"id": 1001, "positionId": 10,
+                                       "horizontalLayout": {"x": 0.86, "y": 0.42}},
+                                      {"id": 9999, "positionId": 9}],
+                         "subs": [{"id": 1002}, {"id": 1001}],
+                         "unavailable": [{"id": 1003, "unavailability": {
+                             "type": "suspension", "expectedReturnDate": "2026-10-20T00:00:00Z"}},
+                             {"id": 1002, "unavailability": {"type": "injury"}}]},
             "awayTeam": {"id": 8678, "formation": "4-2-3-1",
                          "coach": {"name": "Coach B"}, "starters": []},
         }},
     }
     records = normalize_match_details(
         detail, fixture, {"1001": (154, "VERIFIED_MANUAL"),
+                          "1002": (40, "VERIFIED_MANUAL"),
+                          "1003": (165, "VERIFIED_MANUAL"),
                           "9999": (165, "UNMAPPED")},
     )
     assert records is not None
@@ -381,6 +388,14 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
     assert home["verified_starter_count"] == 1
     assert home["verified_official_starters"][0]["official_element_id"] == 154
     assert home["verified_official_starters"][0]["tactical_role"] is None
+    assert home["verified_official_starters"][0]["observed_pitch_layout"]["x"] == 0.86
+    assert home["verified_official_starters"][0]["observed_pitch_layout"]["semantic_role"] is None
+    assert home["verified_official_bench"][0]["official_element_id"] == 40
+    assert len(home["verified_official_bench"]) == 1  # a starter cannot also be bench
+    assert home["verified_official_unavailable"][0]["official_element_id"] == 165
+    assert home["verified_official_unavailable"][0]["reported_unavailability_type"] == "suspension"
+    assert home["verified_official_unavailable"][0]["forecast_availability_eligible"] is False
+    assert home["auxiliary_selection_conflict_count"] == 2
     wrong = deepcopy(detail)
     wrong["general"]["awayTeam"]["id"] = 100
     assert normalize_match_details(wrong, fixture, {}) is None
@@ -402,8 +417,17 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
              "coach": {"name": "Xabi Alonso"}, "formation": "3-4-2-1",
              "verified_official_starters": [
                 {"official_element_id": 154, "identity_status": "VERIFIED_MANUAL",
-                 "provider_position_id": 10},
-             ]},
+                 "provider_position_id": 10,
+                 "observed_pitch_layout": {"x": 0.86, "y": 0.42,
+                     "coordinate_system": "FOTMOB_HORIZONTAL_LAYOUT"}},
+             ],
+             "verified_official_bench": [{"official_element_id": 165,
+                  "identity_status": "VERIFIED_MANUAL",
+                  "selection_class": "PROVIDER_REPORTED_MATCHDAY_BENCH"}],
+             "verified_official_unavailable": [{"official_element_id": 40,
+                  "identity_status": "VERIFIED_MANUAL",
+                  "selection_class": "PROVIDER_REPORTED_UNAVAILABLE",
+                  "reported_unavailability_type": "suspension"}]},
         ],
     }]
     ctx = build(fotmob=source, tactical_observation={})
@@ -416,6 +440,19 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     assert observed["formation_fit_score"] is None
     assert ctx["effect_on_projection"] == "NONE_ADVISORY_ONLY"
     assert ctx["focus_team"]["verified_tactical_match_history"][0]["verified_player_roles"]["154"]["role"] is None
+    shadow = ctx["focus_team"]["verified_selection_and_rotation_shadow"]
+    assert shadow["observed_team_match_count"] == 1
+    assert shadow["verified_starter_observation_count"] == 1
+    assert shadow["verified_provider_bench_observation_count"] == 1
+    assert shadow["verified_provider_unavailable_observation_count"] == 1
+    assert shadow["reported_unavailability"][0]["element_id"] == 40
+    assert shadow["reported_unavailability"][0]["historical_predeadline_asof_proven"] is False
+    palmer_shadow = next(p for p in shadow["per_player"] if p["element_id"] == 154)
+    assert palmer_shadow["observed_provider_slot_ids"] == [10]
+    assert palmer_shadow["observed_pitch_layouts"][0]["x"] == 0.86
+    assert shadow["semantic_tactical_roles_verified"] is False
+    assert shadow["pregame_availability_asof_verified"] is False
+    assert shadow["numeric_pstart_effect"] == "NONE"
     # A provider observation from a different immutable source object is not valid.
     source["source_snapshot_ids"] = ["b" * 64]
     rejected = build(fotmob=source, tactical_observation={})

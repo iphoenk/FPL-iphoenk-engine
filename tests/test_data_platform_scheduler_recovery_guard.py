@@ -206,3 +206,98 @@ def test_owner_manual_recovery_issue_transport_is_controlled_non_natural():
     assert manual["transport_role"] == (
         "CONTROLLED_NON_NATURAL_RECOVERY_ONLY"
     )
+
+
+def test_wave3_original_publisher_log_pins_unique_successful_runtime_sha():
+    from src.runtime_v6.wave3_runtime_pin import pin_from_publisher_log
+
+    sha = "a" * 40
+    prefix = "Runtime publish CAS attempt "
+    log = (
+        prefix + "1; expected=" + "b" * 40 + "; candidate=" + sha + "\n"
+        + prefix + "2; expected=" + "c" * 40 + "; candidate=" + sha + "\n"
+        + "PUBLISHED_RUNTIME_SHA: " + sha + "\n"
+    )
+    assert pin_from_publisher_log(log) == sha
+
+
+def test_wave3_original_publisher_log_rejects_moving_or_ambiguous_generation():
+    from src.runtime_v6.wave3_runtime_pin import (
+        ImmutableRuntimePinError, pin_from_publisher_log,
+    )
+    sha = "a" * 40
+    with pytest.raises(ImmutableRuntimePinError):
+        pin_from_publisher_log(
+            "Runtime publish CAS attempt 1; expected=" + "b" * 40
+            + "; candidate=" + sha + "\n"
+        )
+    with pytest.raises(ImmutableRuntimePinError):
+        pin_from_publisher_log(
+            "Runtime publish CAS attempt 1; expected=" + "b" * 40
+            + "; candidate=" + sha + "\n"
+            + "Runtime publish CAS attempt 2; expected=" + "b" * 40
+            + "; candidate=" + "c" * 40 + "\n"
+            + "PUBLISHED_RUNTIME_SHA: " + sha
+        )
+
+
+def test_wave3_original_runtime_requires_exact_git_object_artifact_byte_equality(tmp_path):
+    import base64
+    from src.runtime_v6.wave3_runtime_pin import verify_original_runtime
+
+    sha = "a" * 40
+    freeze = {"run_id": "123", "run_attempt": "1", "candidate_state": "FROZEN"}
+    integrity = {"run_id": "123", "run_attempt": "1", "status": "PASS"}
+    root = tmp_path / "data" / "v6"
+    (root / "health").mkdir(parents=True)
+    frozen = json.dumps(freeze, sort_keys=True).encode()
+    verified = json.dumps(integrity, sort_keys=True).encode()
+    (root / "health/candidate_freeze.lock").write_bytes(frozen)
+    (root / "health/publish_integrity.json").write_bytes(verified)
+
+    def env(blob):
+        return {"encoding": "base64", "content": base64.b64encode(blob).decode()}
+
+    args = dict(
+        runtime_sha=sha, source_run_id="123", source_attempt="1",
+        git_commit={"sha": sha, "parents": [], "message":
+                    "data(v6): atomic hourly snapshot 123 "
+                    "[chatgpt_scheduler] [dedicated_v6_github_app]"},
+        freeze_envelope=env(frozen),
+        integrity_envelope=env(verified),
+        archive_root=root,
+    )
+    result = verify_original_runtime(**args)
+    assert result["moving_branch_tip_consulted"] is False
+    assert result["git_object_artifact_exact_bytes"] is True
+    assert result["source_publish_integrity"] == "PASS"
+
+
+def test_wave3_original_runtime_rejects_wrong_readback_or_source_identity(tmp_path):
+    import base64
+    from src.runtime_v6.wave3_runtime_pin import (
+        ImmutableRuntimePinError, verify_original_runtime,
+    )
+    sha = "a" * 40
+    root = tmp_path / "data" / "v6"
+    (root / "health").mkdir(parents=True)
+    freeze = b'{"run_id":"123","run_attempt":"1","candidate_state":"FROZEN"}'
+    integrity = b'{"run_id":"123","run_attempt":"1","status":"PASS"}'
+    (root / "health/candidate_freeze.lock").write_bytes(freeze)
+    (root / "health/publish_integrity.json").write_bytes(integrity)
+
+    def env(blob):
+        return {"encoding": "base64", "content": base64.b64encode(blob).decode()}
+
+    args = dict(
+        runtime_sha=sha, source_run_id="123", source_attempt="1",
+        git_commit={"sha": sha, "parents": [], "message":
+                    "data(v6): atomic hourly snapshot 123 "
+                    "[chatgpt_scheduler] [dedicated_v6_github_app]"},
+        freeze_envelope=env(freeze),
+        integrity_envelope=env(integrity), archive_root=root,
+    )
+    with pytest.raises(ImmutableRuntimePinError, match="ARTIFACT_BYTES_MISMATCH"):
+        verify_original_runtime(**{**args, "freeze_envelope": env(freeze + b" ")})
+    with pytest.raises(ImmutableRuntimePinError, match="IDENTITY_OR_INTEGRITY"):
+        verify_original_runtime(**{**args, "source_run_id": "999"})

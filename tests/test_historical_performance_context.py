@@ -421,6 +421,8 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     rejected = build(fotmob=source, tactical_observation={})
     assert rejected["match_tactics_verified_team_observations"] == 0
     assert rejected["focus_team"]["tactical_observation"]["status"] == "UNAVAILABLE"
+    _check_t1_ledger_uses_official_starts_and_retains_unverified_tactical_role()
+    _check_t1_three_way_duplicate_tactical_records_never_re_admit_conflict()
 
 
 def test_v6_fotmob_adapter_normalizes_declared_match_details_without_fuzzy_join():
@@ -477,7 +479,7 @@ def test_v6_fotmob_adapter_normalizes_declared_match_details_without_fuzzy_join(
 
 
 
-def test_t1_ledger_uses_official_starts_and_retains_unverified_tactical_role():
+def _check_t1_ledger_uses_official_starts_and_retains_unverified_tactical_role():
     history = deepcopy(HISTORY)
     history["generated_at"] = "2026-10-13T12:32:00Z"
     history["coverage_gate"]["fixture_identity_status"] = "PASS"
@@ -538,7 +540,7 @@ def test_t1_ledger_uses_official_starts_and_retains_unverified_tactical_role():
     assert invalid["coach_id"] is None
 
 
-def test_t1_three_way_duplicate_tactical_records_never_re_admit_conflict():
+def _check_t1_three_way_duplicate_tactical_records_never_re_admit_conflict():
     source = deepcopy(FOTMOB)
     digest = "e" * 64
     source["source_snapshot_ids"] = [digest]

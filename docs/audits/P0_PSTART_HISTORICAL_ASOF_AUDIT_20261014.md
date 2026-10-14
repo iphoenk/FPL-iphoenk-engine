@@ -44,3 +44,13 @@ Latest S02 numerical retrospective diagnostics: starter Brier 0.242833 baseline 
 ## Explicit nonchanges
 
 No changes to PR #1065, PR #809, V6 data authority, V12_PLAYER_MINUTES mathematics, correlated MC500K, eight legal formations, Stage3 temporal integrity, or ChatGPT scheduler. Role/coach/fixture-fit evidence remains advisory unless independently calibrated.
+
+## Later verification, 14 October 2026 (15:30 WIB)
+
+The four earlier Actions run artifacts were queried again. All returned empty artifact lists; this does not prove no unreachable history exists, but no complete predeadline V6 lineage was recovered. Public main has earlier code commits but code history is not equivalent to an original immutable historical full-universe feature snapshot. The private repository retains post-GW6 reports and private player/current-team data, not a verified GW1–GW5 original predictor snapshot. Keep all GW1–GW6 as-of folds unavailable rather than substituting retrospective current-cycle official values.
+
+A genuine frozen prospective GW7 forecast was independently confirmed in the private occurrence `reports/2026-27/gw_7/20261014_132100_plus_0700/`, with 667 forecast rows and a delivery receipt confirming original predeadline immutable remote readback of model and V6 source objects. This replaces the earlier warning that no prospective candidate had independently passed readback. Formal predictive calibration remains pending GW7 final outcomes. This evidence is valid prospectively, not retroactively for GW1–GW6.
+
+Change timestamp: 2026-10-14T15:30:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:30:00+07:00

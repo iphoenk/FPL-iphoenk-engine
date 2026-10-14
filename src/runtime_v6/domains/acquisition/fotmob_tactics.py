@@ -34,6 +34,73 @@ def _coach(value: Any) -> dict[str, Any] | None:
     return {"name": name, "source_native_id": native_id} if name else None
 
 
+def _layout(item: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Expose provider-observed pitch coordinates, NOT a tactical role label."""
+    import math
+
+    raw = item.get("horizontalLayout")
+    if not isinstance(raw, Mapping):
+        return None
+    x, y = raw.get("x"), raw.get("y")
+    if (not isinstance(x, (int, float)) or isinstance(x, bool)
+            or not isinstance(y, (int, float)) or isinstance(y, bool)
+            or not math.isfinite(x) or not math.isfinite(y)
+            or not 0.0 <= float(x) <= 1.0 or not 0.0 <= float(y) <= 1.0):
+        return None
+    return {
+        "x": float(x), "y": float(y),
+        "coordinate_system": "FOTMOB_HORIZONTAL_LAYOUT",
+        "semantic_role": None,
+        "role_calibration_status": "NOT_ESTABLISHED",
+    }
+
+
+def _verified_auxiliary(
+    items: Any,
+    verified_player_ids: Mapping[str, tuple[int, str]],
+    *,
+    kind: str,
+    excluded_native_ids: set[int],
+) -> tuple[list[dict[str, Any]], int]:
+    if not isinstance(items, list):
+        return [], 0
+    out: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    conflicts = 0
+    for item in items:
+        if not isinstance(item, Mapping):
+            continue
+        native = _positive_int(item.get("id"))
+        if native is None:
+            continue
+        if native in excluded_native_ids or native in seen:
+            conflicts += 1
+            continue
+        seen.add(native)
+        link = verified_player_ids.get(str(native))
+        if not link or link[1] not in {"EXACT", "VERIFIED_MANUAL"}:
+            continue
+        obs = {
+            "source_native_player_id": native,
+            "official_element_id": link[0],
+            "identity_status": link[1],
+            "selection_class": kind,
+            "numeric_pstart_eligible": False,
+            "historical_predeadline_asof_proven": False,
+        }
+        if kind == "PROVIDER_REPORTED_UNAVAILABLE":
+            info = item.get("unavailability") or {}
+            info = info if isinstance(info, Mapping) else {}
+            reason = str(info.get("type") or "").strip().lower()
+            obs["reported_unavailability_type"] = (
+                reason if reason in {"injury", "suspension"} else "UNSPECIFIED"
+            )
+            obs["reported_expected_return"] = info.get("expectedReturnDate")
+            obs["forecast_availability_eligible"] = False
+        out.append(obs)
+    return out, conflicts
+
+
 def normalize_match_details(
     raw: Mapping[str, Any],
     fixture: Mapping[str, Any],
@@ -99,9 +166,20 @@ def normalize_match_details(
                 "official_element_id": link[0],
                 "identity_status": link[1],
                 "provider_position_id": _positive_int(item.get("positionId")),
+                "observed_pitch_layout": _layout(item),
                 "tactical_role": None,
                 "role_calibration_status": "NOT_ESTABLISHED",
             })
+        bench, bench_conflicts = _verified_auxiliary(
+            side.get("subs"), verified_player_ids,
+            kind="PROVIDER_REPORTED_MATCHDAY_BENCH", excluded_native_ids=seen,
+        )
+        bench_ids = {int(p["source_native_player_id"]) for p in bench}
+        unavailable, unavailable_conflicts = _verified_auxiliary(
+            side.get("unavailable"), verified_player_ids,
+            kind="PROVIDER_REPORTED_UNAVAILABLE",
+            excluded_native_ids=seen | bench_ids,
+        )
         observations.append({
             "side": "home" if field == "homeTeam" else "away",
             "official_team_id": team["official_team_id"],
@@ -110,6 +188,11 @@ def normalize_match_details(
             "provider_starter_count": len(seen),
             "verified_official_starters": mapped,
             "verified_starter_count": len(mapped),
+            "verified_official_bench": bench,
+            "verified_official_unavailable": unavailable,
+            "auxiliary_selection_conflict_count": bench_conflicts + unavailable_conflicts,
+            "availability_observation_status": "RETROSPECTIVE_PROVIDER_REPORTED_ONLY",
+            "unverified_players_remain_unknown": True,
             "starting_xi_complete": len(seen) == 11,
             "role_is_position_proxy_only": True,
         })

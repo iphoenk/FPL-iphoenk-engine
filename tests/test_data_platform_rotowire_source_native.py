@@ -122,91 +122,43 @@ def test_rotowire_source_native_dataset_is_advisory_and_never_v6_authored_predic
     assert all(row["joinable"] is False and row["numeric_pstart_authority"] is False
                for row in observed["players"])
 
-    # A name-and-club candidate is useful for review but can NEVER create
-    # an EXACT / VERIFIED_MANUAL player link or alter P(start).
-    from scripts.v6_rotowire_candidate_audit import build_rotowire_candidate_audit
-
-    official = {
-        "official": {
-            "bootstrap": {
-                "teams": [
-                    {"id": 9, "name": "Everton"},
-                    {"id": 6, "name": "Chelsea"},
-                ],
-                "elements": [
-                    {
-                        "id": 91, "code": 118779, "team": 9,
-                        "first_name": "Jordan", "second_name": "Pickford",
-                        "web_name": "Pickford",
-                    },
-                ],
-                "events": [{"id": 7, "deadline_time": "2026-10-17T10:00:00Z"}],
-            },
-            "fixtures": [
-                {
-                    "id": 64, "team_h": 9, "team_a": 6,
-                    "event": 7, "kickoff_time": "2026-10-17T11:30:00Z",
-                },
-            ],
-        },
-        "checked_at": "2026-10-14T09:32:00Z",
-    }
-    fixture = {
-        "fixture_key": "October 17 7:30 AM ET|Everton|Chelsea",
-        "time_text": "October 17 7:30 AM ET",
-        "home": {"name": "Everton"},
-        "away": {"name": "Chelsea"},
-        "source_native_id": None,
-    }
-    audit = build_rotowire_candidate_audit(
-        official,
-        {
-            "effective_at": "2026-10-14T09:33:52Z",
-            "source_snapshot_ids": ["original-source-id"],
-            "record_groups": {
-                "fixtures": [fixture],
-                "lineups": [
-                    {
-                        "source_native_id": 19035,
-                        "player_name": "Jordan Pickford",
-                        "team_name": "Everton",
-                        "position": "GK",
-                        "lineup_status": "PREDICTED",
-                        "fixture_key": fixture["fixture_key"],
-                    },
-                ],
-                "availability": [],
-            },
-        },
+    # GW-specific admission: an otherwise verified fixture belongs to one
+    # GW only; a GW8 prediction must not leak into the GW7 review.
+    rotowire["record_groups"]["lineups"][0]["fixture_key"] = (
+        "October 17 7:30 AM ET|Everton|Chelsea"
+    )
+    rotowire["record_groups"]["lineups"][0]["player_name"] = "Jordan Pickford"
+    rotowire["record_groups"]["fixtures"].append({
+        "fixture_key": "October 23 3:00 PM ET|Everton|Chelsea",
+        "home": {"name": "Everton"}, "away": {"name": "Chelsea"},
+    })
+    official_fixtures["fixtures"].append({
+        "official_fpl_fixture_id": 82,
+        "team_h": 9, "team_a": 6, "event": 8,
+        "kickoff_time": "2026-10-23T19:00:00Z",
+    })
+    official_players["players"].append({
+        "official_fpl_element_id": 228, "official_code": 44444,
+        "first_name": "Michael", "second_name": "Keane", "team_id": 9,
+    })
+    rotowire["record_groups"]["lineups"].append({
+        "source_native_id": 17514, "player_name": "Michael Keane",
+        "team_name": "Everton", "position": "D", "lineup_status": "PREDICTED",
+        "fixture_key": "October 23 3:00 PM ET|Everton|Chelsea",
+    })
+    gw7_review = build_review(
+        rotowire, official_players, official_teams, official_fixtures,
         target_gw=7,
     )
-    assert audit["summary"]["distinct_name_team_candidates"] == 1
-    assert audit["fixtures"][0]["fixture_status"] == "GW_TARGET_FIXTURE_VERIFIED"
-    assert audit["player_rows"][0]["candidate_official_element_id"] == 91
-    assert audit["player_rows"][0]["candidate_status"] == "CANDIDATE_ONLY_NOT_VERIFIED"
-    assert audit["player_rows"][0]["joinable"] is False
-    assert audit["player_rows"][0]["identity_status"] == "UNMAPPED"
-    assert audit["summary"]["verified_player_crosswalks_created"] == 0
-
-    # Out-of-GW, invalid fixture or late publication cannot be smuggled
-    # into a calibrated start-probability feature.
-    fixture["time_text"] = "October 18 7:30 AM ET"
-    late = build_rotowire_candidate_audit(
-        official,
-        {
-            "effective_at": "2026-10-18T09:33:52Z",
-            "record_groups": {"fixtures": [fixture], "lineups": [
-                {
-                    "source_native_id": 19035,
-                    "player_name": "Jordan Pickford",
-                    "team_name": "Everton",
-                    "fixture_key": fixture["fixture_key"],
-                },
-            ]},
-        },
-        target_gw=7,
+    assert gw7_review["target_gw"] == 7
+    assert gw7_review["fixture_candidate_matches"] == 1
+    assert gw7_review["fixture_matched_other_gw"] == 1
+    assert gw7_review["candidate_counts"]["IDENTITY_CANDIDATE_REVIEW"] == 1
+    assert gw7_review["candidate_counts"]["MATCHED_OTHER_GW"] == 1
+    assert all(row["joinable"] is False for row in gw7_review["players"])
+    gw8_review = build_review(
+        rotowire, official_players, official_teams, official_fixtures,
+        target_gw=8,
     )
-    assert late["source_before_deadline"] is False
-    assert late["fixtures"][0]["fixture_status"] == "UNVERIFIED_FIXTURE"
-    assert late["summary"]["numeric_model_signals_applied"] == 0
-
+    assert gw8_review["candidate_counts"]["IDENTITY_CANDIDATE_REVIEW"] == 1
+    assert gw8_review["candidate_counts"]["MATCHED_OTHER_GW"] == 1

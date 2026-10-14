@@ -9,11 +9,15 @@ producer run is a completed successful natural issue event in this repository.
 """
 
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timezone
 from typing import Any
 
 
 NATURAL_PROOF_ARTIFACT_PREFIX = "v6-wave3-slot-proof-"
 NATURAL_PROOF_EVENT = "issues"
+# GitHub timestamps sibling workflow runs asynchronously. Match uniquely
+# within a narrow window, while retaining repository, workflow, SHA and event.
+MAX_FANOUT_SKEW_SECONDS = 5
 
 
 class NaturalProofProvenanceError(ValueError):
@@ -51,6 +55,16 @@ def _repository_name(run: Mapping[str, Any], field: str) -> str:
     return name
 
 
+def _created_at(value: Any, field: str) -> datetime:
+    try:
+        instant = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError) as exc:
+        raise NaturalProofProvenanceError(f"missing or invalid {field}") from exc
+    if instant.tzinfo is None or instant.utcoffset() is None:
+        raise NaturalProofProvenanceError(f"missing or invalid {field}")
+    return instant.astimezone(timezone.utc)
+
+
 def resolve_natural_source_run(
     *,
     observer_run: Mapping[str, Any],
@@ -71,9 +85,7 @@ def resolve_natural_source_run(
         raise NaturalProofProvenanceError(
             f"observer event is not natural: expected={NATURAL_PROOF_EVENT!r} actual={observer_event!r}"
         )
-    observer_created_at = str(observer_run.get("created_at") or "")
-    if not observer_created_at:
-        raise NaturalProofProvenanceError("missing or invalid observer created_at")
+    observer_created_at = _created_at(observer_run.get("created_at"), "observer created_at")
     observer_head_sha = _sha(observer_run.get("head_sha"), "observer head_sha")
     if _repository_name(observer_run, "repository") != expected_repository:
         raise NaturalProofProvenanceError("observer repository mismatch")
@@ -86,7 +98,11 @@ def resolve_natural_source_run(
             continue
         if str(run.get("event") or "") != NATURAL_PROOF_EVENT:
             continue
-        if str(run.get("created_at") or "") != observer_created_at:
+        try:
+            source_created_at = _created_at(run.get("created_at"), "source created_at")
+        except NaturalProofProvenanceError:
+            continue
+        if abs((source_created_at - observer_created_at).total_seconds()) > MAX_FANOUT_SKEW_SECONDS:
             continue
         try:
             source_head_sha = _sha(run.get("head_sha"), "source head_sha")

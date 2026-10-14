@@ -120,6 +120,9 @@ def main() -> int:
             "CREDENTIAL_STORE_WRONG_REMOTE",
             "CREDENTIAL_STORE_CAS_VERSION_CONFLICT",
             "CREDENTIAL_STORE_PERSISTENCE_UNCERTAIN",
+            "CREDENTIAL_STORE_GIT_TIMEOUT",
+            "CREDENTIAL_STORE_GIT_OPERATION_FAILED",
+            "CREDENTIAL_STORE_GIT_UNAVAILABLE",
         }
         reason = str(exc)
         print("OIDC_HOURLY_RENEWAL=BLOCKED;reason=" + (reason if reason in allowed else "REVIEW_PRIVATE_CREDENTIAL_STATE"))

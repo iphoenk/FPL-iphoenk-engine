@@ -42,6 +42,20 @@ def checkout(tmp_path, monkeypatch):
     return bare, repo, key
 
 
+def test_remote_git_timeout_is_bounded_and_diagnostic(monkeypatch, tmp_path):
+    timeouts = []
+
+    def fake_run(argv, **kwargs):
+        timeouts.append(kwargs["timeout"])
+        raise subprocess.TimeoutExpired(argv, kwargs["timeout"])
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+    for action, expected in (("fetch", 90), ("push", 90), ("show", 35)):
+        with pytest.raises(RotationBlocked, match="CREDENTIAL_STORE_GIT_TIMEOUT"):
+            module._git(tmp_path, action, "origin", "main")
+        assert timeouts[-1] == expected
+
+
 def test_encrypted_cas_first_version_and_readback(checkout):
     bare, repo, key = checkout
     store = module.EncryptedGitCredentialStore(str(repo), key)

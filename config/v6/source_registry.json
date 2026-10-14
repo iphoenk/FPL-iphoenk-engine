@@ -442,7 +442,7 @@
         "max_backfill_requests_per_cycle": 8,
         "daily_request_budget": 80,
         "max_body_bytes": 450000,
-        "endpoint_template": "https://www.fotmob.com/api/matchDetails?matchId={match_id}",
+        "endpoint_template": "https://www.fotmob.com/api/data/matchDetails?matchId={match_id}",
         "temporal_semantics": "POST_MATCH_RETROSPECTIVE_ONLY",
         "numeric_model_authority": "NONE"
       }

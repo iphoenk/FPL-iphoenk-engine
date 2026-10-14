@@ -8,6 +8,7 @@ from typing import Any
 
 from .http_client import utc_now
 from .rotowire_normalizer import parse_rotowire_lineups
+from .fotmob_tactics import normalize_match_details
 
 NORMALIZATION_VERSION = "V6_SOURCE_NATIVE_1"
 _JOINABLE = {"EXACT", "VERIFIED_MANUAL"}
@@ -667,6 +668,41 @@ def _fotmob(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, 
             }
         )
 
+    # Optional bounded matchDetails requests must be declared and captured by
+    # the same V6 source occurrence. No live requests occur in this normalizer.
+    # Never join provider players by name: only V6 verified native crosswalks.
+    player_reverse = _reverse_links(identity_map, "fotmob", "player")
+    fixture_by_native: dict[int, list[dict[str, Any]]] = {}
+    for fixture in fixtures:
+        key = _int(fixture.get("source_native_id"))
+        if key is not None:
+            fixture_by_native.setdefault(key, []).append(fixture)
+    match_tactics: list[dict[str, Any]] = []
+    for request_id, request_data in (payload.get("data") or {}).items():
+        if not isinstance(request_id, str) or not request_id.startswith("match_details_"):
+            continue
+        if not isinstance(request_data, dict) or not isinstance(request_data.get("json"), dict):
+            continue
+        source_id = _int(request_id[len("match_details_"):])
+        candidates = fixture_by_native.get(source_id, []) if source_id else []
+        if len(candidates) != 1:
+            continue
+        fixture = candidates[0]
+        checked = dict(fixture)
+        checked["home"] = {
+            **(fixture.get("home") or {}),
+            **_identity_fields(team_reverse, (fixture.get("home") or {}).get("source_native_id"), "official_team_id"),
+        }
+        checked["away"] = {
+            **(fixture.get("away") or {}),
+            **_identity_fields(team_reverse, (fixture.get("away") or {}).get("source_native_id"), "official_team_id"),
+        }
+        record = normalize_match_details(request_data["json"], checked, player_reverse)
+        if record is not None:
+            record["source_request_id"] = request_id
+            record["source_snapshot_sha256"] = request_data.get("sha256")
+            match_tactics.append(record)
+
     details = raw.get("details") if isinstance(raw.get("details"), dict) else {}
     competition = [
         {
@@ -683,7 +719,7 @@ def _fotmob(payload: dict[str, Any], identity_map: dict[str, Any]) -> dict[str, 
         payload=payload,
         semantic_class="NORMALIZED_FACT",
         authority="FOTMOB",
-        record_groups={"competition": competition, "teams": teams, "fixtures": fixtures},
+        record_groups={"competition": competition, "teams": teams, "fixtures": fixtures, "match_tactics": match_tactics},
         normalization_status=status,
     )
 

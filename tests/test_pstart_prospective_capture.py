@@ -49,6 +49,12 @@ def _capture(tmp_path, monkeypatch):
             "dnp_probability": .20, "cameo_probability": .10,
         }
     monkeypatch.setattr(module, "estimate_player_minutes", estimate)
+    monkeypatch.setattr(module, "_verify_original_v6_inputs", lambda *a: {
+        "git_commit": "b" * 40,
+        "git_commit_at": "2026-10-14T03:50:00+00:00",
+        "git_object_readback": "PASS",
+        "private_remote_readback": "UNVERIFIED",
+    })
     result = module.build_prospective_capture(
         bootstrap=bootstrap,
         projections=projections,
@@ -76,7 +82,9 @@ def test_prospective_capture_is_full_universe_and_paired(tmp_path, monkeypatch):
     assert rows[0]["baseline"]["start_probability"] == .70
     assert rows[0]["individualized"]["start_probability"] == .83
     assert rows[0]["role_manager_fit"] == "ADVISORY_UNCALIBRATED"
-    assert result["source"]["identity_verified_by_original_git_readback"] is False
+    assert result["source"]["identity_verified_by_original_git_readback"] is True
+    assert result["source"]["original_git_evidence"]["git_object_readback"] == "PASS"
+    assert result["source"]["original_git_evidence"]["private_remote_readback"] == "UNVERIFIED"
     assert all(len(value) == 64 for value in result["source"]["source_file_sha256"].values())
     expected = hashlib.sha256(
         json.dumps(rows, separators=(",", ":"), sort_keys=True).encode()

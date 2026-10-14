@@ -675,6 +675,20 @@ def _bound_retrospective_context(
     # Keep full player rows inside V6; compact DEEP only carries summaries and
     # audited focus players, preserving the 22-section report size budget.
     context.pop("players", None)
+    # Full-universe fixture ledger is materialized only in the verified builder;
+    # mobile DEEP carries compact coverage + explicitly scoped focus-player rows.
+    ledger = context.pop("verified_context_ledger", {})
+    context["verified_context_coverage"] = {
+        key: ledger.get(key) for key in (
+            "contract", "observation_class", "row_count", "admission_counts",
+            "by_club", "by_position", "unresolved_player_count",
+            "historical_predeadline_source_asof", "numeric_pstart_effect",
+        )
+    }
+    context["focus_verified_context_rows"] = [
+        row for row in ledger.get("rows") or []
+        if row.get("element_id") in {154, 40, 165}
+    ]
     context["binding"] = {
         "source": "V6_EXACT_OCCURRENCE_LOSSLESS_HISTORY",
         "prefetch_run_id": archive.get("report_prefetch_run_id"),

@@ -212,3 +212,110 @@ def test_fotmob_rejections_and_out_of_scope_never_become_consumed():
     assert ledger["out_of_historical_scope"] == 1
     assert ledger["consumed_rows"] == 1
     assert ledger["rejected_reasons"]["UNVERIFIED_OR_DUPLICATE_FIXTURE"] == 1
+
+
+def test_active_materializer_binds_exact_occurrence_source_context(monkeypatch, tmp_path):
+    import gzip
+    import json
+    from src.engines import report_materializer as materializer
+
+    slot = "2026-10-14T21:30:00+07:00"
+    generated = "2026-10-14T14:15:00+00:00"
+    original = {
+        "contract": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1",
+        "generated_at": generated,
+        "report_prefetch_run_id": "prefetch-431",
+        "target_logical_report_slot": slot,
+    }
+    historical = {
+        "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "players": {
+            "154": {"team": 6, "position": 3, "history": {
+                "6": {"status": "FINAL", "fixture_count": 1, "aggregate": {"minutes": 90}}}},
+            "40": {"team": 2, "position": 3, "history": {
+                "6": {"status": "FINAL", "fixture_count": 1, "aggregate": {"minutes": 80}}}},
+        },
+        "coverage_gate": {"status": "PASS", "all_historical_gws_finalized": True},
+    }
+
+    def save(relative, payload, *, zipped=False):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        serialized = json.dumps(payload).encode("utf-8")
+        path.write_bytes(gzip.compress(serialized) if zipped else serialized)
+
+    save("v6/history/official_detail.json.gz",
+         {**original, "full_season_history": historical}, zipped=True)
+    save("v6/normalized/canonical_players.json", {
+        "effective_at": "2026-10-14T13:00:00Z",
+        "players": [
+            {"official_fpl_element_id": 154, "web_name": "Palmer"},
+            {"official_fpl_element_id": 40, "web_name": "Rogers"},
+        ]})
+    save("v6/normalized/canonical_fixtures.json", {
+        "effective_at": "2026-10-14T13:00:00Z",
+        "fixtures": [
+            {"official_fpl_fixture_id": 53, "event": 6,
+             "team_h": 6, "team_a": 2, "finished": True},
+        ]})
+    external = deepcopy(UNDERSTAT)
+    external["effective_at"] = "2026-10-14T13:00:00Z"
+    external["record_groups"]["players"][0]["team_title"] = "Chelsea"
+    external["record_groups"]["players"].append({
+        "source_native_id": 9001, "official_element_id": 40,
+        "identity_status": "VERIFIED", "time": 400, "xg": 1.5,
+        "team_title": "Aston Villa",
+    })
+    fotmob = deepcopy(FOTMOB)
+    fotmob["effective_at"] = "2026-10-14T13:00:00Z"
+    fotmob["record_groups"]["teams"][1]["official_team_id"] = 2
+    fotmob["record_groups"]["fixtures"][0]["away"]["source_native_id"] = 8678
+    save("v6/normalized/sources/understat.json", external)
+    save("v6/normalized/sources/fotmob.json", fotmob)
+    monkeypatch.setattr(materializer, "DATA", tmp_path)
+    ctx = materializer._bound_retrospective_context(
+        original_official=original, logical_slot=slot, report_kind="full_master",
+    )
+    assert ctx["binding"]["prefetch_run_id"] == "prefetch-431"
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 2
+    assert ctx["source_health"]["fotmob"]["consumed_rows"] == 1
+    assert {r["team_id"] for r in ctx["focus_players"]} == {2, 6}
+    assert "players" not in ctx
+    assert ctx["effect_on_projection"] == "NONE_ADVISORY_ONLY"
+
+
+def test_active_materializer_rejects_late_source_or_mismatched_original_archive(monkeypatch, tmp_path):
+    import gzip
+    import json
+    from src.engines import report_materializer as materializer
+    original = {
+        "contract": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1",
+        "generated_at": "2026-10-14T14:15:00Z",
+        "target_logical_report_slot": "2026-10-14T21:30:00+07:00",
+        "report_prefetch_run_id": "prefetch-431",
+    }
+    archive = {**original, "full_season_history": {
+        "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
+        "players": {"154": {"team": 6, "position": 3, "history": {}}},
+        "coverage_gate": {"status": "PASS"},
+    }}
+    path = tmp_path / "v6/history/official_detail.json.gz"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(gzip.compress(json.dumps(archive).encode("utf-8")))
+    source = deepcopy(UNDERSTAT)
+    source["effective_at"] = "2026-10-14T22:35:00+07:00"
+    p = tmp_path / "v6/normalized/sources/understat.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(source), encoding="utf-8")
+    monkeypatch.setattr(materializer, "DATA", tmp_path)
+    ctx = materializer._bound_retrospective_context(
+        original_official=original,
+        logical_slot="2026-10-14T21:30:00+07:00", report_kind="full_master",
+    )
+    assert ctx["source_health"]["understat"]["verified_source_identity_rows"] == 1
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 0
+    assert ctx["source_health"]["understat"]["source_gate"] == "SOURCE_AFTER_REPORT_CUTOFF"
+    assert materializer._bound_retrospective_context(
+        original_official={**original, "report_prefetch_run_id": "different"},
+        logical_slot="2026-10-14T21:30:00+07:00", report_kind="full_master",
+    ) == {}

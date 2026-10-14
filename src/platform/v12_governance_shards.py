@@ -54,7 +54,7 @@ REQUIRED_FILES = [
     "tests/test_price_delivery_barrier.py",
     "tests/test_stage1_analytics_foundation.py",
     "tests/test_pstart_prospective_capture.py",
-    "tests/test_v12_pstart_remote_receipt.py",
+    "tests/test_pstart_remote_receipt.py",
     "tests/test_monte_carlo_engine.py",
     "tests/test_cache_runtime_identity.py",
     "tests/test_cache_lineage_invalidation.py",

@@ -138,3 +138,17 @@ No retrospective outcome is relabelled as predeadline, no role/manager/availabil
 Change timestamp: 2026-10-14T15:23:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+## P0 role, manager and availability context observability (14 October 2026)
+
+A quantified `normalized_availability_start_signal` is *conditional*: the canonical player-minutes owner introduces it for supported uncertainty categories, not for every player. Normal official status `a` is an observed FPL flag, never a 100% medical clearance or numerical start prediction. Consequently, the resolution auditor accepts a directly bound canonical S02 normal-status observation as an explanation for why no extra numeric availability feature was applied, while rejecting an unverified source, a doubtful status or unbound context. This does not waive the separate contextual role, manager, prior and calibration requirements.
+
+Every S02 OUR15 row now includes read-only `pstart_context_evidence`: the official-status observation; active versus non-applied uncertainty signal; advisory observed role profile with source if present; and explicit `NO_VERIFIED_MANAGER_TIMELINE` if no suitable manager-conditioned source is available. Neither one known coach name nor one observed lineup proves a calibrated manager-effect probability. Fields are descriptive/diagnostic only. Model owner remains `V12_PLAYER_MINUTES` and its weights/output are unchanged.
+
+Current source audit: V6 RotoWire normalized feed contains 220 predicted-lineup rows and 103 availability rows, but official player identity joins are not established in the inspected samples; the verified crosswalk catalog has no RotoWire mapping. An external predicted lineup is not an original official observed starting XI and cannot establish a historical role, manager, or medical fact. Extend the identity catalog only with an independently verified provider-native-to-official-player bridge, then preserve source effective_at and original as-of lineage before considering any numeric candidate. The 667-player GW7 prospective forecast is already immutable and should not be retrofitted with additional signals.
+
+Calibration promotion remains blocked until independently verified predeadline evidence and out-of-sample settled P(start), DNP, cameo, xMins and per-position non-inferiority are available. Do not label this context-diagnostics improvement `FULL_RESOLUTION` on the current underlying data.
+
+Change timestamp: 2026-10-14T15:59:22+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:59:22+07:00

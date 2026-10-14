@@ -341,3 +341,18 @@ The V12 S15B delivery boundary rebinds the COMPETITIVE denominator to the resolv
 
 
 - **Native UI receipt boundary (12 Oct 2026):** producer and remote evidence never substitute for a user-visible native component acceptance receipt.
+
+### T1 FotMob historical tactical evidence, 15 October 2026
+
+V6 FotMob source polls now optionally backfill finalized EPL GW1-GW6 matchDetails
+at up to 8 fixtures/occurrence, maximum 80 reserved HTTP attempts/day
+(counting 2 retries). Chelsea's six retrospective fixtures are prioritized.
+Per-match source SHA and actual collection timestamp are preserved. Source
+health and `fotmob_match_details` coverage are independently recorded:
+retrieval is **not** verified coach, role, availability, predeadline
+as-of, or calibrated model fit. No second scheduler or P(start) owner.
+See `docs/audits/P0_COACH_FORMATION_ROLE_EVIDENCE_20261015.md`.
+
+Change timestamp: `2026-10-15T06:24:03+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-15T06:24:03+07:00`

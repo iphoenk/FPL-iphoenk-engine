@@ -1271,6 +1271,11 @@ def _analytics_production_acceptance(
             understat=_read_json(factual_root / "normalized/sources/understat.json", {}) or {},
             fotmob=_read_json(factual_root / "normalized/sources/fotmob.json", {}) or {},
             report_slot=report_slot,
+            # This was independently tied to detail.generated_at and the exact
+            # logical occurrence above. The provider check may happen after
+            # HH:30, but never after the authenticated prefetch's publication
+            # timestamp. This is current-report advisory, not historical as-of.
+            observation_cutoff_at=prefetch.get("generated_at"),
             tactical_observation=observation,
         )
     else:

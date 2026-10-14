@@ -68,8 +68,10 @@ def test_s02_has_one_roster_and_one_ordered_identity_matched_audit():
         "official_gw_slots_present": 6,
         "expected_official_gw_slots": 6,
         "official_points_finalized": False,
-        "source_health": {"understat": {"verified_join_count": 1},
-                          "fotmob": {"verified_match_count": 1}},
+        "source_health": {"understat": {"verified_join_count": 1,
+                                        "rejected_reasons": {"SOURCE_AFTER_REPORT_CUTOFF": 3}},
+                          "fotmob": {"verified_match_count": 1,
+                                     "rejected_reasons": {"UNFINISHED_OR_INVALID_SCORE": 2}}},
         "focus_team": {
             "form_gw1_gw6": {
                 "wins": 1, "draws": 0, "losses": 0,
@@ -106,6 +108,10 @@ def test_s02_has_one_roster_and_one_ordered_identity_matched_audit():
     assert "CHELSEA GW OBSERVATION: GW=6" in rich_rendered
     assert "FPL_status=PROVISIONAL" in rich_rendered
     assert "FOCUS PLAYER PROCESS: Player=Cole Palmer" in rich_rendered
+    assert "SOURCE AFTER REPORT CUTOFF=3" in rich_rendered
+    assert "UNFINISHED OR INVALID SCORE=2" in rich_rendered
+    assert "rejected={" not in rich_rendered
+
     missing_context = dict(rich_context)
     missing_context["focus_team"] = dict(rich_context["focus_team"])
     missing_context["focus_team"]["form_gw1_gw6"] = {

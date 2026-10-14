@@ -220,7 +220,7 @@ def test_active_materializer_binds_exact_occurrence_source_context(monkeypatch, 
     from src.engines import report_materializer as materializer
 
     slot = "2026-10-14T21:30:00+07:00"
-    generated = "2026-10-14T14:15:00+00:00"
+    generated = "2026-10-14T14:45:00+00:00"
     original = {
         "contract": "OFFICIAL_DETAIL_FULL_SEASON_HISTORY_V1",
         "generated_at": generated,
@@ -247,19 +247,19 @@ def test_active_materializer_binds_exact_occurrence_source_context(monkeypatch, 
     save("v6/history/official_detail.json.gz",
          {**original, "full_season_history": historical}, zipped=True)
     save("v6/normalized/canonical_players.json", {
-        "effective_at": "2026-10-14T13:00:00Z",
+        "effective_at": "2026-10-14T14:35:00Z",
         "players": [
             {"official_fpl_element_id": 154, "web_name": "Palmer"},
             {"official_fpl_element_id": 40, "web_name": "Rogers"},
         ]})
     save("v6/normalized/canonical_fixtures.json", {
-        "effective_at": "2026-10-14T13:00:00Z",
+        "effective_at": "2026-10-14T14:35:00Z",
         "fixtures": [
             {"official_fpl_fixture_id": 53, "event": 6,
              "team_h": 6, "team_a": 2, "finished": True},
         ]})
     external = deepcopy(UNDERSTAT)
-    external["effective_at"] = "2026-10-14T13:00:00Z"
+    external["effective_at"] = "2026-10-14T14:35:00Z"
     external["record_groups"]["players"][0]["team_title"] = "Chelsea"
     external["record_groups"]["players"].append({
         "source_native_id": 9001, "official_element_id": 40,
@@ -267,7 +267,7 @@ def test_active_materializer_binds_exact_occurrence_source_context(monkeypatch, 
         "team_title": "Aston Villa",
     })
     fotmob = deepcopy(FOTMOB)
-    fotmob["effective_at"] = "2026-10-14T13:00:00Z"
+    fotmob["effective_at"] = "2026-10-14T14:35:00Z"
     fotmob["record_groups"]["teams"][1]["official_team_id"] = 2
     fotmob["record_groups"]["fixtures"][0]["away"]["source_native_id"] = 8678
     save("v6/normalized/sources/understat.json", external)
@@ -277,6 +277,9 @@ def test_active_materializer_binds_exact_occurrence_source_context(monkeypatch, 
         original_official=original, logical_slot=slot, report_kind="full_master",
     )
     assert ctx["binding"]["prefetch_run_id"] == "prefetch-431"
+    assert ctx["source_cutoff_at"] == generated
+    assert ctx["observation_cutoff_mode"] == "OCCURRENCE_BOUND_PREFETCH_GENERATED_AT"
+    assert ctx["historical_predeadline_source_asof_admission"] == "NOT_ASSERTED"
     assert ctx["source_health"]["understat"]["consumed_rows"] == 2
     assert ctx["source_health"]["fotmob"]["consumed_rows"] == 1
     assert {r["team_id"] for r in ctx["focus_players"]} == {2, 6}
@@ -319,3 +322,25 @@ def test_active_materializer_rejects_late_source_or_mismatched_original_archive(
         original_official={**original, "report_prefetch_run_id": "different"},
         logical_slot="2026-10-14T21:30:00+07:00", report_kind="full_master",
     ) == {}
+
+
+def test_advisory_source_after_logical_slot_before_bound_prefetch_is_joinable():
+    ctx = build(report_slot="2026-10-13T19:00:00+07:00",
+                observation_cutoff_at="2026-10-13T12:45:00+00:00")
+    assert ctx["report_logical_slot"] == "2026-10-13T19:00:00+07:00"
+    assert ctx["source_cutoff_at"] == "2026-10-13T12:45:00+00:00"
+    assert ctx["observation_cutoff_mode"] == "OCCURRENCE_BOUND_PREFETCH_GENERATED_AT"
+    assert ctx["historical_predeadline_source_asof_admission"] == "NOT_ASSERTED"
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 1
+    assert ctx["source_health"]["fotmob"]["consumed_rows"] == 1
+
+
+def test_actual_prefetch_cutoff_still_rejects_future_source_and_naive_timestamp():
+    ctx = build(report_slot="2026-10-13T19:00:00+07:00",
+                observation_cutoff_at="2026-10-13T12:30:00+00:00")
+    assert ctx["source_health"]["understat"]["source_gate"] == "SOURCE_AFTER_REPORT_CUTOFF"
+    assert ctx["source_health"]["understat"]["consumed_rows"] == 0
+    assert ctx["source_health"]["fotmob"]["consumed_rows"] == 0
+    import pytest
+    with pytest.raises(ValueError, match="timezone-aware"):
+        build(observation_cutoff_at="2026-10-13T12:45:00")

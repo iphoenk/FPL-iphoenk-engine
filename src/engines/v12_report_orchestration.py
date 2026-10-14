@@ -4385,15 +4385,24 @@ def _render_deep_visible_contract_lines(
                 f"eligible={u.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"consumed={u.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={u.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={u.get('rejected_reasons', {})}; "
+                f"rejected={_compact(u.get('rejected_reasons') or {})}; "
                 f"FotMob raw={f.get('source_records', 'UNVERIFIED')} "
                 f"verified={f.get('verified_source_identity_rows', 'UNVERIFIED')} "
                 f"eligible={f.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"GW1-GW6 scoped={f.get('historical_scope_rows', 'UNVERIFIED')} "
                 f"consumed={f.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={f.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={f.get('rejected_reasons', {})}. "
+                f"rejected={_compact(f.get('rejected_reasons') or {})}. "
                 "Consumed means retrospective advisory context only, not canonical Pstart input."
+            )
+            lines.append(
+                "DEEP SOURCE OBSERVATION CUTOFF: "
+                f"logical_slot={context.get('report_logical_slot', 'UNAVAILABLE')}; "
+                f"source_cutoff={context.get('source_cutoff_at', 'UNAVAILABLE')}; "
+                f"mode={context.get('observation_cutoff_mode', 'UNAVAILABLE')}; "
+                f"historical_predeadline_admission="
+                f"{context.get('historical_predeadline_source_asof_admission', 'UNVERIFIED')}. "
+                "Post-logical-slot captures are advisory only, never historical as-of proof."
             )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}

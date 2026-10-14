@@ -474,3 +474,85 @@ def test_v6_fotmob_adapter_normalizes_declared_match_details_without_fuzzy_join(
     assert rows[0]["pstart_probability_applied"] is False
     source["data"]["match_details_5795467"]["json"]["general"]["matchId"] = "1"
     assert _fotmob(source, identity)["record_groups"]["match_tactics"] == []
+
+
+
+def test_t1_ledger_uses_official_starts_and_retains_unverified_tactical_role():
+    history = deepcopy(HISTORY)
+    history["generated_at"] = "2026-10-13T12:32:00Z"
+    history["coverage_gate"]["fixture_identity_status"] = "PASS"
+    history["players"]["154"]["history"]["6"] = {
+        "status": "FINAL", "fixture_count": 1,
+        "fixtures": [{"fixture": 53, "round": 6, "starts": 1, "minutes": 82}],
+        "aggregate": {"minutes": 82},
+    }
+    fixtures = deepcopy(FPL_FIXTURES)
+    fixtures[0]["finished"] = True
+    source = deepcopy(FOTMOB)
+    digest = "c" * 64
+    source["source_snapshot_ids"] = [digest]
+    source["record_groups"]["match_tactics"] = [{
+        "contract": "V6_FOTMOB_MATCH_TACTICS_V1",
+        "source_snapshot_sha256": digest,
+        "official_fixture_id": 53, "source_native_fixture_id": 5795467,
+        "fixture_join": "VERIFIED_NATIVE_TO_OFFICIAL", "gw": 6,
+        "sides": [{
+            "side": "home", "official_team_id": 6,
+            "coach": {"name": "Coach One", "source_native_id": 101},
+            "formation": "4-2-3-1",
+            "verified_official_starters": [{
+                "official_element_id": 154, "identity_status": "VERIFIED_MANUAL",
+                "provider_position_id": 10,
+            }],
+        }],
+    }]
+    ctx = build(full_history=history, official_fixtures=fixtures,
+                fotmob=source, tactical_observation={})
+    rows = ctx["verified_context_ledger"]["rows"]
+    palmer = next(r for r in rows if r["element_id"] == 154 and r["gw"] == 6)
+    assert palmer["admission_status"] == "OBSERVED_VERIFIED"
+    assert palmer["fixture_id"] == 53
+    assert palmer["started"] is True
+    assert palmer["minutes"] == 82
+    assert palmer["coach_id"] == 101
+    assert palmer["formation"] == "4-2-3-1"
+    assert palmer["observed_role"] is None
+    assert palmer["provider_position_id"] == 10
+    assert palmer["availability"] == "UNKNOWN"
+    assert palmer["finalized_at"] is None
+    assert palmer["numeric_context_eligible"] is False
+    assert palmer["historical_predeadline_asof_proven"] is False
+    assert ctx["verified_context_ledger"]["by_position"]["MID"]["OBSERVED_VERIFIED"] == 1
+    assert ctx["effect_on_projection"] == "NONE_ADVISORY_ONLY"
+
+    # Real Official fixture mismatch cannot be counted as a verified start.
+    wrong = deepcopy(fixtures)
+    wrong[0]["team_h"] = 99
+    rejected = build(full_history=history, official_fixtures=wrong,
+                     fotmob=source, tactical_observation={})
+    invalid = next(r for r in rejected["verified_context_ledger"]["rows"]
+                   if r["element_id"] == 154 and r["gw"] == 6)
+    assert invalid["admission_status"] == "REJECTED"
+    assert invalid["rejection_reason"] == "PLAYER_CLUB_FIXTURE_MISMATCH"
+    assert invalid["started"] is None
+    assert invalid["coach_id"] is None
+
+
+def test_t1_three_way_duplicate_tactical_records_never_re_admit_conflict():
+    source = deepcopy(FOTMOB)
+    digest = "e" * 64
+    source["source_snapshot_ids"] = [digest]
+    row = {
+        "contract": "V6_FOTMOB_MATCH_TACTICS_V1",
+        "source_snapshot_sha256": digest,
+        "official_fixture_id": 53, "source_native_fixture_id": 5795467,
+        "fixture_join": "VERIFIED_NATIVE_TO_OFFICIAL", "gw": "6",
+        "sides": [{"side": "home", "official_team_id": 6,
+                   "coach": {"name": "Coach One"}, "formation": "4-3-3",
+                   "verified_official_starters": []}],
+    }
+    source["record_groups"]["match_tactics"] = [deepcopy(row) for _ in range(3)]
+    ctx = build(fotmob=source, tactical_observation={})
+    assert ctx["match_tactics_verified_team_observations"] == 0
+    assert ctx["focus_team"]["verified_tactical_match_history"] == []
+    assert ctx["focus_team"]["tactical_observation"]["status"] == "UNAVAILABLE"

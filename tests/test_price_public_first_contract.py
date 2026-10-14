@@ -130,3 +130,19 @@ def test_prefetch_state_distinguishes_public_first_from_failed():
         }
     ) == "PREFETCH_FAILED"
 
+    # Full-master public core must not be blocked by an expired legacy auth.
+    # Unverified public data or mandatory protected auth still fail closed.
+    manifest = {
+        "report_kind": "full_master",
+        "public_core_complete": True,
+        "complete": False,
+        "personal_requested": True,
+        "authenticated_personal_deferred": True,
+        "authenticated_personal_required_for_public_green": False,
+    }
+    assert classify_prefetch_state(manifest) == PREFETCH_PUBLIC_FIRST
+    assert classify_prefetch_state({**manifest, "public_core_complete": False}) == "PREFETCH_FAILED"
+    assert classify_prefetch_state({**manifest, "authenticated_personal_deferred": False}) == "PREFETCH_FAILED"
+    assert classify_prefetch_state({**manifest, "authenticated_personal_required_for_public_green": True}) == "PREFETCH_FAILED"
+    assert classify_prefetch_state({**manifest, "personal_requested": False}) == "PREFETCH_FAILED"
+

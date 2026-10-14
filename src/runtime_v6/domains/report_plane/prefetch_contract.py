@@ -76,6 +76,13 @@ def classify_prefetch_state(manifest: dict[str, Any]) -> str:
         private = (manifest.get("source_domains") or {}).get("PRIVATE_PERSONAL") or {}
         if str(private.get("status") or "").upper() != "AVAILABLE":
             return PREFETCH_PUBLIC_FIRST
+    # Public full-master facts are usable even when the legacy personal
+    # credential expired. The protected OIDC publisher remains independently
+    # responsible for personal/finance proof; never upgrade this to FULL.
+    if (manifest.get("personal_requested") is True
+            and manifest.get("authenticated_personal_deferred") is True
+            and manifest.get("authenticated_personal_required_for_public_green") is not True):
+        return PREFETCH_PUBLIC_FIRST
     if manifest.get("complete") is True:
         return PREFETCH_FULL
     return PREFETCH_FAILED

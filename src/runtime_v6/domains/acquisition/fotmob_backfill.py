@@ -10,6 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from .source_native import _fotmob_match_rows
+from .http_client import utc_now
 
 
 def finalized_match_ids(league: dict[str, Any], cfg: dict[str, Any]) -> list[int]:
@@ -136,6 +137,12 @@ def collect_fotmob(source: dict[str, Any], client: Any,
         "historical_predeadline_asof_proven": False,
         "new_scheduler_created": False,
     }
+    # Match-detail requests finish AFTER the base league request. Source
+    # effective_at must reflect the completed enrichment, never the earlier
+    # league poll timestamp or the logical scheduler slot.
+    payload["checked_at"] = utc_now()
+    if fetched:
+        payload["current_run_action"] = "FETCHED"
     payload["match_details_history"] = coverage
     payload.setdefault("coverage", {})["fotmob_match_details"] = coverage
     if fetched:

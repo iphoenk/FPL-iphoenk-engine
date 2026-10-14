@@ -27,7 +27,7 @@ def _source():
             "max_backfill_requests_per_cycle": 2,
             "daily_request_budget": 4,
             "max_body_bytes": 200000,
-            "endpoint_template": "https://www.fotmob.com/api/matchDetails?matchId={match_id}",
+            "endpoint_template": "https://www.fotmob.com/api/data/matchDetails?matchId={match_id}",
         },
     }
 

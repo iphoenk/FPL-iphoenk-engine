@@ -132,6 +132,21 @@ def build(
         if player_id > 0:
             match_rows_by_player.setdefault(player_id, []).append(row)
 
+    # One official match-level selection interpretation for both the target
+    # player and the teammates used in directional chains. No external
+    # identity mapping, alternative P(start) owner or probability override.
+    selection_evidence_cache: dict[int, dict[str, Any]] = {}
+
+    def official_selection_evidence(player: Mapping[str, Any]) -> dict[str, Any]:
+        element_id = int(player.get("id") or player.get("element") or -1)
+        if element_id not in selection_evidence_cache:
+            selection_evidence_cache[element_id] = build_player_selection_evidence(
+                player,
+                match_rows_by_player.get(element_id, []),
+                neutral_prior=_f(cfg.get("neutral_start_prior"), 0.72),
+            )
+        return selection_evidence_cache[element_id]
+
     global_position_calibration = build_global_position_calibration(
         match_rows
     )
@@ -313,11 +328,7 @@ def build(
         matches_played = int(
             (team_rows.get(team_id) or {}).get("matches_played") or 0
         )
-        selection_evidence = build_player_selection_evidence(
-            player,
-            match_rows_by_player.get(element, []),
-            neutral_prior=_f(load_event_config().get("neutral_start_prior"), 0.72),
-        )
+        selection_evidence = official_selection_evidence(player)
         model_player = dict(player)
         if selection_evidence.get("status") == "AVAILABLE":
             # Current official aggregates can lag the exact GW history. For
@@ -402,8 +413,15 @@ def build(
                     (team_rows.get(team_id) or {}).get("matches_played") or 0
                 )
                 teammate_historical = historical_map.get(str(teammate_id)) or {}
+                teammate_selection_evidence = official_selection_evidence(teammate)
+                teammate_model_player = dict(teammate)
+                if teammate_selection_evidence.get("status") == "AVAILABLE":
+                    teammate_model_player["starts"] = teammate_selection_evidence.get("starts")
+                    teammate_model_player["minutes"] = teammate_selection_evidence.get("minutes")
                 teammate_context: dict[str, Any] = {
-                    "team_matches_played": teammate_matches
+                    "team_matches_played": teammate_matches,
+                    "player_match_rows": match_rows_by_player.get(teammate_id, []),
+                    "selection_evidence": teammate_selection_evidence,
                 }
                 teammate_availability_state = availability_state_for(
                     teammate_id,
@@ -429,7 +447,7 @@ def build(
                         }
                     )
                 teammate_xmins = estimate_xmins(
-                    teammate,
+                    teammate_model_player,
                     teammate_context,
                     calibration_summary=calibration_summary,
                     model_evidence_binding=model_evidence_binding,

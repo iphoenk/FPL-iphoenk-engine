@@ -190,3 +190,27 @@ The report intentionally does **not** update config/v6/verified_crosswalks.json,
 The prior 220/103 figures were from an earlier inspected sample: this specific current snapshot has 102 availability rows. Release of the full contextual P(start) improvement still requires verified role/manager/availability as-of lineage and measured out-of-sample calibration by GK/DEF/MID/FWD. CODE GREEN alone is not MODEL_RESOLUTION FULL.
 
 Documentation sync: UPDATED (14 October 2026).
+
+
+## 14 October: Official-only teammate selection consistency
+
+P1.1 target-player `V6_NORMALIZED_PLAYER_MATCH_ROWS` selection evidence was already
+used in canonical `V12_PLAYER_MINUTES`, but the teammate-start probabilities
+passed to directional linkups were previously recomputed from an aggregate
+fallback without the same verified individual match-level evidence. The
+`historical_projection` owner now caches one player-conditioned selection
+receipt per Official FPL element and reuses it when projecting both the target
+and each teammate. Confirmed starts and observed minutes are passed to the
+same canonical player-minutes owner; absent rows retain its existing fallback.
+
+This is an **input-consistency correction**, not calibration proof, verified
+RotoWire mapping, new prediction owner, or an assertion of better out-of-sample
+accuracy. No external lineup is admitted into numeric P(start), no predeadline
+evidence is fabricated, and the immutable GW7 frozen forecast is unchanged.
+Position-specific walk-forward noninferiority and postmerge run receipts are
+separate acceptance gates. Stage3, eight formations, MC500K, scheduler
+authority, V6 facts and PR #809 are untouched.
+
+Change timestamp: 2026-10-14T20:05:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T20:05:00+07:00

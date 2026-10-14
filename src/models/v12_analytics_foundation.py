@@ -585,6 +585,10 @@ def load_v6_analytics_foundation(
                 "source": row.get("source") or selected_source_id,
                 "dataset": row.get("dataset") or "player_matches",
                 "freshness": normalized.get("effective_at"),
+                # Only an immutable historical row-finalization timestamp may
+                # qualify as predeadline evidence. A current-cycle check time
+                # is never interchangeable with the original finalization.
+                "finalized_at": row.get("finalized_at"),
                 "provenance": {
                     "source_id": normalized.get("source_id"),
                     "source_snapshot_ids": normalized.get(
@@ -608,8 +612,20 @@ def load_v6_analytics_foundation(
     hierarchy = build_hierarchical_priors(adjusted)
     distributions = distribution_selection_matrix(adjusted)
     validation = walk_forward_validate(adjusted)
+    # Real Official FPL event deadlines are needed for source-as-of validation.
+    # Never infer historical deadlines from the current time or report slot.
+    historical_deadlines = {
+        int(event["id"]): event["deadline_time"]
+        for event in bootstrap.get("events") or []
+        if isinstance(event, Mapping)
+        and event.get("finished") is True
+        and int(event.get("id") or 0) > 0
+        and isinstance(event.get("deadline_time"), str)
+        and event["deadline_time"].strip()
+    }
     pstart_backtest = walk_forward_pstart_validate(
         adjusted,
+        deadlines_by_gw=historical_deadlines,
         expected_player_count=len(bootstrap.get("elements") or []),
     )
     tactical_states = probabilistic_tactical_states(

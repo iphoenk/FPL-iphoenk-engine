@@ -4395,6 +4395,15 @@ def _render_deep_visible_contract_lines(
                 f"rejected={f.get('rejected_reasons', {})}. "
                 "Consumed means retrospective advisory context only, not canonical Pstart input."
             )
+            lines.append(
+                "DEEP SOURCE OBSERVATION CUTOFF: "
+                f"logical_slot={context.get('report_logical_slot', 'UNAVAILABLE')}; "
+                f"source_cutoff={context.get('source_cutoff_at', 'UNAVAILABLE')}; "
+                f"mode={context.get('observation_cutoff_mode', 'UNAVAILABLE')}; "
+                f"historical_predeadline_admission="
+                f"{context.get('historical_predeadline_source_asof_admission', 'UNVERIFIED')}. "
+                "Post-logical-slot captures are advisory only, never historical as-of proof."
+            )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
             observed_matches = form.get("matches") or []

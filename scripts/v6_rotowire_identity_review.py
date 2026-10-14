@@ -112,9 +112,11 @@ def build_review(
         }
 
     official_players = defaultdict(list)
+    official_web_names = defaultdict(list)
     for p in canonical_players.get("players") or []:
         key = (int(p["team_id"]), _label(f"{p.get('first_name', '')} {p.get('second_name', '')}"))
         official_players[key].append(p)
+        official_web_names[(int(p["team_id"]), _label(p.get("web_name")))].append(p)
 
     records = defaultdict(list)
     for group in ("lineups", "availability"):
@@ -124,7 +126,7 @@ def build_review(
             records[str(row["source_native_id"])].append((group, row))
 
     output = []
-    for native, observations in sorted(records.items(), key=lambda item: int(item[0]) if item[0].isdigit() else item[0]):
+    for native, observations in sorted(records.items(), key=lambda item: (0, int(item[0])) if item[0].isdigit() else (1, item[0])):
         names = {_label(x.get("player_name")) for _, x in observations}
         clubs = {_label(x.get("team_name")) for _, x in observations}
         group_names = sorted({group for group, _ in observations})
@@ -132,6 +134,11 @@ def build_review(
         team = team_id(first.get("team_name"))
         matches = (official_players.get((team, next(iter(names))), [])
                    if team is not None and len(names) == 1 else [])
+        candidate_basis = "FULL_CANONICAL_NAME_AND_CLUB" if len(matches) == 1 else None
+        if not matches and team is not None and len(names) == 1:
+            matches = official_web_names.get((team, next(iter(names))), [])
+            if len(matches) == 1:
+                candidate_basis = "OFFICIAL_WEB_NAME_AND_CLUB"
         matched_fixtures = sorted({
             fixture_proof.get(str(x.get("fixture_key") or ""), {}).get("official_fixture_id_candidate")
             for _, x in observations
@@ -161,6 +168,7 @@ def build_review(
             "provider_lineup_status": sorted({str(x.get("lineup_status")) for _, x in observations if x.get("lineup_status")}),
             "provider_availability_status": sorted({str(x.get("availability_status")) for _, x in observations if x.get("availability_status")}),
             "review_status": status,
+            "candidate_basis": candidate_basis,
             "verification_status": "UNMAPPED",
             "joinable": False,
             "numeric_pstart_authority": False,

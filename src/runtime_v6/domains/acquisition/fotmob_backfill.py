@@ -19,6 +19,18 @@ def finalized_match_ids(league: dict[str, Any], cfg: dict[str, Any]) -> list[int
                 if str(v).isdigit() and int(v) > 0}
     candidates: dict[int, tuple[int, int]] = {}
     conflicted: set[int] = set()
+    # _fotmob_match_rows coalesces native IDs. Detect conflicts against the
+    # uncoalesced provider list first, so a third duplicate cannot re-admit.
+    direct_rows = league.get("matches") or []
+    if isinstance(direct_rows, list):
+        seen: set[int] = set()
+        for raw in direct_rows:
+            if not isinstance(raw, dict) or not str(raw.get("id")).isdigit():
+                continue
+            native = int(raw["id"])
+            if native in seen:
+                conflicted.add(native)
+            seen.add(native)
     for row in _fotmob_match_rows(league):
         native, gw = row.get("id"), row.get("round", row.get("stage"))
         status = row.get("status") or {}

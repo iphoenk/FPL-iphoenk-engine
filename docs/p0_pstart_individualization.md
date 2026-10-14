@@ -68,7 +68,7 @@ noninferior on all specified paired metrics. Without those facts:
 calculation or entire 667-player dataset completed successfully.
 
 Explicit tolerances, fixed in the diagnostic (not optimized on holdout):
-Brier delta <= +0.01, log loss <= +0.02, xMins MAE <= +1.0, DNP/cameo Brier delta each <= +0.02, and per-position GK/DEF/MID/FWD Brier delta <= +0.03.
+overall Brier delta <= +0.01, log loss <= +0.02, xMins MAE <= +1.0, DNP/cameo Brier delta each <= +0.02. For every GK/DEF/MID/FWD position, Brier delta <= +0.03, log loss <= +0.02, xMins MAE <= +1.0, DNP/cameo Brier delta each <= +0.02.
 Diagnostic eligibility requires >=200 paired fixtures and >=25 per position,
 plus >=95% player-universe coverage, predeadline lineage and zero temporal/partition errors. Report
 `NONINFERIORITY` separately from `SOURCE_AS_OF`.
@@ -102,7 +102,8 @@ historical predeadline snapshot for the five evaluated folds.
 
 `walk_forward_pstart_validate()` now reports baseline and individualized
 starter Brier, log loss, xMins MAE, DNP and cameo Brier **by position and
-club**, as well as overall. It separately publishes
+club**, as well as overall. All five metrics must be noninferior **in each
+position**, not just starter Brier. It separately publishes
 `historical_asof_status=HISTORICAL_AS_OF_UNAVAILABLE` and
 `missing_original_archival_witnesses` rather than promoting timestamp-only
 rows. A `finalized_at` and an official GW deadline *alone* are never proof of

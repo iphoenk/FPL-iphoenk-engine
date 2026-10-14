@@ -9,6 +9,7 @@ scheduler. A private remote Git readback is needed to admit a forecast.
 from datetime import datetime, timezone
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -38,6 +39,49 @@ def _sha(path: Path) -> str:
     if not path.is_file():
         raise ProspectiveCaptureError("V6_SOURCE_FILE_MISSING")
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _verify_original_v6_inputs(
+    runtime_data_root: Path,
+    input_sha: Mapping[str, str],
+    captured_at: datetime,
+) -> dict[str, Any]:
+    """Read the original immutable V6 commit and compare source file digests.
+
+    A working-tree hash alone is insufficient. No active network is needed:
+    the runner's authenticated V6 checkout already contains the Git objects.
+    A separate post-publish private Git readback remains mandatory.
+    """
+    def git(*args: str) -> bytes:
+        try:
+            return subprocess.check_output(
+                ["git", "-C", str(runtime_data_root), *args], stderr=subprocess.DEVNULL
+            )
+        except (subprocess.CalledProcessError, OSError) as exc:
+            raise ProspectiveCaptureError("ORIGINAL_V6_GIT_OBJECT_UNAVAILABLE") from exc
+
+    origin_commit = git("rev-parse", "HEAD").decode("utf-8").strip()
+    if len(origin_commit) != 40 or any(c not in "0123456789abcdef" for c in origin_commit):
+        raise ProspectiveCaptureError("ORIGINAL_V6_COMMIT_IDENTITY_INVALID")
+    commit_at = _utc(git("show", "-s", "--format=%cI", origin_commit).decode("utf-8").strip())
+    if commit_at > captured_at:
+        raise ProspectiveCaptureError("SOURCE_COMMIT_AFTER_CAPTURE")
+    for path, expected in sorted(input_sha.items()):
+        if path not in {
+            "data/v6/current/official_fpl.json",
+            "data/v6/normalized/sources/official_fpl.json",
+        }:
+            raise ProspectiveCaptureError("SOURCE_PATH_NOT_ALLOWLISTED")
+        obj = git("show", f"{origin_commit}:{path}")
+        if hashlib.sha256(obj).hexdigest() != expected:
+            raise ProspectiveCaptureError("V6_ORIGINAL_GIT_BLOB_SHA_MISMATCH")
+    return {
+        "git_commit": origin_commit,
+        "git_commit_at": commit_at.isoformat(),
+        "git_object_readback": "PASS",
+        "readback_source_file_sha256": dict(input_sha),
+        "private_remote_readback": "UNVERIFIED",
+    }
 
 
 def _predictive_fields(raw: Mapping[str, Any]) -> dict[str, float]:
@@ -115,6 +159,9 @@ def build_prospective_capture(
         current_path.as_posix(): _sha(runtime_data_root / current_path),
         source_path.as_posix(): _sha(runtime_data_root / source_path),
     }
+    original_source_git = _verify_original_v6_inputs(
+        runtime_data_root, input_sha, now
+    )
     rows_by_element: dict[int, list[dict[str, Any]]] = {}
     for row in foundation.get("player_match_rows") or []:
         if isinstance(row, Mapping):
@@ -185,7 +232,8 @@ def build_prospective_capture(
             "snapshot_ids": source_ids,
             "prefetch_run_id": prefetch_run_id,
             "source_file_sha256": input_sha,
-            "identity_verified_by_original_git_readback": False,
+            "identity_verified_by_original_git_readback": True,
+            "original_git_evidence": original_source_git,
         },
         "universe_expected": len(official),
         "universe_observed": len(output),

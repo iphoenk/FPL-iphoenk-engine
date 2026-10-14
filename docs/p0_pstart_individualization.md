@@ -126,3 +126,13 @@ mathematics, Stage3, eight formations and MC500K are unchanged.
 Change timestamp: 2026-10-14T10:00:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T10:00:00+07:00
+
+## 14 October 2026, P0 resolution evidence-integrity follow-up
+
+The existing equality audit already verifies that the twelve current OUR15 estimates rounded to P(start)=0.834 have identical canonical historical selection inputs, not a score-generation transport fault. The added fail-closed checks reject duplicated player element IDs, malformed selection counts, invalid/non-finite quantitative signals, duplicate signal names and nonpositive/invalid weights. This changes auditing only; it cannot legitimately promote missing role/manager/availability signals or change canonical minutes probabilities.
+
+The independent private GW7 DEEP occurrence (14 October 2026, 13:21 WIB) has original remote receipt `pstart_prospective_status=IMMUTABLE_REMOTE_READBACK_VERIFIED`, `pstart_prospective_remote_readback=PASS`, `pstart_prospective_source_sha256_readback=PASS`, and a frozen 667-player forecast. This supersedes only the earlier prospective-freeze gap in the historical audit, **not** the GW1–GW6 source-as-of gap or prospective outcomes. GW7 settlement, position-calibrated noninferiority and additional independently verified context are still required before model-calibration promotion. Latest GitHub artifact audit on older runs 33452812166, 35670033021, 36276649162, 36276767226 again returned no retained original predeadline ZIP inventory. No missing GW1–GW6 witness was manufactured.
+
+Change timestamp: 2026-10-14T15:30:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:30:00+07:00

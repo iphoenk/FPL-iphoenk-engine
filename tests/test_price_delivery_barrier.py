@@ -497,3 +497,25 @@ def test_o_unknown_price_ownership_stays_unknown_and_internal_scope_text_never_r
         body.replace("Current squad could not be verified", "Ownership scope unresolved"),
         report=report,
     )
+
+
+def test_v6_full_master_public_first_still_fail_closes_without_public_core():
+    from src.runtime_v6.domains.report_plane.prefetch_contract import (
+        PREFETCH_FULL, PREFETCH_FAILED, PREFETCH_PUBLIC_FIRST,
+        classify_prefetch_state,
+    )
+
+    manifest = {
+        "report_kind": "full_master",
+        "public_core_complete": True,
+        "complete": False,
+        "personal_requested": True,
+        "authenticated_personal_deferred": True,
+        "authenticated_personal_required_for_public_green": False,
+        "legacy_public_auth_state": "AUTH_EXPIRED",
+    }
+    assert classify_prefetch_state(manifest) == PREFETCH_PUBLIC_FIRST
+    assert classify_prefetch_state({**manifest, "complete": True}) == PREFETCH_FULL
+    assert classify_prefetch_state({**manifest, "public_core_complete": False}) == PREFETCH_FAILED
+    assert classify_prefetch_state({**manifest, "authenticated_personal_deferred": False}) == PREFETCH_FAILED
+    assert classify_prefetch_state({**manifest, "authenticated_personal_required_for_public_green": True}) == PREFETCH_FAILED

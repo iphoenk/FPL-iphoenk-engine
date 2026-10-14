@@ -659,6 +659,44 @@ def walk_forward_pstart_validate(
     mutated by this diagnostic.
     """
     from datetime import datetime
+    import re
+
+    def archive_proof_valid(row: Mapping[str, Any], target: datetime | None) -> bool:
+        """Require traceable original V6 archive facts, not timestamps alone.
+
+        The independent V6 archival verifier must read back the original Git
+        object and source SHA before emitting this witness. A digest-shaped
+        string is only a format check; it is not remote verification by itself.
+        """
+        proof = row.get("verified_source_archive") or {}
+        lineage = row.get("provenance") or {}
+        if not isinstance(proof, Mapping) or not isinstance(lineage, Mapping):
+            return False
+        if proof.get("verifier") != "V6_ORIGINAL_ARCHIVE_READBACK":
+            return False
+        if proof.get("remote_readback_verified") is not True:
+            return False
+        commit = str(proof.get("original_commit_sha") or "")
+        sha256 = str(proof.get("source_sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{40}", commit):
+            return False
+        if not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            return False
+        if proof.get("source_sha256_remote_readback") != sha256:
+            return False
+        if not proof.get("source_snapshot_id") or not proof.get("source_id"):
+            return False
+        snapshot_ids = lineage.get("source_snapshot_ids") or []
+        if (not isinstance(snapshot_ids, (tuple, list))
+                or proof["source_snapshot_id"] not in snapshot_ids
+                or proof["source_id"] != lineage.get("source_id")):
+            return False
+        commit_at = aware(proof.get("original_commit_at"))
+        final_at = aware(row.get("finalized_at"))
+        return bool(
+            target is not None and commit_at is not None and final_at is not None
+            and final_at <= commit_at <= target
+        )
 
     def aware(value: Any) -> datetime | None:
         if not value:
@@ -722,6 +760,7 @@ def walk_forward_pstart_validate(
     no_prior_history = 0
     chronology_errors = 0
     provenance_gaps = 0
+    archival_witness_gaps = 0
     folds_with_predictions = set()
     for gw in gws:
         test = [row for row in clean if row["gw"] == gw]
@@ -749,6 +788,8 @@ def walk_forward_pstart_validate(
                     provenance_gaps += 1
                 elif final_at > target_deadline:
                     chronology_errors += 1
+                if not archive_proof_valid(past, target_deadline):
+                    archival_witness_gaps += 1
             evidence = build_player_selection_evidence(
                 {"id": actual["player_id"]}, history, neutral_prior=neutral_prior
             )
@@ -856,7 +897,10 @@ def walk_forward_pstart_validate(
     )
     noninferior = bool(noninferior and positional_noninferior)
     gw_temporal_only = chronology_errors == 0
-    source_temporal = gw_temporal_only and provenance_gaps == 0 and bool(deadlines_by_gw)
+    source_temporal = bool(
+        gw_temporal_only and provenance_gaps == 0
+        and archival_witness_gaps == 0 and deadlines_by_gw
+    )
     if not sample_count:
         status = "INSUFFICIENT_COMPLETED_FOLDS"
     elif not source_temporal:
@@ -891,6 +935,8 @@ def walk_forward_pstart_validate(
             "PASS" if source_temporal else "HISTORICAL_AS_OF_UNAVAILABLE"
         ),
         "missing_predeadline_source_proofs": provenance_gaps,
+        "missing_original_archival_witnesses": archival_witness_gaps,
+        "archive_readback_required": True,
         "split": "EXPANDING_WINDOW_BY_GW_STRICTLY_PRE_DEADLINE",
         "split_precision": "GW_ORDER_ONLY_WITHOUT_ARCHIVED_FINALIZATION_TIMESTAMPS" if not source_temporal else "AS_OF_ARCHIVED",
         "baseline": metrics["baseline"],

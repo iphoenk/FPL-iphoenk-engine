@@ -2303,6 +2303,45 @@ def test_pstart_resolution_requires_complete_context_and_tolerates_rounded_ties(
     assert uncalibrated["status"] == "LIMITED_RESOLUTION"
     assert "PREDEADLINE_CALIBRATION_NOT_PASS" in uncalibrated["reasons"]
 
+    # FPL status 'a' is documented factual availability, not a fictitious
+    # 1.0 start-probability signal. Numeric uncertainty is conditional.
+    normal_rows = [dict(row) for row in rows]
+    for ix, item in enumerate(normal_rows):
+        item["p_start_evidence"] = dict(item["p_start_evidence"])
+        item["p_start_evidence"]["signals"] = [
+            name for name in signals
+            if name != "normalized_availability_start_signal"
+        ]
+        item["p_start_evidence"]["signal_values"] = [
+            value for value in rows[ix]["p_start_evidence"]["signal_values"]
+            if value["signal"] != "normalized_availability_start_signal"
+        ]
+        item["pstart_context_evidence"] = {
+            "availability": {
+                "official_status_observed": True,
+                "authority": "OFFICIAL_FPL_BOOTSTRAP",
+                "fpl_status": "a",
+                "normal_status_no_numeric_adjustment": True,
+            }
+        }
+    normal = assess_pstart_resolution(normal_rows, calibration_status="PASS")
+    assert normal["status"] == "FULL_RESOLUTION"
+    assert normal["normal_status_numeric_adjustment_not_applicable_rows"] == 15
+    assert normal["availability_probability_signal_is_conditional"] is True
+
+    # No self-declared exemption without its original official observation.
+    forged = [dict(x) for x in normal_rows]
+    forged[0] = {**forged[0], "pstart_context_evidence": {
+        "availability": {
+            "official_status_observed": True, "authority": "UNVERIFIED",
+            "fpl_status": "a", "normal_status_no_numeric_adjustment": True,
+        }
+    }}
+    invalid = assess_pstart_resolution(forged, calibration_status="PASS")
+    assert invalid["status"] == "LIMITED_RESOLUTION"
+    assert invalid["contextual_evidence_rows"] == 14
+
+
 
 def test_pstart_asof_bridge_uses_only_historical_finalization_and_real_deadlines(tmp_path):
     rows = _foundation_rows(3)

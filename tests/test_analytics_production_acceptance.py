@@ -93,7 +93,63 @@ def test_report_architecture_binds_owned_player_minutes_evidence():
             "source": "V12_PLAYER_MINUTES",
             "signals": ["season_start_rate", "role_start_probability"],
         },
+        "pstart_context_evidence": {
+            "contract": "V12_PSTART_CONTEXT_OBSERVABILITY_V1",
+            "role": {
+                "profile": None, "source": None, "status": "UNAVAILABLE",
+                "calibrated_start_signal_applied": True,
+            },
+            "manager": {
+                "manager_id": None, "source": None,
+                "status": "NO_VERIFIED_MANAGER_TIMELINE",
+                "calibrated_start_signal_applied": False,
+            },
+            "availability": {
+                "fpl_status": None,
+                "official_status_observed": False,
+                "authority": "UNVERIFIED",
+                "normalized_gw_state": "UNKNOWN",
+                "normalized_start_signal_applied": False,
+                "normal_status_no_numeric_adjustment": False,
+                "official_status_is_not_start_probability": True,
+                "normal_status_is_not_medical_clearance": True,
+            },
+            "readiness": {
+                "role_manager_calibration": "NOT_ESTABLISHED",
+                "asof_feature_lineage": "NOT_ESTABLISHED",
+                "shadow_only": True,
+                "changes_to_canonical_pstart": False,
+            },
+        },
     }]
+
+    from src.models.v12_pstart_context_evidence import build_pstart_context_observability
+    proof = build_pstart_context_observability(
+        {
+            "element": 11, "status": "a", "position": "MID",
+            "tactical_role": {
+                "profile": "attacking-midfielder",
+                "source": "understat_normalized_exact_identity",
+                "decision_influence": "ADVISORY_ONLY",
+            },
+        },
+        {
+            "availability_observation": {"gw_availability": "UNKNOWN"},
+        },
+        {"signals": ["neutral_prior", "player_selection_posterior"]},
+    )
+    assert proof["role"]["status"] == "PROFILE_ADVISORY_UNCALIBRATED"
+    assert proof["availability"]["normal_status_no_numeric_adjustment"] is True
+    assert proof["availability"]["official_status_is_not_start_probability"] is True
+    assert proof["manager"]["status"] == "NO_VERIFIED_MANAGER_TIMELINE"
+    assert proof["readiness"]["changes_to_canonical_pstart"] is False
+
+    no_observation = build_pstart_context_observability(
+        {"element": 11, "status": "d"},
+        {"availability_observation": {"gw_availability": "DOUBT"}},
+        {"signals": ["neutral_prior"]},
+    )
+    assert no_observation["availability"]["normal_status_no_numeric_adjustment"] is False
 
 
 def test_gw7_history_rejects_v6_gw1_to_gw5_nominal_pass():

@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Any
 
 from src.utils import DATA, ROOT, atomic_json, read_json
+from src.models.v12_pstart_context_evidence import build_pstart_context_observability
 
 CONFIG_PATH = ROOT / "config" / "intelligence" / "reporting.json"
 USER_OUT = DATA / "user_report.json"
@@ -81,6 +82,7 @@ def _pstart_rows(team: dict[str, Any], projections: dict[str, Any]) -> list[dict
             "p_dnp": xmins.get("dnp_probability", projection.get("p_dnp")),
             "xmins": xmins.get("expected_minutes"),
             "p_start_evidence": evidence,
+            "pstart_context_evidence": build_pstart_context_observability(projection, xmins, evidence),
         })
     return rows
 

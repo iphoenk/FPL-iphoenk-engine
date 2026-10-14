@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from src.engines.v12_player_minutes import estimate_player_minutes
+from src.models.v12_pstart_context_evidence import build_pstart_context_observability
 
 CONTRACT = "V12_PSTART_PROSPECTIVE_PREDEADLINE_V1"
 POSITIONS = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -202,6 +203,22 @@ def build_prospective_capture(
         # or free-form injury observations are converted to numeric odds.
         baseline = _predictive_fields(estimate_player_minutes(player, context))
         individualized = _predictive_fields(projected.get("xmins") or {})
+        xmins = projected.get("xmins") or {}
+        source_evidence = xmins.get("p_start_evidence") or projected.get("p_start_evidence")
+        # Freeze source-bound features alongside the forecast. External role
+        # and manager profiles remain advisory without original as-of lineage.
+        feature_snapshot = build_pstart_context_observability(
+            {**projected, "status": player.get("status")},
+            xmins,
+            source_evidence if isinstance(source_evidence, Mapping) else None,
+        )
+        feature_snapshot["readiness"].update({
+            "official_fpl_source_original_git_readback": "PASS",
+            "external_role_asof_git_readback": "UNVERIFIED",
+            "external_manager_asof_git_readback": "UNVERIFIED",
+            "numeric_shadow_prediction_created": False,
+            "historical_retrofit": False,
+        })
         output.append({
             "element": pid,
             "position": POSITIONS[int(player.get("element_type") or 0)],
@@ -211,6 +228,7 @@ def build_prospective_capture(
             "selection_status": selection.get("status") or "MISSING",
             "selection_observed_matches": selection.get("observed_matches"),
             "role_manager_fit": "ADVISORY_UNCALIBRATED",
+            "context_evidence": feature_snapshot,
         })
     output.sort(key=lambda p: p["element"])
     rows_sha = hashlib.sha256(
@@ -241,6 +259,22 @@ def build_prospective_capture(
                       for pos in ("GK", "DEF", "MID", "FWD")},
         "forecast_rows_sha256": rows_sha,
         "forecast_rows": output,
+        "context_evidence_summary": {
+            "contract": "V12_GW7_CONTEXT_SHADOW_CAPTURE_V1",
+            "official_status_original_git_verified": sum(
+                row["context_evidence"]["availability"]["official_status_observed"]
+                for row in output
+            ),
+            "advisory_role_profiles": sum(
+                row["context_evidence"]["role"]["status"] == "PROFILE_ADVISORY_UNCALIBRATED"
+                for row in output
+            ),
+            "manager_timeline_eligible": 0,
+            "external_role_asof_git_readback": "UNVERIFIED",
+            "external_manager_asof_git_readback": "UNVERIFIED",
+            "may_promote_context_probability": False,
+            "shadow_observation_only": True,
+        },
         "governance": {
             "current_only": True,
             "never_retrofit_previous_gws": True,

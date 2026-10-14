@@ -57,8 +57,11 @@ def assess_pstart_resolution(
         raw_values = evidence.get("signal_values") or []
         quantitative_vector = tuple(
             sorted(
-                (str(r.get("signal")), r.get("probability"), r.get("weight"))
-                for r in raw_values if isinstance(r, Mapping)
+                (
+                    (str(r.get("signal")), r.get("probability"), r.get("weight"))
+                    for r in raw_values if isinstance(r, Mapping)
+                ),
+                key=lambda item: item[0],
             )
         )
         # Vectors must match signals one-for-one; duplicate/undeclared

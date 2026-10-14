@@ -4385,14 +4385,14 @@ def _render_deep_visible_contract_lines(
                 f"eligible={u.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"consumed={u.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={u.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={u.get('rejected_reasons', {})}; "
+                f"rejected={_compact(u.get('rejected_reasons') or {})}; "
                 f"FotMob raw={f.get('source_records', 'UNVERIFIED')} "
                 f"verified={f.get('verified_source_identity_rows', 'UNVERIFIED')} "
                 f"eligible={f.get('eligible_verified_rows', 'UNVERIFIED')} "
                 f"GW1-GW6 scoped={f.get('historical_scope_rows', 'UNVERIFIED')} "
                 f"consumed={f.get('consumed_rows', 'UNVERIFIED')} "
                 f"gate={f.get('source_gate', 'UNVERIFIED')} "
-                f"rejected={f.get('rejected_reasons', {})}. "
+                f"rejected={_compact(f.get('rejected_reasons') or {})}. "
                 "Consumed means retrospective advisory context only, not canonical Pstart input."
             )
             lines.append(

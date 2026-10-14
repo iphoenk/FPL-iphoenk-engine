@@ -14,6 +14,8 @@ Newly inspected original Git commit `8d6c76e7d35ee5332f6d73a2bdc9822d9e62f92c` h
 | `data/stats/vaastav_gw1.json` | `c3da0a51c9d05d0e13bcb6fa42557747a1506af7` | 599 rows marked `SEASON_SNAPSHOT_FALLBACK`, *not* actual GW1 match rows |
 | `data/history.jsonl` | `878766c9e94d8c6097482701c3cc264cc113cb9e` | 25 original Aug25 report records; includes personal account context, do not mirror into public calibration audit |
 
+Additional inspection found 612 player IDs in the 25 Aug `data/universe.json` source and exactly 399/399 FPL-Core-Insights `player_id` numerically present in that snapshot. The 399 records span ten unique fixture labels, with 220 records marked start-minute 0 with minutes played, 90 positive-minute cameo rows and 89 zero-minute rows, with no duplicate `(player_id, match_id)` keys. Numeric candidate alignment is NOT proof of independent provider-to-Official identity, completed match attribution or finalization timestamp; it does not grant a V6 historical-as-of witness.
+
 Original SHA1 values are Git-object identity witnesses, not an independently recomputed SHA256 attestation. No archival source-as-of PASS was minted. This earlier V3/V4-era data remains read-only historical discovery: **V6 remains the only factual authority** and cannot be retroactively replaced with legacy payloads. Match finalization timing, complete Official player-selection evidence, source identity mapping and independent SHA256 receipt must be verified before any row is eligible for `verified_source_archive` and `walk_forward_pstart_validate()`.
 
 | GW | Original predeadline candidate | Historical source-as-of disposition |

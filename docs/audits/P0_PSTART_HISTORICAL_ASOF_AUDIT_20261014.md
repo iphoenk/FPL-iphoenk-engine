@@ -54,3 +54,20 @@ These results narrow the archive recovery search. They do not prove that unreach
 Change timestamp: 2026-10-14T15:23:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+## Recovery discovery: original V6 Git objects survive force-updated runtime branch
+
+Read-only GitHub Actions **logs**, unlike their expired/empty artifact inventories, preserve the original published runtime commit IDs. GitHub Git Commit and Tree APIs independently returned both original root commits and their original trees:
+
+| Original V6 run | Original commit | GitHub recorded commit time (UTC) | Original Official FPL blob (Git SHA-1) | Catalog Official FPL SHA256 | Admission |
+| --- | --- | --- | --- | --- | --- |
+| `34725699713` | `d2d9ddbfc6292964240a03d60c30dbba62c3ac1f` | `2026-09-12T23:33:28Z` | `8eed445a0080b0dd0265b9126a43997b0d53b305` | `cd20e4028b4e390231fece33b74b880c36d242b132b7d6e6c1ecb8e66e85057e` | SOURCE_CANDIDATE_ONLY |
+| `35476739571` | `41b95421cba8fe70c94d0769e039f2208ede6b3c` | `2026-09-19T23:40:44Z` | `96db450a284deffa930084313c08485d97f2b3ea` | `186077472a3514e82f860be1f7af3ac147f36cee479fa4050e3183f0b74dbfbb` | SOURCE_CANDIDATE_ONLY |
+
+Original `data/v6/evidence/artifact_catalog.json` was read back from each original commit. It records `official_fpl` source snapshot IDs, effective timestamp, production run ID, and the SHA256 above. Original `data/v6/normalized/canonical_fixtures.json` also read back successfully: 380 fixtures (10 per GW) with original FPL fixture IDs. This materially strengthens the archive audit: zero retained Actions ZIPs does **not** imply original Git objects were lost. September snapshots may support some **later** training folds, subject to independent deadline and all source-row checks, but cannot establish GW1–GW4 predeadline evidence on their own.
+
+The large Official FPL source blobs were confirmed as immutable Git tree entries, but their complete payload bytes were not independently rehashed during this audit. SHA256 values currently come from the original committed catalog. Before admitting any fold, an approved verifier must read the exact original blob bytes, compute SHA256 independently, bind original commit/run timestamp and original source IDs, verify each required previous-GW finalized player/fixture row and compare the actual target GW deadline. Do not promote the catalog's own digest or commit timestamp alone as complete proof. GW1–GW6 overall remains `HISTORICAL_AS_OF_UNAVAILABLE` pending row-level admission.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00

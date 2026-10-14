@@ -67,6 +67,8 @@ def build_prospective_capture(
     Exact timestamp is observed at creation, never backdated to report_slot.
     GW outcomes are not consumed; true holdout requires a future settlement.
     """
+    if not isinstance(projections, Mapping):
+        raise ProspectiveCaptureError("PROJECTION_UNAVAILABLE")
     now = observed_at or datetime.now(timezone.utc)
     if now.tzinfo is None:
         raise ProspectiveCaptureError("CAPTURE_TIMESTAMP_NAIVE")

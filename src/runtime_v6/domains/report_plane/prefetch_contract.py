@@ -78,6 +78,14 @@ def classify_prefetch_state(manifest: dict[str, Any]) -> str:
             return PREFETCH_PUBLIC_FIRST
     if manifest.get("complete") is True:
         return PREFETCH_FULL
+    # A fully verified public full-master can be operationally usable while the
+    # legacy personal credential is expired. The protected private publisher
+    # must prove authenticated finance separately; do not mislabel this as
+    # PREFETCH_FULL and do not block public source admission.
+    if (manifest.get("personal_requested") is True
+            and manifest.get("authenticated_personal_deferred") is True
+            and manifest.get("authenticated_personal_required_for_public_green") is not True):
+        return PREFETCH_PUBLIC_FIRST
     return PREFETCH_FAILED
 
 

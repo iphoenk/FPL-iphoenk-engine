@@ -407,3 +407,10 @@ def test_private_publish_failure_diagnostic_allowlists_missing_serving_files():
         "code": "MISSING_SERVING_ARTIFACTS",
         "missing": ["serving_report.json", "delivery_status.json"],
     }
+
+    # Final private receipt/materialized manifest must survive sparse rebase.
+    # The original remote Git object remains the source of readback authority.
+    workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(encoding="utf-8")
+    assert '(repo / root).mkdir(parents=True, exist_ok=True)' in workflow
+    assert '(repo / "latest").mkdir(parents=True, exist_ok=True)' in workflow
+    assert 'manifest = json.loads(show(f"{root}/native_content.manifest.json"))' in workflow

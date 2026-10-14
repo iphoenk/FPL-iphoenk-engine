@@ -84,3 +84,22 @@ These are **potential** original input snapshots for evaluating a later target G
 Change timestamp: 2026-10-14T15:23:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+## Independent full Git-blob SHA256 readback, 14 October 2026
+
+All four original Official FPL source blob byte streams identified via the original V6 root Git objects were read back directly from GitHub, their complete UTF-8 bytes were independently hashed with SHA256, and the computed digests matched the corresponding source SHA256 values in the original committed artifact catalogs, four out of four. Evidence is preserved at `docs/audits/P0_ORIGINAL_V6_SOURCE_SHA256_20261014.json`.
+
+| Source run | Original Git commit | Verified Official FPL source SHA256 | Candidate target (deadline UTC) | Original source integrity |
+| --- | --- | --- | --- | --- |
+| 34286506638 (8 Sep) | ed5c910aee9bf808aa7007a080da3b0654338841 | cc11e734bd93c200e0fb8920e65b843cd736e42250804870094ec0167ff5e56c | GW4 (12 Sep 12:30) | PASS |
+| 34417093599 (9 Sep) | e7b7ded8aebc19a115ddbf2ef16946986c26bdb9 | 768e11092ac6a2c99199ec9597b753632a0afc08caa7c82c74cd0cec7ae57176 | GW4 (12 Sep 12:30) | PASS |
+| 34725699713 (12 Sep) | d2d9ddbfc6292964240a03d60c30dbba62c3ac1f | cd20e4028b4e390231fece33b74b880c36d242b132b7d6e6c1ecb8e66e85057e | GW5 (18 Sep 17:30) | PASS |
+| 35476739571 (19 Sep) | 41b95421cba8fe70c94d0769e039f2208ede6b3c | 186077472a3514e82f860be1f7af3ac147f36cee479fa4050e3183f0b74dbfbb | GW6 (10 Oct 10:00) | PASS |
+
+Original archived bootstrap contains Official FPL event deadlines and 654 players on the 8 and 9 September checkpoints and 657 players on 12 September. The archived canonical player identity entries do not provide per-match starts/finalization. The inspected Vaastav normalized source has season/player aggregates rather than a complete independently finalized match-level individual selection training history. Therefore all four entries remain **SOURCE_INTEGRITY_PASS / HISTORICAL_AS_OF_UNAVAILABLE**; none is automatically a certified walk-forward fold, and GW1–GW3 cannot be backdated from these September observations.
+
+Remaining admission steps are to recover independently timestamped and finalized original match-level training rows for every target's prior GW, bind each to immutable original source identity and snapshot ID, validate source/payload SHA256 and exact Official deadline, then run the governed walk-forward and per-position noninferiority checks. Do not mint `verified_source_archive` witnesses from catalog claims alone. The existing original V6 owner, V12_PLAYER_MINUTES, Stage3, eight formations, MC500K and scheduler are unchanged.
+
+Change timestamp: 2026-10-14T15:48:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:48:00+07:00

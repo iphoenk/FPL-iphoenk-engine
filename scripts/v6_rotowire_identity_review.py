@@ -55,6 +55,8 @@ def build_review(
     canonical_players: dict[str, Any],
     canonical_teams: dict[str, Any],
     canonical_fixtures: dict[str, Any],
+    *,
+    target_gw: int | None = None,
 ) -> dict[str, Any]:
     if rotowire.get("source_id") != "rotowire":
         raise ValueError("expected RotoWire normalized V6 payload")
@@ -102,10 +104,14 @@ def build_review(
         at = _observed_fixture_time(key, effective_at)
         matches = official_fixtures.get((h, a, at), []) if h and a and at else []
         valid = len(matches) == 1 and at is not None and asof < at
+        same_gw = valid and (target_gw is None or matches[0].get("event") == target_gw)
+        fixture_status = ("FIXTURE_CANDIDATE_MATCHED" if same_gw else
+                          "MATCHED_OTHER_GW" if valid else "FIXTURE_UNVERIFIED")
         fixture_proof[key] = {
-            "status": "FIXTURE_CANDIDATE_MATCHED" if valid else "FIXTURE_UNVERIFIED",
+            "status": fixture_status,
             "official_fixture_id_candidate": int(matches[0]["official_fpl_fixture_id"]) if valid else None,
             "gw_candidate": matches[0].get("event") if valid else None,
+            "target_gw_eligible": bool(same_gw),
             "kickoff_utc": at.isoformat() if at is not None else None,
             "official_team_pair_resolved": h is not None and a is not None,
             "fixture_identity_joinable": False,
@@ -142,7 +148,7 @@ def build_review(
         matched_fixtures = sorted({
             fixture_proof.get(str(x.get("fixture_key") or ""), {}).get("official_fixture_id_candidate")
             for _, x in observations
-            if fixture_proof.get(str(x.get("fixture_key") or ""), {}).get("official_fixture_id_candidate")
+            if fixture_proof.get(str(x.get("fixture_key") or ""), {}).get("status") == "FIXTURE_CANDIDATE_MATCHED"
         })
         if len(names) != 1 or len(clubs) != 1:
             status = "PROVIDER_ID_COLLISION"
@@ -151,7 +157,11 @@ def build_review(
         elif len(matches) != 1:
             status = "NAME_TEAM_UNRESOLVED" if not matches else "AMBIGUOUS_OFFICIAL_PLAYER"
         elif not matched_fixtures:
-            status = "FIXTURE_UNVERIFIED"
+            has_other_gw = any(
+                fixture_proof.get(str(x.get("fixture_key") or ""), {}).get("status") == "MATCHED_OTHER_GW"
+                for _, x in observations
+            )
+            status = "MATCHED_OTHER_GW" if has_other_gw else "FIXTURE_UNVERIFIED"
         else:
             status = "IDENTITY_CANDIDATE_REVIEW"
         player = matches[0] if len(matches) == 1 else {}
@@ -184,6 +194,8 @@ def build_review(
         "official_fpl_player_universe": len(canonical_players.get("players") or []),
         "provider_unique_player_ids": len(output),
         "provider_input_rows": len(groups["lineups"]) + len(groups["availability"]),
+        "target_gw": target_gw,
+        "fixture_matched_other_gw": sum(x["status"] == "MATCHED_OTHER_GW" for x in fixture_proof.values()),
         "candidate_counts": counts,
         "fixture_candidate_matches": sum(x["status"] == "FIXTURE_CANDIDATE_MATCHED" for x in fixture_proof.values()),
         "fixture_count": len(groups["fixtures"]),
@@ -204,6 +216,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("rotowire", "canonical-players", "canonical-teams", "canonical-fixtures", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument("--target-gw", type=int, default=None)
     args = parser.parse_args()
     def load(path: Path) -> dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -212,6 +225,7 @@ def main() -> None:
         load(args.canonical_players),
         load(args.canonical_teams),
         load(args.canonical_fixtures),
+        target_gw=args.target_gw,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(review, sort_keys=True, indent=2) + "\n", encoding="utf-8")

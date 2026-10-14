@@ -121,3 +121,44 @@ def test_rotowire_source_native_dataset_is_advisory_and_never_v6_authored_predic
     assert all(row["verification_status"] == "UNMAPPED" for row in observed["players"])
     assert all(row["joinable"] is False and row["numeric_pstart_authority"] is False
                for row in observed["players"])
+
+    # GW-specific admission: an otherwise verified fixture belongs to one
+    # GW only; a GW8 prediction must not leak into the GW7 review.
+    rotowire["record_groups"]["lineups"][0]["fixture_key"] = (
+        "October 17 7:30 AM ET|Everton|Chelsea"
+    )
+    rotowire["record_groups"]["lineups"][0]["player_name"] = "Jordan Pickford"
+    rotowire["record_groups"]["fixtures"].append({
+        "fixture_key": "October 23 3:00 PM ET|Everton|Chelsea",
+        "home": {"name": "Everton"}, "away": {"name": "Chelsea"},
+    })
+    official_fixtures["fixtures"].append({
+        "official_fpl_fixture_id": 82,
+        "team_h": 9, "team_a": 6, "event": 8,
+        "kickoff_time": "2026-10-23T19:00:00Z",
+    })
+    official_players["players"].append({
+        "official_fpl_element_id": 228, "official_code": 44444,
+        "first_name": "Michael", "second_name": "Keane", "team_id": 9,
+    })
+    rotowire["record_groups"]["lineups"].append({
+        "source_native_id": 17514, "player_name": "Michael Keane",
+        "team_name": "Everton", "position": "D", "lineup_status": "PREDICTED",
+        "fixture_key": "October 23 3:00 PM ET|Everton|Chelsea",
+    })
+    gw7_review = build_review(
+        rotowire, official_players, official_teams, official_fixtures,
+        target_gw=7,
+    )
+    assert gw7_review["target_gw"] == 7
+    assert gw7_review["fixture_candidate_matches"] == 1
+    assert gw7_review["fixture_matched_other_gw"] == 1
+    assert gw7_review["candidate_counts"]["IDENTITY_CANDIDATE_REVIEW"] == 1
+    assert gw7_review["candidate_counts"]["MATCHED_OTHER_GW"] == 1
+    assert all(row["joinable"] is False for row in gw7_review["players"])
+    gw8_review = build_review(
+        rotowire, official_players, official_teams, official_fixtures,
+        target_gw=8,
+    )
+    assert gw8_review["candidate_counts"]["IDENTITY_CANDIDATE_REVIEW"] == 1
+    assert gw8_review["candidate_counts"]["MATCHED_OTHER_GW"] == 1

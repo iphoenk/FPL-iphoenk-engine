@@ -335,6 +335,7 @@ def _verified_tactical_matches(
     official_matches: Sequence[Mapping[str, Any]],
     historical_gws: Sequence[int],
     as_of: str,
+    official_player_teams: Mapping[int, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Admit only same-source, verified match details within report cutoff.
 
@@ -347,6 +348,7 @@ def _verified_tactical_matches(
     fixtures = {m["official_fixture_id"]: m for m in official_matches}
     observed: list[dict[str, Any]] = []
     used = set()
+    ambiguous = set()
     for row in ((fotmob or {}).get("record_groups") or {}).get("match_tactics") or []:
         if not isinstance(row, Mapping) or row.get("contract") != "V6_FOTMOB_MATCH_TACTICS_V1":
             continue
@@ -354,7 +356,7 @@ def _verified_tactical_matches(
         fixture_id = _id(row.get("official_fixture_id"))
         match = fixtures.get(fixture_id)
         digest = str(row.get("source_snapshot_sha256") or "")
-        if (not match or native_id != _id(match.get("source_native_id"))
+        if (not re.fullmatch(r"[0-9a-f]{64}", digest) or not match or native_id != _id(match.get("source_native_id"))
                 or _id(row.get("gw")) != match.get("gw")
                 or match.get("gw") not in historical_gws
                 or row.get("fixture_join") != "VERIFIED_NATIVE_TO_OFFICIAL"
@@ -370,8 +372,12 @@ def _verified_tactical_matches(
             if side.get("side") != expected_side:
                 continue
             key = (fixture_id, team_id)
+            if key in ambiguous:
+                continue
             if key in used:
-                # Ambiguous duplicates cannot become coach/formation evidence.
+                # Permanently reject this team/fixture after any duplicate, even
+                # if a third provider row repeats the same identity.
+                ambiguous.add(key)
                 observed = [item for item in observed if (item["fixture_id"], item["team_id"]) != key]
                 continue
             used.add(key)
@@ -387,7 +393,8 @@ def _verified_tactical_matches(
                 if not isinstance(p, Mapping) or p.get("identity_status") not in _VERIFIED:
                     continue
                 pid = _id(p.get("official_element_id"))
-                if not pid or pid in seen_players:
+                if (not pid or pid in seen_players or
+                        (official_player_teams is not None and official_player_teams.get(pid) != team_id)):
                     continue
                 seen_players.add(pid)
                 roles[str(pid)] = {
@@ -408,6 +415,146 @@ def _verified_tactical_matches(
                 "numeric_start_probability_eligible": False,
             })
     return sorted(observed, key=lambda item: (item["gw"], item["fixture_id"], item["team_id"]))
+
+
+
+def _verified_context_ledger(
+    bootstrap: Mapping[str, Any],
+    official_fixtures: Sequence[Mapping[str, Any]],
+    full_history: Mapping[str, Any],
+    tactical_matches: Sequence[Mapping[str, Any]],
+    historical_gws: Sequence[int],
+    cutoff: str,
+) -> dict[str, Any]:
+    """Retrospective, fail-closed player/fixture ledger; never a model feature.
+
+    The original Official player/GW fixture rows are authoritative for starts
+    and minutes. FotMob may enrich coach and formation only after verified
+    fixture/team/source crosswalk. Post-match evidence is not predeadline truth.
+    """
+    universe = {
+        _id(p.get("id")): p for p in bootstrap.get("elements") or []
+        if isinstance(p, Mapping) and _id(p.get("id")) is not None
+    }
+    fixtures = {
+        _id(f.get("id")): f for f in official_fixtures
+        if isinstance(f, Mapping) and _id(f.get("id")) is not None
+    }
+    tactics = {(t["fixture_id"], t["team_id"]): t for t in tactical_matches}
+    generated = full_history.get("generated_at")
+    source_time_ok = (
+        _aware(generated) is not None
+        and _aware(cutoff) is not None
+        and _aware(generated) <= _aware(cutoff)
+    )
+    fixture_gate_ok = (full_history.get("coverage_gate") or {}).get("fixture_identity_status") == "PASS"
+    player_history = full_history.get("players") or {}
+    by_club: dict[str, Counter] = {}
+    by_position: dict[str, Counter] = {}
+    unresolved: set[int] = set()
+    rows: list[dict[str, Any]] = []
+
+    def record(row: dict[str, Any], position: str) -> None:
+        rows.append(row)
+        club = str(row.get("team_id") or "UNKNOWN")
+        by_club.setdefault(club, Counter())[row["admission_status"]] += 1
+        by_position.setdefault(position, Counter())[row["admission_status"]] += 1
+        if row["admission_status"] != "OBSERVED_VERIFIED":
+            unresolved.add(row["element_id"])
+
+    for element_id, element in sorted(universe.items()):
+        position = POSITION.get(_id(element.get("element_type")), "UNKNOWN")
+        team = _id(element.get("team"))
+        history = ((player_history.get(str(element_id)) or {}).get("history") or {})
+        for gw in historical_gws:
+            slot = history.get(str(gw)) or {}
+            status = str(slot.get("status") or "UNAVAILABLE").upper()
+            fixture_rows = slot.get("fixtures") or []
+            if not isinstance(fixture_rows, list):
+                fixture_rows = []
+            if not fixture_rows:
+                # A DNP or BLANK GW does not identify an individual fixture or
+                # prove a benched/unused lineup; never manufacture those facts.
+                record({
+                    "element_id": element_id, "fixture_id": None, "gw": gw,
+                    "team_id": team, "coach_id": None, "formation": None,
+                    "observed_role": None, "started": None, "minutes": None,
+                    "availability": "UNKNOWN", "source_id": f"OFFICIAL_FPL_ELEMENT_SUMMARY/{element_id}",
+                    "observed_at": generated if source_time_ok else None,
+                    "finalized_at": None, "confidence": 0.0,
+                    "admission_status": "UNAVAILABLE",
+                    "rejection_reason": "NO_PLAYER_FIXTURE_ROW_" + status,
+                    "official_gw_status": status, "numeric_context_eligible": False,
+                    "historical_predeadline_asof_proven": False,
+                }, position)
+                continue
+            seen_fixtures: set[int] = set()
+            for raw in fixture_rows:
+                if not isinstance(raw, Mapping):
+                    continue
+                fixture_id = _id(raw.get("fixture"))
+                fixture = fixtures.get(fixture_id)
+                reason = None
+                if fixture_id in seen_fixtures:
+                    reason = "DUPLICATE_PLAYER_FIXTURE"
+                elif fixture_id is None or fixture is None:
+                    reason = "FIXTURE_IDENTITY_NOT_VERIFIED"
+                elif _id(raw.get("round") or raw.get("event")) != gw or _id(fixture.get("event")) != gw:
+                    reason = "FIXTURE_GW_MISMATCH"
+                elif team not in {_id(fixture.get("team_h")), _id(fixture.get("team_a"))}:
+                    reason = "PLAYER_CLUB_FIXTURE_MISMATCH"
+                elif status != "FINAL" or not fixture_gate_ok or fixture.get("finished") is not True:
+                    reason = "OFFICIAL_FINALITY_NOT_VERIFIED"
+                elif not source_time_ok:
+                    reason = "SOURCE_OBSERVED_AT_UNVERIFIED_OR_LATE"
+                if fixture_id is not None:
+                    seen_fixtures.add(fixture_id)
+
+                starts = _n(raw.get("starts"))
+                minutes = _n(raw.get("minutes"))
+                if not reason and (starts not in (0.0, 1.0) or minutes is None or minutes < 0 or minutes > 130
+                                   or (starts == 1.0 and minutes == 0)):
+                    reason = "OFFICIAL_START_OR_MINUTES_UNVERIFIED"
+                tactical = tactics.get((fixture_id, team)) if reason is None else None
+                observed_role = None  # FotMob positionId is not a tactical role.
+                record({
+                    "element_id": element_id, "fixture_id": fixture_id, "gw": gw,
+                    "team_id": team, "coach_id": _id((tactical or {}).get("manager_native_id")),
+                    "formation": (tactical or {}).get("formation"),
+                    "observed_role": observed_role,
+                    "provider_position_id": ((tactical or {}).get("verified_player_roles") or {}).get(
+                        str(element_id), {}
+                    ).get("provider_position_id"),
+                    "started": starts == 1.0 if reason is None else None,
+                    "minutes": int(minutes) if reason is None else None,
+                    "selection_class": (
+                        "START" if starts == 1.0 else "CAMEO" if minutes > 0 else "DNP"
+                    ) if reason is None else "UNAVAILABLE",
+                    "availability": "UNKNOWN", "source_id": f"OFFICIAL_FPL_ELEMENT_SUMMARY/{element_id}",
+                    "source_snapshot_sha256": (tactical or {}).get("source_snapshot_sha256"),
+                    "observed_at": generated if source_time_ok else None,
+                    "finalized_at": None,  # The original archive has no verified finalization instant.
+                    "confidence": 1.0 if reason is None else 0.0,
+                    "admission_status": "OBSERVED_VERIFIED" if reason is None else "REJECTED",
+                    "rejection_reason": reason,
+                    "official_gw_status": status, "coach_formation_admission": (
+                        "ADVISORY" if tactical else "UNAVAILABLE"
+                    ), "numeric_context_eligible": False,
+                    "historical_predeadline_asof_proven": False,
+                }, position)
+    return {
+        "contract": "V12_VERIFIED_PLAYER_FIXTURE_CONTEXT_LEDGER_V1",
+        "observation_class": "RETROSPECTIVE_POST_DEADLINE_ONLY",
+        "rows": rows,
+        "row_count": len(rows),
+        "admission_counts": dict(Counter(r["admission_status"] for r in rows)),
+        "by_club": {k: dict(v) for k, v in sorted(by_club.items())},
+        "by_position": {k: dict(v) for k, v in sorted(by_position.items())},
+        "unresolved_player_count": len(unresolved),
+        "unresolved_player_ids": sorted(unresolved),
+        "numeric_pstart_effect": "NONE",
+        "historical_predeadline_source_asof": "NOT_ATTESTED",
+    }
 
 
 def build_retrospective_context(
@@ -436,7 +583,13 @@ def build_retrospective_context(
     players, available = _official_player_rows(bootstrap, full_history, gw_ids)
     understat_source = _attach_understat(players, understat, source_cutoff)
     matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, source_cutoff)
-    tactical_matches = _verified_tactical_matches(fotmob, matches, gw_ids, source_cutoff)
+    official_player_teams = {row["official_element_id"]: row["team_id"] for row in players}
+    tactical_matches = _verified_tactical_matches(
+        fotmob, matches, gw_ids, source_cutoff, official_player_teams
+    )
+    context_ledger = _verified_context_ledger(
+        bootstrap, official_fixtures, full_history, tactical_matches, gw_ids, source_cutoff
+    )
     by_id = {row["official_element_id"]: row for row in players}
     focused = [by_id[player_id] for player_id in focus_player_ids if player_id in by_id]
     formation = {"status": "UNAVAILABLE", "coach_fit_score": None, "formation_fit_score": None}
@@ -486,6 +639,7 @@ def build_retrospective_context(
         "player_position_counts": dict(by_position),
         "source_health": {"understat": understat_source, "fotmob": match_source},
         "match_tactics_verified_team_observations": len(tactical_matches),
+        "verified_context_ledger": context_ledger,
         "players": players,
         "focus_players": focused,
         "focus_team": {

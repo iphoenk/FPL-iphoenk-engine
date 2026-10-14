@@ -618,7 +618,8 @@ def _bound_retrospective_context(
 
     def asof_admitted(payload: dict[str, Any]) -> bool:
         effective = _normalise_occurrence_slot(payload.get("effective_at"))
-        return bool(effective and expected_slot and effective <= expected_slot)
+        source_cutoff = _normalise_occurrence_slot(original_official.get("generated_at"))
+        return bool(effective and source_cutoff and effective <= source_cutoff)
 
     names: dict[int, str] = {}
     if asof_admitted(canonical_players):
@@ -666,6 +667,7 @@ def _bound_retrospective_context(
             understat=read_json(DATA / "v6/normalized/sources/understat.json", {}) or {},
             fotmob=read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {},
             report_slot=str(logical_slot),
+            observation_cutoff_at=original_official.get("generated_at"),
             focus_player_ids=(154, 40, 165),
         )
     except (TypeError, ValueError, KeyError):

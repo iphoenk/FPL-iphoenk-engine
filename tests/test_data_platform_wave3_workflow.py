@@ -71,11 +71,15 @@ def test_wave3_observer_binds_proof_to_exact_immutable_source_publication_artifa
 def test_wave3_observer_binds_source_generation_to_exact_published_runtime_commit():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert "Resolve exact published runtime commit" in text
-    assert "/branches/runtime-data-v6" in text
+    assert "/branches/runtime-data-v6" not in text
+    assert "gh run view --repo" in text
+    assert "--job \"$SOURCE_PUBLISH_JOB_ID\" --log" in text
+    assert "src.runtime_v6.wave3_runtime_pin extract" in text
+    assert "src.runtime_v6.wave3_runtime_pin verify" in text
+    assert "/git/commits/${runtime_sha}" in text
     assert "candidate_freeze.lock?ref=${runtime_sha}" in text
-    assert 'freeze.get("run_id")' in text
-    assert 'freeze.get("run_attempt")' in text
-    assert "runtime branch no longer points to the source run generation" in text
+    assert "publish_integrity.json?ref=${runtime_sha}" in text
+    assert "--archive-root \"$RUNNER_TEMP/v6-wave3-source-tree/data/v6\"" in text
     assert "--published-runtime-sha \"${{ steps.runtime.outputs.sha }}\"" in text
 
 

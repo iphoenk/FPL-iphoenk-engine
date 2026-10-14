@@ -2190,6 +2190,13 @@ def test_pstart_walkforward_rejects_unsettled_and_future_match_rows():
     assert out["target_gws"] == [2, 3, 4, 5]
     assert out["future_leakage"] is False
     assert out["status"] != "PASS"
+    assert out["historical_asof_status"] == "HISTORICAL_AS_OF_UNAVAILABLE"
+    for cohort in ("by_position", "by_team"):
+        assert out[cohort]
+        for metrics in out[cohort].values():
+            for label in ("baseline", "individualized"):
+                for metric in ("brier", "log_loss", "xmins_mae", "dnp_brier", "cameo_brier"):
+                    assert f"{label}_{metric}" in metrics
 
 
 def test_pstart_walkforward_requires_archived_predeadline_finality():

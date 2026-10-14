@@ -10351,7 +10351,7 @@ def run_deep(
     except (ProspectiveCaptureError, OSError, KeyError, ValueError) as exc:
         # This diagnostic is independent of S02's retrospective gate.
         reason = str(exc)
-        if not re.fullmatch(r"[A-Z_]+", reason):
+        if not reason or not reason.replace("_", "").isalpha() or reason != reason.upper():
             reason = "CAPTURE_INPUT_UNAVAILABLE"
         (output_dir / "pstart_prospective_gap.json").write_text(
             json.dumps({

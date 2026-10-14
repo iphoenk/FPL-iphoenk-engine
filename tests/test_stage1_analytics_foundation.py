@@ -2351,3 +2351,59 @@ def test_pstart_asof_bridge_never_uses_current_check_time_as_historical_proof(tm
     assert diagnostic["predeadline_source_lineage"] == "UNVERIFIED"
     assert diagnostic["missing_predeadline_source_proofs"] > 0
     assert diagnostic["status"] == "RETROSPECTIVE_DIAGNOSTIC_ONLY"
+
+def test_pstart_resolution_rejects_duplicate_ids_and_malformed_quantified_inputs():
+    from src.engines.v12_pstart_resolution import assess_pstart_resolution
+
+    rows = [
+        {
+            "element_id": i + 1,
+            "p_start": 0.75,
+            "p_start_evidence": {
+                "signals": ["neutral_prior", "player_selection_posterior", "role_start_probability"],
+                "model_probability_agrees": True,
+                "signal_values": [
+                    {"signal": "neutral_prior", "probability": 0.72, "weight": 1.0},
+                    {"signal": "player_selection_posterior", "probability": 0.6, "weight": 1.5},
+                    {"signal": "role_start_probability", "probability": 0.8, "weight": 0.8},
+                ],
+                "selection_evidence": {
+                    "status": "AVAILABLE", "observed_matches": 5, "starts": 3,
+                    "recent_starts": 2, "selection_posterior": 0.6,
+                },
+            },
+        }
+        for i in range(15)
+    ]
+    baseline = assess_pstart_resolution(rows, calibration_status="PASS")
+    assert baseline["status"] == "FULL_RESOLUTION"
+    assert baseline["equal_probability_pairs_with_identical_evidence"] == 105
+    assert baseline["duplicate_player_elements"] == []
+    assert baseline["quantitative_signal_domain_checked"] is True
+
+    duplicate = [dict(row) for row in rows]
+    duplicate[1]["element_id"] = 1
+    same_identity = assess_pstart_resolution(duplicate, calibration_status="PASS")
+    assert same_identity["status"] == "LIMITED_RESOLUTION"
+    assert same_identity["duplicate_player_elements"] == [1]
+    assert "CANONICAL_PLAYER_IDENTITY_INVALID_OR_DUPLICATED" in same_identity["reasons"]
+
+    malformed = [dict(row) for row in rows]
+    malformed[0]["p_start_evidence"] = dict(rows[0]["p_start_evidence"])
+    malformed[0]["p_start_evidence"]["signal_values"] = [
+        *rows[0]["p_start_evidence"]["signal_values"][:1],
+        {"signal": "player_selection_posterior", "probability": float("nan"), "weight": 1.5},
+        *rows[0]["p_start_evidence"]["signal_values"][2:],
+    ]
+    bad_quant = assess_pstart_resolution(malformed, calibration_status="PASS")
+    assert bad_quant["status"] == "LIMITED_RESOLUTION"
+    assert bad_quant["invalid_quantitative_input_elements"] == [1]
+    assert bad_quant["quantified_input_rows"] == 14
+
+    malformed[0]["p_start_evidence"]["selection_evidence"] = {
+        **rows[0]["p_start_evidence"]["selection_evidence"],
+        "recent_starts": 7,
+    }
+    bad_history = assess_pstart_resolution(malformed, calibration_status="PASS")
+    assert bad_history["individual_evidence_rows"] == 14
+    assert bad_history["status"] == "LIMITED_RESOLUTION"

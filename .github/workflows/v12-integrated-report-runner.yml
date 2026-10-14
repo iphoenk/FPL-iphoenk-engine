@@ -1132,6 +1132,15 @@ jobs:
               if receipt.get("native_content_chunk_count") != 0:
                   raise SystemExit("non-native report unexpectedly declares chunks")
           
+          # Original Git-blob readback of paired P(start) forecast + V6 inputs.
+          from src.engines.v12_pstart_remote_receipt import verify_forecast
+          receipt.update(verify_forecast(
+              receipt,
+              private_repo=repo,
+              private_commit=commit,
+              occurrence_path=root.as_posix(),
+              runtime_repo=Path("../runtime-data"),
+          ))
           receipt["private_remote_readback"] = "PASS"
           receipt["private_report_commit"] = commit
           receipt_path.write_text(

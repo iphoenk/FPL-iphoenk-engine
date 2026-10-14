@@ -10318,6 +10318,52 @@ def run_deep(
         json.dumps(execution_proof, indent=2, ensure_ascii=False, default=str),
         encoding="utf-8",
     )
+    # Predeadline paired evidence is captured by this already-authorized DEEP
+    # occurrence. It is a read-only companion artifact, never Stage3 input.
+    # A failure to admit evidence must not forge calibration or block a valid
+    # READY_FULL report. The private publisher owns its occurrence-bound copy.
+    from src.engines.v12_pstart_prospective import (
+        ProspectiveCaptureError,
+        build_prospective_capture,
+    )
+    import os
+    try:
+        if scenario_overrides:
+            raise ProspectiveCaptureError("SCENARIO_OVERRIDE_IS_NOT_PROSPECTIVE_PRODUCTION")
+        capture = build_prospective_capture(
+            bootstrap=bootstrap,
+            projections=projections,
+            strength=strength or {},
+            foundation=foundation or {},
+            runtime_data_root=runtime_data_root,
+            report_slot=report_slot,
+            prefetch_run_id=str(prefetch.get("report_prefetch_run_id") or ""),
+            model_sha=str(os.getenv("GITHUB_SHA") or ""),
+        )
+        (output_dir / "pstart_predeadline_forecast.json").write_text(
+            json.dumps(capture, sort_keys=True, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            "[V12_PSTART_PROSPECTIVE] "
+            f"CAPTURED_AWAITING_REMOTE_READBACK players={capture['universe_observed']}",
+            flush=True,
+        )
+    except (ProspectiveCaptureError, OSError, KeyError, ValueError) as exc:
+        # This diagnostic is independent of S02's retrospective gate.
+        reason = str(exc)
+        if not re.fullmatch(r"[A-Z_]+", reason):
+            reason = "CAPTURE_INPUT_UNAVAILABLE"
+        (output_dir / "pstart_prospective_gap.json").write_text(
+            json.dumps({
+                "status": "PROSPECTIVE_CAPTURE_UNAVAILABLE",
+                "reason": reason,
+                "report_slot": report_slot,
+                "planning_gw": planning_gw,
+                "calibration_promoted": False,
+            }, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
     return bundle
 
 

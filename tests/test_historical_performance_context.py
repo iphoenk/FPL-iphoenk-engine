@@ -421,3 +421,56 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     rejected = build(fotmob=source, tactical_observation={})
     assert rejected["match_tactics_verified_team_observations"] == 0
     assert rejected["focus_team"]["tactical_observation"]["status"] == "UNAVAILABLE"
+
+
+def test_v6_fotmob_adapter_normalizes_declared_match_details_without_fuzzy_join():
+    from src.runtime_v6.domains.acquisition.source_native import _fotmob
+
+    def link(official_key, official, native):
+        return {official_key: official, "links": {
+            "fotmob": {"status": "VERIFIED_MANUAL", "source_native_id": native},
+        }}
+
+    identity = {
+        "mappings": {"154": link("official_fpl_element_id", 154, 1001)},
+        "entity_bridges": {
+            "fixture": {"mappings": {"53": link("official_fpl_fixture_id", 53, 5795467)}},
+            "team": {"mappings": {
+                "6": link("official_fpl_team_id", 6, 8455),
+                "3": link("official_fpl_team_id", 3, 8678),
+            }},
+        },
+    }
+    detail = {
+        "general": {"matchId": "5795467", "leagueId": 47,
+                    "homeTeam": {"id": 8455}, "awayTeam": {"id": 8678}},
+        "content": {"lineup": {
+            "homeTeam": {"id": 8455, "formation": "3-4-2-1",
+                         "coach": {"name": "Xabi Alonso"},
+                         "starters": [{"id": 1001, "positionId": 10}]},
+            "awayTeam": {"id": 8678, "formation": "4-4-2",
+                         "coach": {"name": "Coach B"}, "starters": []},
+        }},
+    }
+    source = {
+        "health": "GREEN", "checked_at": "2026-10-13T12:31:00+00:00",
+        "data": {
+            "league": {"json": {"details": {"id": 47, "selectedSeason": "2026/2027"},
+                               "matches": [{
+                                   "id": 5795467, "round": "6",
+                                   "home": {"id": 8455, "name": "Chelsea"},
+                                   "away": {"id": 8678, "name": "Bournemouth"},
+                                   "status": {"finished": True, "scoreStr": "5 - 1"},
+                               }]}},
+            "match_details_5795467": {"json": detail, "sha256": "a" * 64},
+        },
+    }
+    normalized = _fotmob(source, identity)
+    assert normalized["normalization_status"] == "NORMALIZED"
+    rows = normalized["record_groups"]["match_tactics"]
+    assert len(rows) == 1
+    assert rows[0]["source_snapshot_sha256"] == "a" * 64
+    assert rows[0]["sides"][0]["verified_official_starters"][0]["official_element_id"] == 154
+    assert rows[0]["pstart_probability_applied"] is False
+    source["data"]["match_details_5795467"]["json"]["general"]["matchId"] = "1"
+    assert _fotmob(source, identity)["record_groups"]["match_tactics"] == []

@@ -148,3 +148,67 @@ def test_transferred_player_is_never_assumed_to_have_one_club_season_stats():
     assert source["mixed_team_season"] is True
     assert source["club_specific_team_fit"] == "UNAVAILABLE_MIXED_TEAM_SEASON"
     assert source["season_aggregate_only"] is True
+
+
+def test_source_consumption_ledger_distinguishes_verified_eligible_and_consumed():
+    ctx = build()
+    understat = ctx["source_health"]["understat"]
+    assert understat["source_records"] == 2
+    assert understat["verified_source_identity_rows"] == 1
+    assert understat["eligible_verified_rows"] == 1
+    assert understat["consumed_rows"] == understat["verified_join_count"] == 1
+    assert understat["source_gate"] == "PASS"
+    assert understat["rejected_reasons"] == {"SOURCE_IDENTITY_UNVERIFIED": 1}
+    fotmob = ctx["source_health"]["fotmob"]
+    assert fotmob["source_records"] == 1
+    assert fotmob["verified_source_identity_rows"] == 1
+    assert fotmob["eligible_verified_rows"] == 1
+    assert fotmob["historical_scope_rows"] == 1
+    assert fotmob["consumed_rows"] == fotmob["verified_match_count"] == 1
+    assert fotmob["source_gate"] == "PASS"
+
+
+def test_temporal_gate_preserves_verified_counts_without_fake_deep_consumption():
+    ctx = build(report_slot="2026-10-13T09:00:00+07:00")
+    understat = ctx["source_health"]["understat"]
+    assert understat["verified_source_identity_rows"] == 1
+    assert understat["eligible_verified_rows"] == understat["consumed_rows"] == 0
+    assert understat["source_gate"] == "SOURCE_AFTER_REPORT_CUTOFF"
+    assert understat["rejected_reasons"]["SOURCE_AFTER_REPORT_CUTOFF"] == 2
+    fotmob = ctx["source_health"]["fotmob"]
+    assert fotmob["verified_source_identity_rows"] == 1
+    assert fotmob["eligible_verified_rows"] == fotmob["consumed_rows"] == 0
+    assert fotmob["source_gate"] == "SOURCE_AFTER_REPORT_CUTOFF"
+    assert fotmob["rejected_reasons"]["SOURCE_AFTER_REPORT_CUTOFF"] == 1
+
+
+def test_verified_external_identity_outside_official_universe_is_not_consumed():
+    source = deepcopy(UNDERSTAT)
+    source["record_groups"]["players"].append({
+        "source_native_id": 123456, "official_element_id": 999888,
+        "identity_status": "VERIFIED", "games": 6, "time": 450, "xg": 2.3,
+    })
+    ctx = build(understat=source)
+    ledger = ctx["source_health"]["understat"]
+    assert ledger["verified_source_identity_rows"] == 2
+    assert ledger["eligible_verified_rows"] == 2
+    assert ledger["consumed_rows"] == 1
+    assert ledger["rejected_reasons"]["VERIFIED_BUT_NOT_CONSUMED"] == 1
+    assert len(ctx["players"]) == len(BOOTSTRAP["elements"])
+
+
+def test_fotmob_rejections_and_out_of_scope_never_become_consumed():
+    source = deepcopy(FOTMOB)
+    duplicate = deepcopy(source["record_groups"]["fixtures"][0])
+    source["record_groups"]["fixtures"].append(duplicate)
+    out_of_scope = deepcopy(duplicate)
+    out_of_scope["round"] = "8"
+    source["record_groups"]["fixtures"].append(out_of_scope)
+    ctx = build(fotmob=source)
+    ledger = ctx["source_health"]["fotmob"]
+    assert ledger["source_records"] == 3
+    assert ledger["verified_source_identity_rows"] == 3
+    assert ledger["historical_scope_rows"] == 2
+    assert ledger["out_of_historical_scope"] == 1
+    assert ledger["consumed_rows"] == 1
+    assert ledger["rejected_reasons"]["UNVERIFIED_OR_DUPLICATE_FIXTURE"] == 1

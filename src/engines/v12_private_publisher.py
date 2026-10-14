@@ -110,6 +110,8 @@ _OPTIONAL_SERVING_FILES = (
     "presentation_qa.json",
     "gw6-forward-mc.json",
     "gw7-midfield-mc.json",
+    "pstart_predeadline_forecast.json",
+    "pstart_prospective_gap.json",
 )
 _REPORT_FIRST_SERVING_FILES = (
     "serving_report.json",
@@ -764,6 +766,16 @@ def publish_private_output(
         "native_content_commit": None,
         "native_ui_acceptance": "UNVERIFIED",
         "native_chatgpt_render_acceptance": "UNVERIFIED",
+        "pstart_prospective_status": (
+            "CAPTURED_AWAITING_IMMUTABLE_REMOTE_READBACK"
+            if copied.get("pstart_predeadline_forecast.json")
+            else "PROSPECTIVE_CAPTURE_UNAVAILABLE"
+            if copied.get("pstart_prospective_gap.json") else "NOT_APPLICABLE"
+        ),
+        "pstart_prospective_sha256": copied.get("pstart_predeadline_forecast.json"),
+        "pstart_prospective_gap_sha256": copied.get("pstart_prospective_gap.json"),
+        "pstart_prospective_remote_readback": "UNVERIFIED",
+        "pstart_prospective_source_sha256_readback": "UNVERIFIED",
         "previous_deep_baseline_published": previous_deep_baseline_sha is not None,
         "previous_deep_baseline_sha256": previous_deep_baseline_sha,
         "math_recomputed": False,

@@ -521,5 +521,8 @@ def collect_source(
             previous,
         )
     if adapter == "http":
+        if source.get("id") == "fotmob":
+            from .fotmob_backfill import collect_fotmob
+            return collect_fotmob(source, client, previous)
         return collect_http(source, client, previous)
     raise ValueError(f"unsupported V6 adapter: {adapter}")

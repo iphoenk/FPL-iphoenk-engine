@@ -120,3 +120,29 @@ source-as-of remains NOT_ATTESTED. Actual club/position coverage from a
 fresh controlled production occurrence and remote receipt are not yet
 established. Until then CHELSEA_CONTEXT=PARTIAL, not PASS.
 
+
+## T1 retrieval continuation: existing V6 FotMob bounded matchDetails
+
+On the original V6 FotMob source poll, `fotmob_backfill.collect_fotmob()`
+reuses the **single** declared league request and performs up to eight
+supplemental `/api/data/matchDetails?matchId=<native>` HTTP GET requests.
+Only GW1-GW6 provider-finalized, noncancelled fixtures are candidates.
+Chelsea fixtures (FotMob team 8455) are first; all teams follow.
+A daily budget of 80 reserved HTTP attempts accounts for two retries
+per request. Responses are separately SHA256-bound and immutable in the
+V6 source-native snapshot, with their original observed timestamp.
+Failed, blocked, or truncated requests are marked PARTIAL; the public
+Official FPL source is not blocked by optional FotMob access failures.
+
+`coverage.fotmob_match_details` separates retrieval completion from
+**independent crosswalk/formation/coach/role admission**. A complete
+download is not a tactical admission PASS. Full player fixture ledger,
+verified role, available-by-deadline injuries and rotation features remain
+unproven. No historical as-of timestamps are manufactured.
+No change to scheduler, P1.7, Stage3, MC500K, V12_PLAYER_MINUTES,
+original frozen GW7, or PR #809. The first legitimate postmerge
+V6 occurrence and native DEEP production readback still need verification.
+
+Change timestamp: `2026-10-15T06:24:03+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-15T06:24:03+07:00`

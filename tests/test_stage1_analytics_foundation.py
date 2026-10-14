@@ -2218,22 +2218,24 @@ def test_pstart_walkforward_requires_archived_predeadline_finality():
     assert out["predeadline_source_lineage"] == "UNVERIFIED"
 
 
-def test_pstart_resolution_accepts_equality_only_if_input_evidence_matches():
+def test_pstart_resolution_requires_complete_context_and_tolerates_rounded_ties():
     from src.engines.v12_pstart_resolution import assess_pstart_resolution
 
+    signals = [
+        "neutral_prior", "player_selection_posterior",
+        "prior_start_probability", "role_start_probability",
+        "manager_start_probability", "normalized_availability_start_signal",
+    ]
+    probs = [0.72, 0.8712, 0.82, 0.86, 0.85, 0.91]
     rows = [
         {
             "element_id": i + 1, "p_start": .83,
             "p_start_evidence": {
-                "signals": [
-                    "neutral_prior", "player_selection_posterior",
-                    "role_start_probability",
-                ],
+                "signals": signals,
                 "model_probability_agrees": True,
                 "signal_values": [
-                    {"signal": "neutral_prior", "probability": .72, "weight": .8},
-                    {"signal": "player_selection_posterior", "probability": .8712, "weight": 1.8},
-                    {"signal": "role_start_probability", "probability": .86, "weight": 1.1},
+                    {"signal": name, "probability": p, "weight": 1.0}
+                    for name, p in zip(signals, probs)
                 ],
                 "selection_evidence": {
                     "status": "AVAILABLE", "observed_matches": 6,
@@ -2241,27 +2243,65 @@ def test_pstart_resolution_accepts_equality_only_if_input_evidence_matches():
                     "selection_posterior": .8712,
                 },
             },
-        }
-        for i in range(15)
+        } for i in range(15)
     ]
     good = assess_pstart_resolution(rows, calibration_status="PASS")
     assert good["status"] == "FULL_RESOLUTION"
+    assert good["contextual_evidence_rows"] == 15
+    assert good["quantified_input_rows"] == 15
+    assert good["model_agreement_rows"] == 15
     assert good["unique_rounded_probabilities"] == 1
     assert good["equal_probability_pairs_with_identical_evidence"] == 105
     assert good["equal_probability_pairs_with_different_evidence"] == 0
+
     changed = [dict(r) for r in rows]
     changed[0] = dict(changed[0])
     changed[0]["p_start_evidence"] = dict(rows[0]["p_start_evidence"])
     changed[0]["p_start_evidence"]["selection_evidence"] = {
-        **rows[0]["p_start_evidence"]["selection_evidence"],
-        "starts": 4,
+        **rows[0]["p_start_evidence"]["selection_evidence"], "starts": 4,
     }
-    mismatch = assess_pstart_resolution(changed, calibration_status="PASS")
-    assert mismatch["status"] == "LIMITED_RESOLUTION"
-    assert mismatch["equal_probability_pairs_with_different_evidence"] == 14
-    missing = assess_pstart_resolution(rows, calibration_status="UNVERIFIED")
-    assert missing["status"] == "LIMITED_RESOLUTION"
-    assert "PREDEADLINE_CALIBRATION_NOT_PASS" in missing["reasons"]
+    # A rounded tie alone is diagnostic, not evidence of miscalibration.
+    tied = assess_pstart_resolution(changed, calibration_status="PASS")
+    assert tied["status"] == "FULL_RESOLUTION"
+    assert tied["equal_probability_pairs_with_different_evidence"] == 14
+    assert tied["rounded_collision_status"] == "REVIEW_ONLY_NOT_A_FAIL_GATE"
+
+    missing_context = [dict(r) for r in rows]
+    missing_context[0] = {**rows[0], "p_start_evidence": {
+        **rows[0]["p_start_evidence"],
+        "signals": [s for s in signals if s != "manager_start_probability"],
+        "signal_values": [
+            x for x in rows[0]["p_start_evidence"]["signal_values"]
+            if x["signal"] != "manager_start_probability"
+        ],
+    }}
+    context_out = assess_pstart_resolution(missing_context, calibration_status="PASS")
+    assert context_out["status"] == "LIMITED_RESOLUTION"
+    assert context_out["contextual_evidence_rows"] == 14
+
+    duplicated = [dict(r) for r in rows]
+    duplicated[0] = {**rows[0], "p_start_evidence": {
+        **rows[0]["p_start_evidence"],
+        "signal_values": [
+            *rows[0]["p_start_evidence"]["signal_values"][:-1],
+            rows[0]["p_start_evidence"]["signal_values"][0],
+        ],
+    }}
+    quantified_out = assess_pstart_resolution(duplicated, calibration_status="PASS")
+    assert quantified_out["status"] == "LIMITED_RESOLUTION"
+    assert quantified_out["quantified_input_rows"] == 14
+
+    unagreed = [dict(r) for r in rows]
+    unagreed[0] = {**rows[0], "p_start_evidence": {
+        **rows[0]["p_start_evidence"], "model_probability_agrees": None,
+    }}
+    unagreed_out = assess_pstart_resolution(unagreed, calibration_status="PASS")
+    assert unagreed_out["status"] == "LIMITED_RESOLUTION"
+    assert "MODEL_OUTPUT_AGREEMENT_UNVERIFIED" in unagreed_out["reasons"]
+
+    uncalibrated = assess_pstart_resolution(rows, calibration_status="UNVERIFIED")
+    assert uncalibrated["status"] == "LIMITED_RESOLUTION"
+    assert "PREDEADLINE_CALIBRATION_NOT_PASS" in uncalibrated["reasons"]
 
 
 def test_pstart_asof_bridge_uses_only_historical_finalization_and_real_deadlines(tmp_path):

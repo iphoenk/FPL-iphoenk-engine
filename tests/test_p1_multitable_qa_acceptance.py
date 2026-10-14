@@ -105,7 +105,7 @@ def test_s02_has_one_roster_and_one_ordered_identity_matched_audit():
     assert rich_names == names
     assert "CHELSEA GW OBSERVATION: GW=6" in rich_rendered
     assert "FPL_status=PROVISIONAL" in rich_rendered
-    assert "CHELSEA PLAYER PROCESS: Player=Cole Palmer" in rich_rendered
+    assert "FOCUS PLAYER PROCESS: Player=Cole Palmer" in rich_rendered
     missing_context = dict(rich_context)
     missing_context["focus_team"] = dict(rich_context["focus_team"])
     missing_context["focus_team"]["form_gw1_gw6"] = {

@@ -574,6 +574,117 @@ def _full_season_history_acceptance(official: dict[str, Any], planning_gw: Any) 
     }
 
 
+def _bound_retrospective_context(
+    *, original_official: dict[str, Any], logical_slot: str | None,
+    report_kind: str,
+) -> dict[str, Any]:
+    """Read-only V6 source-to-DEEP bridge, never a P(start) mathematical owner.
+
+    Accept the original lossless player-history archive only when it matches
+    the same original prefetch occurrence already verified by the sidecar.
+    External normalized sources remain strictly cutoff-gated by the existing
+    GW1-GW6 context builder. Return no contextual rows on identity mismatch.
+    """
+    if report_kind != "full_master" or not _normalise_occurrence_slot(logical_slot):
+        return {}
+    if original_official.get("contract") != _V6_HISTORY_CONTRACT:
+        return {}
+    archive_path = DATA / "v6/history/official_detail.json.gz"
+    if not archive_path.is_file():
+        return {}
+    try:
+        archive = json.loads(gzip.decompress(archive_path.read_bytes()).decode("utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError, gzip.BadGzipFile):
+        return {}
+    expected_slot = _normalise_occurrence_slot(logical_slot)
+    if (archive.get("contract") != _V6_HISTORY_CONTRACT
+            or archive.get("generated_at") != original_official.get("generated_at")
+            or _normalise_occurrence_slot(archive.get("target_logical_report_slot")) != expected_slot
+            or _normalise_occurrence_slot(original_official.get("target_logical_report_slot")) != expected_slot
+            or archive.get("report_prefetch_run_id") != original_official.get("report_prefetch_run_id")):
+        return {}
+    raw_history = archive.get("full_season_history") or {}
+    players = raw_history.get("players") or {}
+    if (raw_history.get("contract") != "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1"
+            or not isinstance(players, dict) or not players):
+        return {}
+
+    from src.engines.v12_gw1_gw6_history_context import build_retrospective_context
+
+    # Use archived player identity/team/position as official authority. Names
+    # from a newer canonical roster may only be used when it predates cutoff.
+    canonical_players = read_json(DATA / "v6/normalized/canonical_players.json", {}) or {}
+    canonical_fixtures = read_json(DATA / "v6/normalized/canonical_fixtures.json", {}) or {}
+
+    def asof_admitted(payload: dict[str, Any]) -> bool:
+        effective = _normalise_occurrence_slot(payload.get("effective_at"))
+        return bool(effective and expected_slot and effective <= expected_slot)
+
+    names: dict[int, str] = {}
+    if asof_admitted(canonical_players):
+        for row in canonical_players.get("players") or []:
+            if not isinstance(row, dict):
+                continue
+            try:
+                element = int(row.get("official_fpl_element_id"))
+            except (TypeError, ValueError):
+                continue
+            if row.get("web_name"):
+                names[element] = str(row["web_name"])
+    elements: list[dict[str, Any]] = []
+    for key, row in players.items():
+        if not isinstance(row, dict):
+            continue
+        try:
+            eid = int(key)
+            team = int(row.get("team"))
+            position = int(row.get("position"))
+        except (TypeError, ValueError):
+            continue
+        if eid > 0 and team > 0 and position in (1, 2, 3, 4):
+            elements.append({
+                "id": eid, "team": team, "element_type": position,
+                "web_name": names.get(eid, f"FPL #{eid}"),
+            })
+    if len(elements) != len(players):
+        return {}
+    fixture_rows = []
+    if asof_admitted(canonical_fixtures):
+        for row in canonical_fixtures.get("fixtures") or []:
+            if not isinstance(row, dict):
+                continue
+            fixture_rows.append({
+                "id": row.get("official_fpl_fixture_id"),
+                "event": row.get("event"), "team_h": row.get("team_h"),
+                "team_a": row.get("team_a"), "finished": row.get("finished"),
+            })
+    try:
+        context = build_retrospective_context(
+            bootstrap={"elements": elements},
+            official_fixtures=fixture_rows,
+            full_history=raw_history,
+            understat=read_json(DATA / "v6/normalized/sources/understat.json", {}) or {},
+            fotmob=read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {},
+            report_slot=str(logical_slot),
+            focus_player_ids=(154, 40, 165),
+        )
+    except (TypeError, ValueError, KeyError):
+        return {}
+    # Keep full player rows inside V6; compact DEEP only carries summaries and
+    # audited focus players, preserving the 22-section report size budget.
+    context.pop("players", None)
+    context["binding"] = {
+        "source": "V6_EXACT_OCCURRENCE_LOSSLESS_HISTORY",
+        "prefetch_run_id": archive.get("report_prefetch_run_id"),
+        "original_generated_at": archive.get("generated_at"),
+        "original_logical_slot": archive.get("target_logical_report_slot"),
+        "external_advisory_only": True,
+        "historical_predeadline_lineage_admitted": False,
+        "forecast_or_pstart_changed": False,
+    }
+    return context
+
+
 def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any]) -> dict[str, Any]:
     captaincy = dict(user.get("captaincy") or {})
     source_rows = user.get("rows") or []
@@ -696,6 +807,13 @@ def run() -> dict[str, Any]:
     auth = read_json(DATA / "auth.json", {})
     current_team = read_json(DATA / "v6" / "personal" / "current_team.json", {})
     full_season_history = _full_season_history_acceptance(official, user.get("planning_gw"))
+    if occurrence_official:
+        retrospective = _bound_retrospective_context(
+            original_official=occurrence_official, logical_slot=logical_slot,
+            report_kind=requested_report_kind,
+        )
+        if retrospective:
+            full_season_history["retrospective_context"] = retrospective
     analytics_acceptance = _analytics_acceptance(user=user, full_history=full_season_history)
 
     owned = _owned_rows(user, team, projections)

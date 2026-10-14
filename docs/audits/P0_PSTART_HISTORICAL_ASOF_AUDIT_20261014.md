@@ -44,3 +44,43 @@ Latest S02 numerical retrospective diagnostics: starter Brier 0.242833 baseline 
 ## Explicit nonchanges
 
 No changes to PR #1065, PR #809, V6 data authority, V12_PLAYER_MINUTES mathematics, correlated MC500K, eight legal formations, Stage3 temporal integrity, or ChatGPT scheduler. Role/coach/fixture-fit evidence remains advisory unless independently calibrated.
+
+## Addendum: additional public Actions retention check, 14 October 2026
+
+The GitHub API reports empty artifact inventories for inspected completed V6 hourly acquisition runs `34725699713`, `34722950239`, `34720145902` (12 September) and `35476739571` (19 September), and inspected skipped runs `36198244096`, `36156578313` (25 September). Previously sampled `33452812166` and `35670033021` also return empty inventories. The public repository main tree at original 25 September commit `31c912345d17b9225cfbe2b6dae5c2de3649a6e6` contains no `data/v6` source snapshot blobs. The private repository's inspected commit history starts on 26 September, and early GW6 manual captures are **team state**, not full-player predeadline model inputs.
+
+These results narrow the archive recovery search. They do not prove that unreachable Git objects, other older workflow artifacts, GitHub caches or additional trusted archives never existed. No GW1–GW6 fold may be promoted without authentic immutable predeadline readback, original source SHA256, source identity, official deadline and independent original finalization/first-seen evidence. Keep historical gate UNAVAILABLE where evidence is absent. Historical snapshots cannot be recreated retroactively from current Official FPL data.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+## Recovery discovery: original V6 Git objects survive force-updated runtime branch
+
+Read-only GitHub Actions **logs**, unlike their expired/empty artifact inventories, preserve the original published runtime commit IDs. GitHub Git Commit and Tree APIs independently returned both original root commits and their original trees:
+
+| Original V6 run | Original commit | GitHub recorded commit time (UTC) | Original Official FPL blob (Git SHA-1) | Catalog Official FPL SHA256 | Admission |
+| --- | --- | --- | --- | --- | --- |
+| `34725699713` | `d2d9ddbfc6292964240a03d60c30dbba62c3ac1f` | `2026-09-12T23:33:28Z` | `8eed445a0080b0dd0265b9126a43997b0d53b305` | `cd20e4028b4e390231fece33b74b880c36d242b132b7d6e6c1ecb8e66e85057e` | SOURCE_CANDIDATE_ONLY |
+| `35476739571` | `41b95421cba8fe70c94d0769e039f2208ede6b3c` | `2026-09-19T23:40:44Z` | `96db450a284deffa930084313c08485d97f2b3ea` | `186077472a3514e82f860be1f7af3ac147f36cee479fa4050e3183f0b74dbfbb` | SOURCE_CANDIDATE_ONLY |
+
+Original `data/v6/evidence/artifact_catalog.json` was read back from each original commit. It records `official_fpl` source snapshot IDs, effective timestamp, production run ID, and the SHA256 above. Original `data/v6/normalized/canonical_fixtures.json` also read back successfully: 380 fixtures (10 per GW) with original FPL fixture IDs. This materially strengthens the archive audit: zero retained Actions ZIPs does **not** imply original Git objects were lost. September snapshots may support some **later** training folds, subject to independent deadline and all source-row checks, but cannot establish GW1–GW4 predeadline evidence on their own.
+
+The large Official FPL source blobs were confirmed as immutable Git tree entries, but their complete payload bytes were not independently rehashed during this audit. SHA256 values currently come from the original committed catalog. Before admitting any fold, an approved verifier must read the exact original blob bytes, compute SHA256 independently, bind original commit/run timestamp and original source IDs, verify each required previous-GW finalized player/fixture row and compare the actual target GW deadline. Do not promote the catalog's own digest or commit timestamp alone as complete proof. GW1–GW6 overall remains `HISTORICAL_AS_OF_UNAVAILABLE` pending row-level admission.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00
+
+### Additional original September 8–9 objects for the GW4 candidate pool
+
+Two earlier original V6 root commits also survive and were independently returned by GitHub Git Tree APIs. The original `artifact_catalog.json` was read back at each exact commit and contains the corresponding original Official FPL source snapshot identities:
+
+- Natural run `34286506638` published `ed5c910aee9bf808aa7007a080da3b0654338841` at 2026-09-08T22:34:02Z; original Official FPL Git blob `f64a1f1836b135d8abbfcf17bfbc8fdd640be894`, catalog SHA256 `cc11e734bd93c200e0fb8920e65b843cd736e42250804870094ec0167ff5e56c`.
+- Natural run `34417093599` published `e7b7ded8aebc19a115ddbf2ef16946986c26bdb9` at 2026-09-09T23:29:05Z; original Official FPL Git blob `4261175f3e25bdc86304ef74df291ddaa431e256`, catalog SHA256 `768e11092ac6a2c99199ec9597b753632a0afc08caa7c82c74cd0cec7ae57176`.
+
+These are **potential** original input snapshots for evaluating a later target GW, not confirmed source-as-of admission for any GW. Existing retrospective match rows must be compared to the original archived bytes and the actual target deadline before issuance of a trusted per-row witness. Do not extrapolate earlier GW2/GW3 provenance from a September archive.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00

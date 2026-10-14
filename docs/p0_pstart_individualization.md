@@ -126,3 +126,15 @@ mathematics, Stage3, eight formations and MC500K are unchanged.
 Change timestamp: 2026-10-14T10:00:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T10:00:00+07:00
+
+## 14 October, additional read-only archive inventory and P(start) resolution integrity
+
+The verified public V6 Actions run inventory includes natural/hourly acquisition runs on 12 September (`34725699713`, `34722950239`, `34720145902`), 19 September (`35476739571`), and 25 September (`36198244096`, `36156578313`). GitHub returns no retained artifacts for these inspected runs, or for earlier sampled runs `33452812166` and `35670033021`. This finding is scoped to inspected run artifacts. It neither proves absence of all historical objects nor creates original source-finalization timestamps. All affected GW1–GW6 folds remain `HISTORICAL_AS_OF_UNAVAILABLE` until genuine original Git-object lineage and deadline proof are admitted.
+
+Model-resolution audit fixes three acceptance defects without changing canonical probabilities: all four context signals (prior, role, manager and normalized availability) must be present rather than any one; numeric signal vectors must be uniquely named, finite, range-valid and exactly match declared signals; explicit `model_probability_agrees=True` is required for full acceptance. Different verified inputs that round to identical P(start) are reported for review but no longer automatically count as an inference failure. Calibration `PASS` remains a separate hard prerequisite for `FULL_RESOLUTION`. The test suite exercises both valid rounded ties and incomplete/duplicate/unverified context.
+
+No retrospective outcome is relabelled as predeadline, no role/manager/availability weight is tuned without calibration, and no new data authority or scheduler is introduced.
+
+Change timestamp: 2026-10-14T15:23:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T15:23:39+07:00

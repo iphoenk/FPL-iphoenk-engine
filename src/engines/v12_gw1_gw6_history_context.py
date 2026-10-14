@@ -63,6 +63,24 @@ def _source_is_eligible(source: Mapping[str, Any] | None, as_of: str | None) -> 
     return observed is not None and (cutoff is None or observed <= cutoff)
 
 
+def _source_gate_reason(source: Mapping[str, Any] | None, as_of: str | None) -> str:
+    """Explain admission failure without changing the strict as-of contract."""
+    if not isinstance(source, Mapping):
+        return "SOURCE_NOT_PRESENT"
+    if source.get("source_health") != "GREEN":
+        return "SOURCE_NOT_GREEN"
+    if source.get("normalization_status") != "NORMALIZED":
+        return "SOURCE_NOT_NORMALIZED"
+    observed, cutoff = _aware(source.get("effective_at")), _aware(as_of)
+    if observed is None:
+        return "SOURCE_EFFECTIVE_AT_UNVERIFIED"
+    if cutoff is None:
+        return "REPORT_CUTOFF_UNVERIFIED"
+    if observed > cutoff:
+        return "SOURCE_AFTER_REPORT_CUTOFF"
+    return "PASS"
+
+
 def _official_player_rows(
     bootstrap: Mapping[str, Any],
     history: Mapping[str, Any],
@@ -116,12 +134,25 @@ def _attach_understat(
     understat: Mapping[str, Any] | None,
     as_of: str | None,
 ) -> dict[str, Any]:
-    eligible = _source_is_eligible(understat, as_of)
-    summary = {"source": "understat", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
-               "verified_join_count": 0, "unmapped_provider_count": 0, "season_aggregate_only": True}
-    if not eligible:
-        return summary
     raw = ((understat or {}).get("record_groups") or {}).get("players") or []
+    raw = raw if isinstance(raw, list) else []
+    eligible = _source_is_eligible(understat, as_of)
+    verified = sum(isinstance(p, Mapping) and _id(p.get("official_element_id")) is not None
+                   and p.get("identity_status") in _VERIFIED for p in raw)
+    gate = _source_gate_reason(understat, as_of)
+    summary = {
+        "source": "understat", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
+        "source_records": len(raw), "verified_source_identity_rows": verified,
+        "eligible_verified_rows": verified if eligible else 0,
+        "consumed_rows": 0, "verified_join_count": 0,
+        "unmapped_provider_count": 0, "season_aggregate_only": True,
+        "source_gate": gate, "source_effective_at": (understat or {}).get("effective_at"),
+        "report_cutoff_at": as_of, "rejected_reasons": {},
+        "decision_influence": "ADVISORY_ONLY",
+    }
+    if not eligible:
+        summary["rejected_reasons"][gate] = len(raw)
+        return summary
     by_id: dict[int, dict[str, Any]] = {}
     for p in raw:
         if not isinstance(p, Mapping):
@@ -129,6 +160,8 @@ def _attach_understat(
         eid = _id(p.get("official_element_id"))
         if eid is None or p.get("identity_status") not in _VERIFIED:
             summary["unmapped_provider_count"] += 1
+            reason = "SOURCE_IDENTITY_UNVERIFIED"
+            summary["rejected_reasons"][reason] = summary["rejected_reasons"].get(reason, 0) + 1
             continue
         if eid in by_id:
             # Ambiguous identity collisions are not counted as a reliable join.
@@ -171,6 +204,12 @@ def _attach_understat(
             "interpretation": "PROCESS_PROXY_NOT_AN_ABSOLUTE_SKILL_RATING",
         }
         summary["verified_join_count"] += 1
+    summary["consumed_rows"] = summary["verified_join_count"]
+    summary["rejected_reasons"]["VERIFIED_BUT_NOT_CONSUMED"] = max(
+        0, verified - summary["consumed_rows"]
+    )
+    if not summary["rejected_reasons"]["VERIFIED_BUT_NOT_CONSUMED"]:
+        del summary["rejected_reasons"]["VERIFIED_BUT_NOT_CONSUMED"]
     return summary
 
 
@@ -180,12 +219,27 @@ def _fotmob_matches(
     historical_gws: Sequence[int],
     as_of: str | None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    eligible = _source_is_eligible(fotmob, as_of)
-    status = {"source": "fotmob", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
-              "verified_match_count": 0, "rejected_or_ambiguous": 0}
-    if not eligible:
-        return [], status
     groups = (fotmob or {}).get("record_groups") or {}
+    raw = groups.get("fixtures") or []
+    raw = raw if isinstance(raw, list) else []
+    eligible = _source_is_eligible(fotmob, as_of)
+    verified = sum(isinstance(f, Mapping) and f.get("identity_status") in _VERIFIED
+                   and _id(f.get("official_fixture_id")) is not None for f in raw)
+    gate = _source_gate_reason(fotmob, as_of)
+    status = {
+        "source": "fotmob", "status": "AVAILABLE" if eligible else "UNAVAILABLE",
+        "source_records": len(raw), "verified_source_identity_rows": verified,
+        "eligible_verified_rows": verified if eligible else 0,
+        "historical_scope_rows": 0, "consumed_rows": 0,
+        "verified_match_count": 0, "rejected_or_ambiguous": 0,
+        "out_of_historical_scope": 0, "source_gate": gate,
+        "source_effective_at": (fotmob or {}).get("effective_at"),
+        "report_cutoff_at": as_of, "rejected_reasons": {},
+        "decision_influence": "ADVISORY_ONLY",
+    }
+    if not eligible:
+        status["rejected_reasons"][gate] = len(raw)
+        return [], status
     verified_teams = {}
     for p in groups.get("teams") or []:
         if isinstance(p, Mapping) and p.get("identity_status") in _VERIFIED:
@@ -195,12 +249,19 @@ def _fotmob_matches(
     official_by_id = {_id(f.get("id")): f for f in official_fixtures if isinstance(f, Mapping)}
     out = []
     used = set()
-    for f in groups.get("fixtures") or []:
+    for f in raw:
         if not isinstance(f, Mapping):
             continue
         event = _id(f.get("round"))
         fixture_id = _id(f.get("official_fixture_id"))
-        if event not in historical_gws or not fixture_id:
+        if event not in historical_gws:
+            status["out_of_historical_scope"] += 1
+            continue
+        status["historical_scope_rows"] += 1
+        if not fixture_id:
+            status["rejected_or_ambiguous"] += 1
+            reason = "OFFICIAL_FIXTURE_ID_MISSING"
+            status["rejected_reasons"][reason] = status["rejected_reasons"].get(reason, 0) + 1
             continue
         info = f.get("status") or {}
         score = _SCORES.fullmatch(str(info.get("scoreStr") or ""))
@@ -212,6 +273,12 @@ def _fotmob_matches(
                 or not official or _id(official.get("event")) != event
                 or _id(official.get("team_h")) != home or _id(official.get("team_a")) != away):
             status["rejected_or_ambiguous"] += 1
+            reason = ("UNVERIFIED_OR_DUPLICATE_FIXTURE" if f.get("identity_status") not in _VERIFIED or fixture_id in used
+                      else "UNFINISHED_OR_INVALID_SCORE" if not info.get("finished") or not score
+                      else "TEAM_IDENTITY_UNVERIFIED" if home is None or away is None
+                      else "OFFICIAL_FIXTURE_NOT_FOUND" if not official
+                      else "OFFICIAL_FIXTURE_GW_OR_TEAM_MISMATCH")
+            status["rejected_reasons"][reason] = status["rejected_reasons"].get(reason, 0) + 1
             continue
         used.add(fixture_id)
         gh, ga = int(score.group(1)), int(score.group(2))
@@ -229,6 +296,7 @@ def _fotmob_matches(
             "fpl_points_settlement": "FINAL" if official.get("finished") is True else "PENDING",
         })
         status["verified_match_count"] += 1
+    status["consumed_rows"] = status["verified_match_count"]
     out.sort(key=lambda f: (f["gw"], f["official_fixture_id"]))
     return out, status
 

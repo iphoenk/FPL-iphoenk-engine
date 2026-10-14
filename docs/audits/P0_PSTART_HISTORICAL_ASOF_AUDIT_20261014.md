@@ -100,6 +100,6 @@ The original source payload `data.bootstrap.json.events` binds Official GW4 dead
 
 **Strict scope of PASS:** `SOURCE_BLOB_SHA256_VERIFIED=4/4` attests to original **byte integrity**, not the historical backtest's original per-player inputs, model as-of registration, training provenance, or predictor performance. The existing 3,191 retrospective samples cannot be given `historical_asof_status=PASS` from these four blobs alone. Confirm that each paired player-match input existed in the same admissible archive before the target deadline and verify per-fold row linkage and model version; otherwise `HISTORICAL_AS_OF_UNAVAILABLE` remains. No historical forecast is fabricated.
 
-Change timestamp: 2026-10-14T08:52:39.058+00:00
+Change timestamp: 2026-10-14T08:52:39+00:00
 Documentation sync: UPDATED
-Documentation timestamp: 2026-10-14T08:52:39.058+00:00
+Documentation timestamp: 2026-10-14T08:52:39+00:00

@@ -4318,6 +4318,21 @@ def _render_deep_visible_contract_lines(
                 f"{resolution_audit.get('equal_probability_pairs_with_different_evidence')}; "
                 f"limitations={','.join(resolution_audit.get('reasons') or []) or 'NONE'}."
             )
+        if resolution_audit:
+            lines.append(
+                "PSTART CONTEXT SOURCE READINESS: "
+                f"official FPL availability observations="
+                f"{resolution_audit.get('official_availability_observation_rows', 0)}/15; "
+                f"normal observed status with no numeric adjustment required="
+                f"{resolution_audit.get('normal_status_numeric_adjustment_not_applicable_rows', 0)}/15; "
+                f"advisory (uncalibrated) role profiles="
+                f"{resolution_audit.get('advisory_role_profile_rows', 0)}/15; "
+                f"missing verified manager timeline="
+                f"{resolution_audit.get('missing_verified_manager_timeline_rows', 0)}/15. "
+                "Official status is not a starting probability; external role observations "
+                "and manager labels cannot affect canonical P(start) until independent "
+                "as-of source proof and position-wise calibration pass."
+            )
         if calibration:
             baseline = calibration.get("baseline") or {}
             model = calibration.get("individualized") or {}

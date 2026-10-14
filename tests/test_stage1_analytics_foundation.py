@@ -2249,3 +2249,62 @@ def test_pstart_resolution_accepts_equality_only_if_input_evidence_matches():
     missing = assess_pstart_resolution(rows, calibration_status="UNVERIFIED")
     assert missing["status"] == "LIMITED_RESOLUTION"
     assert "PREDEADLINE_CALIBRATION_NOT_PASS" in missing["reasons"]
+
+
+def test_pstart_asof_bridge_uses_only_historical_finalization_and_real_deadlines(tmp_path):
+    rows = _foundation_rows(3)
+    finalized = {
+        1: "2026-08-10T12:00:00+00:00",
+        2: "2026-08-18T12:00:00+00:00",
+        3: "2026-08-24T12:00:00+00:00",
+    }
+    for row in rows:
+        row["finalized_at"] = finalized[row["gw"]]
+        row["source_checked_at"] = "2026-10-14T09:00:00+00:00"
+
+    _write_normalized(
+        tmp_path, "official_fpl",
+        _normalized_history("official_fpl", rows),
+    )
+    bootstrap = _foundation_bootstrap()
+    deadlines = {
+        1: "2026-08-09T12:00:00+00:00",
+        2: "2026-08-17T12:00:00+00:00",
+        3: "2026-08-23T12:00:00+00:00",
+    }
+    for event in bootstrap["events"]:
+        if event["id"] in deadlines:
+            event["deadline_time"] = deadlines[event["id"]]
+
+    out = load_v6_analytics_foundation(
+        tmp_path, bootstrap=bootstrap, planning_gw=4, strength=_strength(),
+    )
+    backtest = out["pstart_walk_forward_diagnostic"]
+    assert backtest["predeadline_source_lineage"] == "PASS"
+    assert backtest["missing_predeadline_source_proofs"] == 0
+    assert backtest["future_leakage"] is False
+    # This tiny fixture is *not* eligible for production calibration.
+    assert backtest["status"] == "INSUFFICIENT_POSITION_SAMPLES"
+    assert backtest["minimum_sample_satisfied"] is False
+
+
+def test_pstart_asof_bridge_never_uses_current_check_time_as_historical_proof(tmp_path):
+    rows = _foundation_rows(3)
+    for row in rows:
+        row["source_checked_at"] = "2026-08-01T00:00:00+00:00"
+        # Explicit historical finalization is absent: cannot be synthesized.
+    _write_normalized(
+        tmp_path, "official_fpl",
+        _normalized_history("official_fpl", rows),
+    )
+    bootstrap = _foundation_bootstrap()
+    for event in bootstrap["events"]:
+        if event["id"] in (1, 2, 3):
+            event["deadline_time"] = "2026-08-25T12:00:00+00:00"
+    out = load_v6_analytics_foundation(
+        tmp_path, bootstrap=bootstrap, planning_gw=4, strength=_strength(),
+    )
+    diagnostic = out["pstart_walk_forward_diagnostic"]
+    assert diagnostic["predeadline_source_lineage"] == "UNVERIFIED"
+    assert diagnostic["missing_predeadline_source_proofs"] > 0
+    assert diagnostic["status"] == "RETROSPECTIVE_DIAGNOSTIC_ONLY"

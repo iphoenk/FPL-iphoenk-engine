@@ -80,3 +80,13 @@ calibration promotion.
 Change timestamp: 2026-10-14T05:45:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-14T05:45:00+07:00
+
+## Official GW deadline and source-as-of ingress (14 Oct 2026)
+
+The live V12 analytics foundation now forwards Official FPL historical `events[].deadline_time` for completed GWs and only an explicitly recorded normalized match-row `finalized_at` to the existing P(start) walk-forward validator. Current-cycle `source_checked_at`, normalized dataset `effective_at`, and report timestamps must **never** be substituted for historical finalization. The current V6 Official FPL source-native rows supply current-cycle `source_checked_at`, but do not yet publish independently archived per-match finalization evidence. Consequently existing GW1–GW6 production remains `RETROSPECTIVE_DIAGNOSTIC_ONLY`, despite noninferiority, until genuine immutable predeadline sources are available. Full-model resolution also requires verified contextual inputs (role, manager, availability); no inferred values or artificial PASS labels are allowed.
+
+Two required regression tests prove (1) valid prior archived finality and original deadlines reach the lineage gate without bypassing minimum sample/position requirements, and (2) a current-cycle check timestamp alone cannot pass the lineage gate. Governance reviewed required-suite node baseline becomes 1,396. No new scheduler or mathematical owner is introduced.
+
+Change timestamp: 2026-10-14T09:42:32+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-14T09:42:32+07:00

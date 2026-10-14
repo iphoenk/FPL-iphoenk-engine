@@ -299,5 +299,5 @@ def test_wave3_original_runtime_rejects_wrong_readback_or_source_identity(tmp_pa
     )
     with pytest.raises(ImmutableRuntimePinError, match="ARTIFACT_BYTES_MISMATCH"):
         verify_original_runtime(**{**args, "freeze_envelope": env(freeze + b" ")})
-    with pytest.raises(ImmutableRuntimePinError, match="IDENTITY_OR_INTEGRITY"):
+    with pytest.raises(ImmutableRuntimePinError, match="GIT_COMMIT_IDENTITY_MISMATCH"):
         verify_original_runtime(**{**args, "source_run_id": "999"})

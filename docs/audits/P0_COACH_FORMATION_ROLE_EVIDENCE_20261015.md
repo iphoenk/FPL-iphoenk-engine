@@ -254,3 +254,14 @@ The full 667-player longitudinal panel remains inside the governed retrospective
 Change timestamp: 2026-10-15T11:08:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T11:08:00+07:00
+
+
+## Verified dual-provider ESPN-to-Official-FPL fixture bridge (15 October 2026)
+
+Source-normalized V6 FotMob league fixtures provide the already-reviewed Official FPL fixture/team ID join. Independently completed ESPN historical scoreboards have unique source-native event IDs. Only exact home-team name, away-team name, kickoff UTC to the second, score at full time, verified FPL fixture ID, unique one-to-one joins and a valid ESPN scoreboard SHA are accepted, under the original V6 exact-occurrence cutoff. Rejected or duplicated events are never promoted.
+
+At V6 acquisition 2026-10-15 13:20 WIB, 20/20 ESPN events among six covered historical dates matched fixture identity with the retained league index on all four attributes. This is not a FotMob matchDetails backfill; absence of lineups, coaches or semantic roles remains unresolved until source-native match summaries and independent player mappings are verified. Source hashes remain immutable. Numerical P(start), current/future manager appointment, original GW7 forecast, natural occurrence, and private report receipt are unchanged.
+
+Change timestamp: 2026-10-15T13:29:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T13:29:00+07:00

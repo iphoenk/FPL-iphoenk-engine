@@ -151,6 +151,7 @@ def normalize_match_details(
             starters = []
         seen = set()
         mapped = []
+        unverified_native_ids = []
         for item in starters:
             if not isinstance(item, Mapping):
                 continue
@@ -160,6 +161,8 @@ def normalize_match_details(
             seen.add(player_id)
             link = verified_player_ids.get(str(player_id))
             if not link or link[1] not in {"EXACT", "VERIFIED_MANUAL"}:
+                # Source-native review candidate, never an inferred Official ID.
+                unverified_native_ids.append(player_id)
                 continue
             mapped.append({
                 "source_native_player_id": player_id,
@@ -188,6 +191,8 @@ def normalize_match_details(
             "provider_starter_count": len(seen),
             "verified_official_starters": mapped,
             "verified_starter_count": len(mapped),
+            "unverified_provider_starter_ids": sorted(unverified_native_ids),
+            "unverified_starter_identity_semantics": "NATIVE_ID_REVIEW_ONLY_NO_CANONICAL_ATTRIBUTION",
             "verified_official_bench": bench,
             "verified_official_unavailable": unavailable,
             "auxiliary_selection_conflict_count": bench_conflicts + unavailable_conflicts,

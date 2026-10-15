@@ -283,3 +283,25 @@ From the existing source-native V6 ESPN archive, all 9 scoreboard dates contain 
 Change timestamp: 2026-10-15T14:09:39+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T14:09:39+07:00
+
+## Follow-up: API-first FotMob retry path inside original quota (15 October 2026)
+
+The provider's original matchDetails JSON fetch remains the first choice on the
+20 missing GW1-GW6 fixtures. Optional first-party public match-page HTML SSR is
+attempted only after a recoverable malformed/truncated/unavailable API response,
+never after denied/challenged HTTP 401/403/429 or an access-control classification.
+Each candidate reserves **two complete retry envelopes** up front, including
+possible page fallback, against the existing 80-attempt/WIB-day cap. Still at most
+eight candidate fixtures per governed existing V6 occurrence. The original
+HTML and SHA are preserved, and API primary failure plus SSR provenance are
+visible. This is not an added scheduler, alternate domain to circumvent provider
+denial, fake FotMob retrieval success, or historical deadline-as-of evidence.
+
+As of this code change, FotMob success remains **40/60 until a real V6
+occurrence proves retrieval**. ESPN 15 source-native summaries and combined
+54/60 theoretical tactical coverage remain independent and do not establish
+Official FPL athlete IDs, prospective role/coach probabilities or model GREEN.
+No numeric P(start), immutable GW7, MC500K, P1.7, Stage3, or PR #809 change.
+
+Documentation sync: UPDATED
+Documentation date: 2026-10-15

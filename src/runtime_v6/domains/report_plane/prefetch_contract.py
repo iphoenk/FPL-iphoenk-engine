@@ -202,7 +202,7 @@ def resolve_scope(
     mini = bool(config.get("mini_league_enabled", True))
     if report_kind == PRICE_REPORT:
         price_mini = mini and bool(config.get("priority_full_picks_enabled", False))
-        return ReportScope(False, price_mini, False)
+        return ReportScope(personal and ad_hoc_personal, price_mini, False)
     if report_kind == "full_master":
         return ReportScope(personal, mini, False)
     if report_kind == "match_mode":

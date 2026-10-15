@@ -89,6 +89,7 @@ def collect_fotmob(source: dict[str, Any], client: Any,
 
     missing = [n for n in candidates if f"match_details_{n}" not in payload["data"]]
     scheduled = missing[:slots]
+    use_public_ssr = cfg.get("public_page_fallback_enabled") is True
     results: dict[int, dict[str, Any]] = {}
     if scheduled:
         with ThreadPoolExecutor(max_workers=min(3, len(scheduled))) as pool:
@@ -96,20 +97,50 @@ def collect_fotmob(source: dict[str, Any], client: Any,
             for native in scheduled:
                 request = {
                     "id": f"match_details_{native}",
-                    "url": str(cfg["endpoint_template"]).format(match_id=native),
-                    "expect": "json",
-                    "max_body_bytes": min(750000, max(10000, int(cfg.get("max_body_bytes") or 450000))),
-                    "validation": {"required_json_paths": ["general.matchId", "content.lineup"]},
+                    "url": str(
+                        cfg["public_page_url_template"] if use_public_ssr
+                        else cfg["endpoint_template"]
+                    ).format(match_id=native),
+                    "expect": "text" if use_public_ssr else "json",
+                    "max_body_bytes": (
+                        min(2500000, max(10000, int(cfg.get("public_page_max_body_bytes") or 1500000)))
+                        if use_public_ssr
+                        else min(750000, max(10000, int(cfg.get("max_body_bytes") or 450000)))
+                    ),
                 }
+                if not use_public_ssr:
+                    request["validation"] = {"required_json_paths": ["general.matchId", "content.lineup"]}
                 futures[pool.submit(client.fetch, source, request)] = (native, request)
             for future in as_completed(futures):
                 native, request = futures[future]
                 try:
-                    results[native] = future.result()
+                    outcome = future.result()
                 except Exception as exc:
-                    results[native] = _failed_attempt(source, request, exc)
+                    outcome = _failed_attempt(source, request, exc)
+                if use_public_ssr and outcome.get("status") == "AVAILABLE":
+                    from .fotmob_public_page import extract_verified_page_matchdetails
+                    parsed = extract_verified_page_matchdetails(
+                        outcome.get("body"), native
+                    )
+                    if parsed is None:
+                        outcome = {
+                            **outcome, "status": "INVALID_PAYLOAD",
+                            "error": "FOTMOB_PUBLIC_PAGE_SCHEMA_OR_ID_MISMATCH",
+                            "retrieval_method": "SSR_REJECTED",
+                        }
+                    else:
+                        outcome = {
+                            **outcome, "json": parsed,
+                            "retrieval_method": "FOTMOB_PUBLIC_PAGE_SSR",
+                            "source_original_html_retained": True,
+                            "source_raw_html_sha256": outcome.get("sha256"),
+                            "not_original_api_matchdetails_response": True,
+                            "historical_predeadline_asof_proven": False,
+                        }
+                results[native] = outcome
 
     fetched = 0
+    fetched_public_ssr = 0
     attempts = [results[n] for n in scheduled]
     for row in attempts:
         if (row.get("status") == "AVAILABLE"
@@ -118,6 +149,7 @@ def collect_fotmob(source: dict[str, Any], client: Any,
                 and len(row["sha256"]) == 64):
             payload["data"][str(row["request_id"])] = {**row, "data_origin": "CURRENT_CYCLE"}
             fetched += 1
+            fetched_public_ssr += int(row.get("retrieval_method") == "FOTMOB_PUBLIC_PAGE_SSR")
     # Reserve worst-case HTTP retries; no uncontrolled request amplification.
     used += len(scheduled) * retries
     coverage = {
@@ -128,6 +160,14 @@ def collect_fotmob(source: dict[str, Any], client: Any,
         "candidate_finalized_fixtures": len(candidates),
         "cached_finalized_match_details": retained,
         "fetched_this_cycle": fetched,
+        "fetched_public_page_ssr_this_cycle": fetched_public_ssr,
+        "cached_public_page_ssr_details": sum(
+            payload["data"].get("match_details_" + str(n), {}).get("retrieval_method")
+            == "FOTMOB_PUBLIC_PAGE_SSR" for n in candidates
+        ),
+        "public_page_ssr_enabled": use_public_ssr,
+        "same_daily_fotmob_budget_for_api_and_page": True,
+        "public_page_original_html_sha_required": True,
         "remaining_without_usable_details": len(missing) - fetched,
         "attempted_this_cycle": len(attempts),
         "attempt_failures": [{"request_id": a.get("request_id"), "status": a.get("status"),

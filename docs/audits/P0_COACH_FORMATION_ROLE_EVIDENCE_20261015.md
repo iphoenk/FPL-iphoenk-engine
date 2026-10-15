@@ -265,3 +265,13 @@ At V6 acquisition 2026-10-15 13:20 WIB, 20/20 ESPN events among six covered hist
 Change timestamp: 2026-10-15T13:29:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T13:29:00+07:00
+
+## FotMob first-party public HTML alternate within original quota (15 October 2026)
+
+The provider also exposes a public /match/<native_match_id> endpoint redirecting to its human-facing match URL. Its SSR page can contain JSON script id=__NEXT_DATA__ with props.pageProps.general and content.lineup. V6 can acquire this using the EXISTING FotMob quota, NEVER as an uncounted second request channel. The 80/day reserved HTTP attempts already exhausted today mean no same-day extra FotMob request is made. The maximum eight fixtures per existing occurrence, retries, fail-closed identity and source as-of gates are unchanged. A request with access denial, anti-bot challenge, missing script, wrong matchId, wrong league, incomplete XI, wrong official team crosswalk or missing original SHA cannot advance coverage.
+
+When the parsed public page is valid, the unmodified original HTML and its SHA are preserved, extracted source JSON is labelled FOTMOB_PUBLIC_PAGE_SSR and passed through the SAME native fixture/team/player crosswalk validator as the API. No fake API-response-origin claim or probability/role/manager calibration. The optional ESPN archive remains a distinct provider, never counted in FotMob coverage.
+
+Change timestamp: 2026-10-15T13:31:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T13:31:00+07:00

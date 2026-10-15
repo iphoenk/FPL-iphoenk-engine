@@ -701,7 +701,125 @@ def _bound_retrospective_context(
     return context
 
 
-def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any]) -> dict[str, Any]:
+
+def _bind_current15_official_context_shadow(
+    rows: list[dict[str, Any]],
+    projections: dict[str, Any] | None,
+    official_v6: dict[str, Any] | None,
+    *,
+    occurrence_bound: bool,
+    retrospective: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Repair report-only context observability from verified current V6 facts.
+
+    This never adds a numeric model signal or changes P(start), xMins or GW7
+    frozen forecasts. An unbound, missing or conflicting source fails closed.
+    """
+    summary: dict[str, Any] = {
+        "contract": "V12_CURRENT15_BOUND_SOURCE_SHADOW_V1",
+        "status": "UNAVAILABLE",
+        "official_status_observed": 0,
+        "advisory_role_profiles": 0,
+        "retrospective_verified_manager_history": 0,
+        "calibrated_role_manager_rows": 0,
+        "prospective_manager_effect_verified": False,
+        "numeric_model_mutation": False,
+        "retrospective_is_not_predeadline": True,
+        "source": "V6_OFFICIAL_FPL_CURRENT_EXACT_OCCURRENCE",
+    }
+    if not occurrence_bound or not isinstance(projections, dict) or not isinstance(official_v6, dict):
+        summary["reason"] = "OCCURRENCE_OR_SOURCE_NOT_VERIFIED"
+        return rows, summary
+    if official_v6.get("source_id") != "official_fpl":
+        summary["reason"] = "SOURCE_AUTHORITY_MISMATCH"
+        return rows, summary
+    bootstrap = (official_v6.get("data") or {}).get("bootstrap") or {}
+    if (not isinstance(bootstrap, dict) or bootstrap.get("status") != "AVAILABLE"
+            or not isinstance(bootstrap.get("json"), dict)
+            or not isinstance(bootstrap.get("sha256"), str)
+            or len(bootstrap["sha256"]) != 64):
+        summary["reason"] = "OFFICIAL_BOOTSTRAP_SNAPSHOT_UNAVAILABLE"
+        return rows, summary
+    official_rows = bootstrap["json"].get("elements")
+    projected_rows = projections.get("players")
+    if not isinstance(official_rows, list) or not isinstance(projected_rows, list):
+        summary["reason"] = "PLAYER_UNIVERSE_UNAVAILABLE"
+        return rows, summary
+    try:
+        official = {int(x["id"]): x for x in official_rows if isinstance(x, dict)}
+        predicted = {int(x["element"]): x for x in projected_rows if isinstance(x, dict)}
+        elements = [int(x["element"]) for x in rows]
+    except (KeyError, ValueError, TypeError):
+        summary["reason"] = "PLAYER_ID_INVALID"
+        return rows, summary
+    if (len(rows) != 15 or len(set(elements)) != 15
+            or len(official) != len(official_rows)
+            or len(predicted) != len(projected_rows)
+            or set(elements) - set(official) or set(elements) - set(predicted)):
+        summary["reason"] = "CURRENT15_OR_UNIVERSE_IDENTITY_MISMATCH"
+        return rows, summary
+    from src.models.v12_pstart_context_evidence import build_pstart_context_observability
+    valid_status = {"a", "d", "i", "s", "u"}
+    bound = []
+    for raw, eid in zip(rows, elements):
+        player = official[eid]
+        projection = predicted[eid]
+        status = str(player.get("status") or "").lower()
+        if status not in valid_status or int(projection.get("team") or player.get("team") or 0) != int(player.get("team") or 0):
+            summary["reason"] = "CURRENT_PLAYER_STATUS_OR_TEAM_UNVERIFIED"
+            return rows, summary
+        xmins = projection.get("xmins") or {}
+        evidence = raw.get("p_start_evidence") or {}
+        context = build_pstart_context_observability(
+            {**projection, "status": status},
+            xmins if isinstance(xmins, dict) else {},
+            evidence if isinstance(evidence, dict) else None,
+        )
+        context["readiness"]["status_binding"] = "CURRENT_GOVERNED_V6_BOOTSTRAP"
+        context["readiness"]["numeric_model_mutation"] = False
+        patched = dict(raw)
+        patched["pstart_context_evidence"] = context
+        bound.append(patched)
+    # Past matches may verify a manager timeline, but do not establish who
+    # will manage the next fixture or quantify the manager's P(start) effect.
+    historical_clubs = (
+        ((retrospective or {}).get("all_clubs_tactical_coverage") or {}).get("clubs") or []
+    )
+    historically_observed_teams = set()
+    for club in historical_clubs:
+        if not isinstance(club, dict):
+            continue
+        try:
+            tid = int(club.get("team_id"))
+        except (ValueError, TypeError):
+            continue
+        if any(
+            isinstance(record, dict)
+            and record.get("manager_native_id") is not None
+            and isinstance(record.get("source_snapshot_sha256"), str)
+            and len(record["source_snapshot_sha256"]) == 64
+            for record in club.get("timeline") or []
+        ):
+            historically_observed_teams.add(tid)
+    summary["retrospective_verified_manager_history"] = sum(
+        int(official[eid].get("team") or 0) in historically_observed_teams
+        for eid in elements
+    )
+    summary["status"] = "OBSERVABILITY_BOUND_ADVISORY_ONLY"
+    summary["reason"] = None
+    summary["official_status_observed"] = sum(
+        x["pstart_context_evidence"]["availability"]["official_status_observed"]
+        for x in bound
+    )
+    summary["advisory_role_profiles"] = sum(
+        x["pstart_context_evidence"]["role"]["status"] == "PROFILE_ADVISORY_UNCALIBRATED"
+        for x in bound
+    )
+    summary["official_bootstrap_original_sha256"] = bootstrap["sha256"]
+    return bound, summary
+
+
+def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any], projections: dict[str, Any] | None = None, official_v6: dict[str, Any] | None = None, occurrence_bound: bool = False) -> dict[str, Any]:
     captaincy = dict(user.get("captaincy") or {})
     source_rows = user.get("rows") or []
     pstart_rows = [
@@ -711,6 +829,10 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any])
             row.get("p_start"), row.get("start_probability"), row.get("pstart")
         ) if value is not None), None) is not None
     ]
+    pstart_rows, context_shadow = _bind_current15_official_context_shadow(
+        pstart_rows, projections, official_v6, occurrence_bound=occurrence_bound,
+        retrospective=(full_history.get("retrospective_context") or {}),
+    )
     pstart_evidence = [
         row for row in pstart_rows
         if any(isinstance(row.get(key), dict) for key in (
@@ -745,6 +867,7 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any])
             "evidence_status": pstart_status,
             "resolution_status": resolution,
             "resolution_audit": audit,
+            "source_context_shadow": context_shadow,
             "calibration_diagnostic": diagnostic,
             "rows_with_probability": len(pstart_rows),
             "rows_with_evidence": len(pstart_evidence),
@@ -830,7 +953,14 @@ def run() -> dict[str, Any]:
         )
         if retrospective:
             full_season_history["retrospective_context"] = retrospective
-    analytics_acceptance = _analytics_acceptance(user=user, full_history=full_season_history)
+    analytics_acceptance = _analytics_acceptance(
+        user=user, full_history=full_season_history, projections=projections,
+        official_v6=(
+            read_json(DATA / "v6" / "current" / "official_fpl.json", {})
+            if occurrence_official else {}
+        ),
+        occurrence_bound=bool(occurrence_official),
+    )
 
     owned = _owned_rows(user, team, projections)
     watch_summary = _watchlist_summary(watchlist, deep=False)

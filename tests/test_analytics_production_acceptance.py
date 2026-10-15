@@ -63,6 +63,67 @@ def test_analytics_acceptance_separates_evidence_from_resolution_and_lock():
     assert out["s08_captain"]["decision_state"] == "PREPARE"
     assert out["full_history"]["evidence_status"] == "PASS"
 
+    # Operational source observability is separate from calibrated P(start).
+    from src.engines.report_materializer import _bind_current15_official_context_shadow
+    rows = [
+        {"element": eid, "p_start": 0.83,
+         "p_start_evidence": {"signals": ["player_selection_posterior"]}}
+        for eid in range(1, 16)
+    ]
+    projections = {"players": [
+        {"element": eid, "team": 1, "xmins": {"expected_minutes": 70},
+         "tactical_role": {"profile": "CM", "source": "understat_normalized_exact_identity"}}
+        for eid in range(1, 16)
+    ]}
+    snapshot = {"source_id": "official_fpl", "data": {"bootstrap": {
+        "status": "AVAILABLE", "sha256": "a" * 64,
+        "json": {"elements": [
+            {"id": eid, "team": 1, "status": "a"} for eid in range(1, 16)
+        ]},
+    }}}
+    shadow_rows, shadow = _bind_current15_official_context_shadow(
+        rows, projections, snapshot, occurrence_bound=True
+    )
+    assert shadow["status"] == "OBSERVABILITY_BOUND_ADVISORY_ONLY"
+    assert shadow["official_status_observed"] == 15
+    assert shadow["advisory_role_profiles"] == 15
+    assert shadow["calibrated_role_manager_rows"] == 0
+    historic = {"all_clubs_tactical_coverage": {"clubs": [{
+        "team_id": 1, "timeline": [{
+            "manager_native_id": 12, "source_snapshot_sha256": "b" * 64,
+        }],
+    }]}}
+    _, manager_shadow = _bind_current15_official_context_shadow(
+        rows, projections, snapshot, occurrence_bound=True,
+        retrospective=historic,
+    )
+    assert manager_shadow["retrospective_verified_manager_history"] == 15
+    assert manager_shadow["calibrated_role_manager_rows"] == 0
+    assert shadow["numeric_model_mutation"] is False
+    assert [r["p_start"] for r in shadow_rows] == [0.83] * 15
+    verified = _analytics_acceptance(
+        user={"rows": rows}, full_history={}, projections=projections,
+        official_v6=snapshot, occurrence_bound=True,
+    )
+    assert verified["p_start"]["source_context_shadow"]["official_status_observed"] == 15
+    assert verified["p_start"]["resolution_status"] == "LIMITED_RESOLUTION"
+    unbound, blocked = _bind_current15_official_context_shadow(
+        rows, projections, snapshot, occurrence_bound=False
+    )
+    assert blocked["status"] == "UNAVAILABLE"
+    assert unbound == rows
+    conflict = {"source_id": "official_fpl", "data": {"bootstrap": {
+        **snapshot["data"]["bootstrap"], "json": {"elements": [
+            {"id": eid, "team": 2, "status": "a"} for eid in range(1, 16)
+        ]},
+    }}}
+    mismatch, rejected = _bind_current15_official_context_shadow(
+        rows, projections, conflict, occurrence_bound=True
+    )
+    assert rejected["status"] == "UNAVAILABLE"
+    assert rejected["reason"] == "CURRENT_PLAYER_STATUS_OR_TEAM_UNVERIFIED"
+    assert mismatch == rows
+
 
 def test_report_architecture_binds_owned_player_minutes_evidence():
     from src.engines.report_architecture import _pstart_rows

@@ -577,6 +577,7 @@ def _full_season_history_acceptance(official: dict[str, Any], planning_gw: Any) 
 def _bound_retrospective_context(
     *, original_official: dict[str, Any], logical_slot: str | None,
     report_kind: str,
+    owned_element_ids: set[int] | None = None,
 ) -> dict[str, Any]:
     """Read-only V6 source-to-DEEP bridge, never a P(start) mathematical owner.
 
@@ -672,6 +673,10 @@ def _bound_retrospective_context(
         )
     except (TypeError, ValueError, KeyError):
         return {}
+    # Reduce player-manager-slot evidence to current15 to protect mobile payload.
+    longitudinal = context.pop("manager_role_longitudinal", {})
+    context["manager_role_longitudinal_coverage"] = {key: longitudinal.get(key) for key in ("contract", "scoped_club_count", "official_player_universe_count", "players_with_verified_slot_history", "verified_starter_slot_observations", "observed_manager_transitions", "observed_formation_transitions", "numeric_pstart_effect")}
+    context["owned_manager_role_history"] = [row for row in longitudinal.get("players") or [] if isinstance(row, dict) and row.get("element_id") in (owned_element_ids or set())] if len(owned_element_ids or set()) == 15 else []
     # Keep full player rows inside V6; compact DEEP only carries summaries and
     # audited focus players, preserving the 22-section report size budget.
     context.pop("players", None)
@@ -950,6 +955,7 @@ def run() -> dict[str, Any]:
         retrospective = _bound_retrospective_context(
             original_official=occurrence_official, logical_slot=logical_slot,
             report_kind=requested_report_kind,
+            owned_element_ids={int(x["element"]) for x in user.get("rows") or [] if isinstance(x, dict) and str(x.get("element") or "").isdigit()},
         )
         if retrospective:
             full_season_history["retrospective_context"] = retrospective

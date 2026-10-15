@@ -1050,6 +1050,10 @@ jobs:
               return show_bytes(path).decode("utf-8")
           
           receipt_path = repo / root / "delivery_receipt.json"
+          # A sparse-checkout rebase after an unrelated private writer can
+          # drop the local occurrence directory. Only original remote Git
+          # objects are authoritative, so rebuild LOCAL parents after readback.
+          receipt_path.parent.mkdir(parents=True, exist_ok=True)
           receipt = json.loads(show(f"{root}/delivery_receipt.json"))
           if receipt.get("report_mode") != mode:
               raise SystemExit("remote report mode mismatch")

@@ -406,6 +406,7 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 
 
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    _check_manager_role_longitudinal_regression()
     _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
 
     source = deepcopy(FOTMOB)
@@ -868,3 +869,31 @@ def _check_independent_espn_historical_acquisition_does_not_promote_fotmob():
         assert client.calls == [
             "history_scoreboard_20260912", "history_summary_401879285"
         ]
+
+def _check_manager_role_longitudinal_regression():
+    from src.engines.v12_gw1_gw6_history_context import _manager_role_longitudinal
+    digest = "a" * 64
+    b = {"teams": [{"id": 1, "name": "Club"}],
+         "elements": [{"id": 10, "team": 1}, {"id": 11, "team": 1}]}
+    one = {"fixture_id": 100, "gw": 1, "team_id": 1, "manager": "A",
+           "manager_native_id": 7, "formation": "4-3-3",
+           "source_snapshot_sha256": digest,
+           "verified_player_roles": {"10": {"provider_position_id": 9}}}
+    two = {"fixture_id": 110, "gw": 2, "team_id": 1, "manager": "B",
+           "manager_native_id": 8, "formation": "3-4-3",
+           "source_snapshot_sha256": digest,
+           "verified_player_roles": {"10": {"provider_position_id": 11}}}
+    out = _manager_role_longitudinal(b, [one, two])
+    assert out["observed_manager_transitions"] == 1
+    assert out["observed_formation_transitions"] == 1
+    assert out["verified_starter_slot_observations"] == 2
+    assert out["numeric_pstart_effect"] == "NONE"
+    p = next(x for x in out["players"] if x["element_id"] == 10)
+    assert p["provider_slot_counts"] == {"9": 1, "11": 1}
+    assert p["semantic_role"] is None
+    assert p["target_gw_role_start_probability"] is None
+    assert p["historical_predeadline_asof_proven"] is False
+    assert _manager_role_longitudinal(b, [one, one, two])["observed_manager_transitions"] == 0
+    assert _manager_role_longitudinal(
+        b, [dict(one, source_snapshot_sha256="bad")]
+    )["verified_starter_slot_observations"] == 0

@@ -1,5 +1,8 @@
 # FPL iphoenk Engine v3.39.0
 
+- **P0 T1 merged remediation merge (15 Oct 2026):** Rebased source-verified GW1–GW6 manager/formation/player-slot 20-club longitudinal evidence and guarded private sparse Git receipt directory reconstruction on top of independent ESPN V6 historical acquisition. Original FotMob 40/60 not relabeled, native slots remain opaque, historical coach/current coach distinct, source retrospective only and no automatic calibrated P(start). Frozen GW7, V12_PLAYER_MINUTES, MC500K, Stage3, P1.7, one scheduler and PR #809 unchanged. See P0 source and private delivery audits.
+
+
 - **P0 independent historical tactical fallback (15 Oct 2026):** The existing ESPN V6 poll (no new scheduler) now retains bounded league scoreboards for nine GW4–GW6 dates and completed ESPN event summaries with original SHA. A separate 48 reserved HTTP-attempt/day cap and six requests per existing occurrence prevent runaway retries. ESPN is an independent provider, NOT a way to relabel FotMob matchDetails 40/60 as 60/60 or to bypass exhausted FotMob 80/80 cap. ESPN raw event identity has no Official FPL crosswalk or semantic role calibration yet, so no P(start)/xMins/immutable GW7 numeric mutation. Missing/crosswalk-unverified rows remain PARTIAL. See P0 source audit.
 
 
@@ -99,7 +102,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-15T13:07:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-15T13:27:00+07:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.

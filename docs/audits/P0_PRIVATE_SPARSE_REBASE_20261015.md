@@ -17,3 +17,12 @@ Test extension enforces parent path reconstruction in the governed test suite. S
 
 Change timestamp: 2026-10-15T05:15:00+07:00
 Documentation sync: UPDATED
+
+
+## 15 Oct 2026 second occurrence private receipt parent regression
+
+Controlled V12 #38677939541 ended FAILED in the post-first-push remote readback/publish stage after concurrent private Git writer. Job log identifies FileNotFoundError at ../private-reports/reports/2026-27/gw_7/20261015_104400_plus_0700/delivery_receipt.json; original remote Git-object readback was performed before Python tried to write its updated local receipt. Sparse rebase may leave the local report occurrence directory absent even when remote objects exist. Remediation only reconstructs the local receipt parent before local write. Remote verified SHA and canonical immutable original remain unchanged; do not assume final readback success unless the final private receipt is remotely verified.
+
+Change timestamp: 2026-10-15T13:07:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T13:07:00+07:00

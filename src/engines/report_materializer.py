@@ -673,6 +673,25 @@ def _bound_retrospective_context(
         )
     except (TypeError, ValueError, KeyError):
         return {}
+    from src.engines.v12_espn_fixture_crosscheck import crosscheck_espn_historical_fixtures
+    espn_bridge = crosscheck_espn_historical_fixtures(
+        read_json(DATA / "v6/current/espn.json", {}) or {},
+        read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {},
+        source_cutoff=str(original_official.get("generated_at") or ""),
+    )
+    context["independent_espn_fixture_crosscheck"] = {
+        key: espn_bridge.get(key) for key in (
+            "contract", "status", "verified_fixture_count",
+            "matched_missing_fotmob_detail_fixtures",
+            "fotmob_match_details_verified_original_count",
+            "fotmob_matchdetails_retrieval_promoted",
+            "lineup_or_tactical_role_admitted", "manager_effect_calibrated",
+            "historical_predeadline_asof_proven", "numeric_pstart_effect", "reason",
+        )
+    }
+    context["espn_missing_fotmob_fixtures"] = (
+        espn_bridge.get("missing_fotmob_detail_fixture_ids") or []
+    )
     # Reduce player-manager-slot evidence to current15 to protect mobile payload.
     longitudinal = context.pop("manager_role_longitudinal", {})
     context["manager_role_longitudinal_coverage"] = {key: longitudinal.get(key) for key in ("contract", "scoped_club_count", "official_player_universe_count", "players_with_verified_slot_history", "verified_starter_slot_observations", "observed_manager_transitions", "observed_formation_transitions", "numeric_pstart_effect")}

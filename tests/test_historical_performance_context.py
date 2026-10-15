@@ -406,6 +406,7 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 
 
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    _check_espn_dual_source_fixture_join_fail_closed()
     _check_manager_role_longitudinal_regression()
     _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
 
@@ -897,3 +898,70 @@ def _check_manager_role_longitudinal_regression():
     assert _manager_role_longitudinal(
         b, [dict(one, source_snapshot_sha256="bad")]
     )["verified_starter_slot_observations"] == 0
+
+
+def _check_espn_dual_source_fixture_join_fail_closed():
+    from src.engines.v12_espn_fixture_crosscheck import crosscheck_espn_historical_fixtures
+    from copy import deepcopy
+    sha = "a" * 64
+    fm = {
+        "source_id": "fotmob", "effective_at": "2026-10-15T09:50:00Z",
+        "record_groups": {
+            "teams": [
+                {"source_native_id": 8472, "official_team_id": 20,
+                 "name": "Sunderland", "identity_status": "VERIFIED_MANUAL"},
+                {"source_native_id": 9825, "official_team_id": 1,
+                 "name": "Arsenal", "identity_status": "VERIFIED_MANUAL"},
+            ],
+            "fixtures": [{
+                "source_native_id": 5795453, "official_fixture_id": 36,
+                "identity_status": "VERIFIED_MANUAL", "round": 4,
+                "home": {"source_native_id": 8472},
+                "away": {"source_native_id": 9825},
+                "status": {"finished": True, "utcTime": "2026-09-12T19:00:00Z",
+                           "scoreStr": "2 - 1"},
+            }],
+            "match_tactics": [],
+        },
+    }
+    event = {
+        "id": "401878779", "date": "2026-09-12T19:00Z",
+        "competitions": [{
+            "id": "401878779",
+            "status": {"type": {"completed": True, "state": "post"}},
+            "competitors": [
+                {"homeAway": "home", "team": {"displayName": "Sunderland"}, "score": "2"},
+                {"homeAway": "away", "team": {"displayName": "Arsenal"}, "score": "1"},
+            ],
+        }],
+    }
+    espn = {
+        "source_id": "espn", "checked_at": "2026-10-15T09:55:00Z",
+        "data": {"history_scoreboard_20260912": {
+            "status": "AVAILABLE", "sha256": sha,
+            "json": {"events": [event]},
+        }},
+    }
+    result = crosscheck_espn_historical_fixtures(
+        espn, fm, source_cutoff="2026-10-15T10:00:00Z"
+    )
+    assert result["status"] == "VERIFIED_FIXTURE_ONLY"
+    assert result["verified_fixture_count"] == 1
+    assert result["matched_missing_fotmob_detail_fixtures"] == 1
+    assert result["missing_fotmob_detail_fixture_ids"] == [36]
+    assert result["matches"][0]["official_fixture_id"] == 36
+    assert result["lineup_or_tactical_role_admitted"] is False
+    assert result["numeric_pstart_effect"] == "NONE"
+    conflict = deepcopy(espn)
+    conflict["data"]["history_scoreboard_20260912"]["json"]["events"].append(event)
+    assert crosscheck_espn_historical_fixtures(
+        conflict, fm, source_cutoff="2026-10-15T10:00:00Z"
+    )["verified_fixture_count"] == 0
+    failed_score = deepcopy(espn)
+    failed_score["data"]["history_scoreboard_20260912"]["json"]["events"][0]["competitions"][0]["competitors"][0]["score"] = "3"
+    assert crosscheck_espn_historical_fixtures(
+        failed_score, fm, source_cutoff="2026-10-15T10:00:00Z"
+    )["verified_fixture_count"] == 0
+    assert crosscheck_espn_historical_fixtures(
+        espn, fm, source_cutoff="2026-10-15T09:53:00Z"
+    )["status"] == "SOURCE_UNAVAILABLE"

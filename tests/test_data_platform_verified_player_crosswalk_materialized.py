@@ -57,9 +57,9 @@ def test_reep_v1_fotmob_promotion_is_exact_and_auditable():
     newly_verified = [r for r in cfg["players"] if r.get("verification_method") == method]
     assert len(newly_verified) == 137
     assert len({r["source_native_id"] for r in newly_verified}) == 137
-    assert len({r["official_fpl_code"] for r in newly_verified}) == 134
-    assert len({r["official_fpl_element_id"] for r in newly_verified}) == 134
-    assert len({r["reep_id"] for r in newly_verified}) == 134
+    assert len({r["official_fpl_code"] for r in newly_verified}) == 137
+    assert len({r["official_fpl_element_id"] for r in newly_verified}) == 137
+    assert len({r["reep_id"] for r in newly_verified}) == 137
     for row in newly_verified:
         assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
         assert row["review_reference"] in {"github-actions:run/38811691738", "github-actions:run/38812432637"}

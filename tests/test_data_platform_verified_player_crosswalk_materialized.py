@@ -5,7 +5,7 @@ from src.runtime_v6.verified_crosswalks import load_verified_crosswalks
 
 EXPECTED = {
     "understat": 587,
-    "fotmob": 486,
+    "fotmob": 489,
     "statmuse": 303,
 }
 
@@ -46,21 +46,23 @@ def test_reep_v1_fotmob_promotion_is_exact_and_auditable():
     wave = cfg["wave_b_extension"]
     method = "REEP_V1_20261005_FOTMOB_PERSON_OPTA_PERSON_NUMERIC"
     assert wave["verification_method"] == method
-    assert wave["promoted_mapping_count"] == 134
+    assert wave["promoted_mapping_count"] == 137
     assert wave["observed_gw1_gw6_native_count"] == 327
+    assert wave["observed_native_total_count"] == 332
+    assert wave["already_present_v0_nonstarter_count"] == 2
     assert wave["remaining_observed_unmapped_count"] == 0
     assert wave["name_matching_used"] is False
     assert wave["fuzzy_matching_used"] is False
     assert wave["auto_promotion_used"] is False
     newly_verified = [r for r in cfg["players"] if r.get("verification_method") == method]
-    assert len(newly_verified) == 134
-    assert len({r["source_native_id"] for r in newly_verified}) == 134
+    assert len(newly_verified) == 137
+    assert len({r["source_native_id"] for r in newly_verified}) == 137
     assert len({r["official_fpl_code"] for r in newly_verified}) == 134
     assert len({r["official_fpl_element_id"] for r in newly_verified}) == 134
     assert len({r["reep_id"] for r in newly_verified}) == 134
     for row in newly_verified:
         assert row["review_status"] == "DETERMINISTIC_BRIDGE_REVIEWED"
-        assert row["review_reference"] == "github-actions:run/38811691738"
+        assert row["review_reference"] in {"github-actions:run/38811691738", "github-actions:run/38812432637"}
         assert row["bridge_path"] == [
             "official_fpl.bootstrap.elements.code",
             "reep_v1:opta/person_numeric",

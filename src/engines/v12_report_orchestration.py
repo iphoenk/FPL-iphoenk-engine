@@ -4415,6 +4415,29 @@ def _render_deep_visible_contract_lines(
                 f"{context.get('historical_predeadline_source_asof_admission', 'UNVERIFIED')}. "
                 "Post-logical-slot captures are advisory only, never historical as-of proof."
             )
+            longitudinal = context.get("manager_role_longitudinal_coverage") or {}
+            cohort = context.get("owned_manager_role_history") or []
+            if longitudinal.get("contract") == "V12_ALLCLUB_MANAGER_ROLE_LONGITUDINAL_V1":
+                lines.append(
+                    "ALL-CLUB MANAGER/FORMATION EVIDENCE: "
+                    f"clubs={longitudinal.get('scoped_club_count')}; "
+                    f"player_slot_observations={longitudinal.get('verified_starter_slot_observations')}; "
+                    f"observed_manager_changes={longitudinal.get('observed_manager_transitions')}; "
+                    f"observed_formation_changes={longitudinal.get('observed_formation_transitions')}; "
+                    f"OUR15_player_panels={len(cohort)}/15. "
+                    "Native position IDs are descriptive post-match slots only; "
+                    "current manager and numeric Pstart effect remain UNVERIFIED."
+                )
+                for item in cohort:
+                    lines.append(
+                        "OUR15 HISTORICAL COACH/SLOT: "
+                        f"id={item.get('element_id')}; "
+                        f"observations={item.get('source_verified_starter_observations')}; "
+                        f"coaches={item.get('distinct_observed_manager_ids')}; "
+                        f"formations={item.get('distinct_observed_formations')}; "
+                        f"native_slots={item.get('provider_slot_counts')}; "
+                        "semantics=UNVERIFIED; Pstart_effect=NONE."
+                    )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
             observed_matches = form.get("matches") or []

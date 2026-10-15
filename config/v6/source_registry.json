@@ -444,7 +444,11 @@
         "max_body_bytes": 450000,
         "endpoint_template": "https://www.fotmob.com/api/data/matchDetails?matchId={match_id}",
         "temporal_semantics": "POST_MATCH_RETROSPECTIVE_ONLY",
-        "numeric_model_authority": "NONE"
+        "numeric_model_authority": "NONE",
+        "public_page_fallback_enabled": true,
+        "public_page_url_template": "https://www.fotmob.com/match/{match_id}",
+        "public_page_max_body_bytes": 1500000,
+        "public_page_temporal_semantics": "CURRENT_POSTMATCH_PUBLIC_HTML_NOT_HISTORICAL_PREDEADLINE"
       }
     },
     {

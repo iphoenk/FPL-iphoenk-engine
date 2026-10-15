@@ -733,15 +733,36 @@ jobs:
           rc=$?
           set -e
           if [[ $rc -ne 0 ]]; then
-            echo "PRIVATE_PERSONAL_REFRESH=FAIL (report prefetch did not complete)"
+            echo "PRIVATE_PERSONAL_REFRESH=REPORT_PREFETCH_FAILED"
+            echo "PRIVATE_PERSONAL_REFRESH_FAILURE_CODE=PREFETCH_EXECUTION_FAILED"
             exit "$rc"
           fi
+          # Emit only a bounded, non-sensitive report summary. Never print the
+          # private manifest, player payload, or credential material.
+          V6_PREFETCH_MANIFEST="$work/data/v6/report_prefetch/latest.json" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["V6_PREFETCH_MANIFEST"])
+          if not path.is_file():
+              print("PRIVATE_PERSONAL_REFRESH_FAILURE_CODE=SNAPSHOT_VALIDATION_FAILED")
+              raise SystemExit(0)
+          manifest = json.loads(path.read_text(encoding="utf-8"))
+          print("PRIVATE_PERSONAL_PREFETCH_REPORT_KIND=" + str(manifest.get("report_kind") or "UNAVAILABLE"))
+          print("PRIVATE_PERSONAL_PREFETCH_PERSONAL_REQUESTED=" + str(bool(manifest.get("personal_requested"))).lower())
+          print("PRIVATE_PERSONAL_PREFETCH_AUTH_STATE=" + str(manifest.get("auth_state") or "UNAVAILABLE"))
+          print("PRIVATE_PERSONAL_PREFETCH_PUBLIC_CORE=" + str(bool(manifest.get("public_core_complete"))).lower())
+          print("PRIVATE_PERSONAL_PREFETCH_PERSONAL_STATUS=" + str(manifest.get("personal_status") or "UNAVAILABLE"))
+          PY
           refreshed_team="$work/data/v6/personal/current_team.json"
           if [[ ! -s "$refreshed_team" ]]; then
             cat >"$refresh_status" <<'JSON'
-          {"auth_state":"AUTH_UNAVAILABLE","generated_at":null,"fallback":"NONE"}
+          {"auth_state":"AUTH_UNAVAILABLE","failure_code":"SNAPSHOT_VALIDATION_FAILED","generated_at":null,"fallback":"OFFICIAL_SUBMITTED_PICKS"}
           JSON
-            echo "PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT"
+            echo "PRIVATE_PERSONAL_REFRESH=SNAPSHOT_VALIDATION_FAILED_NO_CURRENT_SNAPSHOT"
+            echo "PRIVATE_PERSONAL_REFRESH_FAILURE_CODE=SNAPSHOT_VALIDATION_FAILED"
+            echo "PUBLIC_CURRENT15_FALLBACK=OFFICIAL_SUBMITTED_PICKS"
             exit 0
           else
           V6_REFRESHED_TEAM_PATH="$refreshed_team" V6_REFRESH_STATUS_PATH="$refresh_status" python - <<'PY'

@@ -147,8 +147,10 @@ def build_report(official, fotmob, bridges_gz):
         "still_without_independent_bridge_native_players": len(missing),
         "new_provider_id_candidates": [
             {"fotmob_native_id": nid, "official_fpl_element_id": proved[nid],
+             "official_fpl_code": next(code for code, element in code_map.items() if element == proved[nid]),
+             "reep_id": next(rid for element, rid in by_native[nid] if element == proved[nid]),
              "bridge_class": "EXACT_FOTMOB_PERSON_TO_REEP_TO_OPTA_PERSON_NUMERIC",
-             "status": "REVIEW_ONLY"} for nid in new
+             "status": "SOURCE_ID_VERIFIED_PROMOTION_CANDIDATE"} for nid in new
         ],
         "no_independent_bridge_native_ids": missing,
         "existing_crosswalk_conflicts": 0, "canonical_mapping_updated": False,

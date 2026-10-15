@@ -341,3 +341,32 @@ stay UNVERIFIED. GW7 immutable forecast and canonical P(start) remain untouched.
 Change timestamp: 2026-10-15T15:29:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T15:29:00+07:00
+
+## T1 live V6 source freshness versus immutable historical cache (15 Oct 2026)
+
+At genuine scheduler-controlled V6 runtime 38706092931 (15:30 WIB) original
+Official FPL's three required source calls succeeded, and source/publish integrity
+was PASS with 667/667 current players. The source-health diagnostic nevertheless
+reported public_core_status=RED because it computed the *oldest age* across
+the primary live data **and** historical extras. Original archived postmatch
+rows older than 23 days are legitimate immutable history, not evidence that
+the three newly fetched Official live endpoints are stale.
+
+The source-health fix scopes the operational freshness decision to every
+source-registry **declared live request ID** (bootstrap, fixtures, event_status
+for Official). An absent, unusable or stale required live record is RED for a
+critical source. Old finalized archive/extras remain auditable and contribute
+to max_effective_data_age_minutes, but cannot contaminate live runtime health.
+A separate max_required_live_request_age_minutes and freshness_scope expose
+the distinction. Providers without declared requests retain the legacy policy.
+No stale source is made fresh, no source snapshot timestamp or SHA rewritten,
+and identity/red secondary-join gates remain separate.
+
+This is a code/CI fix only until postmerge natural V6 source-health readback
+proves the updated public_core_status. Missing ESPN native summaries,
+FotMob 40/60 under 80/80 daily quota, source-as-of and prospectively calibrated
+P(start) remain unchanged.
+
+Change timestamp: 2026-10-15T15:59:36+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T15:59:36+07:00

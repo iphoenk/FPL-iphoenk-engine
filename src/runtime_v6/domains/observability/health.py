@@ -43,6 +43,37 @@ def _max_data_age_minutes(payload: dict[str, Any]) -> float | None:
     return max(concrete) if concrete else None
 
 
+def _required_live_request_age_minutes(
+    source: dict[str, Any], payload: dict[str, Any],
+) -> float | None:
+    """Report oldest required live request; never count optional history caches.
+
+    Explicit source.requests are the authoritative live-acquisition contract.
+    Missing or timestamp-unverifiable required rows return None (fail closed).
+    Sources without an explicit request set retain legacy effective-age policy.
+    """
+    declared = source.get("requests")
+    if not isinstance(declared, list) or not declared:
+        return _max_data_age_minutes(payload)
+    ids = [r.get("id") for r in declared if isinstance(r, dict)]
+    if (len(ids) != len(declared) or not all(isinstance(k, str) and k for k in ids)
+            or len(set(ids)) != len(ids)):
+        return None
+    data = payload.get("data") or {}
+    if not isinstance(data, dict):
+        return None
+    ages = []
+    for key in ids:
+        row = data.get(key)
+        if not isinstance(row, dict) or row.get("status") not in {"AVAILABLE", "NOT_MODIFIED"}:
+            return None
+        age = _minutes_since(_effective_data_checked_at(row))
+        if age is None:
+            return None
+        ages.append(age)
+    return max(ages) if ages else None
+
+
 def _last_success_at(payload: dict[str, Any]) -> str | None:
     values = [
         row.get("checked_at")
@@ -69,8 +100,10 @@ def _transport_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
 
 def _freshness_health(source: dict[str, Any], payload: dict[str, Any]) -> str:
     target = float(source.get("check_freshness_minutes") or 90)
-    age = _max_data_age_minutes(payload)
-    if age is None:
+    age = _required_live_request_age_minutes(source, payload)
+    # Do not substitute a recent collector timestamp for missing/stale
+    # explicitly configured live request records.
+    if age is None and not source.get("requests"):
         age = _minutes_since(payload.get("checked_at"))
     if age is None:
         return "RED" if source.get("critical") else "AMBER"
@@ -304,6 +337,14 @@ def build_source_health(
                 "last_success_at": _last_success_at(payload),
                 "check_age_minutes": round(check_age, 3) if check_age is not None else None,
                 "max_effective_data_age_minutes": round(max_data_age, 3) if max_data_age is not None else None,
+                "max_required_live_request_age_minutes": (
+                    round(age, 3) if (age := _required_live_request_age_minutes(source, payload)) is not None
+                    else None
+                ),
+                "freshness_scope": (
+                    "DECLARED_LIVE_REQUESTS" if source.get("requests")
+                    else "LEGACY_ALL_EFFECTIVE_ROWS"
+                ),
                 "check_freshness_target_minutes": source.get("check_freshness_minutes"),
                 "duration_ms": payload.get("duration_ms"),
                 "current_run_action": _current_run_action(payload),

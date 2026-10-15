@@ -106,6 +106,14 @@ def collect_espn_history(source: dict[str, Any], client: Any,
             })
     remaining = slots - len(requests)
     events = verified_espn_events(payload["data"], dates)
+    # Priority IDs must already be present in a verified, completed ESPN
+    # scoreboard. Unrecognized IDs are ignored, never directly fetched.
+    requested_priority = cfg.get("priority_summary_event_ids") or []
+    if not isinstance(requested_priority, list):
+        requested_priority = []
+    priorities = {int(x) for x in requested_priority
+                  if str(x).isascii() and str(x).isdecimal() and int(x) > 0}
+    events.sort(key=lambda eid: (eid not in priorities, eid))
     for event in events:
         retain("history_summary_" + str(event))
     for event in events:
@@ -154,6 +162,15 @@ def collect_espn_history(source: dict[str, Any], client: Any,
         "history_dates_cached": len(dates) - remaining_dates,
         "verified_espn_events": len(confirmed_events),
         "event_summaries_cached": summary_count,
+        "priority_event_ids_verified": sorted(set(confirmed_events) & priorities),
+        "priority_summaries_cached": sum(
+            "history_summary_" + str(eid) in payload["data"]
+            for eid in set(confirmed_events) & priorities
+        ),
+        "priority_summaries_outstanding": sorted(
+            eid for eid in set(confirmed_events) & priorities
+            if "history_summary_" + str(eid) not in payload["data"]
+        ),
         "requests_this_cycle": len(requests),
         "fetched_this_cycle": fetched,
         "failures_this_cycle": [

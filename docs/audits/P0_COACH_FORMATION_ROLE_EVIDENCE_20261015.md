@@ -305,3 +305,39 @@ No numeric P(start), immutable GW7, MC500K, P1.7, Stage3, or PR #809 change.
 
 Documentation sync: UPDATED
 Documentation date: 2026-10-15
+
+## T1 six ESPN tactical summary gap queue (15 Oct 2026)
+
+Independent source-reconciled GW4-GW5 tactical gaps:
+- ESPN 401879277 / Official fixture 37: Tottenham vs Everton
+- ESPN 401879274 / Official fixture 42: Brighton vs Arsenal
+- ESPN 401879271 / Official fixture 46: Newcastle vs Hull City
+- ESPN 401879276 / Official fixture 49: Bournemouth vs Liverpool
+- ESPN 401879273 / Official fixture 44: Leeds vs Crystal Palace
+- ESPN 401879272 / Official fixture 45: Manchester City vs Sunderland
+
+All six are absent both from the original 40/60 retained FotMob matchDetails
+and the 15/30 ESPN completed native summaries in the source-SHA-bound
+V6 archive at run 38697802162. The names, event IDs, dates, scores, and
+Official fixture IDs have exact reviewed four-attribute fixture joins;
+an ESPN native event ID is **not** an Official player identity.
+
+The existing V6 ESPN collector now prioritizes those six IDs only *after*
+verifying each is in a completed unique source-native scoreboard. Unknown
+priority IDs are ignored and cannot trigger a network request. Same 6-request
+occurrence limit and 48 reserved retry attempts/WIB-day; no extra scheduler.
+New coverage fields explicitly report priority ID verification, cached summary
+count and remaining summary gaps. Regressions share the existing V12 mandatory
+test node.
+
+**Not a retrieved 60/60 claim.** At 15 Oct local time, ESPN 48/48 and
+FotMob 80/80 caps were already consumed, so natural/controlled V6 on a
+subsequent reset is required to retrieve these six summaries. Until original
+summary SHA, full 11+11 native roster and valid source-cutoff joins pass,
+the combined retrospective tactical gate remains 54/60, and individual
+Official athlete mapping plus semantic role/manager/predeadline availability
+stay UNVERIFIED. GW7 immutable forecast and canonical P(start) remain untouched.
+
+Change timestamp: 2026-10-15T15:29:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T15:29:00+07:00

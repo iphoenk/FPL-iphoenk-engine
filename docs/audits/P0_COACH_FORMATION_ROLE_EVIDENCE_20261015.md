@@ -218,3 +218,16 @@ This is an independent additional **selection** gate only. It never upgrades the
 Change timestamp: 2026-10-15T10:05:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T10:05:00+07:00
+
+
+## Verified current15 observational binding versus calibrated model signals (15 October 2026)
+
+The source-native, immutable private GW7 prospective capture for 2026-10-15T10:14:00+07:00 records 667/667 verified Official FPL status observations and 424/667 advisory tactical-role profiles. Its separate S02 15-player audit displayed 0/15 because this current source readiness was not independently bound to the user-report diagnostic. Source observational completeness must not be misreported as numeric calibration.
+
+The read-only fail-closed V12_CURRENT15_BOUND_SOURCE_SHADOW_V1 bridge binds only exact-occurrence V6 Official bootstrap status, same-team player identity and existing advisory role profile to current15 audit rows; an absent/mismatched source produces UNAVAILABLE. It separately counts source-SHA-verified manager appearances in the GW1–GW6 *retrospective* timeline, without claiming an active future manager or causal fit. All three counts are reported independently of role/manager calibrated start signals. The latter remain 0 if no timestamp-correct, position-wise out-of-sample validated features exist.
+
+Canonical V12_PLAYER_MINUTES P(start)/xMins, 500k MC, frozen GW7, P1.7, Stage3, single scheduler, and PR #809 remain unchanged. Do not declare FULL_RESOLUTION until both quantitative evidence and as-of noninferiority gates truly PASS. External historical FotMob coverage is still 40/60 under 80/80 daily reservation; this bridge does not bypass it.
+
+Change timestamp: 2026-10-15T10:33:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T10:33:00+07:00

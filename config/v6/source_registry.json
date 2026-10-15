@@ -662,7 +662,28 @@
             ]
           }
         }
-      ]
+      ],
+      "historical_tactics": {
+        "enabled": true,
+        "dates_yyyymmdd": [
+          "20260912",
+          "20260913",
+          "20260914",
+          "20260918",
+          "20260919",
+          "20260920",
+          "20261010",
+          "20261011",
+          "20261012"
+        ],
+        "max_requests_per_cycle": 6,
+        "daily_request_budget": 48,
+        "scoreboard_url_template": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard?dates={date}",
+        "summary_url_template": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event={event_id}",
+        "source_semantics": "INDEPENDENT_RETROSPECTIVE_ESPN_ONLY_NOT_FOTMOB_MATCHDETAILS",
+        "canonical_fpl_identity": "NOT_ESTABLISHED",
+        "numeric_pstart_effect": "NONE"
+      }
     },
     {
       "id": "football_data_org",

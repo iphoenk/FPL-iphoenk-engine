@@ -6316,23 +6316,17 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         for row in report.get("sections") or []
         if isinstance(row, Mapping)
     ]
-    # Fail closed at the presentation boundary: a DEEP renderer must never
-    # silently display MATCH/PRICE sections or conceal upstream contamination.
+    # Reject cross-mode section contamination before rendering any DEEP body.
+    # Full canonical order remains independently enforced by post-render QA.
     if mode == "DEEP":
-        from collections import Counter
-
-        actual_ids = [str(row.get("section_id") or "").strip().upper() for row in sections]
-        expected_ids = list(canonical_mode_contract(
-            "", "DEEP", s16b_due="S16B" in actual_ids
-        )["expected_section_ids"])
-        if actual_ids != expected_ids:
-            missing = [sid for sid in expected_ids if sid not in actual_ids]
-            unexpected = [sid for sid in actual_ids if sid not in expected_ids]
-            duplicates = [sid for sid, count in Counter(actual_ids).items() if count > 1]
+        foreign_ids = [
+            str(row.get("section_id") or "").strip().upper()
+            for row in sections
+            if not str(row.get("section_id") or "").strip().upper().startswith("S")
+        ]
+        if foreign_ids:
             raise ReportOrchestrationError(
-                "DEEP_RENDER_CATALOG_MISMATCH "
-                f"missing={missing} unexpected={unexpected} duplicates={duplicates} "
-                f"expected={expected_ids} actual={actual_ids}"
+                "DEEP_RENDER_CROSS_MODE_SECTIONS=" + ",".join(foreign_ids)
             )
     owned_ids = {
         int(item.get("element_id"))

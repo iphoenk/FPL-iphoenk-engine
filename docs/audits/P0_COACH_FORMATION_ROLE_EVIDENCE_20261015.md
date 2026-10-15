@@ -231,3 +231,13 @@ Canonical V12_PLAYER_MINUTES P(start)/xMins, 500k MC, frozen GW7, P1.7, Stage3, 
 Change timestamp: 2026-10-15T10:33:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T10:33:00+07:00
+
+## T1 manager/role longitudinal all-club phase, 15 Oct 2026
+
+All twenty clubs now receive an auditable GW1–GW6 sequence of *observed* coach native ID, observed formation, actual known mapped Official FPL starter identity and opaque provider position slot. The pipeline counts observed changes between consecutive **covered** matches and preserves the original source SHA. It does not guess missing fixtures, active target GW7 coach or role semantics. Duplicated fixture/team, invalid SHA and mismatched player team fail closed.
+
+The full 667-player longitudinal panel remains inside the governed retrospective builder. Native DEEP transports only source coverage and the 15-current-squad exact-ID panel, with the unverified tactical role and manager-effect probabilities explicit. No new P(start) signals, no parameter retuning, no forecast GW7 overwrite, no historical predeadline as-of claim. A previous controlled V12 run 38677939541 failed after a private push collision despite partial receipt delivery, and must not be called successful. Resolve private writer race separately, then require CI and source-bound remote readback before real production acceptance.
+
+Change timestamp: 2026-10-15T11:08:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T11:08:00+07:00

@@ -687,7 +687,15 @@
         "summary_url_template": "https://site.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event={event_id}",
         "source_semantics": "INDEPENDENT_RETROSPECTIVE_ESPN_ONLY_NOT_FOTMOB_MATCHDETAILS",
         "canonical_fpl_identity": "NOT_ESTABLISHED",
-        "numeric_pstart_effect": "NONE"
+        "numeric_pstart_effect": "NONE",
+        "priority_summary_event_ids": [
+          401879271,
+          401879272,
+          401879273,
+          401879274,
+          401879276,
+          401879277
+        ]
       }
     },
     {

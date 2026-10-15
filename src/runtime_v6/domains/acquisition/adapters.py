@@ -524,5 +524,8 @@ def collect_source(
         if source.get("id") == "fotmob":
             from .fotmob_backfill import collect_fotmob
             return collect_fotmob(source, client, previous)
+        if source.get("id") == "espn":
+            from .espn_historical import collect_espn_history
+            return collect_espn_history(source, client, previous)
         return collect_http(source, client, previous)
     raise ValueError(f"unsupported V6 adapter: {adapter}")

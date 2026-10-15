@@ -406,6 +406,8 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 
 
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
+
     source = deepcopy(FOTMOB)
     digest = "a" * 64
     source["source_snapshot_ids"] = [digest]
@@ -786,3 +788,83 @@ def _check_t1_official_independent_starter_coverage_does_not_depend_on_fotmob():
         fixtures, {"rows": rows + [rows[0]]}, [1]
     )
     assert duplicate_starter["complete_verified_starting_xis"] == 1
+
+
+def _check_independent_espn_historical_acquisition_does_not_promote_fotmob():
+    import pytest
+    from src.runtime_v6.domains.acquisition import adapters
+    from src.runtime_v6.domains.acquisition.espn_historical import (
+        verified_espn_events, collect_espn_history,
+    )
+    event = {
+        "id": "401879285", "date": "2026-09-12T14:00:00Z",
+        "competitions": [{
+            "id": "401879285",
+            "status": {"type": {"completed": True, "state": "post"}},
+            "competitors": [
+                {"homeAway": "home", "team": {"id": "349"}},
+                {"homeAway": "away", "team": {"id": "337"}},
+            ],
+        }],
+    }
+    data = {"history_scoreboard_20260912": {
+        "status": "AVAILABLE", "json": {"events": [event]},
+    }}
+    assert verified_espn_events(data, ["20260912"]) == [401879285]
+    duplicated = {"history_scoreboard_20260912": {
+        "status": "AVAILABLE", "json": {"events": [event, event]},
+    }}
+    assert verified_espn_events(duplicated, ["20260912"]) == []
+    future = {"history_scoreboard_20260912": {
+        "status": "AVAILABLE",
+        "json": {"events": [{**event, "competitions": [{
+            **event["competitions"][0],
+            "status": {"type": {"completed": False, "state": "pre"}},
+        }]}]},
+    }}
+    assert verified_espn_events(future, ["20260912"]) == []
+
+    source = {"id": "espn", "adapter": "http", "critical": False,
+              "historical_tactics": {
+                  "enabled": True, "dates_yyyymmdd": ["20260912"],
+                  "daily_request_budget": 6, "max_requests_per_cycle": 2,
+                  "scoreboard_url_template": "https://site.api.espn.com/scoreboard?dates={date}",
+                  "summary_url_template": "https://site.api.espn.com/summary?event={event_id}",
+              }}
+    class Client:
+        retry_attempts = 2
+        calls = []
+        def fetch(self, src, request, previous=None):
+            self.calls.append(request["id"])
+            return {
+                "request_id": request["id"], "status": "AVAILABLE",
+                "sha256": "a" * 64,
+                "json": (
+                    {"leagues": [], "events": [event]}
+                    if request["id"].startswith("history_scoreboard")
+                    else {"header": {"id": 401879285}, "boxscore": {}}
+                ),
+            }
+    client = Client()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(adapters, "collect_http", lambda *a: {
+            "source_id": "espn", "health": "GREEN",
+            "data": {}, "coverage": {}, "changed": False,
+        })
+        first = collect_espn_history(source, client)
+        assert first["historical_tactics_coverage"]["history_dates_cached"] == 1
+        assert first["historical_tactics_coverage"]["event_summaries_cached"] == 0
+        second = collect_espn_history(source, client, first)
+        assert second["historical_tactics_coverage"]["event_summaries_cached"] == 1
+        assert second["historical_tactics_coverage"]["status"] == "RETRIEVAL_COMPLETE"
+        assert second["historical_tactics_coverage"]["fotmob_matchdetails_coverage_not_modified"] is True
+        assert second["historical_tactics_coverage"]["numeric_pstart_effect"] == "NONE"
+        assert second["historical_tactics_coverage"]["new_scheduler_created"] is False
+        assert client.calls == [
+            "history_scoreboard_20260912", "history_summary_401879285"
+        ]
+        third = collect_espn_history(source, client, second)
+        assert third["historical_tactics_coverage"]["requests_this_cycle"] == 0
+        assert client.calls == [
+            "history_scoreboard_20260912", "history_summary_401879285"
+        ]

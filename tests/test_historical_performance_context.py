@@ -386,6 +386,8 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
     assert home["formation"] == "3-4-2-1"
     assert home["coach"]["name"] == "Xabi Alonso"
     assert home["verified_starter_count"] == 1
+    assert home["unverified_provider_starter_ids"] == [9999]
+    assert home["unverified_starter_identity_semantics"] == "NATIVE_ID_REVIEW_ONLY_NO_CANONICAL_ATTRIBUTION"
     assert home["verified_official_starters"][0]["official_element_id"] == 154
     assert home["verified_official_starters"][0]["tactical_role"] is None
     assert home["verified_official_starters"][0]["observed_pitch_layout"]["x"] == 0.86
@@ -415,6 +417,7 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
         "sides": [
             {"side": "home", "official_team_id": 6,
              "coach": {"name": "Xabi Alonso"}, "formation": "3-4-2-1",
+             "unverified_provider_starter_ids": [9999],
              "verified_official_starters": [
                 {"official_element_id": 154, "identity_status": "VERIFIED_MANUAL",
                  "provider_position_id": 10,
@@ -440,6 +443,7 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     assert observed["formation_fit_score"] is None
     assert ctx["effect_on_projection"] == "NONE_ADVISORY_ONLY"
     assert ctx["focus_team"]["verified_tactical_match_history"][0]["verified_player_roles"]["154"]["role"] is None
+    assert ctx["focus_team"]["verified_tactical_match_history"][0]["unverified_native_starter_ids"] == [9999]
     shadow = ctx["focus_team"]["verified_selection_and_rotation_shadow"]
     assert shadow["observed_team_match_count"] == 1
     assert shadow["verified_starter_observation_count"] == 1
@@ -475,6 +479,7 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
         "team_id": 1, "fixture_id": 10, "gw": 1, "manager": "Recorded Coach",
         "formation": "4-3-3", "source_snapshot_sha256": "a" * 64,
         "verified_player_roles": {"101": {"provider_position_id": 7}},
+        "unverified_native_starter_ids": [7777, 8888],
         "verified_bench_players": {}, "verified_unavailable_players": {},
     }]
     league = _all_clubs_tactical_coverage(full_league, sixty, single_team, list(range(1, 7)))
@@ -484,6 +489,8 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     assert league["complete_coach_formation_club_count"] == 0
     assert len(league["clubs"]) == 20
     assert league["clubs"][0]["unmapped_expected_starter_slots"] == 10
+    assert league["clubs"][0]["unverified_native_starter_ids"] == [7777, 8888]
+    assert league["clubs"][0]["unverified_native_starter_observation_count"] == 2
     assert league["clubs"][0]["coach_formation_coverage"] == "RETROSPECTIVE_PARTIAL"
     assert league["clubs"][0]["missing_official_fixture_ids"] == [20, 30, 40, 50, 60]
     assert league["clubs"][-1]["verified_tactical_team_fixture_count"] == 0

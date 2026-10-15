@@ -196,3 +196,14 @@ Remaining operational gates: finish rate-bounded historical match details via ex
 Change timestamp: `2026-10-15T07:30:00+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-15T07:30:00+07:00`
+
+
+## T1 unmatched native starter review provenance, 15 Oct 2026
+
+Persist source-native FotMob starter IDs which fail deterministic Official FPL mapping, in the verified occurrence-bound V12 per-match history and all-20-club review summaries. No name, kit number, position, or pitch layout is used to infer a canonical player. Native ID candidates are never admitted to P(start)/xMins, historical predeadline availability, semantic tactical roles or the immutable GW7 forecast. Distinct candidate IDs and repeated observations must not be confused with distinct FPL players. Existing mandatory tactical history regression checks preserve fail-closed behavior.
+
+At the 07:44 WIB controlled V6 cycle the immutable public provider had 40/60 matchDetails, 80 team-sides and 533 mapped starter observations out of 880 slots. FotMob's reserved request budget was 80/80 for the Jakarta day and prohibited the remaining 20 acquisitions in that day. Preserve the cap of 8 per occurrence and 80 reserved attempts/day; complete future retrieval through original governed V6 occurrences only. Stage1 model and natural report acceptance remain NOT PASS until independently validated.
+
+Change timestamp: 2026-10-15T09:36:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T09:36:00+07:00

@@ -708,6 +708,7 @@ def _bind_current15_official_context_shadow(
     official_v6: dict[str, Any] | None,
     *,
     occurrence_bound: bool,
+    retrospective: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Repair report-only context observability from verified current V6 facts.
 
@@ -719,6 +720,7 @@ def _bind_current15_official_context_shadow(
         "status": "UNAVAILABLE",
         "official_status_observed": 0,
         "advisory_role_profiles": 0,
+        "retrospective_verified_manager_history": 0,
         "calibrated_role_manager_rows": 0,
         "prospective_manager_effect_verified": False,
         "numeric_model_mutation": False,
@@ -778,6 +780,31 @@ def _bind_current15_official_context_shadow(
         patched = dict(raw)
         patched["pstart_context_evidence"] = context
         bound.append(patched)
+    # Past matches may verify a manager timeline, but do not establish who
+    # will manage the next fixture or quantify the manager's P(start) effect.
+    historical_clubs = (
+        ((retrospective or {}).get("all_clubs_tactical_coverage") or {}).get("clubs") or []
+    )
+    historically_observed_teams = set()
+    for club in historical_clubs:
+        if not isinstance(club, dict):
+            continue
+        try:
+            tid = int(club.get("team_id"))
+        except (ValueError, TypeError):
+            continue
+        if any(
+            isinstance(record, dict)
+            and record.get("manager_native_id") is not None
+            and isinstance(record.get("source_snapshot_sha256"), str)
+            and len(record["source_snapshot_sha256"]) == 64
+            for record in club.get("timeline") or []
+        ):
+            historically_observed_teams.add(tid)
+    summary["retrospective_verified_manager_history"] = sum(
+        int(official[eid].get("team") or 0) in historically_observed_teams
+        for eid in elements
+    )
     summary["status"] = "OBSERVABILITY_BOUND_ADVISORY_ONLY"
     summary["reason"] = None
     summary["official_status_observed"] = sum(
@@ -803,7 +830,8 @@ def _analytics_acceptance(*, user: dict[str, Any], full_history: dict[str, Any],
         ) if value is not None), None) is not None
     ]
     pstart_rows, context_shadow = _bind_current15_official_context_shadow(
-        pstart_rows, projections, official_v6, occurrence_bound=occurrence_bound
+        pstart_rows, projections, official_v6, occurrence_bound=occurrence_bound,
+        retrospective=(full_history.get("retrospective_context") or {}),
     )
     pstart_evidence = [
         row for row in pstart_rows

@@ -414,3 +414,7 @@ def test_private_publish_failure_diagnostic_allowlists_missing_serving_files():
     assert '(repo / root).mkdir(parents=True, exist_ok=True)' in workflow
     assert '(repo / "latest").mkdir(parents=True, exist_ok=True)' in workflow
     assert 'manifest = json.loads(show(f"{root}/native_content.manifest.json"))' in workflow
+    # First-commit readback path can disappear after sparse rebase even when
+    # original Git object remote proof succeeds; never mutate remote hash.
+    assert 'receipt_path.parent.mkdir(parents=True, exist_ok=True)' in workflow
+    assert workflow.index('receipt_path.parent.mkdir(parents=True, exist_ok=True)') < workflow.index('receipt_path.write_text(')

@@ -228,6 +228,20 @@ def test_report_kind_routing():
     }
 
 
+def test_protected_price_ad_hoc_personal_scope_is_enabled():
+    cfg = config()
+    assert resolve_scope("05:30_price", cfg, ad_hoc_personal=True).__dict__ == {
+        "personal": True, "mini_league": True, "live": False
+    }
+
+
+def test_price_ad_hoc_personal_stays_disabled_when_personal_team_is_disabled():
+    cfg = {**config(), "personal_team_enabled": False}
+    assert resolve_scope("05:30_price", cfg, ad_hoc_personal=True).__dict__ == {
+        "personal": False, "mini_league": True, "live": False
+    }
+
+
 def test_membership_discovery_no_five_limit_system_excluded_and_h2h_kept():
     memberships = discover_memberships(entry_payload(), "now")
     assert len([item for item in memberships if item["league_kind"] == "classic"]) == 8
@@ -420,6 +434,39 @@ def test_personal_auth_unavailable_degrades_without_guessing(tmp_path):
     assert team["bank"] is None
     assert team["free_transfers"] is None
     assert team["players"][0]["purchase_price"] is None
+
+
+def test_protected_price_writes_current_team_from_official_personal_acquisition(tmp_path):
+    client = FakeClient(auth=True)
+    manifest = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW).run(
+        report_kind="05:30_price", logical_slot=SLOT, ad_hoc_personal=True
+    )
+    team = json.loads((tmp_path / "personal/current_team.json").read_text())
+    assert manifest["personal_requested"] is True
+    assert manifest["personal_status"] == "AVAILABLE"
+    assert team["squad_state"] == "AUTHENTICATED_CURRENT_TEAM"
+    assert team["auth_state"] == "AUTH_AVAILABLE"
+    assert len(team["players"]) == 15
+    assert team["bank"] == 10
+    assert "me" in client.calls
+    assert "my-team:3462711" in client.calls
+
+
+def test_protected_price_without_auth_keeps_submitted_picks_and_withholds_finance(tmp_path):
+    client = FakeClient(auth=False)
+    manifest = PrefetchService(config=config(), output_root=tmp_path, client=client, now=NOW).run(
+        report_kind="05:30_price", logical_slot=SLOT, ad_hoc_personal=True
+    )
+    team = json.loads((tmp_path / "personal/current_team.json").read_text())
+    assert manifest["personal_requested"] is True
+    assert manifest["personal_status"] == "DEGRADED"
+    assert team["squad_state"] == "SUBMITTED_PICKS_ONLY"
+    assert team["auth_state"] == "AUTH_UNAVAILABLE"
+    assert team["bank"] is None
+    assert team["availability"]["purchase_price"] == "UNAVAILABLE"
+    assert team["availability"]["selling_price"] == "UNAVAILABLE"
+    assert len(team["players"]) == 15
+    assert not any(call == "me" or call.startswith("my-team:") for call in client.calls)
 
 
 def test_match_mode_refetches_rival_scoring_history_and_live(tmp_path):

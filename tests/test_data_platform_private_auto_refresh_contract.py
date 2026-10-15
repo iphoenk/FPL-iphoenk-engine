@@ -60,6 +60,19 @@ def test_private_refresh_remains_public_nonblocking_and_finance_fail_closed():
     assert 'for attempt in 1 2 3; do' in private
 
 
+def test_private_refresh_reports_safe_prefetch_summary_and_distinguishes_missing_snapshot():
+    _, private = _jobs()
+    assert 'PRIVATE_PERSONAL_PREFETCH_REPORT_KIND=' in private
+    assert 'PRIVATE_PERSONAL_PREFETCH_PERSONAL_REQUESTED=' in private
+    assert 'PRIVATE_PERSONAL_PREFETCH_AUTH_STATE=' in private
+    assert 'PRIVATE_PERSONAL_PREFETCH_PUBLIC_CORE=' in private
+    assert 'PRIVATE_PERSONAL_REFRESH_FAILURE_CODE=SNAPSHOT_VALIDATION_FAILED' in private
+    assert 'PRIVATE_PERSONAL_REFRESH=SNAPSHOT_VALIDATION_FAILED_NO_CURRENT_SNAPSHOT' in private
+    assert 'PRIVATE_PERSONAL_REFRESH=AUTH_UNAVAILABLE_NO_CURRENT_SNAPSHOT' not in private.split(
+        'if [[ ! -s "$refreshed_team" ]]; then', 1
+    )[1].split('else', 1)[0]
+
+
 def test_only_authenticated_ft_normalization_is_admissible():
     assert normalise_authenticated_free_transfers({"free_transfers": 3}) == (3, "OFFICIAL_EXPLICIT")
     assert normalise_authenticated_free_transfers({"limit": 5, "made": 2}) == (3, "AUTHENTICATED_LIMIT_MINUS_MADE")

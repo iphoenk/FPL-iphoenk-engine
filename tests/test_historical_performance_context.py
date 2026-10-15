@@ -1136,6 +1136,8 @@ def _check_t1_fotmob_api_first_fallback_and_denied_access():
         first = collect_fotmob(source, client)
         audit = first["match_details_history"]
         assert audit["status"] == "RETRIEVAL_COMPLETE"
+        assert audit["total_usable_finalized_match_details"] == 2
+        assert audit["cached_finalized_match_details"] == 0
         assert audit["retrieval_strategy"] == "API_THEN_PUBLIC_PAGE"
         assert audit["reserved_attempts_today"] == 8
         assert audit["worst_case_http_attempts_reserved_this_cycle"] == 8
@@ -1145,6 +1147,18 @@ def _check_t1_fotmob_api_first_fallback_and_denied_access():
         assert first["data"]["match_details_101"]["retrieval_method"] == "FOTMOB_PUBLIC_PAGE_SSR"
         assert "retrieval_method" not in first["data"]["match_details_102"]
 
+        # Production 56 retained + 4 new must report 60 total, never 56.
+        # Simulate the same accounting with one retained + one retrieved.
+        seeded = deepcopy(_base())
+        seeded["data"]["match_details_102"] = deepcopy(first["data"]["match_details_102"])
+        resumed = collect_fotmob(source, Client(), seeded)
+        saved = resumed["match_details_history"]
+        assert saved["status"] == "RETRIEVAL_COMPLETE"
+        assert saved["cached_finalized_match_details"] == 1
+        assert saved["fetched_this_cycle"] == 1
+        assert saved["total_usable_finalized_match_details"] == 2
+        assert saved["remaining_without_usable_details"] == 0
+
         class Denied(Client):
             def fetch(self, source, request, previous=None):
                 self.requests.append(request["url"])
@@ -1153,6 +1167,7 @@ def _check_t1_fotmob_api_first_fallback_and_denied_access():
         denied = Denied()
         refusal = collect_fotmob(source, denied)
         assert refusal["match_details_history"]["status"] == "PARTIAL"
+        assert refusal["match_details_history"]["total_usable_finalized_match_details"] == 0
         assert refusal["match_details_history"]["api_first_public_fallback_attempts"] == 0
         assert len(denied.requests) == 2
         assert all("/api/data/matchDetails" in url for url in denied.requests)

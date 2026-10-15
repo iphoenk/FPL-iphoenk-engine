@@ -183,6 +183,7 @@ def collect_fotmob(source: dict[str, Any], client: Any,
         "daily_request_budget": budget,
         "candidate_finalized_fixtures": len(candidates),
         "cached_finalized_match_details": retained,
+        "total_usable_finalized_match_details": retained + fetched,
         "fetched_this_cycle": fetched,
         "fetched_public_page_ssr_this_cycle": fetched_public_ssr,
         "cached_public_page_ssr_details": sum(

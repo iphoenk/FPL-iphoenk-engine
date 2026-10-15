@@ -750,3 +750,38 @@ def _check_t1_fotmob_budget_and_provider_failure_stay_partial(monkeypatch):
     second = collect_fotmob(source, client, first)
     assert second["match_details_history"]["attempted_this_cycle"] == 0
     assert len(client.requests) == 2
+
+
+def test_official_independent_starter_coverage_does_not_depend_on_fotmob():
+    from src.engines.v12_gw1_gw6_history_context import _official_fixture_starter_coverage
+    fixtures = [
+        {"id": 1234, "event": 1, "team_h": 6, "team_a": 3, "finished": True},
+        {"id": 1235, "event": 1, "team_h": 15, "team_a": 1, "finished": False},
+    ]
+    rows = [
+        {"fixture_id": 1234, "team_id": team, "element_id": team * 100 + player,
+         "admission_status": "OBSERVED_VERIFIED", "started": True, "minutes": 90}
+        for team in (6, 3) for player in range(1, 12)
+    ]
+    observed = _official_fixture_starter_coverage(fixtures, {"rows": rows}, [1, 2, 3, 4, 5, 6])
+    assert observed["finalized_official_fixture_count"] == 1
+    assert observed["expected_finalized_team_fixture_sides"] == 2
+    assert observed["complete_verified_starting_xis"] == 2
+    assert observed["coverage_status"] == "COMPLETE"
+    assert observed["coach_formation_status"] == "NOT_ESTABLISHED_BY_OFFICIAL_SELECTION"
+    assert observed["fotmob_match_details_count_not_affected"] is True
+    assert observed["numeric_pstart_effect"] == "NONE"
+
+    # One missing Official starter cannot be patched using the provider lineup.
+    missing = _official_fixture_starter_coverage(fixtures, {"rows": rows[:-1]}, [1])
+    assert missing["coverage_status"] == "PARTIAL"
+    assert missing["complete_verified_starting_xis"] == 1
+    assert missing["incomplete_or_unverified_team_fixture_sides"] == 1
+    # Duplicate and conflicting original fixture IDs fail closed.
+    duplicate = _official_fixture_starter_coverage(fixtures + [fixtures[0]], {"rows": rows}, [1])
+    assert duplicate["complete_verified_starting_xis"] == 0
+    # Repeated Official player start is not counted twice as independent evidence.
+    duplicate_starter = _official_fixture_starter_coverage(
+        fixtures, {"rows": rows + [rows[0]]}, [1]
+    )
+    assert duplicate_starter["complete_verified_starting_xis"] == 1

@@ -433,6 +433,7 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
                   "reported_unavailability_type": "suspension"}]},
         ],
     }]
+    _check_t1_official_independent_starter_coverage_does_not_depend_on_fotmob()
     ctx = build(fotmob=source, tactical_observation={})
     observed = ctx["focus_team"]["tactical_observation"]
     assert observed["status"] == "MATCH_SPECIFIC_OBSERVED"
@@ -752,7 +753,7 @@ def _check_t1_fotmob_budget_and_provider_failure_stay_partial(monkeypatch):
     assert len(client.requests) == 2
 
 
-def test_official_independent_starter_coverage_does_not_depend_on_fotmob():
+def _check_t1_official_independent_starter_coverage_does_not_depend_on_fotmob():
     from src.engines.v12_gw1_gw6_history_context import _official_fixture_starter_coverage
     fixtures = [
         {"id": 1234, "event": 1, "team_h": 6, "team_a": 3, "finished": True},

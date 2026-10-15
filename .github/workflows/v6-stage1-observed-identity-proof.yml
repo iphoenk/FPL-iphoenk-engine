@@ -1,0 +1,54 @@
+name: V6 Stage1 historical observed XI proof
+run-name: Stage1 historical XI exact-ID proof ${{ github.event.pull_request.number }}
+
+on:
+  pull_request:
+    paths:
+      - "scripts/v6_stage1_observed_xi_identity_gate.py"
+      - "tests/test_historical_observed_identity_acceptance.py"
+      - ".github/workflows/v6-stage1-observed-identity-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-observed-xi-against-official:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - name: Read immutable published V6 official and FotMob facts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/t1/source/history"
+          git fetch --depth=1 origin runtime-data-v6
+          git rev-parse FETCH_HEAD > "$RUNNER_TEMP/t1/v6_source_git_sha.txt"
+          git show FETCH_HEAD:data/v6/current/official_fpl.json > "$RUNNER_TEMP/t1/source/official.json"
+          git show FETCH_HEAD:data/v6/normalized/sources/fotmob.json > "$RUNNER_TEMP/t1/source/fotmob.json"
+          for gw in 1 2 3 4 5 6; do
+            git show "FETCH_HEAD:data/v6/history/official_gw_${gw}.json" > "$RUNNER_TEMP/t1/source/history/official_gw_${gw}.json"
+          done
+          sha256sum "$RUNNER_TEMP/t1/source/official.json" "$RUNNER_TEMP/t1/source/fotmob.json"             "$RUNNER_TEMP"/t1/source/history/*.json > "$RUNNER_TEMP/t1/source_sha256s.txt"
+      - name: Verify independent Official FPL actual XI against all native FotMob starters
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/v6_stage1_observed_xi_identity_gate.py             --official "$RUNNER_TEMP/t1/source/official.json"             --fotmob "$RUNNER_TEMP/t1/source/fotmob.json"             --history-dir "$RUNNER_TEMP/t1/source/history"             --out "$RUNNER_TEMP/t1/observed_historical_identity_proof.json"
+          test -s "$RUNNER_TEMP/t1/observed_historical_identity_proof.json"
+      - name: Publish source-bound read-only proof (no model mutation)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-stage1-observed-xi-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/t1/observed_historical_identity_proof.json
+            ${{ runner.temp }}/t1/v6_source_git_sha.txt
+            ${{ runner.temp }}/t1/source_sha256s.txt
+          retention-days: 14
+          if-no-files-found: warn

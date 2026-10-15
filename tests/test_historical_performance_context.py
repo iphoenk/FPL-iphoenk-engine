@@ -408,6 +408,7 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     _check_espn_native_lineup_coverage_regression()
     _check_t1_fotmob_public_ssr_under_original_budget()
+    _check_t1_fotmob_api_first_fallback_and_denied_access()
     _check_espn_dual_source_fixture_join_fail_closed()
     _check_manager_role_longitudinal_regression()
     _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
@@ -1030,6 +1031,77 @@ def _check_t1_fotmob_public_ssr_under_original_budget():
         two = collect_fotmob(source, client, one)
         assert two["match_details_history"]["attempted_this_cycle"] == 0
         assert len(client.requests) == 2
+
+
+def _check_t1_fotmob_api_first_fallback_and_denied_access():
+    """Prefer native API, reserve worst-case requests, reject access-bypass."""
+    import pytest
+    from src.runtime_v6.domains.acquisition import adapters
+    from src.runtime_v6.domains.acquisition.fotmob_backfill import collect_fotmob
+
+    source = _source()
+    cfg = source["match_details_history"]
+    cfg["public_page_fallback_enabled"] = True
+    cfg["retrieval_strategy"] = "API_THEN_PUBLIC_PAGE"
+    cfg["public_page_url_template"] = "https://www.fotmob.com/match/{match_id}"
+    cfg["daily_request_budget"] = 8
+
+    def page(native):
+        import json
+        teams = {
+            side: {"id": tid, "starters": [{"id": offset + n} for n in range(11)]}
+            for side, tid, offset in (("homeTeam", 8455, 1), ("awayTeam", 8678, 30))
+        }
+        return '<script id="__NEXT_DATA__">' + json.dumps({"props": {"pageProps": {
+            "general": {"matchId": str(native), "leagueId": 47, "finished": True,
+                        "homeTeam": {"id": 8455}, "awayTeam": {"id": 8678}},
+            "content": {"lineup": teams},
+        }}}) + '</script>'
+
+    class Client(_Client):
+        def fetch(self, source, request, previous=None):
+            url = request["url"]
+            self.requests.append(url)
+            native = int(request["id"].split("_")[-1])
+            if "/api/data/matchDetails" in url:
+                if native == 101:
+                    return {"request_id": request["id"], "status": "INVALID_PAYLOAD",
+                            "http_status": 200, "error": "invalid_native_json"}
+                return {"request_id": request["id"], "status": "AVAILABLE",
+                        "sha256": "a" * 64, "json": {"general": {"matchId": 102},
+                        "content": {"lineup": {}}}}
+            assert native == 101
+            return {"request_id": request["id"], "status": "AVAILABLE",
+                    "sha256": "b" * 64, "body": page(native), "json": None}
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(adapters, "collect_http", lambda *a: deepcopy(_base()))
+        client = Client()
+        first = collect_fotmob(source, client)
+        audit = first["match_details_history"]
+        assert audit["status"] == "RETRIEVAL_COMPLETE"
+        assert audit["retrieval_strategy"] == "API_THEN_PUBLIC_PAGE"
+        assert audit["reserved_attempts_today"] == 8
+        assert audit["worst_case_http_attempts_reserved_this_cycle"] == 8
+        assert audit["api_first_public_fallback_attempts"] == 1
+        assert audit["fetched_public_page_ssr_this_cycle"] == 1
+        assert len(client.requests) == 3
+        assert first["data"]["match_details_101"]["retrieval_method"] == "FOTMOB_PUBLIC_PAGE_SSR"
+        assert "retrieval_method" not in first["data"]["match_details_102"]
+
+        class Denied(Client):
+            def fetch(self, source, request, previous=None):
+                self.requests.append(request["url"])
+                return {"request_id": request["id"], "status": "UNAVAILABLE",
+                        "http_status": 403, "error": "http_403"}
+        denied = Denied()
+        refusal = collect_fotmob(source, denied)
+        assert refusal["match_details_history"]["status"] == "PARTIAL"
+        assert refusal["match_details_history"]["api_first_public_fallback_attempts"] == 0
+        assert len(denied.requests) == 2
+        assert all("/api/data/matchDetails" in url for url in denied.requests)
+        assert refusal["match_details_history"]["reserved_attempts_today"] == 8
+
 
 
 def _check_espn_native_lineup_coverage_regression():

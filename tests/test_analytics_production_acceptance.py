@@ -88,6 +88,17 @@ def test_analytics_acceptance_separates_evidence_from_resolution_and_lock():
     assert shadow["official_status_observed"] == 15
     assert shadow["advisory_role_profiles"] == 15
     assert shadow["calibrated_role_manager_rows"] == 0
+    historic = {"all_clubs_tactical_coverage": {"clubs": [{
+        "team_id": 1, "timeline": [{
+            "manager_native_id": 12, "source_snapshot_sha256": "b" * 64,
+        }],
+    }]}}
+    _, manager_shadow = _bind_current15_official_context_shadow(
+        rows, projections, snapshot, occurrence_bound=True,
+        retrospective=historic,
+    )
+    assert manager_shadow["retrospective_verified_manager_history"] == 15
+    assert manager_shadow["calibrated_role_manager_rows"] == 0
     assert shadow["numeric_model_mutation"] is False
     assert [r["p_start"] for r in shadow_rows] == [0.83] * 15
     verified = _analytics_acceptance(

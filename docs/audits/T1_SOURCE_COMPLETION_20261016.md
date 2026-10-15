@@ -75,3 +75,17 @@ No frozen GW7 or P1.7 / Stage3 / MC500K / PR #809 mutation.
 Change timestamp: 2026-10-16T04:31:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-16T04:31:00+07:00
+
+## Original-source historical XI identity acceptance: 16 Oct 2026
+
+The first natural V6 snapshot after merged PR #1112 (GitHub publication run `38814078563`) contains 60/60 uniquely Official-bound original FotMob native matchDetails, 120/120 tactical sides and **1,320/1,320 provider starters already annotated with certified Official FPL IDs**, with zero source-unmapped starter IDs. Comparison against the separately published Official FPL GW1–GW6 partitions finds **zero lineup differences**, 327 unique observed native starter IDs, and 60/60 full-length SHA256 source snapshot digests.
+
+`scripts/v6_stage1_observed_xi_identity_gate.py` is a read-only fail-closed acceptance gate for exactly this retrospective observation scope. It requires all Official six GW partitions finalized and 60 fixture IDs with 120 coach/formation sides, verifies each of 1,320 starters and dual-source identity consistency, and rejects duplicates, missing source/ID/SHA, mismatching historical lineup or stale source authority. No historical result is allowed to infer past predeadline feature availability.
+
+Stage1 `OBSERVED_HISTORICAL_PLAYER_IDENTITY=PASS` is deliberately separate from `FOTMOB_SOURCE_WIDE_IDENTITY=AMBER`, because the FotMob observed league stats are 82 native players versus all 667 Official FPL players. The provider has not proven whether each of the 178 unbridged Official players lacks provider presence. Therefore global absence is NOT asserted, and no existing provider health label is overwritten.
+
+Historical predeadline training-feature finalization: NOT ESTABLISHED. Semantic tactical player roles and calibrated manager/availability P(start) effects: NOT ESTABLISHED. Prospective GW7 calibration: PENDING real final matches. No mutation to Stage3, frozen GW7 or scheduler.
+
+Change timestamp: 2026-10-16T05:07:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-16T05:07:00+07:00

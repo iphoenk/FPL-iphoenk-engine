@@ -21,8 +21,10 @@ def _validated_rosters(
 ) -> list[dict[str, Any]] | None:
     """Require same ESPN native match, teams, scores and 22 unique starters."""
     header = summary.get("header") or {}
+    if not isinstance(header, Mapping):
+        return None
     rosters = summary.get("rosters") or []
-    comps = header.get("competitions") or [] if isinstance(header, Mapping) else []
+    comps = header.get("competitions") or []
     if (_int(header.get("id")) != eid or not isinstance(comps, list)
             or len(comps) != 1 or not isinstance(rosters, list) or len(rosters) != 2):
         return None

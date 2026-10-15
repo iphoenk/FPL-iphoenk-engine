@@ -4452,6 +4452,20 @@ def _render_deep_visible_contract_lines(
                     "This is fixture crosscheck only, NOT recovered FotMob matchDetails, "
                     "verified player lineup, coach-role effect or numeric Pstart authority."
                 )
+            native_espn = context.get("espn_native_tactical_coverage") or {}
+            if native_espn.get("contract") == "V12_ESPN_NATIVE_POSTMATCH_TACTICAL_EVIDENCE_V1":
+                lines.append(
+                    "ESPN NATIVE STARTING-XI / FORMATION: "
+                    f"status={native_espn.get('status')}; "
+                    f"ESPN_native_XI_fixtures={native_espn.get('native_espn_starting_xi_matches')}; "
+                    f"native_starter_observations={native_espn.get('native_espn_starter_observations')}; "
+                    f"missing_FotMob_with_ESPN_XI={native_espn.get('missing_fotmob_with_espn_native_xi')}; "
+                    f"combined_distinct_fixtures={native_espn.get('combined_distinct_tactical_fixtures')}/"
+                    f"{native_espn.get('historical_fixture_denominator')}; "
+                    f"still_missing_ids={native_espn.get('still_without_tactical_source_fixture_ids')}. "
+                    "Retrospective ESPN-native IDs/positions are NOT verified Official FPL player identity, "
+                    "semantic role-fit, manager impact or P(start) calibration. FotMob total unchanged."
+                )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
             observed_matches = form.get("matches") or []

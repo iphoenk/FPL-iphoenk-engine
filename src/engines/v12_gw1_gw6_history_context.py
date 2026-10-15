@@ -440,6 +440,12 @@ def _verified_tactical_matches(
                 "verified_unavailable_players": unavailable,
                 "availability_observation_status": "RETROSPECTIVE_PROVIDER_REPORTED_ONLY",
                 "verified_starter_count": len(roles),
+                # Immutable, occurrence-bound review candidates; no inferred
+                # player ownership, role or numeric P(start) admission.
+                "unverified_native_starter_ids": sorted({
+                    native for raw in side.get("unverified_provider_starter_ids") or []
+                    if (native := _id(raw)) is not None
+                }),
                 "source_snapshot_sha256": digest,
                 "source_effective_at": (fotmob or {}).get("effective_at"),
                 "source": "V6_FOTMOB_MATCH_DETAILS",
@@ -753,6 +759,13 @@ def _all_clubs_tactical_coverage(
             "verified_native_manager_id_count": managers_with_native_id,
             "verified_mapped_starter_count": starters,
             "unmapped_expected_starter_slots": max(0, 11 * len(observed_fixtures) - starters),
+            "unverified_native_starter_observation_count": sum(
+                len(m.get("unverified_native_starter_ids") or []) for m in games
+            ),
+            "unverified_native_starter_ids": sorted({
+                native for m in games for native in m.get("unverified_native_starter_ids") or []
+            }),
+            "unverified_starter_identity_semantics": "REVIEW_ONLY_NO_CANONICAL_ATTRIBUTION",
             "verified_provider_bench_count": bench,
             "verified_provider_unavailable_count": unavailable,
             "same_provider_slot_candidate_group_count": len(

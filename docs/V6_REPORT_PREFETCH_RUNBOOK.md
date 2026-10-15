@@ -252,3 +252,14 @@ In V6 report-prefetch outputs, `legacy_public_auth_state` is an observation of t
 `auth_state_source=PUBLIC_LEGACY_CREDENTIALS`, `private_rotating_auth_state=NOT_EVALUATED_IN_PUBLIC_PLANE`, and `private_auth_reconciliation=PENDING_PROTECTED_PUBLISHER` explicitly distinguish these scopes. `auth_action_scope=PUBLIC_LEGACY_ONLY` identifies which credentials any existing renewal advice concerns.
 
 The protected private publisher independently verifies current team and financial fields. No public V6 record can promote that result without an authoritative protected attestation. `strict_complete`, source failures, temporal controls and previously persisted occurrences are unchanged. This change labels existing status facts; it does not claim completed protected authentication reconciliation.
+
+
+## T1 authenticated private publish race, 15 Oct 2026
+
+**P0 T1 private authenticated publication race (15 Oct 2026):** Controlled V6 source occurrence 38660800895 successfully collected and publicly published 40/60 historical FotMob matchDetails, but private_personal_publish failed after authenticated team refresh succeeded because concurrent private writers conflicted in personal/current_team.json, memberships.json, private_boundary_receipt.json and submitted_picks.json. The existing private job now rebases with the incoming verified local snapshot and a 3-attempt bounded push retry, but refuses to overwrite a newer authenticated remote snapshot (UTC generated_at monotonic), fails on missing/naive timestamps, and never turns a failed push into a PASS receipt. Public source remains independent. No new scheduler, API request budget change, PR #809, GW7 forecast, P(start)/xMins, Stage3, MC500K or P1.7 change.
+
+Evidence: V6 controlled run `38660800895`, private job `116181512347` confirms `PRIVATE_PERSONAL_REFRESH_AUTH_STATE=AUTH_AVAILABLE` and `PRIVATE_PERSONAL_REFRESH=PASS`, followed by `git pull --rebase origin main` content conflicts in four personal files; public collect/publish both succeeded. No authentication failure and no source roll-back should be inferred. Corrected bounded rebase retries must be verified by postmerge CI and a new exact-slot private readback before stating delivery PASS.
+
+Change timestamp: `2026-10-15T07:41:00+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-15T07:41:00+07:00`

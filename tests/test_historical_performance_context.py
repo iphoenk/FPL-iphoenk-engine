@@ -412,6 +412,7 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     _check_espn_dual_source_fixture_join_fail_closed()
     _check_manager_role_longitudinal_regression()
     _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
+    _check_t1_espn_priority_summary_queue_source_verified()
 
     source = deepcopy(FOTMOB)
     digest = "a" * 64
@@ -873,6 +874,61 @@ def _check_independent_espn_historical_acquisition_does_not_promote_fotmob():
         assert client.calls == [
             "history_scoreboard_20260912", "history_summary_401879285"
         ]
+
+def _check_t1_espn_priority_summary_queue_source_verified():
+    """Never fetch arbitrary ESPN IDs; only prioritize valid source scoreboard events."""
+    import pytest
+    from src.runtime_v6.domains.acquisition import adapters
+    from src.runtime_v6.domains.acquisition.espn_historical import collect_espn_history
+    events = []
+    for event_id in (100, 200, 300):
+        events.append({
+            "id": str(event_id), "date": "2026-09-12T14:00:00Z",
+            "competitions": [{
+                "id": str(event_id),
+                "status": {"type": {"completed": True, "state": "post"}},
+                "competitors": [
+                    {"homeAway": "home", "team": {"id": "1"}},
+                    {"homeAway": "away", "team": {"id": "2"}},
+                ],
+            }],
+        })
+    old = {"data": {"history_scoreboard_20260912": {
+        "status": "AVAILABLE", "sha256": "a" * 64,
+        "json": {"leagues": [], "events": events},
+    }}}
+    src = {"id": "espn", "historical_tactics": {
+        "enabled": True, "dates_yyyymmdd": ["20260912"],
+        "daily_request_budget": 4, "max_requests_per_cycle": 2,
+        "priority_summary_event_ids": [300, 999],
+        "summary_url_template": "https://site.api.espn.com/summary?event={event_id}",
+        "scoreboard_url_template": "https://site.api.espn.com/scoreboard?dates={date}",
+    }}
+    class Client:
+        retry_attempts = 2
+        def __init__(self):
+            self.calls = []
+        def fetch(self, src, request, previous=None):
+            self.calls.append(request["id"])
+            return {"request_id": request["id"], "status": "AVAILABLE",
+                    "sha256": "b" * 64,
+                    "json": {"header": {"id": int(request["id"].rsplit("_", 1)[-1])}}}
+    client = Client()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(adapters, "collect_http", lambda *args: {
+            "source_id": "espn", "data": {}, "coverage": {}, "changed": False,
+        })
+        result = collect_espn_history(src, client, old)
+        assert client.calls == ["history_summary_300", "history_summary_100"]
+        coverage = result["historical_tactics_coverage"]
+        assert coverage["priority_event_ids_verified"] == [300]
+        assert coverage["priority_summaries_cached"] == 1
+        assert coverage["priority_summaries_outstanding"] == []
+        assert coverage["reserved_attempts_today"] == 4
+        assert coverage["requests_this_cycle"] == 2
+        assert coverage["event_summaries_cached"] == 2
+        assert result["historical_tactics_coverage"]["numeric_pstart_effect"] == "NONE"
+
 
 def _check_manager_role_longitudinal_regression():
     from src.engines.v12_gw1_gw6_history_context import _manager_role_longitudinal

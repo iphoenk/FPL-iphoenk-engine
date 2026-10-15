@@ -49,6 +49,15 @@ def test_private_refresh_remains_public_nonblocking_and_finance_fail_closed():
     assert 'private personal 15/15 purchase and selling prices not verified' in private
     assert 'private free transfers not verified by authenticated official evidence' in private
     assert 'private personal bank is not verified' in private
+    # Remote may move between private refresh and publish, while an older
+    # retry must never roll back authenticated personal state.
+    assert 'git pull --rebase origin main' not in private
+    assert 'git rebase --strategy-option=theirs origin/main' in private
+    assert 'PRIVATE_PERSONAL_REMOTE_ORDER=STALE_LOCAL_BLOCKED' in private
+    assert 'PRIVATE_PERSONAL_REMOTE_ORDER=NAIVE_TIMESTAMP' in private
+    assert 'PRIVATE_PERSONAL_PUBLISH=REMOTE_MOVED_RETRY_' in private
+    assert 'PRIVATE_PERSONAL_PUBLISH=RETRY_EXHAUSTED' in private
+    assert 'for attempt in 1 2 3; do' in private
 
 
 def test_only_authenticated_ft_normalization_is_admissible():

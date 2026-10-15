@@ -876,9 +876,44 @@ jobs:
             exit 0
           fi
           git commit -m "data(private): V6 personal snapshot ${GITHUB_RUN_ID}"
-          git pull --rebase origin main
-          git push origin HEAD:main
-          echo "PRIVATE_PERSONAL_PUBLISH=PASS"
+          # Concurrent, legitimate personal publishers may move remote main.
+          # Preserve newer remote evidence rather than backdating/stomping it.
+          # On rebase, "theirs" means the incoming local snapshot commit.
+          # The finite push loop never invents a receipt on conflict.
+          for attempt in 1 2 3; do
+            git fetch --quiet origin main
+            if git cat-file -e origin/main:personal/current_team.json 2>/dev/null; then
+              python - <<'PY'
+          import json
+          import subprocess
+          from datetime import datetime, timezone
+
+          def original_generated_at(ref):
+              raw = subprocess.check_output(
+                  ["git", "show", f"{ref}:personal/current_team.json"], text=True
+              )
+              obj = json.loads(raw)
+              value = obj.get("generated_at")
+              if not isinstance(value, str):
+                  raise SystemExit("PRIVATE_PERSONAL_REMOTE_ORDER=UNVERIFIED")
+              moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+              if moment.tzinfo is None or moment.utcoffset() is None:
+                  raise SystemExit("PRIVATE_PERSONAL_REMOTE_ORDER=NAIVE_TIMESTAMP")
+              return moment.astimezone(timezone.utc)
+
+          if original_generated_at("HEAD") < original_generated_at("origin/main"):
+              raise SystemExit("PRIVATE_PERSONAL_REMOTE_ORDER=STALE_LOCAL_BLOCKED")
+          PY
+            fi
+            git rebase --strategy-option=theirs origin/main
+            if git push origin HEAD:main; then
+              echo "PRIVATE_PERSONAL_PUBLISH=PASS"
+              exit 0
+            fi
+            echo "PRIVATE_PERSONAL_PUBLISH=REMOTE_MOVED_RETRY_${attempt}"
+          done
+          echo "::error::PRIVATE_PERSONAL_PUBLISH=RETRY_EXHAUSTED"
+          exit 1
 
   route-visible-report:
     name: route-visible-report

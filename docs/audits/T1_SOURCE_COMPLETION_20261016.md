@@ -41,3 +41,37 @@ Scheduler additions: NONE
 Change date: 2026-10-16
 Documentation sync: UPDATED
 Documentation date: 2026-10-16
+
+## Identity bridge independent readback — 16 October 2026
+
+The earlier 536 unjoined source-native starter observations are now resolved
+by 134 **new exact provider-ID** bridges in the Reep v1
+release `20261005T180536Z`, with direct, namespace-scoped chain:
+
+`fotmob/person -> Reep v1 ID -> opta/person_numeric == Official FPL bootstrap.elements.code`.
+
+A second controlled PR-run `38812432637` inspected ALL originally observed
+FotMob source native player IDs across 60 historical match details and 82
+league-stat player records. The resulting count is 332 distinct natives:
+327 starter natives plus five league-only natives. All 332/332 joined exactly
+to Official FPL; no ambiguous/multiple provider mappings, no mismatches against
+193 previously certified starter mappings. Of the five additional league-only
+natives, two were already in v0 crosswalk; three new IDs are promoted.
+Therefore exactly 137 **new** v1 rows are added to 352 existing configured
+FotMob rows -> 489 configured source-native player links.
+
+Evidence: https://github.com/iphoenk/FPL-iphoenk-engine/actions/runs/38812432637
+First 327-starter ID audit: https://github.com/iphoenk/FPL-iphoenk-engine/actions/runs/38811691738
+Source immutable V6 Git SHA: `dada6d7962ea25576e3e12bc0f501fd065f9f064`
+Published Reep v1 gzip SHA256:
+`ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731`.
+
+This source/native identity evidence is prospective model-advisory only until
+the original predeadline historical feature snapshots and calibrated numeric
+P(start)/role/manager/availability predictions pass their own strict gates.
+No historic-as-of or GW7 future settlement claim is made. No scheduler added.
+No frozen GW7 or P1.7 / Stage3 / MC500K / PR #809 mutation.
+
+Change timestamp: 2026-10-16T04:31:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-16T04:31:00+07:00

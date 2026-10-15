@@ -1,0 +1,62 @@
+name: V6 Stage1 Reep v1 independent ID review
+run-name: Reep v1 exact ID readback ${{ github.event.pull_request.number }}
+
+on:
+  pull_request:
+    paths:
+      - "scripts/v6_reep_v1_fotmob_identity_review.py"
+      - ".github/workflows/v6-reep-v1-identity-review.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit-source-native-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+      - name: Hydrate read-only published V6 snapshot (never mutate existing runtime)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/reep"
+          git fetch --depth=1 origin runtime-data-v6
+          git show FETCH_HEAD:data/v6/current/official_fpl.json > "$RUNNER_TEMP/reep/official.json"
+          git show FETCH_HEAD:data/v6/normalized/sources/fotmob.json > "$RUNNER_TEMP/reep/fotmob.json"
+          git rev-parse FETCH_HEAD > "$RUNNER_TEMP/reep/v6_source_git_sha.txt"
+          sha256sum "$RUNNER_TEMP/reep/official.json" "$RUNNER_TEMP/reep/fotmob.json" > "$RUNNER_TEMP/reep/source_sha256s.txt"
+      - name: Retrieve Reep October 2026 public release exact bridge CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 2 --connect-timeout 20 \
+            --max-time 540 -o "$RUNNER_TEMP/reep/bridges.csv.gz" \
+            "https://data.reep.football/releases/20261005T180536Z/csv/bridges.csv.gz"
+          echo "ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731  $RUNNER_TEMP/reep/bridges.csv.gz" | sha256sum --check -
+      - name: Audit only direct FotMob person to Opta person_numeric bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/v6_reep_v1_fotmob_identity_review.py \
+            --official "$RUNNER_TEMP/reep/official.json" \
+            --fotmob "$RUNNER_TEMP/reep/fotmob.json" \
+            --bridges "$RUNNER_TEMP/reep/bridges.csv.gz" \
+            --out "$RUNNER_TEMP/reep/verified_reep_v1_review.json"
+          test -s "$RUNNER_TEMP/reep/verified_reep_v1_review.json"
+      - name: Publish bounded machine-readable crosswalk evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: v6-t1-reep-v1-id-review-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/reep/verified_reep_v1_review.json
+            ${{ runner.temp }}/reep/v6_source_git_sha.txt
+            ${{ runner.temp }}/reep/source_sha256s.txt
+          retention-days: 14
+          if-no-files-found: warn

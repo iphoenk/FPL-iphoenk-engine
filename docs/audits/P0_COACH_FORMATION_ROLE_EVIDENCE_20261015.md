@@ -207,3 +207,14 @@ At the 07:44 WIB controlled V6 cycle the immutable public provider had 40/60 mat
 Change timestamp: 2026-10-15T09:36:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T09:36:00+07:00
+
+
+## T1 alternative independent Official starting-XI completeness
+
+The remaining 20 FotMob matchDetails cannot be fabricated while the original 80/80 reserved-attempt daily limit is exhausted. Official FPL fixture-level `starts`/minutes is a separate authoritative source already collected inside V6 and does **not** consume FotMob HTTP quota. `V12_OFFICIAL_INDEPENDENT_STARTER_COVERAGE_V1` now computes per finalized GW1–GW6 fixture and per club whether 11 distinct starters are established by original `OBSERVED_VERIFIED` Official player-fixture rows. Missing starts, duplicates, unfinalized fixtures, invalid player identity and source cutoff remain PARTIAL/UNVERIFIED; do not invent substitution or bench identities.
+
+This is an independent additional **selection** gate only. It never upgrades the FotMob matchDetails 40/60 tactical observation count, manager/formation role calibration, historical predeadline availability or MODEL_RESOLUTION status. The 20 missing FotMob games and 117 native ID crosswalk candidates remain explicit, and all numeric P(start)/xMins, MC500K, Stage3, P1.7, one scheduler, PR #809, and frozen GW7 remain unchanged. The new field is retrospective advisory and carries no prediction influence. A controlled V12 run must read back the exact new field before production delivery claims.
+
+Change timestamp: 2026-10-15T10:05:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T10:05:00+07:00

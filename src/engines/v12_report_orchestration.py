@@ -4340,6 +4340,7 @@ def _render_deep_visible_contract_lines(
                 f"status={source_shadow.get('status', 'UNAVAILABLE')}; "
                 f"Official FPL status observed={source_shadow.get('official_status_observed', 0)}/15; "
                 f"role profile advisory={source_shadow.get('advisory_role_profiles', 0)}/15; "
+                f"historical coach witnesses={source_shadow.get('retrospective_verified_manager_history', 0)}/15; "
                 f"role/manager calibrated={source_shadow.get('calibrated_role_manager_rows', 0)}/15; "
                 "observations do not establish calibrated role/manager start odds."
             )

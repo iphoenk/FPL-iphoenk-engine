@@ -4438,6 +4438,20 @@ def _render_deep_visible_contract_lines(
                         f"native_slots={item.get('provider_slot_counts')}; "
                         "semantics=UNVERIFIED; Pstart_effect=NONE."
                     )
+            independent_espn = context.get("independent_espn_fixture_crosscheck") or {}
+            if independent_espn.get("contract") == "V12_ESPN_DUAL_PROVIDER_FIXTURE_CROSSCHECK_V1":
+                lines.append(
+                    "ESPN INDEPENDENT FIXTURE VERIFICATION: "
+                    f"status={independent_espn.get('status')}; "
+                    f"exact_4attribute_fixtures={independent_espn.get('verified_fixture_count')}; "
+                    f"missing_FotMob_details_with_independent_fixture="
+                    f"{independent_espn.get('matched_missing_fotmob_detail_fixtures')}; "
+                    f"original_FotMob_matchDetails="
+                    f"{independent_espn.get('fotmob_match_details_verified_original_count')}; "
+                    f"missing_fixture_ids={context.get('espn_missing_fotmob_fixtures') or []}. "
+                    "This is fixture crosscheck only, NOT recovered FotMob matchDetails, "
+                    "verified player lineup, coach-role effect or numeric Pstart authority."
+                )
             team = (context.get("focus_team") or {})
             form = team.get("form_gw1_gw6") or {}
             observed_matches = form.get("matches") or []

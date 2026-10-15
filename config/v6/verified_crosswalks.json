@@ -24,6 +24,7 @@
       "evidence": [
         "git_blob_sha256_contract:dc4441b1f94f05c36b807ed23f3a2b7dede5878d",
         "github-actions:run/38811691738",
+        "github-actions:run/38812432637",
         "github:withqwerty/reep@0ec59faa5d81615b7a8200ae6121023a3bc14ce3:data/people.csv",
         "official_fpl:bootstrap.elements.code",
         "reep_v0_release:2026.25",
@@ -527,6 +528,33 @@
             "reep_v1:opta/person_numeric:146426",
             "reep_v1:fotmob/person:410836",
             "reep_v1:reep_id:rp6661376025e74c",
+            "reep_v1_release:20261005T180536Z",
+            "reep_v1_bridges_sha256:ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731",
+            "source_v6_git:dada6d7962ea25576e3e12bc0f501fd065f9f064"
+          ]
+        },
+        {
+          "official_fpl_code": 147675,
+          "official_fpl_element_id": 320,
+          "source_native_id": 413158,
+          "reep_id": "rp7209596353344d",
+          "verification_method": "REEP_V1_20261005_FOTMOB_PERSON_OPTA_PERSON_NUMERIC",
+          "verification_release": "20261005T180536Z",
+          "verified_at": "2026-10-15T21:41:26Z",
+          "review_status": "DETERMINISTIC_BRIDGE_REVIEWED",
+          "review_reference": "github-actions:run/38812432637",
+          "bridge_path": [
+            "official_fpl.bootstrap.elements.code",
+            "reep_v1:opta/person_numeric",
+            "reep_v1:fotmob/person",
+            "official_fpl.bootstrap.elements.id"
+          ],
+          "evidence": [
+            "official_fpl:bootstrap.elements.code:147675",
+            "official_fpl:bootstrap.elements.id:320",
+            "reep_v1:opta/person_numeric:147675",
+            "reep_v1:fotmob/person:413158",
+            "reep_v1:reep_id:rp7209596353344d",
             "reep_v1_release:20261005T180536Z",
             "reep_v1_bridges_sha256:ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731",
             "source_v6_git:dada6d7962ea25576e3e12bc0f501fd065f9f064"
@@ -2763,6 +2791,33 @@
           "source_native_id": 862608
         },
         {
+          "official_fpl_code": 451490,
+          "official_fpl_element_id": 119,
+          "source_native_id": 1079456,
+          "reep_id": "rp22fceb2cc71cfd",
+          "verification_method": "REEP_V1_20261005_FOTMOB_PERSON_OPTA_PERSON_NUMERIC",
+          "verification_release": "20261005T180536Z",
+          "verified_at": "2026-10-15T21:41:26Z",
+          "review_status": "DETERMINISTIC_BRIDGE_REVIEWED",
+          "review_reference": "github-actions:run/38812432637",
+          "bridge_path": [
+            "official_fpl.bootstrap.elements.code",
+            "reep_v1:opta/person_numeric",
+            "reep_v1:fotmob/person",
+            "official_fpl.bootstrap.elements.id"
+          ],
+          "evidence": [
+            "official_fpl:bootstrap.elements.code:451490",
+            "official_fpl:bootstrap.elements.id:119",
+            "reep_v1:opta/person_numeric:451490",
+            "reep_v1:fotmob/person:1079456",
+            "reep_v1:reep_id:rp22fceb2cc71cfd",
+            "reep_v1_release:20261005T180536Z",
+            "reep_v1_bridges_sha256:ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731",
+            "source_v6_git:dada6d7962ea25576e3e12bc0f501fd065f9f064"
+          ]
+        },
+        {
           "official_fpl_code": 455084,
           "official_fpl_element_id": 305,
           "source_native_id": 980381,
@@ -4462,6 +4517,33 @@
           "source_native_id": 1319972
         },
         {
+          "official_fpl_code": 549940,
+          "official_fpl_element_id": 646,
+          "source_native_id": 1364069,
+          "reep_id": "rp4cc37658037b5f",
+          "verification_method": "REEP_V1_20261005_FOTMOB_PERSON_OPTA_PERSON_NUMERIC",
+          "verification_release": "20261005T180536Z",
+          "verified_at": "2026-10-15T21:41:26Z",
+          "review_status": "DETERMINISTIC_BRIDGE_REVIEWED",
+          "review_reference": "github-actions:run/38812432637",
+          "bridge_path": [
+            "official_fpl.bootstrap.elements.code",
+            "reep_v1:opta/person_numeric",
+            "reep_v1:fotmob/person",
+            "official_fpl.bootstrap.elements.id"
+          ],
+          "evidence": [
+            "official_fpl:bootstrap.elements.code:549940",
+            "official_fpl:bootstrap.elements.id:646",
+            "reep_v1:opta/person_numeric:549940",
+            "reep_v1:fotmob/person:1364069",
+            "reep_v1:reep_id:rp4cc37658037b5f",
+            "reep_v1_release:20261005T180536Z",
+            "reep_v1_bridges_sha256:ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731",
+            "source_v6_git:dada6d7962ea25576e3e12bc0f501fd065f9f064"
+          ]
+        },
+        {
           "official_fpl_code": 550615,
           "official_fpl_element_id": 242,
           "source_native_id": 1424875,
@@ -5511,8 +5593,8 @@
         "verification_release": "20261005T180536Z",
         "verification_sha256": "ccfe36b94612890102d89159b82eb92f22245151b4b7ebbf2859e38f069d7731",
         "source_v6_git": "dada6d7962ea25576e3e12bc0f501fd065f9f064",
-        "review_reference": "github-actions:run/38811691738",
-        "promoted_mapping_count": 134,
+        "review_reference": "github-actions:run/38812432637",
+        "promoted_mapping_count": 137,
         "existing_certified_observed_count": 193,
         "observed_gw1_gw6_native_count": 327,
         "observed_native_after_promotion": 327,
@@ -5520,7 +5602,13 @@
         "verification_type": "EXACT_PROVIDER_ID_ONLY",
         "name_matching_used": false,
         "fuzzy_matching_used": false,
-        "auto_promotion_used": false
+        "auto_promotion_used": false,
+        "observed_native_total_count": 332,
+        "observed_league_stats_native_count": 82,
+        "additional_review_references": [
+          "github-actions:run/38811691738"
+        ],
+        "already_present_v0_nonstarter_count": 2
       }
     },
     "statmuse": {

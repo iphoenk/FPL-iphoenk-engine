@@ -183,3 +183,16 @@ MC500K, P1.7 and Stage3 remain untouched.
 Change timestamp: 2026-10-15T06:47:16+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T06:47:16+07:00
+
+
+## T1 full-league coverage admission (20 clubs)
+
+**P0 T1 20-club evidence scope (15 Oct 2026):** Retrospective tactical coverage now reports all 20 Official FPL clubs over GW1-GW6 (120 finalized team-fixture observations expected from 60 finalized league matches), not only the Chelsea focus view. Separate exact verified coach/formation observations, native manager IDs, starter identity shortfalls, matchday bench/unavailable, per-fixture manager/formation timelines and observed same-slot rivalry counts. Every club has its own missing fixture IDs and full/partial/unavailable flag. All claims remain post-match ADVISORY only, with semantic tactical role and historical predeadline availability unverified. Original rate cap (8 matches/cycle and 80 reserved attempts/day), V6 factual authority, canonical V12_PLAYER_MINUTES owner, forecast GW7, MC500K, Stage3, P1.7, single scheduler and PR #809 unchanged. Change timestamp: `2026-10-15T07:30:00+07:00`. Documentation sync: UPDATED.
+
+Evidence scope: separately count 60 league fixtures vs 120 club/fixture sides, and never treat 16 retrieved matches as 16/120 team sides. A post-match manager or observed pitch coordinate does not establish a historical predeadline role, player readiness, coach-fit, expected minutes or P(start). The 20-club ledger is a compact report inclusion, while focus-team per-player detail stays bounded for mobile reports. Required existing tactical test node validates a 20-team, 60-match synthetic denominator including 120 side occurrences and missing identities without inventing evidence.
+
+Remaining operational gates: finish rate-bounded historical match details via existing V6 occurrence, verify native DEEP source binding and private delivery, and accept a real natural occurrence separately. No retrospective evidence substitutes for forward role/availability calibration.
+
+Change timestamp: `2026-10-15T07:30:00+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-15T07:30:00+07:00`

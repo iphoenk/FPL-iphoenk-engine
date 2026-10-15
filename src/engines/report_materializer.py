@@ -689,13 +689,8 @@ def _bound_retrospective_context(
             "historical_predeadline_asof_proven", "numeric_pstart_effect", "reason",
         )
     }
-    context["espn_missing_fotmob_fixtures"] = sorted(
-        {int(row["official_fixture_id"]) for row in espn_bridge.get("matches") or []
-         if int(row["official_fixture_id"]) not in {
-             int(t["official_fixture_id"])
-             for t in (read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {}).get("record_groups", {}).get("match_tactics", [])
-             if isinstance(t, dict) and str(t.get("official_fixture_id") or "").isdigit()
-         }}
+    context["espn_missing_fotmob_fixtures"] = (
+        espn_bridge.get("missing_fotmob_detail_fixture_ids") or []
     )
     # Reduce player-manager-slot evidence to current15 to protect mobile payload.
     longitudinal = context.pop("manager_role_longitudinal", {})

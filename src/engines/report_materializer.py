@@ -674,11 +674,27 @@ def _bound_retrospective_context(
     except (TypeError, ValueError, KeyError):
         return {}
     from src.engines.v12_espn_fixture_crosscheck import crosscheck_espn_historical_fixtures
+    from src.engines.v12_espn_native_tactics import verify_espn_native_lineup_coverage
+    espn_v6 = read_json(DATA / "v6/current/espn.json", {}) or {}
+    fotmob_v6 = read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {}
+    v6_cutoff = str(original_official.get("generated_at") or "")
     espn_bridge = crosscheck_espn_historical_fixtures(
-        read_json(DATA / "v6/current/espn.json", {}) or {},
-        read_json(DATA / "v6/normalized/sources/fotmob.json", {}) or {},
-        source_cutoff=str(original_official.get("generated_at") or ""),
+        espn_v6, fotmob_v6, source_cutoff=v6_cutoff,
     )
+    espn_native = verify_espn_native_lineup_coverage(
+        espn_v6, fotmob_v6, source_cutoff=v6_cutoff,
+    )
+    context["espn_native_tactical_coverage"] = {
+        k: espn_native.get(k) for k in (
+            "contract", "status", "native_espn_starting_xi_matches",
+            "native_espn_starter_observations", "missing_fotmob_with_espn_native_xi",
+            "verified_fotmob_native_tactics", "combined_distinct_tactical_fixtures",
+            "historical_fixture_denominator", "still_without_tactical_source_fixture_ids",
+            "espn_athlete_official_fpl_crosswalk", "player_role_or_manager_effect_calibrated",
+            "historical_predeadline_asof_proven", "numeric_pstart_effect",
+            "fotmob_matchdetails_retrieval_promoted", "reason",
+        )
+    }
     context["independent_espn_fixture_crosscheck"] = {
         key: espn_bridge.get(key) for key in (
             "contract", "status", "verified_fixture_count",

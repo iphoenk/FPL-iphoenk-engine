@@ -596,6 +596,164 @@ def _verified_context_ledger(
 
 
 
+
+def _manager_role_longitudinal(
+    bootstrap: Mapping[str, Any],
+    tactical_matches: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """20-club, player-exact retrospective coach/formation/provider-slot ledger.
+
+    Opaque provider position IDs and pitch coordinates are OBSERVATIONS only,
+    not independently verified football roles or manager-selection effects.
+    Historical matches do not establish present/future manager appointment.
+    """
+    teams = {
+        tid: str(row.get("name") or row.get("short_name") or tid)
+        for row in bootstrap.get("teams") or []
+        if isinstance(row, Mapping) and (tid := _id(row.get("id"))) is not None
+    }
+    players = {
+        pid: {"team_id": _id(row.get("team")), "name": str(row.get("web_name") or "")}
+        for row in bootstrap.get("elements") or []
+        if isinstance(row, Mapping) and (pid := _id(row.get("id"))) is not None
+    }
+    team_rows: dict[int, list[Mapping[str, Any]]] = {tid: [] for tid in teams}
+    player_rows: dict[int, list[dict[str, Any]]] = {}
+    conflicting_team_fixtures: set[tuple[int, int]] = set()
+    seen: set[tuple[int, int]] = set()
+    for row in sorted(tactical_matches, key=lambda m: (
+        _id(m.get("gw")) or 0, _id(m.get("fixture_id")) or 0,
+        _id(m.get("team_id")) or 0
+    )):
+        tid, fid = _id(row.get("team_id")), _id(row.get("fixture_id"))
+        if tid not in teams or fid is None or not isinstance(row.get("formation"), str):
+            continue
+        key = (fid, tid)
+        if key in seen:
+            conflicting_team_fixtures.add(key)
+            continue
+        seen.add(key)
+        if not re.fullmatch(r"[0-9a-f]{64}", str(row.get("source_snapshot_sha256") or "")):
+            continue
+        team_rows[tid].append(row)
+    # Fail closed on duplicated team fixture identity across the ledger.
+    for tid, games in team_rows.items():
+        filtered = [m for m in games if (_id(m.get("fixture_id")), tid) not in conflicting_team_fixtures]
+        team_rows[tid] = filtered
+        for game in filtered:
+            for pid_text, role in (game.get("verified_player_roles") or {}).items():
+                pid = _id(pid_text)
+                if (pid not in players or players[pid]["team_id"] != tid
+                        or not isinstance(role, Mapping)):
+                    continue
+                slot = _id(role.get("provider_position_id"))
+                observed_layout = role.get("observed_pitch_layout")
+                player_rows.setdefault(pid, []).append({
+                    "gw": _id(game.get("gw")),
+                    "fixture_id": _id(game.get("fixture_id")),
+                    "team_id": tid,
+                    "manager": game.get("manager"),
+                    "manager_native_id": _id(game.get("manager_native_id")),
+                    "formation": game.get("formation"),
+                    "provider_position_id": slot,
+                    "pitch_layout_available": isinstance(observed_layout, Mapping),
+                    "source_snapshot_sha256": game.get("source_snapshot_sha256"),
+                })
+
+    clubs = []
+    manager_transitions = 0
+    formation_transitions = 0
+    for tid in sorted(teams):
+        games = sorted(team_rows[tid], key=lambda m: (
+            _id(m.get("gw")) or 0, _id(m.get("fixture_id")) or 0
+        ))
+        managers = sorted({
+            mid for m in games if (mid := _id(m.get("manager_native_id"))) is not None
+        })
+        manager_changes = []
+        formation_changes = []
+        for prior, current in zip(games, games[1:]):
+            before, after = _id(prior.get("manager_native_id")), _id(current.get("manager_native_id"))
+            if before is not None and after is not None and before != after:
+                manager_changes.append({
+                    "from_fixture_id": prior["fixture_id"],
+                    "to_fixture_id": current["fixture_id"],
+                    "previous_manager_native_id": before,
+                    "observed_manager_native_id": after,
+                })
+            if prior.get("formation") != current.get("formation"):
+                formation_changes.append({
+                    "from_fixture_id": prior["fixture_id"],
+                    "to_fixture_id": current["fixture_id"],
+                    "previous_formation": prior.get("formation"),
+                    "observed_formation": current.get("formation"),
+                })
+        manager_transitions += len(manager_changes)
+        formation_transitions += len(formation_changes)
+        clubs.append({
+            "team_id": tid,
+            "team_name": teams[tid],
+            "verified_observed_matches": len(games),
+            "distinct_native_manager_ids": len(managers),
+            "manager_native_ids": managers,
+            "historical_manager_changes": manager_changes,
+            "historical_formation_changes": formation_changes,
+            "last_observed_manager_native_id": (
+                _id(games[-1].get("manager_native_id")) if games else None
+            ),
+            "last_observed_formation": games[-1].get("formation") if games else None,
+            "current_manager_appointment_verified": False,
+            "future_manager_effect_calibrated": False,
+        })
+    by_player = []
+    for pid in sorted(players):
+        observations = sorted(player_rows.get(pid) or [],
+                              key=lambda m: (m["gw"] or 0, m["fixture_id"] or 0))
+        slot_counts: dict[str, int] = {}
+        for match in observations:
+            if match["provider_position_id"] is not None:
+                key = str(match["provider_position_id"])
+                slot_counts[key] = slot_counts.get(key, 0) + 1
+        by_player.append({
+            "element_id": pid,
+            "team_id": players[pid]["team_id"],
+            "source_verified_starter_observations": len(observations),
+            "distinct_observed_manager_ids": len({
+                m["manager_native_id"] for m in observations if m["manager_native_id"] is not None
+            }),
+            "distinct_observed_formations": len({m["formation"] for m in observations}),
+            "provider_slot_counts": slot_counts,
+            "provider_position_id_semantics": "SOURCE_NATIVE_OPAQUE_ONLY",
+            "semantic_role": None,
+            "target_gw_manager_fit_probability": None,
+            "target_gw_role_start_probability": None,
+            "historical_predeadline_asof_proven": False,
+            "numeric_pstart_effect": "NONE",
+            "history": observations,
+        })
+    return {
+        "contract": "V12_ALLCLUB_MANAGER_ROLE_LONGITUDINAL_V1",
+        "observation_scope": "GW1_GW6_POST_MATCH_RETROSPECTIVE_ONLY",
+        "scoped_club_count": len(clubs),
+        "official_player_universe_count": len(players),
+        "players_with_verified_slot_history": sum(
+            bool(p["source_verified_starter_observations"]) for p in by_player
+        ),
+        "verified_starter_slot_observations": sum(
+            p["source_verified_starter_observations"] for p in by_player
+        ),
+        "observed_manager_transitions": manager_transitions,
+        "observed_formation_transitions": formation_transitions,
+        "clubs": clubs,
+        "players": by_player,
+        "semantic_tactical_role_calibrated": False,
+        "manager_start_effect_calibrated": False,
+        "source_asof_before_historical_deadline_verified": False,
+        "numeric_pstart_effect": "NONE",
+    }
+
+
+
 def _official_fixture_starter_coverage(
     official_fixtures: Sequence[Mapping[str, Any]],
     context_ledger: Mapping[str, Any],
@@ -975,6 +1133,7 @@ def build_retrospective_context(
         "player_position_counts": dict(by_position),
         "source_health": {"understat": understat_source, "fotmob": match_source},
         "match_tactics_verified_team_observations": len(tactical_matches),
+        "manager_role_longitudinal": _manager_role_longitudinal(bootstrap, tactical_matches),
         "all_clubs_tactical_coverage": _all_clubs_tactical_coverage(
             bootstrap, official_fixtures, tactical_matches, gw_ids
         ),

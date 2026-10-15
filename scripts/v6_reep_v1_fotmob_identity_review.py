@@ -102,7 +102,14 @@ def build_report(official, fotmob, bridges_gz):
             code_map[code] = eid
     if len(code_map) < 600:
         raise ValueError("Full Official FPL universe not available")
-    observed, certified = native_starter_evidence(fotmob)
+    starter_native, certified = native_starter_evidence(fotmob)
+    league_players = ((fotmob.get("record_groups") or {}).get("players") or [])
+    if not isinstance(league_players, list):
+        raise ValueError("FotMob source-native league player records unavailable")
+    league_native = {_id(p.get("source_native_id")) for p in league_players if isinstance(p, dict)}
+    if None in league_native or len(league_native) != len(league_players):
+        raise ValueError("missing or duplicated source-native league stats IDs")
+    observed = starter_native | league_native
     actual_sha = sha256_file(bridges_gz)
     if actual_sha != BRIDGES_SHA256:
         raise ValueError("Reep v1 20261005T180536Z original compressed CSV SHA256 mismatch")
@@ -140,7 +147,9 @@ def build_report(official, fotmob, bridges_gz):
         "reep_release_stamp": RELEASE, "reep_bridges_gzip_sha256": actual_sha,
         "verified_original_fotmob_fixture_count": 60,
         "official_player_count": len(code_map),
-        "source_native_starter_player_count": len(observed),
+        "source_native_starter_player_count": len(starter_native),
+        "source_native_league_stats_player_count": len(league_native),
+        "source_native_total_observed_player_count": len(observed),
         "previously_certified_native_players": len(certified),
         "independent_bridge_matched_native_players": len(proved),
         "new_independent_bridge_native_players": len(new),

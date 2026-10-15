@@ -453,6 +453,42 @@ def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
     assert shadow["semantic_tactical_roles_verified"] is False
     assert shadow["pregame_availability_asof_verified"] is False
     assert shadow["numeric_pstart_effect"] == "NONE"
+    # A Chelsea focus view MUST NOT hide the rest of the 20-club universe.
+    all_clubs = ctx["all_clubs_tactical_coverage"]
+    assert all_clubs["contract"] == "V12_ALL_CLUBS_TACTICAL_COVERAGE_V1"
+    assert {club["team_id"] for club in all_clubs["clubs"]} == {3, 6, 15}
+    assert all_clubs["verified_team_fixture_observations"] == 0  # Official fixture still provisional.
+    assert all_clubs["predeadline_asof_proven"] is False
+    assert all_clubs["numeric_pstart_effect"] == "NONE"
+
+    from src.engines.v12_gw1_gw6_history_context import _all_clubs_tactical_coverage
+    full_league = {
+        "teams": [{"id": team, "name": f"Club {team}"} for team in range(1, 21)],
+        "elements": [{"id": team, "team": team} for team in range(1, 21)],
+    }
+    sixty = [
+        {"id": gw * 10 + i, "event": gw, "team_h": 2 * i + 1,
+         "team_a": 2 * i + 2, "finished": True}
+        for gw in range(1, 7) for i in range(10)
+    ]
+    single_team = [{
+        "team_id": 1, "fixture_id": 10, "gw": 1, "manager": "Recorded Coach",
+        "formation": "4-3-3", "source_snapshot_sha256": "a" * 64,
+        "verified_player_roles": {"101": {"provider_position_id": 7}},
+        "verified_bench_players": {}, "verified_unavailable_players": {},
+    }]
+    league = _all_clubs_tactical_coverage(full_league, sixty, single_team, list(range(1, 7)))
+    assert league["scoped_club_count"] == 20
+    assert league["expected_finalized_team_fixture_observations"] == 120
+    assert league["verified_team_fixture_observations"] == 1
+    assert league["complete_coach_formation_club_count"] == 0
+    assert len(league["clubs"]) == 20
+    assert league["clubs"][0]["unmapped_expected_starter_slots"] == 10
+    assert league["clubs"][0]["coach_formation_coverage"] == "RETROSPECTIVE_PARTIAL"
+    assert league["clubs"][0]["missing_official_fixture_ids"] == [20, 30, 40, 50, 60]
+    assert league["clubs"][-1]["verified_tactical_team_fixture_count"] == 0
+    assert league["role_semantics"] == "UNVERIFIED_POSITION_PROXY_ONLY"
+    assert league["availability_semantics"] == "POST_MATCH_PROVIDER_REPORT_NOT_PREDEADLINE"
     # A provider observation from a different immutable source object is not valid.
     source["source_snapshot_ids"] = ["b" * 64]
     rejected = build(fotmob=source, tactical_observation={})

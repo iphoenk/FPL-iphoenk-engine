@@ -4333,6 +4333,16 @@ def _render_deep_visible_contract_lines(
                 "and manager labels cannot affect canonical P(start) until independent "
                 "as-of source proof and position-wise calibration pass."
             )
+        source_shadow = dict(pstart_acceptance.get("source_context_shadow") or {})
+        if source_shadow:
+            lines.append(
+                "PSTART CURRENT15 SOURCE SHADOW: "
+                f"status={source_shadow.get('status', 'UNAVAILABLE')}; "
+                f"Official FPL status observed={source_shadow.get('official_status_observed', 0)}/15; "
+                f"role profile advisory={source_shadow.get('advisory_role_profiles', 0)}/15; "
+                f"role/manager calibrated={source_shadow.get('calibrated_role_manager_rows', 0)}/15; "
+                "observations do not establish calibrated role/manager start odds."
+            )
         if calibration:
             baseline = calibration.get("baseline") or {}
             model = calibration.get("individualized") or {}

@@ -275,3 +275,11 @@ When the parsed public page is valid, the unmodified original HTML and its SHA a
 Change timestamp: 2026-10-15T13:31:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T13:31:00+07:00
+
+## ESPN independent completed starting XI / formation (2026-10-15T14:09:39+07:00)
+
+From the existing source-native V6 ESPN archive, all 9 scoreboard dates contain 30 verified finished fixtures and 15 already SHA-retained source summaries. Each summary contains two formations and full 11+11 starters, but these **are ESPN-native IDs**, not yet verified Official FPL player IDs. Exact independent fixture score/time/team source bridge identifies 14 summaries as missing original FotMob tactical-detail fixtures. Conservative V12 retrospective distinct-fixture tactical coverage is therefore 40 original FotMob + 14 unique ESPN = **54/60** if admitted by real occurrence cutoff and original SHA identity. FotMob matchDetails remains 40/60, all 352 existing FotMob mappings remain separate, and identity registry has zero ESPN athlete links. Combined source evidence is only postmatch team formations and source-native starter observations, not historical predeadline forecasts, semantic coach/role probabilities, or Official FPL XI player-identity proof. Reject any malformed source, score/team mismatch, invalid formation, incomplete or duplicate 22 starters, and source published after cutoff. No additional HTTP traffic or scheduler.
+
+Change timestamp: 2026-10-15T14:09:39+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T14:09:39+07:00

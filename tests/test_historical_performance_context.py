@@ -1136,6 +1136,8 @@ def _check_t1_fotmob_api_first_fallback_and_denied_access():
         first = collect_fotmob(source, client)
         audit = first["match_details_history"]
         assert audit["status"] == "RETRIEVAL_COMPLETE"
+        assert audit["total_usable_finalized_match_details"] == 2
+        assert audit["cached_finalized_match_details"] == 0
         assert audit["retrieval_strategy"] == "API_THEN_PUBLIC_PAGE"
         assert audit["reserved_attempts_today"] == 8
         assert audit["worst_case_http_attempts_reserved_this_cycle"] == 8
@@ -1153,6 +1155,7 @@ def _check_t1_fotmob_api_first_fallback_and_denied_access():
         denied = Denied()
         refusal = collect_fotmob(source, denied)
         assert refusal["match_details_history"]["status"] == "PARTIAL"
+        assert refusal["match_details_history"]["total_usable_finalized_match_details"] == 0
         assert refusal["match_details_history"]["api_first_public_fallback_attempts"] == 0
         assert len(denied.requests) == 2
         assert all("/api/data/matchDetails" in url for url in denied.requests)

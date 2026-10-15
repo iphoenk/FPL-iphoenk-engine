@@ -406,6 +406,7 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 
 
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    _check_t1_fotmob_public_ssr_under_original_budget()
     _check_manager_role_longitudinal_regression()
     _check_independent_espn_historical_acquisition_does_not_promote_fotmob()
 
@@ -897,3 +898,65 @@ def _check_manager_role_longitudinal_regression():
     assert _manager_role_longitudinal(
         b, [dict(one, source_snapshot_sha256="bad")]
     )["verified_starter_slot_observations"] == 0
+
+
+def _check_t1_fotmob_public_ssr_under_original_budget():
+    import json
+    import pytest
+    from src.runtime_v6.domains.acquisition.fotmob_public_page import extract_verified_page_matchdetails
+    from src.runtime_v6.domains.acquisition import adapters
+    from src.runtime_v6.domains.acquisition.fotmob_backfill import collect_fotmob
+
+    def html(native, starters=11):
+        sides = {
+            "homeTeam": {"id": 8455, "formation": "4-3-3",
+                         "coach": {"id": 22, "name": "Verified Coach"},
+                         "starters": [{"id": i + 1} for i in range(starters)]},
+            "awayTeam": {"id": 8678, "formation": "4-2-3-1",
+                         "coach": {"id": 44, "name": "Other Coach"},
+                         "starters": [{"id": i + 22} for i in range(starters)]},
+        }
+        raw = {"props": {"pageProps": {
+            "general": {"matchId": str(native), "leagueId": 47, "finished": True,
+                        "homeTeam": {"id": 8455}, "awayTeam": {"id": 8678}},
+            "content": {"lineup": sides},
+        }}}
+        return '<html><script type="application/json" id="__NEXT_DATA__">' + json.dumps(raw) + '</script></html>'
+
+    assert extract_verified_page_matchdetails(html(101), 101)["general"]["matchId"] == "101"
+    assert extract_verified_page_matchdetails(html(101), 102) is None
+    assert extract_verified_page_matchdetails(html(101, starters=10), 101) is None
+    assert extract_verified_page_matchdetails(html(101) + html(101), 101) is None
+
+    source = _source()
+    cfg = source["match_details_history"]
+    cfg["public_page_fallback_enabled"] = True
+    cfg["public_page_url_template"] = "https://www.fotmob.com/match/{match_id}"
+    cfg["public_page_max_body_bytes"] = 1500000
+
+    class PublicClient(_Client):
+        def fetch(self, source, request, previous=None):
+            self.requests.append(request["url"])
+            assert "/match/" in request["url"]
+            assert request["expect"] == "text"
+            native = int(request["id"].removeprefix("match_details_"))
+            return {"request_id": request["id"], "status": "AVAILABLE",
+                    "sha256": "b" * 64, "body": html(native), "json": None}
+    client = PublicClient()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(adapters, "collect_http", lambda *a: deepcopy(_base()))
+        one = collect_fotmob(source, client)
+        assert one["match_details_history"]["status"] == "RETRIEVAL_COMPLETE"
+        assert one["match_details_history"]["fetched_public_page_ssr_this_cycle"] == 2
+        assert one["match_details_history"]["cached_public_page_ssr_details"] == 2
+        assert one["match_details_history"]["reserved_attempts_today"] == 4
+        assert one["match_details_history"]["same_daily_fotmob_budget_for_api_and_page"] is True
+        for n in (101, 102):
+            result = one["data"]["match_details_" + str(n)]
+            assert result["retrieval_method"] == "FOTMOB_PUBLIC_PAGE_SSR"
+            assert result["source_original_html_retained"] is True
+            assert result["not_original_api_matchdetails_response"] is True
+            assert result["json"]["content"]["lineup"]["homeTeam"]["coach"]["name"] == "Verified Coach"
+        two = collect_fotmob(source, client, one)
+        assert two["match_details_history"]["attempted_this_cycle"] == 0
+        assert len(client.requests) == 2

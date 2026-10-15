@@ -161,6 +161,10 @@ def crosscheck_espn_historical_fixtures(
         "matched_missing_fotmob_detail_fixtures": sum(
             row["official_fixture_id"] not in detailed for row in matches
         ),
+        "missing_fotmob_detail_fixture_ids": sorted(
+            row["official_fixture_id"] for row in matches
+            if row["official_fixture_id"] not in detailed
+        ),
         "fotmob_match_details_verified_original_count": len(detailed),
         "matches": matches,
         "reason": None if matches else "NO_EXACT_PROVIDER_CROSSCHECK",

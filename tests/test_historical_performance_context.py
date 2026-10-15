@@ -406,6 +406,7 @@ def test_fotmob_tactical_details_use_only_verified_native_id_crosswalk():
 
 
 def test_occurrence_bound_tactical_history_is_descriptive_not_numeric():
+    _check_espn_native_lineup_coverage_regression()
     _check_t1_fotmob_public_ssr_under_original_budget()
     _check_espn_dual_source_fixture_join_fail_closed()
     _check_manager_role_longitudinal_regression()
@@ -1029,3 +1030,98 @@ def _check_t1_fotmob_public_ssr_under_original_budget():
         two = collect_fotmob(source, client, one)
         assert two["match_details_history"]["attempted_this_cycle"] == 0
         assert len(client.requests) == 2
+
+
+def _check_espn_native_lineup_coverage_regression():
+    """ESPN source-native completed XI/formation is not Official player identity."""
+    from copy import deepcopy
+    from src.engines.v12_espn_native_tactics import verify_espn_native_lineup_coverage
+
+    digest = "a" * 64
+    fm = {
+        "source_id": "fotmob", "effective_at": "2026-10-15T09:50:00Z",
+        "record_groups": {
+            "teams": [
+                {"source_native_id": 8472, "official_team_id": 20,
+                 "name": "Sunderland", "identity_status": "VERIFIED_MANUAL"},
+                {"source_native_id": 9825, "official_team_id": 1,
+                 "name": "Arsenal", "identity_status": "VERIFIED_MANUAL"},
+            ],
+            "fixtures": [{
+                "source_native_id": 5795453, "official_fixture_id": 36,
+                "identity_status": "VERIFIED_MANUAL", "round": "4",
+                "home": {"source_native_id": 8472},
+                "away": {"source_native_id": 9825},
+                "status": {"finished": True, "utcTime": "2026-09-12T19:00:00Z",
+                           "scoreStr": "2 - 1"},
+            }],
+            "match_tactics": [],
+        },
+    }
+    sides = [
+        {"homeAway": "home", "team": {"id": "366", "displayName": "Sunderland"}, "score": "2"},
+        {"homeAway": "away", "team": {"id": "359", "displayName": "Arsenal"}, "score": "1"},
+    ]
+    event = {
+        "id": "401878779", "date": "2026-09-12T19:00Z",
+        "competitions": [{
+            "id": "401878779",
+            "status": {"type": {"completed": True, "state": "post"}},
+            "competitors": sides,
+        }],
+    }
+    summary = {
+        "header": {"id": "401878779", "competitions": [{
+            "id": "401878779", "date": "2026-09-12T19:00Z",
+            "status": {"type": {"completed": True, "state": "post"}},
+            "competitors": deepcopy(sides),
+        }]},
+        "rosters": [
+            {"homeAway": side, "team": dict(sides[idx]["team"]),
+             "formation": "4-2-3-1", "roster": [
+                 {"athlete": {"id": str(idx * 20 + k + 1)}, "starter": True,
+                  "position": {"displayName": "Forward"}} for k in range(11)
+             ]}
+            for idx, side in enumerate(("home", "away"))
+        ],
+    }
+    espn = {
+        "source_id": "espn", "checked_at": "2026-10-15T09:55:00Z",
+        "data": {
+            "history_scoreboard_20260912": {
+                "status": "AVAILABLE", "sha256": digest, "json": {"events": [event]}},
+            "history_summary_401878779": {
+                "status": "AVAILABLE", "sha256": digest, "sha256_scope": "full_body",
+                "checked_at": "2026-10-15T09:54:00Z", "json": summary},
+        },
+    }
+    def check(source, cutoff="2026-10-15T10:00:00Z"):
+        return verify_espn_native_lineup_coverage(
+            source, fm, source_cutoff=cutoff
+        )
+    ok = check(espn)
+    assert ok["status"] == "VERIFIED_ESPN_NATIVE_XI_ONLY"
+    assert ok["native_espn_starting_xi_matches"] == 1
+    assert ok["native_espn_starter_observations"] == 22
+    assert ok["missing_fotmob_with_espn_native_xi"] == 1
+    assert ok["combined_distinct_tactical_fixtures"] == 1
+    assert ok["historical_fixture_denominator"] == 1
+    assert ok["still_without_tactical_source_fixture_ids"] == []
+    assert ok["source_native_observations"][0]["teams"][0]["official_fpl_starter_ids"] == []
+    assert ok["espn_athlete_official_fpl_crosswalk"] == "NOT_ESTABLISHED"
+    assert ok["numeric_pstart_effect"] == "NONE"
+    for mut in ("duplicate", "formation", "score", "late", "sha"):
+        bad = deepcopy(espn)
+        item = bad["data"]["history_summary_401878779"]
+        if mut == "duplicate":
+            item["json"]["rosters"][0]["roster"][1]["athlete"]["id"] = "1"
+        if mut == "formation":
+            item["json"]["rosters"][0]["formation"] = "4-4-4"
+        if mut == "score":
+            item["json"]["header"]["competitions"][0]["competitors"][0]["score"] = "9"
+        if mut == "late":
+            item["checked_at"] = "2026-10-15T10:02:00Z"
+        if mut == "sha":
+            item["sha256"] = "invalid"
+        assert check(bad)["native_espn_starting_xi_matches"] == 0, mut
+    assert check(espn, cutoff="2026-10-15T09:53:00Z")["status"] == "SOURCE_UNAVAILABLE"

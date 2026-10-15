@@ -595,6 +595,97 @@ def _verified_context_ledger(
     }
 
 
+
+def _official_fixture_starter_coverage(
+    official_fixtures: Sequence[Mapping[str, Any]],
+    context_ledger: Mapping[str, Any],
+    historical_gws: Sequence[int],
+) -> dict[str, Any]:
+    """Independently audit all Official starting XIs without FotMob quota.
+
+    This is a retrospective data-completeness measurement ONLY. Do not call
+    it coach/formation coverage, infer the tactical role from FPL position,
+    or admit post-match observations as predeadline features.
+    """
+    expected: dict[tuple[int, int], int] = {}
+    conflicted_fixtures: set[int] = set()
+    seen_fixtures: set[int] = set()
+    for raw in official_fixtures:
+        if not isinstance(raw, Mapping):
+            continue
+        fid = _id(raw.get("id"))
+        gw = _id(raw.get("event"))
+        home, away = _id(raw.get("team_h")), _id(raw.get("team_a"))
+        if fid is None or gw not in historical_gws:
+            continue
+        if fid in seen_fixtures:
+            conflicted_fixtures.add(fid)
+        seen_fixtures.add(fid)
+        if raw.get("finished") is not True or home is None or away is None or home == away:
+            continue
+        for team in (home, away):
+            expected[(fid, team)] = gw
+
+    starters: dict[tuple[int, int], set[int]] = {}
+    conflicting_sides: set[tuple[int, int]] = set()
+    for row in context_ledger.get("rows") or []:
+        if not isinstance(row, Mapping):
+            continue
+        fid, team, player = _id(row.get("fixture_id")), _id(row.get("team_id")), _id(row.get("element_id"))
+        key = (fid, team)
+        if key not in expected or player is None:
+            continue
+        if row.get("started") is not True or row.get("admission_status") != "OBSERVED_VERIFIED":
+            continue
+        if _n(row.get("minutes")) is None or _n(row.get("minutes")) <= 0:
+            conflicting_sides.add(key)
+            continue
+        players = starters.setdefault(key, set())
+        if player in players:
+            conflicting_sides.add(key)
+        players.add(player)
+
+    clubs: dict[int, dict[str, Any]] = {}
+    complete = 0
+    observations = []
+    for (fid, team), gw in sorted(expected.items()):
+        count = len(starters.get((fid, team), set()))
+        eligible = fid not in conflicted_fixtures and (fid, team) not in conflicting_sides
+        verified = eligible and count == 11
+        complete += int(verified)
+        entry = clubs.setdefault(team, {"team_id": team, "official_finalized_sides": 0,
+                                        "complete_verified_starting_xis": 0,
+                                        "missing_or_conflicted_fixture_ids": []})
+        entry["official_finalized_sides"] += 1
+        entry["complete_verified_starting_xis"] += int(verified)
+        if not verified:
+            entry["missing_or_conflicted_fixture_ids"].append(fid)
+        observations.append({
+            "fixture_id": fid, "gw": gw, "team_id": team,
+            "verified_official_starter_count": count,
+            "status": "VERIFIED_STARTING_XI" if verified else "PARTIAL_OR_UNVERIFIED",
+        })
+
+    total = len(expected)
+    return {
+        "contract": "V12_OFFICIAL_INDEPENDENT_STARTER_COVERAGE_V1",
+        "source": "OFFICIAL_FPL_ELEMENT_SUMMARY",
+        "historical_gws": list(historical_gws),
+        "finalized_official_fixture_count": len({fid for fid, _ in expected}),
+        "expected_finalized_team_fixture_sides": total,
+        "complete_verified_starting_xis": complete,
+        "incomplete_or_unverified_team_fixture_sides": total - complete,
+        "coverage_status": "COMPLETE" if total > 0 and complete == total else "PARTIAL",
+        "clubs": [clubs[k] for k in sorted(clubs)],
+        "observations": observations,
+        "fotmob_match_details_count_not_affected": True,
+        "coach_formation_status": "NOT_ESTABLISHED_BY_OFFICIAL_SELECTION",
+        "historical_predeadline_asof_proven": False,
+        "numeric_pstart_effect": "NONE",
+    }
+
+
+
 def _focus_team_selection_shadow(
     tactical_matches: Sequence[Mapping[str, Any]], team_id: int,
 ) -> dict[str, Any]:
@@ -888,6 +979,9 @@ def build_retrospective_context(
             bootstrap, official_fixtures, tactical_matches, gw_ids
         ),
         "verified_context_ledger": context_ledger,
+        "official_independent_starter_coverage": _official_fixture_starter_coverage(
+            official_fixtures, context_ledger, gw_ids
+        ),
         "players": players,
         "focus_players": focused,
         "focus_team": {

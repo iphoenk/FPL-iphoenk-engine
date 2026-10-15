@@ -231,3 +231,15 @@ Canonical V12_PLAYER_MINUTES P(start)/xMins, 500k MC, frozen GW7, P1.7, Stage3, 
 Change timestamp: 2026-10-15T10:33:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T10:33:00+07:00
+
+## Alternate provider acquisition: ESPN (15 October 2026)
+
+Native FotMob matchDetails remains only 40/60 successful for GW1–GW6, original 80/80 reserved request attempts consumed on 15 Oct. Do not bypass FotMob request cap, change cache origins or label another provider's records FOTMOB.
+
+Use the **existing V6 ESPN poll** to retrieve independent completed ESPN scoreboards for source season calendar dates 12–14 Sep, 18–20 Sep, 10–12 Oct 2026, and native ESPN match summaries in later governed occurrences. The adapter enforces 48 reserved HTTP retry attempts/day and six requests/occurrence, SHA-256 native payloads, exact source date/event status, source identity and cache reuse. ESPN native fixture/event identifiers and summary data are **not** automatically identified as Official FPL fixtures, players, managerial effects or source-as-of historical probabilities. Only controlled identity mapping and separate verified role calibration may promote factual context. If ESPN summary endpoints are blocked or absent, report PARTIAL and retain the original source independently.
+
+Source exposure and intrinsic limits: 20 missing FotMob matchDetails cannot be counted as rescued FotMob matchDetails by an ESPN scoreboard. The source may give alternative independent match evidence without changing FotMob 40/60. This archive is not yet a fully mapped coach/role replacement nor a green P(start) gate. Keep all one-scheduler, V6 factual, V12_PLAYER_MINUTES sole numeric owner, MC500K, immutable forecast and Stage3 fail-closed contracts unchanged.
+
+Change timestamp: 2026-10-15T13:07:00+07:00
+Documentation sync: UPDATED
+Documentation timestamp: 2026-10-15T13:07:00+07:00

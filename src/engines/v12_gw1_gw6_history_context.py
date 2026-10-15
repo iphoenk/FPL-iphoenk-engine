@@ -686,6 +686,109 @@ def _focus_team_selection_shadow(
     }
 
 
+
+def _all_clubs_tactical_coverage(
+    bootstrap: Mapping[str, Any],
+    official_fixtures: Sequence[Mapping[str, Any]],
+    tactical_matches: Sequence[Mapping[str, Any]],
+    historical_gws: Sequence[int],
+) -> dict[str, Any]:
+    """Full-league, read-only coach/formation/selection evidence coverage.
+
+    Use original Official team/fixture identity for the denominator. One
+    downloaded match gives two team observations, not two full fixtures.
+    Neither an observed slot nor matchday injury proves predeadline ability.
+    """
+    team_names = {
+        _id(team.get("id")): str(team.get("name") or team.get("short_name") or "")
+        for team in bootstrap.get("teams") or [] if isinstance(team, Mapping)
+    }
+    teams = {
+        _id(player.get("team")) for player in bootstrap.get("elements") or []
+        if isinstance(player, Mapping)
+    } | {
+        _id(fixture.get(key)) for fixture in official_fixtures
+        if isinstance(fixture, Mapping) for key in ("team_h", "team_a")
+        if _id(fixture.get("event")) in historical_gws
+    }
+    teams = {team for team in teams if team is not None}
+    expected: dict[int, set[int]] = {team: set() for team in teams}
+    for fixture in official_fixtures:
+        if (not isinstance(fixture, Mapping)
+                or _id(fixture.get("event")) not in historical_gws
+                or fixture.get("finished") is not True):
+            continue
+        fid = _id(fixture.get("id"))
+        home, away = _id(fixture.get("team_h")), _id(fixture.get("team_a"))
+        if fid is None or home == away:
+            continue
+        for team in (home, away):
+            if team in expected:
+                expected[team].add(fid)
+    by_team: dict[int, list[Mapping[str, Any]]] = {team: [] for team in teams}
+    for observation in tactical_matches:
+        team = _id(observation.get("team_id"))
+        fixture = _id(observation.get("fixture_id"))
+        if team in by_team and fixture in expected.get(team, set()):
+            by_team[team].append(observation)
+
+    clubs = []
+    for team in sorted(teams):
+        games = sorted(by_team[team], key=lambda m: (m["gw"], m["fixture_id"]))
+        observed_fixtures = {m["fixture_id"] for m in games}
+        expected_fixtures = expected[team]
+        # A source's observed XI may be incomplete because native player
+        # crosswalks are deliberately strict; missing identities stay missing.
+        starters = sum(len(m.get("verified_player_roles") or {}) for m in games)
+        bench = sum(len(m.get("verified_bench_players") or {}) for m in games)
+        unavailable = sum(len(m.get("verified_unavailable_players") or {}) for m in games)
+        managers_with_native_id = sum(_id(m.get("manager_native_id")) is not None for m in games)
+        slot_shadow = _focus_team_selection_shadow(tactical_matches, team)
+        clubs.append({
+            "team_id": team,
+            "team_name": team_names.get(team) or f"Official FPL team {team}",
+            "finalized_official_fixture_count": len(expected_fixtures),
+            "verified_tactical_team_fixture_count": len(observed_fixtures),
+            "missing_official_fixture_ids": sorted(expected_fixtures - observed_fixtures),
+            "verified_native_manager_id_count": managers_with_native_id,
+            "verified_mapped_starter_count": starters,
+            "unmapped_expected_starter_slots": max(0, 11 * len(observed_fixtures) - starters),
+            "verified_provider_bench_count": bench,
+            "verified_provider_unavailable_count": unavailable,
+            "same_provider_slot_candidate_group_count": len(
+                slot_shadow["observed_same_slot_candidate_groups"]
+            ),
+            "coach_formation_coverage": (
+                "NO_FINALIZED_OFFICIAL_FIXTURE" if not expected_fixtures else
+                "RETROSPECTIVE_COMPLETE" if observed_fixtures == expected_fixtures
+                else "RETROSPECTIVE_PARTIAL"
+            ),
+            "timeline": [{
+                "gw": m["gw"], "fixture_id": m["fixture_id"],
+                "manager": m["manager"], "manager_native_id": m.get("manager_native_id"),
+                "formation": m["formation"],
+                "source_snapshot_sha256": m["source_snapshot_sha256"],
+                "source_effective_at": m.get("source_effective_at"),
+            } for m in games],
+            "semantic_tactical_roles_verified": False,
+            "pregame_availability_asof_verified": False,
+        })
+    full_count = sum(x["coach_formation_coverage"] == "RETROSPECTIVE_COMPLETE" for x in clubs)
+    return {
+        "contract": "V12_ALL_CLUBS_TACTICAL_COVERAGE_V1",
+        "historical_gws": list(historical_gws),
+        "scoped_club_count": len(clubs),
+        "expected_finalized_team_fixture_observations": sum(len(x) for x in expected.values()),
+        "verified_team_fixture_observations": sum(x["verified_tactical_team_fixture_count"] for x in clubs),
+        "complete_coach_formation_club_count": full_count,
+        "clubs": clubs,
+        "role_semantics": "UNVERIFIED_POSITION_PROXY_ONLY",
+        "availability_semantics": "POST_MATCH_PROVIDER_REPORT_NOT_PREDEADLINE",
+        "predeadline_asof_proven": False,
+        "numeric_pstart_effect": "NONE",
+    }
+
+
 def build_retrospective_context(
     *,
     bootstrap: Mapping[str, Any],
@@ -768,6 +871,9 @@ def build_retrospective_context(
         "player_position_counts": dict(by_position),
         "source_health": {"understat": understat_source, "fotmob": match_source},
         "match_tactics_verified_team_observations": len(tactical_matches),
+        "all_clubs_tactical_coverage": _all_clubs_tactical_coverage(
+            bootstrap, official_fixtures, tactical_matches, gw_ids
+        ),
         "verified_context_ledger": context_ledger,
         "players": players,
         "focus_players": focused,

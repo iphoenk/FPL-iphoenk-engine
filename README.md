@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **P0 T1 natural acquisition complete (16 Oct 2026):** Verified natural V6 run 38794783116 (02:33 WIB) contains 60/60 original FotMob matchDetails (56 retained prior + 4 freshly retrieved), 30/30 ESPN-native summaries, 120/120 observed manager/formation team fixtures, and independent Official 1,320/1,320 starter observations. V6 now exposes total_usable_finalized_match_details beside cached_finalized_match_details so 56/60 retained is not misread as current total. Direct certified FotMob player mapping is still 784/1,320 starter observations; remaining 536 are **NOT** admitted to canonical identity, even if name/age/GW history gives unique retrospective review candidates. Historical original predeadline as-of, semantic roles, and prospective GW7 calibration remain unverified, with no P(start) or GW7 immutable change.
+
 - **P0 T1 live source freshness isolation (15 Oct 2026):** V6 source readiness now compares the age of ALL declared required live request IDs, not the oldest historical enriched/cache row. A missing, unusable or stale required live row remains fail-closed; historical rows retain their original SHA, age and retrospective lineage. Diagnostic exposes both whole-data age and required-live age separately. No change to V6 factual authority, source identity, P(start), GW7 freeze, scheduler or source caps.
 
 

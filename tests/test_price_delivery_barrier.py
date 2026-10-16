@@ -246,14 +246,46 @@ def test_b_dynamic_current15_precedence_and_next_gw_re_resolve():
         "generated_at": "2026-10-11T01:00:00+07:00",
         "auth_state": "AUTH_AVAILABLE",
         "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "_price_selected_current": True,
+        "_price_source_scoring_gw": 6,
     }
     got_d = resolve_current15(
         planning_gw=7,
         bootstrap=bootstrap,
         explicit_user_evidence=squad_b,
         authenticated_current_team=squad_d,
+        as_of="2026-10-11T01:10:00+07:00",
     )
     assert got_d["element_ids"] == list(range(61, 76))
+    assert got_d["state"] == "CURRENT"
+
+    wrong_scoring_gw = deepcopy(squad_d)
+    wrong_scoring_gw["gw"] = 5
+    wrong_scoring_gw["_price_source_scoring_gw"] = 5
+    assert resolve_current15(
+        planning_gw=7,
+        bootstrap=bootstrap,
+        authenticated_current_team=wrong_scoring_gw,
+        as_of="2026-10-11T01:10:00+07:00",
+    )["state"] == "STALE"
+
+    stale_snapshot = deepcopy(squad_d)
+    stale_snapshot["generated_at"] = "2026-10-10T20:00:00+07:00"
+    assert resolve_current15(
+        planning_gw=7,
+        bootstrap=bootstrap,
+        authenticated_current_team=stale_snapshot,
+        as_of="2026-10-11T01:10:00+07:00",
+    )["state"] == "STALE"
+
+    expired = deepcopy(squad_d)
+    expired["auth_state"] = "AUTH_EXPIRED"
+    assert resolve_current15(
+        planning_gw=7,
+        bootstrap=bootstrap,
+        authenticated_current_team=expired,
+        as_of="2026-10-11T01:10:00+07:00",
+    )["state"] == "STALE"
 
 
 def test_c_contemplated_transfer_does_not_mutate_current15():

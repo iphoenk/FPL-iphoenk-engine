@@ -24,3 +24,14 @@ def test_stagec_shadow_rejects_duplicate_official_ids():
     import pytest
     with pytest.raises(ValueError, match="OFFICIAL_UNIVERSE_INVALID"):
         audit_stagec_context([1, 1], [])
+
+
+def test_conflicting_observations_cannot_be_reintroduced():
+    base = {"element": 1, "field": "role", "source": "V6_OBSERVED_MATCH", "match_id": "m1"}
+    result = audit_stagec_context([1], [
+        {**base, "value": "WINGER"},
+        {**base, "value": "FULLBACK"},
+        {**base, "value": "WINGER"},
+    ])
+    assert result["observed_players_by_field"]["role"] == 0
+    assert result["rejected_observations_by_reason"]["CONFLICTING_OBSERVATION"] == 2

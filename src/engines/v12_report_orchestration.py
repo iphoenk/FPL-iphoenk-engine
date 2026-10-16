@@ -5333,6 +5333,41 @@ def _render_deep_visible_contract_lines(
                 "Evidence is decision-usable at the confidence level above; partial or stale domains cannot independently trigger ACT."
             )
 
+        # Independent counterpart is advisory and never upgrades canonical status.
+        # Only comparable, timestamped, separately sourced evidence may confirm.
+        from src.engines.v12_independent_counterpart import assess_counterpart
+        lines.append("### INDEPENDENT COUNTERPART ANALYSIS")
+        lines.append("This gate does not change canonical P1.7, S08, or MC500K decisions.")
+        counterpart = dict(payload.get("independent_counterpart") or {})
+        comparisons = [dict(item) for item in counterpart.get("assessments") or []
+                       if isinstance(item, Mapping)]
+        if not comparisons:
+            lines.append("Counterpart verdict: INSUFFICIENT_EVIDENCE — no occurrence-bound independent comparable assessment supplied.")
+            lines.append("Required: player, Starting XI, formation, captain/VC, transfer, and mini-league source-as-of validation.")
+        else:
+            rendered = []
+            for item in comparisons:
+                result = assess_counterpart(
+                    dict(item.get("canonical") or {}),
+                    [dict(x) for x in item.get("counterparts") or [] if isinstance(x, Mapping)],
+                )
+                rendered.append((
+                    item.get("assessment_type", "UNSPECIFIED"),
+                    result.get("subject", "UNAVAILABLE"),
+                    result.get("metric", "UNAVAILABLE"),
+                    result.get("verdict", "INSUFFICIENT_EVIDENCE"),
+                    result.get("reason", "UNAVAILABLE"),
+                    "; ".join(
+                        str(x.get("source")) + " delta=" + str(round(x.get("delta", 0), 3))
+                        for x in result.get("comparisons") or []
+                    ) or "NO_COMPARABLE_SOURCE",
+                ))
+            lines.extend(_markdown_table(
+                ("Assessment", "Subject", "Metric", "Verdict", "Reason", "Independent evidence"),
+                rendered,
+            ))
+            lines.append("Independent counterpart cannot silently replace the canonical decision.")
+
     elif section_id == "S15B":
         coverage = str(payload.get("coverage_state") or "").upper()
         expected = payload.get("expected_manager_count")
@@ -6021,6 +6056,15 @@ def _render_deep_visible_contract_lines(
             lines.append("Alternative: " + _human_summary(candidate) if isinstance(candidate, (str, int, float, bool)) and candidate != "" else "Alternative: UNAVAILABLE")
 
     elif section_id == "S19":
+        lines.append("### INDEPENDENT COUNTERPART DECISION CHECK")
+        independent = dict(payload.get("independent_counterpart") or {})
+        if independent.get("overall_verdict") in {"CONFIRMED", "CONTESTED", "INSUFFICIENT_EVIDENCE"}:
+            lines.append("Counterpart verdict: " + str(independent["overall_verdict"]))
+            lines.append("See S15 for independent source-as-of and comparable-metric details.")
+        else:
+            lines.append("Counterpart verdict: INSUFFICIENT_EVIDENCE — no occurrence-bound independently validated final verdict.")
+            lines.append("Canonical action state is preserved; independent confirmation is NOT asserted.")
+
         raw_judgement = payload.get("final_judgement")
         if isinstance(raw_judgement, Mapping):
             judgement = dict(raw_judgement)

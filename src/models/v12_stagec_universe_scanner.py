@@ -787,12 +787,23 @@ def build_stagec_from_canonical_inputs(
     )
     # Stage B authoritative membership gate; external mapping is independently
     # audited and must never remove an Official FPL player from the scan.
-    universe_gate = audit_universe(
-        official_rows,
-        [row.get("element") or row.get("id") for row in projections.get("players") or []],
-        [],
-        expected_official_count=len(official_rows),
-    )
+    try:
+        universe_gate = audit_universe(
+            official_rows,
+            [row.get("element") or row.get("id") for row in projections.get("players") or []],
+            [],
+            expected_official_count=len(official_rows),
+        )
+    except ValueError as exc:
+        # Preserve the existing Stage C diagnostic contract: malformed input
+        # degrades the scan instead of aborting the entire report. Never PASS.
+        universe_gate = {
+            "contract": "V12_OFFICIAL_FULL_UNIVERSE_COVERAGE_V1",
+            "scanner_coverage": "FAIL",
+            "failure_reason": str(exc),
+            "source_fallback": "OFFICIAL_FPL_ONLY_FOR_UNMAPPED",
+            "numeric_model_effect": "NONE",
+        }
     scan["stageb_official_universe_gate"] = universe_gate
     official_complete = official_complete and universe_gate["scanner_coverage"] == "PASS"
     scan["official_universe_count"] = len(official_rows)

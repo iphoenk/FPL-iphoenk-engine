@@ -1227,6 +1227,30 @@ jobs:
           fi
           exit 0
 
+      # Existing DEEP run only: evaluate the ORIGINAL frozen GW7 projection
+      # against completed V6 Official match evidence, if and only if settled.
+      # This step cannot alter the already-published report or numeric owner.
+      - name: Stage C original-Git shadow replay when GW7 is officially final
+        if: always() && needs.parse.outputs.report_mode == 'DEEP' && steps.private_delivery.outputs.status == 'PASS'
+        working-directory: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m src.engines.v12_stagec_postsettlement_replay \
+            --private-repo ../private-reports \
+            --v6-repo ../runtime-data \
+            --fetch-original \
+            --output artifacts/v12-stagec-oos/stagec-readback.json
+
+      - name: Retain safe aggregate Stage C replay receipt
+        if: always() && needs.parse.outputs.report_mode == 'DEEP'
+        uses: actions/upload-artifact@v4
+        with:
+          name: v12-stagec-safe-oos-${{ github.run_id }}
+          path: app/artifacts/v12-stagec-oos/stagec-readback.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Build allowlisted public operational proof
         if: always()
         id: public_proof

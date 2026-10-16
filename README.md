@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **PRICE Stage B (16 Oct 2026):** Require verified authenticated bank, FT, hit cost, and 15/15 Official purchase and selling prices before private finance authority is accepted. The legacy PRICE source label is matched to canonical evidence; selling-price route normalization remains Stage C and PRICE is not promoted to FULL. No scheduler, PR #809, frozen GW7, Stage3, or MC changes. Change timestamp: `2026-10-16T11:27:14+07:00`. Documentation sync: UPDATED.
+
 - **P0 PRICE Stage A shared CURRENT15 authority (16 Oct 2026):** PRICE now consumes the same canonical private evidence selector as DEEP, with exact report-slot as-of validation and explicit scoring-GW6 versus editable-GW7 provenance. Five reviewed regression node IDs cover authenticated 15/15 CURRENT and fail-closed expired identity, entry mismatch, wrong editable GW and post-slot evidence. The existing finance source-label gate remains intentionally DEGRADED until Stage B; no false PRICE READY_FULL, pricing normalization, scheduler, PR #809 or immutable GW7 forecast change. V12 governed test baseline 1,419 -> 1,424. Change timestamp: `2026-10-16T11:17:00+07:00`. Documentation sync: UPDATED.
 
 - **Stage B scanner integration (16 Oct 2026):** Canonical Stage C bridge now calls the read-only Official FPL membership audit and exposes stageb_official_universe_gate; unmapped external provider IDs remain Official-only. No scheduler or P(start) numerical changes. Change timestamp: `2026-10-16T08:18:00+07:00`. Documentation sync: UPDATED.
@@ -135,7 +137,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-16T11:17:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-16T11:27:14+07:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.
@@ -451,3 +453,11 @@ PRICE now binds its CURRENT15 identity to the exact same source selector as DEEP
 Change timestamp: `2026-10-16T11:17:00+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-16T11:17:00+07:00`
+
+### PRICE finance verification Stage B
+
+Private CURRENT15 evidence now requires complete verified financial provenance before finance authority can be asserted. Executable transfer affordability stays disabled until Stage C selling-price route mapping is present. Eleven regression node IDs added for exact V12 governance coverage.
+
+Change timestamp: `2026-10-16T11:27:14+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-16T11:27:14+07:00`

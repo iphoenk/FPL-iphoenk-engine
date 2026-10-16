@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .v12_integrated_report_runner import run_deep
+from .v12_formation_monte_carlo import run_forced_lineup_monte_carlo
 from .v12_stage3_upstream_diagnostics import blocked_stage3_payload
 from .v12_p6_runtime import _identity
 from .v12_scenario_package import (
@@ -28,6 +29,57 @@ from .v12_scenario_package import (
 
 class P4ScenarioProductionError(RuntimeError):
     pass
+
+
+def _forced_trio_routes(owned: list[int], planning_gw: int) -> list[dict[str, Any]]:
+    """Build the two exact GW7-GW12 routes without invoking the optimizer."""
+    scenario_a = {
+        109,  # Verbruggen
+        115, 8, 391,  # De Cuyper, Calafiori, Gvardiol
+        154, 40, 427, 124,  # Palmer, Rogers, Mbeumo, Groß
+        411, 165, 249,  # Haaland, João Pedro, Barry
+        572, 68, 31, 279,  # Tzolakis, Tavernier, Konsa, Ajayi
+    }
+    scenario_b = {
+        109, 8, 31, 115, 279, 391,  # Verbruggen, Calafiori, Konsa, De Cuyper, Ajayi, Gvardiol
+        68, 124, 427,  # Tavernier, Groß, Mbeumo
+        249, 411,  # Barry, Haaland
+        572, 40, 154, 165,  # Tzolakis, Rogers, Palmer, João Pedro
+    }
+    if set(owned) != scenario_a or scenario_a != scenario_b:
+        raise P4ScenarioProductionError(
+            "forced Chelsea trio requires the authenticated 15-player GW7 squad"
+        )
+
+    def rows(starters: list[int], bench: list[int], captain: int, vice: int) -> list[dict[str, Any]]:
+        return [
+            {
+                "gw": planning_gw + offset,
+                "starting_xi": list(starters),
+                "bench_order": list(bench),
+                "bench_gk": 572,
+                "captain": captain,
+                "vice_captain": vice,
+            }
+            for offset in range(6)
+        ]
+
+    return [
+        {
+            "route_id": "HOLD",
+            "label": "Scenario A - user actual XI 3-4-3",
+            "classification": "FORCED_USER_XI",
+            "per_gw": rows([109, 115, 8, 391, 154, 40, 427, 124, 411, 165, 249], [68, 31, 279], 411, 154),
+        },
+        {
+            "route_id": "SCENARIO_B_OPT_VC",
+            "label": "Scenario B - previous V12 XI 5-3-2 optimized vice",
+            "classification": "FORCED_PREVIOUS_V12_XI",
+            "per_gw": rows([109, 8, 31, 115, 279, 391, 68, 124, 427, 249, 411], [40, 154, 165], 411, 427),
+            "bench_vice_candidate": 154,
+            "bench_vice_candidate_status": "NOT_SCORED_UNDER_CANONICAL_STARTER_VICE_CONTRACT",
+        },
+    ]
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -514,6 +566,24 @@ def _evaluate_scenario_worker(
     warm_state = _read_json(warm_state_path)
     result = _decision_result(bundle)
     result["p1_8_rebind_inputs"] = _compact_p1_8_rebind_inputs(warm_state)
+    if os.environ.get("V12_P4_FORCED_TRIO") == "1" and not overrides:
+        projections = warm_state.get("projections")
+        if not isinstance(projections, Mapping):
+            raise P4ScenarioProductionError(
+                "forced trio requires the private canonical projection snapshot"
+            )
+        current15 = [int(value) for value in warm_state.get("owned") or []]
+        result["forced_trio_mc"] = run_forced_lineup_monte_carlo(
+            projections,
+            current15=current15,
+            scenarios=_forced_trio_routes(
+                current15,
+                int(warm_state.get("planning_gw") or 0),
+            ),
+            input_snapshot_id="private-full-master:" + str(report_slot),
+            planning_gw=int(warm_state.get("planning_gw") or 0),
+            seed=120910,
+        )
     warm_state_path.unlink(missing_ok=True)
     return result
 
@@ -601,6 +671,11 @@ def materialize_p4_package(
         raise P4ScenarioProductionError("P4 package scenario coverage is incomplete")
     if package.get("private_only") is not True:
         raise P4ScenarioProductionError("P4 package lost private-only governance")
+    if os.environ.get("V12_P4_FORCED_TRIO") == "1":
+        forced = base.get("forced_trio_mc")
+        if not isinstance(forced, Mapping):
+            raise P4ScenarioProductionError("forced trio MC result is missing")
+        package["forced_trio_mc"] = dict(forced)
     return package
 
 

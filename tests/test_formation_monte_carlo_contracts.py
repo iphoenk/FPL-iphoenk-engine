@@ -5,6 +5,7 @@ import pytest
 from src.engines.v12_formation_monte_carlo import (
     FORMATIONS,
     FormationMonteCarloError,
+    run_forced_lineup_monte_carlo,
     run_formation_monte_carlo,
 )
 from src.engines.v12_report_orchestration import _formation_mc_lines
@@ -88,6 +89,82 @@ def _fake_simulator(projections, route_defs, **kwargs):
         },
         "output_fingerprint": "mc-fingerprint",
     }
+
+
+def test_forced_lineup_mc_binds_exact_routes_to_same_current15_and_kernel():
+    routes = [
+        {
+            "route_id": "HOLD",
+            "label": "Scenario A",
+            "per_gw": [
+                {
+                    "gw": gw,
+                    "starting_xi": list(range(1, 12)),
+                    "bench_order": [12, 13, 14],
+                    "bench_gk": 15,
+                    "captain": 1,
+                    "vice_captain": 2,
+                }
+                for gw in range(7, 13)
+            ],
+        },
+        {
+            "route_id": "SCENARIO_B",
+            "label": "Scenario B",
+            "per_gw": [
+                {
+                    "gw": gw,
+                    "starting_xi": list(range(2, 13)),
+                    "bench_order": [1, 13, 14],
+                    "bench_gk": 15,
+                    "captain": 2,
+                    "vice_captain": 3,
+                }
+                for gw in range(7, 13)
+            ],
+        },
+    ]
+
+    def simulator(projections, route_defs, **kwargs):
+        assert [row["route_id"] for row in route_defs] == ["HOLD", "SCENARIO_B"]
+        assert kwargs["actual_paths"] == 500_000
+        assert kwargs["horizons"] == (1, 3, 5)
+        assert kwargs["selected_route_id"] == "HOLD"
+        assert kwargs["canonical"] is True
+        return {
+            "execution_state": "EXECUTED",
+            "canonical_pass": True,
+            "actual_paths": 500_000,
+            "common_random_numbers": True,
+            "correlated": True,
+            "convergence_evidence": {"status": "PASS"},
+            "metrics": {
+                route_id: {
+                    str(horizon): {"status": "READY", "mean_net_utility": 10.0}
+                    for horizon in (1, 3, 5)
+                }
+                for route_id in ("HOLD", "SCENARIO_B")
+            },
+            "paired_outputs": {
+                "HOLD__VS__SCENARIO_B__H1": {"status": "READY", "p_a_gt_b": 0.6},
+                "HOLD__VS__SCENARIO_B__H3": {"status": "READY", "p_a_gt_b": 0.55},
+                "HOLD__VS__SCENARIO_B__H5": {"status": "READY", "p_a_gt_b": 0.52},
+            },
+            "model_evidence_binding": {"output_fingerprint": "projection-fp"},
+        }
+
+    result = run_forced_lineup_monte_carlo(
+        {"planning_gw": 7},
+        current15=list(range(1, 16)),
+        scenarios=routes,
+        input_snapshot_id="private-full-master:gw7",
+        simulator=simulator,
+    )
+
+    assert result["integrity"]["exact_route_binding"] is True
+    assert result["integrity"]["common_random_numbers"] is True
+    assert result["routes"]["HOLD"]["label"] == "Scenario A"
+    assert result["paired"]["HOLD__VS__SCENARIO_B__H5"]["p_a_gt_b"] == 0.52
 
 
 def test_all_eight_formations_are_executed_on_one_six_gw_contract():

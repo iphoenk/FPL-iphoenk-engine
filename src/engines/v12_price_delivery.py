@@ -1523,6 +1523,7 @@ def _load_personal_inputs(
     runtime_data_root: Path,
     private_data_root: Path | None,
     planning_gw: int | None = None,
+    report_slot: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Use the shared personal evidence adapter and selector for PRICE.
 
@@ -1557,13 +1558,106 @@ def _load_personal_inputs(
         enforce_public_disclosure=True,
     )
     selected = select_personal_evidence(
-        candidates, planning_gw=planning_gw, expected_entry_id=3462711
+        candidates,
+        planning_gw=planning_gw,
+        expected_entry_id=3462711,
+        as_of=report_slot,
     )
     payload = dict(selected.get("payload") or {})
     source_class = str(selected.get("source_class") or "").upper()
     if source_class == "OFFICIAL_SUBMITTED_PICKS":
-        return {"current_team": {}, "submitted_picks": payload}
-    return {"current_team": payload, "submitted_picks": {}}
+        return {
+            "current_team": {},
+            "submitted_picks": payload,
+            "selected_evidence": selected,
+        }
+    return {
+        "current_team": payload,
+        "submitted_picks": {},
+        "selected_evidence": selected,
+    }
+
+
+def resolve_price_from_selected_evidence(
+    *,
+    selected: Mapping[str, Any],
+    planning_gw: int,
+    bootstrap: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project the shared DEEP/PRICE selector's decision, without reselecting.
+
+    The shared selector alone establishes entry identity, authenticated
+    lineage, exact 15-player ownership and editable planning-GW validity.
+    Retain the existing PRICE source labels until the separate finance-binding
+    stage, so Stage A cannot accidentally promote incomplete economics.
+    """
+    proof = dict(selected or {})
+    payload = dict(proof.get("payload") or {})
+    raw_rows = [
+        dict(row) for row in proof.get("rows") or []
+        if isinstance(row, Mapping)
+    ]
+    rows = _normalise_team_rows(raw_rows, bootstrap=bootstrap)
+    ids = [int(row["element_id"]) for row in rows]
+    exact15 = len(rows) == 15 and len(set(ids)) == 15
+    canonical_source_class = str(proof.get("source_class") or "").upper()
+    authenticated = proof.get("authenticated") is True
+    user_current = proof.get("user_current") is True
+    current = bool(
+        exact15
+        and proof.get("resolution_status") == "CURRENT_VALID"
+        and proof.get("current_semantic") is True
+        and proof.get("stale") is False
+        and (
+            (authenticated and canonical_source_class == "AUTHENTICATED_CURRENT_TEAM")
+            or (user_current and canonical_source_class == "USER_CONFIRMED")
+        )
+    )
+    source_class = (
+        "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+        if authenticated and canonical_source_class == "AUTHENTICATED_CURRENT_TEAM"
+        else "USER_EXPLICIT_CURRENT_GW"
+        if user_current and canonical_source_class == "USER_CONFIRMED"
+        else canonical_source_class or None
+    )
+    if not exact15:
+        return {
+            "state": "UNRESOLVED",
+            "supportable": False,
+            "rows": [],
+            "element_ids": [],
+            "source_class": source_class,
+            "canonical_source_class": canonical_source_class,
+            "gw": None,
+            "observed_at": proof.get("observed_at") or "UNAVAILABLE",
+            "finance": {},
+            "reason": "shared personal evidence did not establish 15 unique player IDs",
+        }
+    finance = (
+        {
+            "bank": payload.get("bank"),
+            "free_transfers": payload.get("free_transfers"),
+            "hit_cost": payload.get("hit_cost"),
+            "transfers_made": payload.get("transfers_made"),
+        }
+        if current else {}
+    )
+    return {
+        "state": "CURRENT" if current else "STALE",
+        "supportable": current,
+        "rows": rows,
+        "element_ids": ids,
+        "source_class": source_class,
+        "canonical_source_class": canonical_source_class,
+        "gw": planning_gw if current else proof.get("gw"),
+        "source_scoring_gw": proof.get("source_scoring_gw"),
+        "editable_planning_gw": payload.get("editable_planning_gw"),
+        "observed_at": proof.get("observed_at") or "UNAVAILABLE",
+        "finance": finance,
+        "reason": None if current else (
+            "shared personal evidence is not authenticated/current for planning GW"
+        ),
+    }
 
 
 def _public_first_personal_projection(
@@ -1760,17 +1854,13 @@ def run_price_occurrence(
         runtime_data_root=runtime_data_root,
         private_data_root=private_data_root,
         planning_gw=planning_gw,
+        report_slot=report_slot,
     )
     current_team = personal_inputs["current_team"]
-    submitted = personal_inputs["submitted_picks"]
-    explicit = explicit_user_evidence_from_state(state)
-    resolution = resolve_current15(
+    resolution = resolve_price_from_selected_evidence(
+        selected=personal_inputs["selected_evidence"],
         planning_gw=planning_gw,
         bootstrap=bootstrap,
-        explicit_user_evidence=explicit,
-        authenticated_current_team=current_team,
-        personal_artifact=None,
-        last_good_evidence=submitted,
     )
 
     evaluated_universe: list[dict[str, Any]] = []

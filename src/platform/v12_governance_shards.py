@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fail-closed deterministic sharding of the exact pre-repair V12 required suite.
 
-The prior 52-file V12 suite is expanded to 54 required files and 1451 collected
+The prior 52-file V12 suite is expanded to 54 required files and 1460 collected
 pytest node IDs, including the reviewed provisional-fixture lifecycle and active-runner S02
-history finality regression cases (13 Oct 2026), plus five reviewed P(start) calibration, resolution and as-of-source regressions (14 Oct 2026). Three reviewed coach/formation/role evidence fail-closed regressions (15 Oct 2026) expand the baseline to 1419. Five reviewed PRICE Stage A canonical current-team GW6-to-editable-GW7 and fail-closed provenance regressions (16 Oct 2026) raise it to 1424. Eleven reviewed Stage B finance test nodes (16 Oct 2026) bring the mandatory baseline to 1435. Sixteen reviewed PRICE Stage C route-pricing and security tests (16 Oct 2026) expand it to 1451. No tests are
+history finality regression cases (13 Oct 2026), plus five reviewed P(start) calibration, resolution and as-of-source regressions (14 Oct 2026). Three reviewed coach/formation/role evidence fail-closed regressions (15 Oct 2026) expand the baseline to 1419. Five reviewed PRICE Stage A canonical current-team GW6-to-editable-GW7 and fail-closed provenance regressions (16 Oct 2026) raise it to 1424. Eleven reviewed Stage B finance test nodes (16 Oct 2026) bring the mandatory baseline to 1435. Sixteen reviewed PRICE Stage C route-pricing and security tests (16 Oct 2026) expand it to 1451. Nine reviewed Stage 1 exact-667 Official scanner and provider-provenance tests expand it to 1460 (16 Oct 2026). No tests are
 skipped, deselected, or replaced by subset fixtures.
 """
 from __future__ import annotations
@@ -75,7 +75,7 @@ REQUIRED_FILES = [
     "tests/test_data_platform_precompute_control.py",
     "tests/test_runtime_cross_cpu_proof_registry.py"
 ]
-BASELINE_TOTAL = 1451
+BASELINE_TOTAL = 1460
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

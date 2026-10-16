@@ -5201,7 +5201,245 @@ def _evidence_quality_surface(
             "state": identity_status,
             "source": (personal_resolution or {}).get("source"),
             "observed_at": (personal_resolution or {}).get("observed_at"),
-        },…2296 tokens truncated…          "player": (pmap.get(element) or {}).get("name") or f"element:{element}",
+        },
+        "authenticated personal auth": {
+            "state": auth,
+            "source": "data/v6/personal/current_team.json:auth_state",
+        },
+        "authenticated finance": {
+            "state": finance_state,
+            "bank_status": (finance or {}).get("bank_status"),
+            "sell_value_status": (finance or {}).get("sell_value_status"),
+            "free_transfers_status": (finance or {}).get("free_transfers_status"),
+        },
+        "chips": {
+            "state": "AVAILABLE" if chip_available else "UNAVAILABLE",
+            "source": (finance or {}).get("personal_evidence_source"),
+        },
+        "fixtures/calendar": {
+            "state": str(calendar.get("state") or "UNAVAILABLE"),
+            "non_pl_schedule_bound": coverage.get(
+                "verified_non_pl_schedule_bound"
+            ),
+        },
+        "workload/travel": {
+            "state": (
+                "COMPLETE"
+                if coverage.get("verified_non_pl_schedule_bound") is True
+                and str(coverage.get("player_observation_status") or "").upper()
+                == "VALIDATED"
+                else "CLUB_SCHEDULE_COMPLETE_PLAYER_OBSERVATIONS_UNAVAILABLE"
+                if coverage.get("verified_non_pl_schedule_bound") is True
+                else "PL_ONLY_DEGRADED"
+            ),
+            "club_schedule_status": coverage.get("club_schedule_status"),
+            "player_observation_status": coverage.get("player_observation_status"),
+            "static_fatigue_penalty": False,
+        },
+        "tactical": {
+            "state": "CURRENT_MODEL_OUTPUT" if projections else "UNAVAILABLE",
+        },
+        "post-match underlying": {
+            "state": (
+                "AVAILABLE"
+                if (post_match_review or {}).get("our15")
+                else "UNAVAILABLE"
+            ),
+        },
+        "price factual": {
+            "state": "CURRENT" if official else "UNAVAILABLE",
+            "source": "OFFICIAL_FPL_PUBLIC",
+        },
+        "price predictor freshness": {
+            "state": price_freshness,
+            "health": (rise or {}).get("predictor_health"),
+            "observed_at": (
+                price_rows[0].get("evidence_timestamp")
+                if price_rows else None
+            ),
+        },
+        "mini-league submitted picks": {
+            "state": (mini or {}).get("coverage_state") or "UNAVAILABLE",
+            "semantic": "BEHAVIOURAL BASELINE",
+        },
+        "mini-league standings/live": {
+            "state": (mini or {}).get("coverage_state") or "UNAVAILABLE",
+        },
+        "weather": {
+            "state": (
+                "REPORT_TIME_BOUND"
+                if weather_bound
+                else "DEGRADED_OR_OUTSIDE_FORECAST_HORIZON"
+            ),
+            "mutates_football_model": False,
+        },
+        "model snapshot": {
+            "state": "CURRENT" if projections else "UNAVAILABLE",
+            "timestamp": report_slot,
+        },
+        "data_timestamp": report_slot,
+    }
+
+
+def _action_board_surface(
+    *,
+    dashboard: Mapping[str, Any],
+    stage3_decision: Mapping[str, Any] | None,
+    stage3_visible: Mapping[str, Any],
+    all15_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    selected_id = str(
+        (stage3_decision or {}).get("selected_route_id") or "HOLD"
+    )
+    routes = [
+        dict(row)
+        for row in stage3_visible.get("package_routes") or []
+        if isinstance(row, Mapping)
+    ]
+    alternative = next(
+        (
+            row for row in routes
+            if str(row.get("route") or "").upper() != "HOLD"
+        ),
+        None,
+    )
+    injury_watch = [
+        {
+            "element_id": row.get("element_id"),
+            "player": row.get("player") or row.get("name"),
+            "warning": row.get("injury_rotation_warning"),
+        }
+        for row in all15_rows
+        if str(row.get("injury_rotation_warning") or "NONE_MATERIAL")
+        != "NONE_MATERIAL"
+    ]
+    rows = [
+        {
+            "axis": "TRANSFER",
+            "NOW": dashboard.get("TRANSFER"),
+            "NEXT": "re-evaluate selected route at next fresh occurrence",
+            "TRIGGER TO ACT": (
+                (stage3_decision or {}).get("action_contract")
+                or "CURRENT_TRANSFER_GATE"
+            ),
+            "LATEST SAFE DECISION POINT": "NEXT_CANONICAL_PRE_DEADLINE_OCCURRENCE",
+            "COST OF WAITING": next(
+                (
+                    row.get("voi_vs_cost_of_waiting")
+                    for row in (stage3_decision or {}).get("routes") or []
+                    if str(row.get("route_id") or "") == selected_id
+                ),
+                None,
+            ),
+            "ABORT / REVERSAL": "fresh role/injury/economics/fixture evidence invalidates route",
+        },
+        {
+            "axis": "XI",
+            "NOW": dashboard.get("XI"),
+            "NEXT": "refresh availability, workload and final team news",
+            "TRIGGER TO ACT": "P1.7 legal XI remains supportable",
+            "LATEST SAFE DECISION POINT": "FINAL_PRE_DEADLINE_XI_CHECK",
+            "COST OF WAITING": "late lineup information may improve security",
+            "ABORT / REVERSAL": "starter probability or role materially changes",
+        },
+        {
+            "axis": "CAPTAIN",
+            "NOW": dashboard.get("CAPTAIN"),
+            "NEXT": "refresh S08 frontier and Competitive Window exposure",
+            "TRIGGER TO ACT": "captain frontier resolves under fresh supportable evidence",
+            "LATEST SAFE DECISION POINT": "FINAL_PRE_DEADLINE_CAPTAIN_CHECK",
+            "COST OF WAITING": "none unless new team news or role evidence arrives",
+            "ABORT / REVERSAL": "captain leaves legal final XI or football baseline changes",
+        },
+        {
+            "axis": "PRICE",
+            "NOW": dashboard.get("PRICE"),
+            "NEXT": "refresh governed predictor evidence",
+            "TRIGGER TO ACT": "price only affects execution timing after football route is supportable",
+            "LATEST SAFE DECISION POINT": "BEFORE_SUPPORTABLE_OFFICIAL_PRICE_CYCLE",
+            "COST OF WAITING": "possible affordability/optionality change",
+            "ABORT / REVERSAL": "stale predictor or football route no longer supportable",
+        },
+        {
+            "axis": "AUTH/FINANCE",
+            "NOW": (
+                "AVAILABLE"
+                if dashboard.get("PERSONAL_AUTH") == "AVAILABLE"
+                and dashboard.get("finance_available") is True
+                else "DEGRADED"
+            ),
+            "NEXT": "refresh authenticated current-team evidence",
+            "TRIGGER TO ACT": "current bank/sell-value/FT authority available",
+            "LATEST SAFE DECISION POINT": "BEFORE_ANY_EXECUTABLE_TRANSFER",
+            "COST OF WAITING": "execution economics remain unresolved",
+            "ABORT / REVERSAL": "auth expires or finance becomes stale",
+        },
+        {
+            "axis": "INJURY/TEAM NEWS",
+            "NOW": "MONITOR" if injury_watch else "CLEAR",
+            "NEXT": injury_watch or "refresh official team news",
+            "TRIGGER TO ACT": "new availability evidence changes P1.1/P1.7 decision",
+            "LATEST SAFE DECISION POINT": "FINAL_PRE_DEADLINE_TEAM_NEWS_CHECK",
+            "COST OF WAITING": "uncertainty versus information value",
+            "ABORT / REVERSAL": "new official availability evidence supersedes prior state",
+        },
+    ]
+    return {
+        "axes": rows,
+        "best_alternative": alternative,
+        "best_alternative_executable": (
+            alternative.get("executable") if alternative else None
+        ),
+        "finance_unresolved_hides_execution_readiness": True,
+    }
+
+
+
+def _formation_mini_league_strategy(
+    *,
+    lineup: Mapping[str, Any] | None,
+    mini: Mapping[str, Any] | None,
+    mini_overlay: Mapping[str, Any] | None,
+    projections: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    raw_formation = (lineup or {}).get("formation")
+    comparisons = [
+        dict(row)
+        for row in (lineup or {}).get("formation_comparison") or []
+        if isinstance(row, Mapping)
+    ]
+    overlay = dict(mini_overlay or {})
+    posture = str((overlay.get("risk_posture") or {}).get("posture") or "BALANCED").upper()
+    changed = bool((overlay.get("decision_delta") or {}).get("changed"))
+    if posture == "PROTECT":
+        stance = "PROTECT"
+    elif posture == "CHASE":
+        stance = "CHASE_MODERATE"
+    elif changed:
+        stance = "CHASE_MODERATE"
+    else:
+        stance = "BALANCED"
+
+    pmap = _projection_map(projections)
+    exposures = {
+        int(row.get("element_id") or 0): dict(row)
+        for row in (mini or {}).get("exposures") or []
+        if isinstance(row, Mapping) and int(row.get("element_id") or 0) > 0
+    }
+    xi_ids = [
+        element
+        for element in (
+            _surface_element(value)
+            for value in (lineup or {}).get("starting_xi") or []
+        )
+        if element is not None
+    ]
+    xi_exposure = []
+    for element in xi_ids:
+        exp = exposures.get(element) or {}
+        xi_exposure.append({
+            "element_id": element,
+            "player": (pmap.get(element) or {}).get("name") or f"element:{element}",
             "ownership_pct": exp.get("ownership_pct"),
             "starter_pct": exp.get("starter_pct"),
             "captain_pct": exp.get("captain_pct"),

@@ -35,8 +35,18 @@ def _git(repo: Path, *args: str, allow_missing: bool = False) -> bytes:
             stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired:
-        # This is a secret-free diagnostic. A timed-out Git push is uncertain;
-        # CAS readback must verify remote state before any refresh grant.
+        # Record only an allowlisted Git verb (never command arguments, URLs,
+        # paths or credentials). Identify expensive local checkout separately
+        # from remote fetch/push without weakening fail-closed semantics.
+        safe_operation = (
+            args[0] if args and args[0] in {
+                "fetch", "push", "worktree", "sparse-checkout", "checkout",
+                "ls-tree", "show", "rev-parse", "add", "commit",
+            } else "other"
+        )
+        print("OIDC_GIT_TIMEOUT_OPERATION=" + safe_operation, flush=True)
+        # An uncertain push must NEVER be assumed failed, and no refresh
+        # grant may be replayed on a timeout.
         raise RotationBlocked("CREDENTIAL_STORE_GIT_TIMEOUT") from None
     except Exception:
         raise RotationBlocked("CREDENTIAL_STORE_GIT_UNAVAILABLE") from None
@@ -149,8 +159,16 @@ class EncryptedGitCredentialStore:
             pushed = False
             with tempfile.TemporaryDirectory(prefix="fpl-oidc-encrypted-") as tmp:
                 work = Path(tmp)
-                _git(self.directory, "worktree", "add", "--quiet", "--detach", str(work), revision)
+                # The private report repository contains large historical
+                # artifacts. A full detached checkout may exceed the bounded
+                # Git-operation timeout even though CAS changes ONE ciphertext
+                # file. Keep the original parent tree via a sparse worktree.
+                _git(self.directory, "worktree", "add", "--quiet", "--detach",
+                     "--no-checkout", str(work), revision)
                 try:
+                    _git(work, "sparse-checkout", "set", "--no-cone",
+                         _CREDENTIAL_PATH)
+                    _git(work, "checkout", "-f", "HEAD")
                     destination = work / _CREDENTIAL_PATH
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     destination.write_bytes(encrypted + b"\n")

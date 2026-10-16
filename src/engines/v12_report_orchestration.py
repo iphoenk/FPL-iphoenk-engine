@@ -6322,7 +6322,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         foreign_ids = [
             str(row.get("section_id") or "").strip().upper()
             for row in sections
-            if not str(row.get("section_id") or "").strip().upper().startsWith("S")
+            if not str(row.get("section_id") or "").strip().upper().startswith("S")
         ]
         if foreign_ids:
             raise ReportOrchestrationError(

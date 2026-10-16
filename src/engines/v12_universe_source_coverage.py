@@ -22,7 +22,7 @@ def _ids(rows: list[Mapping[str, Any]], key: str) -> set[int]:
 def audit_universe(
     official_players: list[Mapping[str, Any]],
     scanner_player_ids: list[int],
-    provider_bridges: list[Mapping[str, Any]],
+    provider_bridges: list[Mapping[str, Any]] | None,
     *,
     expected_official_count: int = 667,
 ) -> dict[str, Any]:
@@ -36,9 +36,12 @@ def audit_universe(
     scanner = set(scanner_player_ids)
     missing = sorted(official - scanner)
     foreign = sorted(scanner - official)
+    # None means the orchestrator has not supplied verified provider
+    # provenance. It must not be reported as zero provider mappings.
+    provider_assessed = provider_bridges is not None
     mapped: set[int] = set()
     natives: set[str] = set()
-    for bridge in provider_bridges:
+    for bridge in provider_bridges or []:
         oid, native = bridge.get("official_element_id"), bridge.get("source_native_id")
         if isinstance(oid, bool) or not isinstance(oid, int) or oid not in official:
             raise ValueError("PROVIDER_BRIDGE_OFFICIAL_ID_INVALID")
@@ -59,9 +62,15 @@ def audit_universe(
         "scanner_coverage": "PASS" if full else "FAIL",
         "missing_official_ids": missing,
         "foreign_scanner_ids": foreign,
-        "verified_provider_bridges_in_universe": len(mapped),
-        "provider_unmapped_official_count": len(official - mapped),
-        "provider_full_coverage": "PASS" if len(mapped) == len(official) else "PARTIAL",
+        "provider_coverage_assessed": provider_assessed,
+        "verified_provider_bridges_in_universe": len(mapped) if provider_assessed else None,
+        "provider_unmapped_official_count": (
+            len(official - mapped) if provider_assessed else None
+        ),
+        "provider_full_coverage": (
+            "NOT_EVALUATED" if not provider_assessed else
+            "PASS" if len(mapped) == len(official) else "PARTIAL"
+        ),
         "source_fallback": "OFFICIAL_FPL_ONLY_FOR_UNMAPPED",
         "numeric_model_effect": "NONE",
     }

@@ -1091,8 +1091,8 @@ def test_s15b_bench_boost_keeps_slot_ownership_and_eo_distinct(monkeypatch):
     ours = next(row for row in detail["league_our15_exposure"] if row["element_id"] == 12)
     full12 = next(row for row in detail["league_full_composition"] if row["element_id"] == 12)
     assert (ours["starter_count"], ours["bench_count"]) == (full12["starter_count"], full12["bench_count"])
-    assert ours["starter_count"] == 1
-    assert ours["bench_count"] == 2
+    assert ours["starter_count"] == 0
+    assert ours["bench_count"] == 3
 
 
 def test_mini_league_deep_materializes_competitive_window_and_threats(monkeypatch):

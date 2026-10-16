@@ -9,7 +9,7 @@ prices, mutate ownership, or infer a contemplated transfer as executed.
 """
 
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from typing import Any, Mapping, Sequence
 import hashlib
@@ -234,6 +234,7 @@ def resolve_current15(
     authenticated_current_team: Mapping[str, Any] | None = None,
     personal_artifact: Mapping[str, Any] | None = None,
     last_good_evidence: Mapping[str, Any] | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """Resolve occurrence-bound CURRENT15 without pinning any player identity.
 
@@ -266,9 +267,36 @@ def resolve_current15(
         rows = payload.get("players") or payload.get("rows") or []
         auth_state = str(payload.get("auth_state") or payload.get("availability_state") or "").upper()
         squad_state = str(payload.get("squad_state") or "").upper()
+        observed_at = payload.get("generated_at") or payload.get("observed_at")
+        observed_dt = _aware(observed_at)
+        as_of_dt = _aware(as_of) if as_of else None
+        fresh_at_report = bool(
+            as_of_dt is None
+            or (
+                observed_dt is not None
+                and -timedelta(minutes=15)
+                <= as_of_dt - observed_dt
+                <= timedelta(minutes=30)
+            )
+        )
         current_auth = bool(
             auth_state in CURRENT_AUTH_STATES
             and (not squad_state or squad_state in CURRENT_SQUAD_STATES)
+            and fresh_at_report
+        )
+        source_scoring_gw = payload.get(
+            "_price_source_scoring_gw", payload.get("gw")
+        )
+        try:
+            source_scoring_gw = int(source_scoring_gw)
+        except (TypeError, ValueError):
+            source_scoring_gw = None
+        editable_current = bool(
+            source_class == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+            and current_auth
+            and payload.get("_price_selected_current") is True
+            and payload.get("editable_planning_gw") == int(planning_gw)
+            and source_scoring_gw in {int(planning_gw), int(planning_gw) - 1}
         )
         if rows:
             row = _candidate(
@@ -276,12 +304,11 @@ def resolve_current15(
                 rows=rows,
                 bootstrap=bootstrap,
                 gw=(
-                    payload.get("editable_planning_gw")
-                    if source_class == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
-                    and payload.get("editable_planning_gw") is not None
+                    planning_gw
+                    if editable_current
                     else payload.get("gw")
                 ),
-                observed_at=payload.get("generated_at") or payload.get("observed_at"),
+                observed_at=observed_at,
                 authoritative_current=current_auth,
                 finance={
                     "bank": payload.get("bank"),
@@ -1528,6 +1555,7 @@ def _load_personal_inputs(
     runtime_data_root: Path,
     private_data_root: Path | None,
     planning_gw: int | None = None,
+    as_of: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Use the shared personal evidence adapter and selector for PRICE.
 
@@ -1562,10 +1590,21 @@ def _load_personal_inputs(
         enforce_public_disclosure=True,
     )
     selected = select_personal_evidence(
-        candidates, planning_gw=planning_gw, expected_entry_id=3462711
+        candidates,
+        planning_gw=planning_gw,
+        expected_entry_id=3462711,
+        as_of=as_of,
     )
     payload = dict(selected.get("payload") or {})
     source_class = str(selected.get("source_class") or "").upper()
+    if (
+        source_class == "AUTHENTICATED_CURRENT_TEAM"
+        and selected.get("resolution_status") == "CURRENT_VALID"
+        and selected.get("authenticated") is True
+        and selected.get("finance_allowed") is True
+    ):
+        payload["_price_selected_current"] = True
+        payload["_price_source_scoring_gw"] = selected.get("source_scoring_gw")
     if source_class == "OFFICIAL_SUBMITTED_PICKS":
         return {"current_team": {}, "submitted_picks": payload}
     return {"current_team": payload, "submitted_picks": {}}
@@ -1765,6 +1804,7 @@ def run_price_occurrence(
         runtime_data_root=runtime_data_root,
         private_data_root=private_data_root,
         planning_gw=planning_gw,
+        as_of=report_slot,
     )
     current_team = personal_inputs["current_team"]
     submitted = personal_inputs["submitted_picks"]
@@ -1776,6 +1816,7 @@ def run_price_occurrence(
         authenticated_current_team=current_team,
         personal_artifact=None,
         last_good_evidence=submitted,
+        as_of=report_slot,
     )
 
     evaluated_universe: list[dict[str, Any]] = []

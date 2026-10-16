@@ -275,7 +275,12 @@ def resolve_current15(
                 source_class=source_class,
                 rows=rows,
                 bootstrap=bootstrap,
-                gw=payload.get("gw"),
+                gw=(
+                    payload.get("editable_planning_gw")
+                    if source_class == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+                    and payload.get("editable_planning_gw") is not None
+                    else payload.get("gw")
+                ),
                 observed_at=payload.get("generated_at") or payload.get("observed_at"),
                 authoritative_current=current_auth,
                 finance={

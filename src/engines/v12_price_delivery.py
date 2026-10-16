@@ -596,10 +596,17 @@ def _route_economics(
     *,
     team_resolution: Mapping[str, Any],
     predictor_artifact: Mapping[str, Any],
+    official_bootstrap: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     finance = dict(team_resolution.get("finance") or {})
     bank = finance.get("bank")
     price_by_id = _price_map(predictor_artifact)
+    # Official FPL bootstrap, when provided, is the current purchase-price
+    # authority. Predictor rows supply forecasts, not executable buy prices.
+    has_official_bootstrap = official_bootstrap is not None
+    official_by_id = _player_map(official_bootstrap or {})
+    ft = finance.get("free_transfers")
+    per_extra_hit = finance.get("hit_cost")
     owned_by_id = {
         int(row["element_id"]): row
         for row in team_resolution.get("rows") or []
@@ -614,15 +621,28 @@ def _route_economics(
             continue
         out_row = owned_by_id.get(int(out_id)) or {}
         in_row = price_by_id.get(int(in_id)) or {}
+        official_target = official_by_id.get(int(in_id)) or {}
         sell = out_row.get("sell_value")
-        target_cost = in_row.get("now_cost")
-        known = all(value is not None for value in (sell, target_cost, bank))
-        budget = (float(sell) + float(bank)) if known else None
-        target = float(target_cost) if known else None
-        affordable = bool(known and budget >= target)
-        plus = bool(known and budget >= target + 1)
-        minus = bool(known and budget - 1 >= target)
-        combined = bool(known and budget - 1 >= target + 1)
+        target_cost = (
+            official_target.get("now_cost")
+            if has_official_bootstrap else in_row.get("now_cost")
+        )
+        known = bool(
+            int(out_id) in owned_by_id
+            and int(in_id) not in owned_by_id
+            and type(sell) is int and sell >= 0
+            and type(bank) is int and bank >= 0
+            and type(target_cost) is int and target_cost >= 0
+        )
+        budget_tenths = sell + bank if known else None
+        affordable = bool(known and budget_tenths >= target_cost)
+        plus = bool(known and budget_tenths >= target_cost + 1)
+        minus = bool(known and budget_tenths - 1 >= target_cost)
+        combined = bool(known and budget_tenths - 1 >= target_cost + 1)
+        finance_known = (
+            type(ft) is int and 0 <= ft <= 5
+            and type(per_extra_hit) is int and per_extra_hit >= 0
+        )
         output.append(
             {
                 "route": route.get("route")
@@ -637,16 +657,29 @@ def _route_economics(
                 "bank_before": bank,
                 "nominal_affordability": affordable if known else "UNKNOWN",
                 "bank_after": (
-                    round((budget - target) / 10.0, 1) if known else "UNKNOWN"
+                    round((budget_tenths - target_cost) / 10.0, 1)
+                    if known else "UNKNOWN"
                 ),
-                "free_transfers": finance.get("free_transfers", "UNKNOWN"),
-                "hit_cost": finance.get("hit_cost", "UNKNOWN"),
-                "ft_hit_economics": (
-                    "KNOWN"
-                    if finance.get("free_transfers") is not None
-                    and finance.get("hit_cost") is not None
-                    else "UNKNOWN"
+                "bank_after_tenths": (
+                    budget_tenths - target_cost if known else "UNKNOWN"
                 ),
+                "purchase_price_authority": (
+                    "OFFICIAL_FPL_BOOTSTRAP" if has_official_bootstrap
+                    else "PREDICTOR_LEGACY_TEST_ONLY"
+                ),
+                "selling_price_authority": out_row.get(
+                    "sell_value_authority", "UNVERIFIED"
+                ),
+                "free_transfers": ft if finance_known else "UNKNOWN",
+                "free_transfers_after_one": (
+                    max(ft - 1, 0) if finance_known else "UNKNOWN"
+                ),
+                "hit_cost": per_extra_hit if finance_known else "UNKNOWN",
+                "incremental_hit_points": (
+                    (0 if ft > 0 else per_extra_hit)
+                    if finance_known else "UNKNOWN"
+                ),
+                "ft_hit_economics": "KNOWN" if finance_known else "UNKNOWN",
                 "target_plus_0_1": plus if known else "UNKNOWN",
                 "outgoing_minus_0_1": minus if known else "UNKNOWN",
                 "combined_deterioration": combined if known else "UNKNOWN",
@@ -826,6 +859,7 @@ def build_price_delivery_report(
         transfer_routes,
         team_resolution=team_resolution,
         predictor_artifact=predictor,
+        official_bootstrap=bootstrap,
     )
     action = _decision_action(
         route_rows,

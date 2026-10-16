@@ -23,6 +23,7 @@ def audit_stagec_context(
         raise ValueError("OFFICIAL_UNIVERSE_INVALID")
     admitted: dict[tuple[int, str, str], dict[str, Any]] = {}
     rejected: dict[str, int] = {}
+    conflicted: set[tuple[int, str, str]] = set()
     for row in observations:
         player_id = row.get("element")
         field = row.get("field")
@@ -46,9 +47,13 @@ def audit_stagec_context(
         key = (player_id, field, match_id)
         normalized = {"element": player_id, "field": field, "match_id": match_id,
                       "source": source, "value": str(value).strip()}
+        if key in conflicted:
+            rejected["CONFLICTING_OBSERVATION"] = rejected.get("CONFLICTING_OBSERVATION", 0) + 1
+            continue
         if key in admitted and admitted[key]["value"] != normalized["value"]:
             rejected["CONFLICTING_OBSERVATION"] = rejected.get("CONFLICTING_OBSERVATION", 0) + 1
             del admitted[key]
+            conflicted.add(key)
             continue
         admitted[key] = normalized
     by_field = {field: len({r["element"] for r in admitted.values() if r["field"] == field}) for field in FIELDS}

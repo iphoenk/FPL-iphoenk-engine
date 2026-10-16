@@ -8,6 +8,7 @@ from typing import Any, Mapping
 
 from src.engines.p0_decision_quality import enrich_xmins_contract
 from src.engines.v12_model_evidence import bind_deterministic_output, validate_operational_model_evidence
+from src.engines.v12_rotation_risk import build_minutes_scenarios, validate_rotation_events
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "config" / "intelligence" / "player_minutes.json"
@@ -849,6 +850,25 @@ def estimate_player_minutes(
     context = dict(context or {})
     out = _estimate_core(player, context)
 
+    # Rotation news is evidence and scenario metadata.  It cannot silently
+    # mutate P(start) unless a separately governed calibration is supplied.
+    rotation_events = context.get("rotation_risk_events") or []
+    if rotation_events:
+        out["rotation_risk_evidence"] = validate_rotation_events(
+            rotation_events,
+            as_of_cutoff=str(context.get("as_of_cutoff") or ""),
+            player_id=int(player.get("id") or player.get("element") or 0),
+        )
+    else:
+        out["rotation_risk_evidence"] = {
+            "status": "INSUFFICIENT_EVIDENCE",
+            "source_verified": False,
+            "no_duplicates": True,
+            "as_of_valid": False,
+            "events": [],
+            "errors": ["NO_ROTATION_EVENT_BOUND"],
+        }
+
     policy = load_historical_policy()
     conf = policy.get("confidence") or {}
     prior_probability = context.get("prior_start_probability")
@@ -869,6 +889,12 @@ def estimate_player_minutes(
         confidence = "HIGH"
 
     states = list((out.get("xmins_distribution") or {}).get("states") or [])
+    out["minutes_scenarios"] = build_minutes_scenarios(
+        player_id=int(player.get("id") or player.get("element") or 0),
+        existing_state_support=states,
+        calibrated_weights=context.get("calibrated_rotation_weights"),
+        calibration_status=str(context.get("rotation_calibration_status") or "NOT_VERIFIED"),
+    )
     regular_cameo = 0.0
     mixture_mean = 0.0
     mixture_second = 0.0

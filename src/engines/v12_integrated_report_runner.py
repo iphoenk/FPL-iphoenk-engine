@@ -46,6 +46,11 @@ from src.engines.v12_monte_carlo import (
     run_package_monte_carlo,
 )
 from src.engines.v12_formation_monte_carlo import run_formation_monte_carlo
+from src.engines.v12_rotation_risk import (
+    build_competitive_window,
+    build_minutes_scenarios,
+    validate_rotation_events,
+)
 from src.engines.v12_package_search import (
     compose_material_two_transfer_packages,
     search_packages,
@@ -9412,6 +9417,58 @@ def run_deep(
         s16_section_state = "COMPLETE"
         s16_section_reason = None
 
+    # The source-bound rotation target is an evidence overlay, not a pinned XI.  It remains
+    # conditional until the occurrence carries source-native player identity,
+    # as-of timestamps, and a validated minutes calibration.
+    haaland_news_events = [
+        item for item in material_news
+        if int(item.get("player_id") or item.get("element") or 0) == 411
+        and item.get("source_url")
+    ]
+    haaland_rotation_evidence = validate_rotation_events(
+        haaland_news_events,
+        as_of_cutoff=str(report_slot),
+        player_id=411,
+    ) if haaland_news_events else {
+        "status": "INSUFFICIENT_EVIDENCE",
+        "source_verified": False,
+        "no_duplicates": True,
+        "as_of_valid": False,
+        "events": [],
+        "errors": ["NO_SOURCE_NATIVE_HAALAND_ROTATION_EVENT_IN_OCCURRENCE"],
+        "player_id": 411,
+        "as_of_cutoff": str(report_slot),
+    }
+    haaland_minutes_scenarios = build_minutes_scenarios(
+        player_id=411,
+        existing_state_support=[],
+        calibration_status="NOT_VERIFIED",
+    )
+    captain_window = build_competitive_window(
+        rivals=(mini_deep_detail.get("rivals") or mini_deep_detail.get("rows") or []),
+        player_id=411,
+    )
+    rotation_overlay = {
+        "player_id": 411,
+        "player": next(
+            (str(row.get("web_name") or row.get("second_name") or f"element:{411}")
+             for row in ((official.get("payload") or {}).get("elements") or [])
+             if isinstance(row, Mapping) and int(row.get("id") or 0) == 411),
+            f"element:{411}",
+        ),
+        "risk_type": "ROTATION_RISK_NOT_INJURY",
+        "evidence": haaland_rotation_evidence,
+        "minutes_scenarios": haaland_minutes_scenarios,
+        "captain_rule": "VICE_ACTIVATES_ONLY_WHEN_CAPTAIN_PLAYS_ZERO_MINUTES",
+        "exact_xi_mc": {
+            "status": "PENDING_OCCURRENCE_BOUND_PRIVATE_PROJECTIONS",
+            "paths_required": 500000,
+            "formation_optimizer_is_not_exact_user_xi": True,
+        },
+        "competitive_window": captain_window,
+        "publication_status": "CONDITIONAL_ONLY",
+    }
+
     sections = {
         "S01": _section(
             "COMPLETE",
@@ -9551,6 +9608,7 @@ def run_deep(
                 ),
                 "bgw_context": dict(bgw_context),
                 "bgw_lineup_review_required": bool(bgw_context.get("active")),
+                "haaland_rotation": rotation_overlay,
             },
             lineup_reason,
         ),
@@ -9579,6 +9637,7 @@ def run_deep(
                     if formation_mc
                     else {"status": "NOT_RUN", "authority": "AUTHENTICATED_CURRENT_TEAM_REQUIRED"}
                 ),
+                "haaland_rotation": rotation_overlay,
             },
             captain_section_reason,
         ),
@@ -9659,6 +9718,7 @@ def run_deep(
                 "bgw_context": dict(bgw_context),
                 "bgw_frontier_review_required": bool(bgw_context.get("active")),
                 "bgw_is_context_not_second_optimizer": True,
+                "haaland_rotation": rotation_overlay,
             },
             None if stage3_internal_pass else (
                 "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"
@@ -9704,6 +9764,7 @@ def run_deep(
                 "protection_players": formation_strategy.get("high_eo_protection"),
                 "differential_opportunities": formation_strategy.get("differential_slots"),
                 **mini_deep_detail,
+                "haaland_counterpart": rotation_overlay,
             },
             None if mini_state == "COMPLETE" and mini_overlay else (
                 mini_reason or "P1.8 downstream overlay producer did not complete"
@@ -9863,6 +9924,7 @@ def run_deep(
                     if isinstance(row, Mapping)
                 },
                 "BEST ALTERNATIVE": action_board.get("best_alternative"),
+                "haaland_rotation_competitive_window": captain_window,
             },
         ),
         "S19": _section(
@@ -9874,6 +9936,7 @@ def run_deep(
                     if formation_mc
                     else {"status": "NOT_RUN", "authority": "AUTHENTICATED_CURRENT_TEAM_REQUIRED"}
                 ),
+                "haaland_rotation": rotation_overlay,
             },
         ),
     }

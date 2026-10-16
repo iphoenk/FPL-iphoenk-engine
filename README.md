@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **P0 Stage 1 Official 667 scanner readback hardening (16 Oct 2026):** Previously verified natural V6 sources include 60/60 FotMob matchDetails, 30/30 ESPN, 120/120 coach/formation sides and 1320/1320 retrospective starter identities; controlled DEEP 10:20 displays Official=eligible=scanned=667, coverage COMPLETE. Fixed the real 667 gate hole: never use the observed bootstrap size as its own expected count (666/666 or 668/668 must fail). Unprovided provider bridge provenance reports NOT_EVALUATED, not invented 0/667; known external mapping 489/667 and unverified source presence of 178 others remains separate, not missing Official scanner players. Nine exact reviewed regressions raise governed baseline 1451 to 1464 (55 files; nine new and four existing newly governed). Historical predeadline model witnesses and future OOS calibration remain independent pending. Change timestamp: `2026-10-16T13:03:00+07:00`. Documentation sync: UPDATED.
+
 - **P0 PRICE Stage C Official buy/sell route economics (16 Oct 2026):** The existing canonical authenticated selector and Stage B finance evidence now bind 15/15 private `selling_price` to executable `sell_value`, with explicit field equality and source authority. Targets use Official FPL bootstrap current buy prices (no predictor substitution); affordability and +/- GBP 0.1m shocks are integer tenths, with bank-after, FT remaining and incremental hit marked counterfactual. Unverified/mismatched values fail closed. End-to-end tests cover twelve-section rendered PRICE plus 15 more route and security regression nodes; exact V12 governance baseline 1,435 -> 1,451. No scheduler, PR #809, immutable GW7 forecast, Stage3, MC500K or immutable receipt changed; production PRICE FULL remains unverified until a new exact-slot occurrence. Change timestamp: `2026-10-16T11:57:07+07:00`. Documentation sync: UPDATED.
 
 - **PRICE Stage B (16 Oct 2026):** Require verified authenticated bank, FT, hit cost, and 15/15 Official purchase and selling prices before private finance authority is accepted. The legacy PRICE source label is matched to canonical evidence; selling-price route normalization remains Stage C and PRICE is not promoted to FULL. No scheduler, PR #809, frozen GW7, Stage3, or MC changes. Change timestamp: `2026-10-16T11:27:14+07:00`. Documentation sync: UPDATED.
@@ -139,7 +141,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-16T11:57:07+07:00`
+> **Last runtime/documentation sync:** `2026-10-16T13:03:00+07:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.
@@ -471,3 +473,11 @@ Only a validated authenticated private personal snapshot may normalize its fifte
 Change timestamp: `2026-10-16T11:57:07+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-16T11:57:07+07:00`
+
+### Stage 1 667-player Official scanner integrity (16 October 2026)
+
+The existing V6 source plus observed-historical identity proof is accepted separately from model calibration and unverified provider-wide mapping. Stage C's existing read-only membership gate now requires the actual season-wide 667 Official FPL players, rather than learning the expected count from a possibly incomplete bootstrap. Scanner provenance remains Official-first. Without a supplied verified provider bridge list, provider coverage must say NOT_EVALUATED, not 0 mapped; with supplied evidence, collision and exact-identity checks remain fail-closed. No historical fixture, provider identity, or predeadline model proof is fabricated. Mandatory V12 governance baseline: 1464 exact collected nodes across 55 files.
+
+Change timestamp: `2026-10-16T13:03:00+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-16T13:03:00+07:00`

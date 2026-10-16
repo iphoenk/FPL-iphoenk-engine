@@ -2122,8 +2122,14 @@ def test_stagec_official_denominator_and_missing_player_are_not_silent(monkeypat
     assert scan["official_universe_count"] == 4
     assert scan["official_eligible_count"] == 4
     assert scan["scanned_count"] == 4
-    assert scan["official_coverage_state"] == "COMPLETE"
-    assert scan["governance"]["full_universe_scanned"] is True
+    # Four synthetic players can validate internal scanner membership,
+    # but cannot satisfy the *production* season-wide 667-player gate.
+    assert scan["scanner_coverage_state"] == "COMPLETE"
+    assert scan["official_coverage_state"] == "DEGRADED"
+    assert scan["stageb_official_universe_gate"]["scanner_coverage"] == "FAIL"
+    assert scan["stageb_official_universe_gate"]["failure_reason"] == "OFFICIAL_UNIVERSE_SIZE_NOT_ESTABLISHED"
+    assert "OFFICIAL_UNIVERSE_SIZE_NOT_ESTABLISHED" in scan["coverage_reason_codes"]
+    assert scan["governance"]["full_universe_scanned"] is False
     assert all(scan["position_counts"][pos]["scanned"] == 1 for pos in ("GK", "DEF", "MID", "FWD"))
     assert projections == pristine
 

@@ -791,8 +791,8 @@ def build_stagec_from_canonical_inputs(
         universe_gate = audit_universe(
             official_rows,
             [row.get("element") or row.get("id") for row in projections.get("players") or []],
-            [],
-            expected_official_count=len(official_rows),
+            None,  # Provider coverage not evaluated by the Official-only scan.
+            expected_official_count=667,  # Season-wide Official universe contract.
         )
     except ValueError as exc:
         # Preserve the existing Stage C diagnostic contract: malformed input
@@ -820,6 +820,7 @@ def build_stagec_from_canonical_inputs(
         reason for reason, triggered in (
             ("OFFICIAL_BOOTSTRAP_EMPTY", not official_ids),
             ("OFFICIAL_BOOTSTRAP_DUPLICATES", len(official_rows) != len(official_ids)),
+            ("OFFICIAL_UNIVERSE_SIZE_NOT_ESTABLISHED", len(official_rows) != 667),
             ("PROJECTION_MISSING_OFFICIAL_ELEMENTS", bool(missing_ids)),
             ("PROJECTION_MISSING_ELIGIBLE_ELEMENTS", bool(missing_eligible_ids)),
             ("PROJECTION_UNKNOWN_ELEMENTS", bool(unexpected_ids)),

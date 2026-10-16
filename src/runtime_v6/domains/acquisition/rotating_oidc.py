@@ -189,8 +189,20 @@ class RotatingCredentialManager:
             try:
                 marked = self.store.compare_and_swap(current.version, started)
                 confirmed = self.store.load()
-                if confirmed.version != marked.version or confirmed.phase != "IN_FLIGHT":
+                if (
+                    confirmed.version != marked.version
+                    or confirmed.phase != "IN_FLIGHT"
+                    or not marked.transaction_id
+                    or not hmac.compare_digest(confirmed.transaction_id, marked.transaction_id)
+                    or not hmac.compare_digest(confirmed.refresh_token, marked.refresh_token)
+                ):
+                    # Never issue a grant unless the exact claimed transaction,
+                    # not merely an IN_FLIGHT phase, is durably read back.
                     raise RotationUncertain("OIDC_GRANT_MARKER_PERSISTENCE_UNVERIFIED")
+            except RotationUncertain:
+                # Previously swallowed into the generic PERSISTENCE_FAILED code:
+                # retain the distinct fail-closed readback classification.
+                raise RotationUncertain("OIDC_GRANT_MARKER_PERSISTENCE_UNVERIFIED") from None
             except RotationBlocked as exc:
                 # Preserve sanitized Git CAS diagnostics, never reveal secrets
                 # or issue a refresh POST without a verified IN_FLIGHT marker.

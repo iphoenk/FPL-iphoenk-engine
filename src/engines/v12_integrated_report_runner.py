@@ -3690,15 +3690,19 @@ def _mini_league_deep_detail(
                 position = pick_position(pick)
                 if multiplier is not None:
                     effective += multiplier
+                else:
+                    element_multiplier_complete = False
+                # Starting XI / bench describes the submitted squad position,
+                # not the points multiplier (Bench Boost affects the latter).
+                if position is not None and 1 <= position <= 11:
+                    starter += 1
+                elif position is not None and 12 <= position <= 15:
+                    bench += 1
+                elif multiplier is not None:
+                    # Fail-soft for legacy picks without squad positions.
                     if multiplier > 0:
                         starter += 1
                     else:
-                        bench += 1
-                else:
-                    element_multiplier_complete = False
-                    if position is not None and 1 <= position <= 11:
-                        starter += 1
-                    elif position is not None and position > 11:
                         bench += 1
                 if bool(pick.get("captain", pick.get("is_captain"))):
                     captain += 1
@@ -3942,11 +3946,14 @@ def _mini_league_deep_detail(
             for element in [pick_element(pick)]
             if element is not None
             and (
-                (pick_multiplier(pick) is not None and pick_multiplier(pick) > 0)
-                or (
-                    pick_multiplier(pick) is None
-                    and pick_position(pick) is not None
+                (
+                    pick_position(pick) is not None
                     and 1 <= int(pick_position(pick) or 0) <= 11
+                )
+                or (
+                    pick_position(pick) is None
+                    and pick_multiplier(pick) is not None
+                    and pick_multiplier(pick) > 0
                 )
             )
         }

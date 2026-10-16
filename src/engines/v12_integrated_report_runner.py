@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 102296)
-Total output lines: 10596
-
 from __future__ import annotations
 
 """Thin V12-native integrated report runner.

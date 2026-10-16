@@ -497,3 +497,120 @@ def test_o_unknown_price_ownership_stays_unknown_and_internal_scope_text_never_r
         body.replace("Current squad could not be verified", "Ownership scope unresolved"),
         report=report,
     )
+
+
+def test_stage_a_authenticated_gw6_editable_gw7_selected_as_current_without_second_resolver(tmp_path):
+    from src.engines.v12_price_delivery import (
+        _load_personal_inputs,
+        classify_price_personal_mode,
+        resolve_price_from_selected_evidence,
+    )
+
+    runtime_root = tmp_path / "runtime"
+    private_root = tmp_path / "private"
+    (private_root / "personal").mkdir(parents=True)
+    team = {
+        "entry_id": 3462711,
+        "gw": 6,
+        "editable_planning_gw": 7,
+        "auth_state": "AUTH_AVAILABLE",
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "generated_at": "2026-10-16T10:30:27+07:00",
+        "players": [
+            {
+                **row,
+                "purchase_price": 70,
+                "selling_price": 71,
+            }
+            for row in _team_rows(list(range(1, 16)))
+        ],
+        "bank": 10,
+        "free_transfers": 2,
+        "lineage": {"authenticated": [
+            {"endpoint_class": "me", "http_status": 200, "entry_id": 3462711},
+            {"endpoint_class": "my_team", "http_status": 200, "entry_id": 3462711},
+        ]},
+    }
+    (private_root / "personal/current_team.json").write_text(
+        __import__("json").dumps(team), encoding="utf-8"
+    )
+
+    loaded = _load_personal_inputs(
+        runtime_data_root=runtime_root,
+        private_data_root=private_root,
+        planning_gw=7,
+        report_slot="2026-10-16T10:30:00+07:00",
+    )
+    selected = loaded["selected_evidence"]
+    assert selected["resolution_status"] == "CURRENT_VALID"
+    assert selected["authenticated"] is True
+    assert selected["source_scoring_gw"] == 6
+
+    resolved = resolve_price_from_selected_evidence(
+        selected=selected, planning_gw=7, bootstrap=_bootstrap(100)
+    )
+    assert resolved["state"] == "CURRENT"
+    assert resolved["supportable"] is True
+    assert resolved["gw"] == 7
+    assert resolved["source_scoring_gw"] == 6
+    assert resolved["editable_planning_gw"] == 7
+    assert len(resolved["element_ids"]) == 15
+    assert len(set(resolved["element_ids"])) == 15
+    assert resolved["canonical_source_class"] == "AUTHENTICATED_CURRENT_TEAM"
+    # Stage A deliberately does not promote incomplete Stage B finance binding.
+    assert resolved["source_class"] == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+    assert classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=resolved,
+    )["mode"] == "PUBLIC_FIRST_DEGRADED"
+
+
+@pytest.mark.parametrize(
+    "mutation, slot",
+    [
+        ({"auth_state": "AUTH_EXPIRED"}, "2026-10-16T10:30:00+07:00"),
+        ({"entry_id": 123456}, "2026-10-16T10:30:00+07:00"),
+        ({"editable_planning_gw": 8}, "2026-10-16T10:30:00+07:00"),
+        ({}, "2026-10-16T09:50:00+07:00"),
+    ],
+)
+def test_stage_a_rejects_unverified_authenticated_current_evidence(tmp_path, mutation, slot):
+    from src.engines.v12_price_delivery import (
+        _load_personal_inputs,
+        resolve_price_from_selected_evidence,
+    )
+
+    private_root = tmp_path / "private"
+    (private_root / "personal").mkdir(parents=True)
+    team = {
+        "entry_id": 3462711,
+        "gw": 6,
+        "editable_planning_gw": 7,
+        "auth_state": "AUTH_AVAILABLE",
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "generated_at": "2026-10-16T10:30:27+07:00",
+        "players": _team_rows(list(range(1, 16))),
+        "lineage": {"authenticated": [
+            {"endpoint_class": "me", "http_status": 200, "entry_id": 3462711},
+            {"endpoint_class": "my_team", "http_status": 200, "entry_id": 3462711},
+        ]},
+    }
+    team.update(mutation)
+    (private_root / "personal/current_team.json").write_text(
+        __import__("json").dumps(team), encoding="utf-8"
+    )
+    loaded = _load_personal_inputs(
+        runtime_data_root=tmp_path / "runtime",
+        private_data_root=private_root,
+        planning_gw=7,
+        report_slot=slot,
+    )
+    resolved = resolve_price_from_selected_evidence(
+        selected=loaded["selected_evidence"],
+        planning_gw=7,
+        bootstrap=_bootstrap(100),
+    )
+    assert resolved["state"] != "CURRENT"
+    assert resolved["supportable"] is False
+    assert resolved["finance"] == {}

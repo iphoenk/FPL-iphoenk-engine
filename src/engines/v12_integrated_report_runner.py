@@ -9417,7 +9417,7 @@ def run_deep(
         s16_section_state = "COMPLETE"
         s16_section_reason = None
 
-    # Haaland rotation is a report-bound evidence overlay.  It remains
+    # The source-bound rotation target is an evidence overlay, not a pinned XI.  It remains
     # conditional until the occurrence carries source-native player identity,
     # as-of timestamps, and a validated minutes calibration.
     haaland_news_events = [
@@ -9450,7 +9450,12 @@ def run_deep(
     )
     rotation_overlay = {
         "player_id": 411,
-        "player": "Haaland",
+        "player": next(
+            (str(row.get("web_name") or row.get("second_name") or f"element:{411}")
+             for row in ((official.get("payload") or {}).get("elements") or [])
+             if isinstance(row, Mapping) and int(row.get("id") or 0) == 411),
+            f"element:{411}",
+        ),
         "risk_type": "ROTATION_RISK_NOT_INJURY",
         "evidence": haaland_rotation_evidence,
         "minutes_scenarios": haaland_minutes_scenarios,

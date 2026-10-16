@@ -133,7 +133,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-16T08:18:00+07:00`
+> **Last runtime/documentation sync:** `2026-10-16T02:46:54+00:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.
@@ -422,3 +422,8 @@ of PR #809, P1.7, Stage3, MC500K, frozen GW7 or scheduler changed.
 Change timestamp: 2026-10-15T06:47:16+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-15T06:47:16+07:00
+
+
+### Stage C shadow evidence admission (2026-10-16)
+
+The isolated `src/models/v12_stagec_shadow_evidence.py` audit classifies coach, formation, tactical role, and availability evidence by Official FPL element ID, match identity, and governed source. It rejects unmapped IDs, source/field mismatches, and conflicting observations. Official FPL position is **not** observed tactical role evidence. This audit is shadow-only, never changes canonical P(start)/xMins, and cannot activate production calibration. Stage B live full-universe scanner receipt and Stage C out-of-sample calibration remain pending.

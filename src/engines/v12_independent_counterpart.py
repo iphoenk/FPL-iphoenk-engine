@@ -47,7 +47,7 @@ def assess_counterpart(
         group = str(row.get("independence_group") or "")
         date = str(row.get("as_of") or "")
         counterpart_metric = str(row.get("metric") or "")
-        if not name or not group or not date or date > deadline or date > as_of:
+        if not name or not group or not date or date > deadline:
             rejected.append({"source": name, "reason": "SOURCE_PROVENANCE_OR_TEMPORAL_INVALID"})
             continue
         if group in seen_groups or group == str(canonical.get("independence_group") or ""):

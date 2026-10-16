@@ -500,6 +500,29 @@ def _compact_p1_8_rebind_inputs(
     }
 
 
+def _normalize_warm_owned_ids(rows: Any) -> list[int]:
+    """Map canonical warm-state owned rows to exactly 15 official FPL element IDs.
+
+    Warm-state rows may be source-native player mappings, not numeric scalars.
+    Never infer, discard or reorder a player on invalid identity.
+    """
+    if not isinstance(rows, list):
+        raise P4ScenarioProductionError("P4_WARM_STATE_OWNED_NOT_LIST")
+    owned: list[int] = []
+    for row in rows:
+        raw = row.get("element_id") if isinstance(row, Mapping) else row
+        try:
+            element = int(raw)
+        except (TypeError, ValueError) as exc:
+            raise P4ScenarioProductionError("P4_WARM_STATE_OWNED_INVALID_ID") from exc
+        if element <= 0:
+            raise P4ScenarioProductionError("P4_WARM_STATE_OWNED_INVALID_ID")
+        owned.append(element)
+    if len(owned) != 15 or len(set(owned)) != 15:
+        raise P4ScenarioProductionError("P4_WARM_STATE_OWNED_NOT_UNIQUE_15")
+    return owned
+
+
 def _evaluate_scenario_worker(
     runtime_data_root_raw: str,
     private_root_raw: str,
@@ -572,7 +595,7 @@ def _evaluate_scenario_worker(
             raise P4ScenarioProductionError(
                 "forced trio requires the private canonical projection snapshot"
             )
-        current15 = [int(value) for value in warm_state.get("owned") or []]
+        current15 = _normalize_warm_owned_ids(warm_state.get("owned"))
         result["forced_trio_mc"] = run_forced_lineup_monte_carlo(
             projections,
             current15=current15,

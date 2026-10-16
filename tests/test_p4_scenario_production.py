@@ -13,6 +13,7 @@ from src.engines.v12_p4_scenario_production import (
     _evaluate_scenario_worker,
     _override_key,
     _owned_context,
+    _normalize_warm_owned_ids,
     _safe_scenario_failure_diagnostic,
     _scenario_override_specs,
 )
@@ -63,6 +64,26 @@ def test_owned_context_requires_exact_current15_and_reads_c_vc(tmp_path):
     assert owned == list(range(1, 16))
     assert captain == 1
     assert vice == 2
+
+
+def test_p4_warm_state_accepts_exact_native_owned_player_rows():
+    rows = [{"element_id": element, "name": f"Player {element}"} for element in range(1, 16)]
+    assert _normalize_warm_owned_ids(rows) == list(range(1, 16))
+
+
+def test_p4_warm_state_supports_legacy_numeric_owned_ids():
+    assert _normalize_warm_owned_ids(list(range(1, 16))) == list(range(1, 16))
+
+
+@pytest.mark.parametrize("rows", [
+    [{"element_id": element} for element in range(1, 15)],
+    [{"element_id": element} for element in range(1, 15)] + [{"element_id": 1}],
+    [{"element_id": element} for element in range(1, 15)] + [{"unexpected": 15}],
+    None,
+])
+def test_p4_warm_state_rejects_missing_duplicate_and_unknown_identity(rows):
+    with pytest.raises(P4ScenarioProductionError, match="P4_WARM_STATE_OWNED"):
+        _normalize_warm_owned_ids(rows)
 
 
 def test_parallel_p4_specs_are_complete_unique_and_worker_count_is_bounded(

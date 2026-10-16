@@ -920,7 +920,7 @@ def _ml_picks(elements, *, captain=None, vice=None, bench=None):
     return rows
 
 
-def _ml_deep_fixture(monkeypatch):
+def _ml_deep_fixture(monkeypatch, *, effective_bench_boost=False):
     monkeypatch.setattr(
         runner,
         "_captain_candidate_review",
@@ -1003,6 +1003,11 @@ def _ml_deep_fixture(monkeypatch):
             },
         }
     }
+    if effective_bench_boost:
+        # Positive Bench Boost multipliers must not turn bench slots into XI.
+        for pick in manager_picks["entries"]["201"]["picks"]:
+            if pick["squad_position"] > 11:
+                pick["multiplier"] = 1
     exposures = []
     for element in range(1, 16):
         own = 2 if element <= 13 else 1 if element == 14 else 0
@@ -1071,6 +1076,23 @@ def _ml_deep_fixture(monkeypatch):
         operational_action="WAIT",
     )
     return mini, detail, owned
+
+
+def test_s15b_bench_boost_keeps_slot_ownership_and_eo_distinct(monkeypatch):
+    _, detail, _ = _ml_deep_fixture(monkeypatch, effective_bench_boost=True)
+    # Player 16 is a bench-only pick in leader 201 but Bench Boost grants
+    # multiplier 1. Ownership/EO include that pick, XI must not.
+    full = next(row for row in detail["league_full_composition"] if row["element_id"] == 16)
+    assert full["ownership_count"] == 1
+    assert full["starter_count"] == 0
+    assert full["bench_count"] == 1
+    assert full["effective_multiplier_sum"] == 1
+    # Player 12 is in OUR15 and also on the Bench Boost bench.
+    ours = next(row for row in detail["league_our15_exposure"] if row["element_id"] == 12)
+    full12 = next(row for row in detail["league_full_composition"] if row["element_id"] == 12)
+    assert (ours["starter_count"], ours["bench_count"]) == (full12["starter_count"], full12["bench_count"])
+    assert ours["starter_count"] == 1
+    assert ours["bench_count"] == 2
 
 
 def test_mini_league_deep_materializes_competitive_window_and_threats(monkeypatch):

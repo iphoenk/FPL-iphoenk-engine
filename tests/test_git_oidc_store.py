@@ -201,3 +201,52 @@ def test_existing_ciphertext_read_failure_is_not_empty_enrollment(checkout, monk
     monkeypatch.setattr(module, "_git", unreadable)
     with pytest.raises(RotationBlocked, match="GIT_OPERATION_FAILED"):
         store.load()
+
+
+def test_sparse_cas_worktree_keeps_noncredential_private_tree_untouched(checkout, monkeypatch):
+    """An auth update must not materialize the bulky private report tree."""
+    bare, repo, key = checkout
+    report = repo / "reports" / "large-private-artifact.bin"
+    report.parent.mkdir(parents=True)
+    report_payload = b"immutable-private-report-fixture" * 32768
+    report.write_bytes(report_payload)
+    git("add", "--", "reports/large-private-artifact.bin", cwd=repo)
+    git("commit", "-m", "fixture large private report", cwd=repo)
+    git("push", "origin", "main", cwd=repo)
+
+    original_git = module._git
+    observed = {"no_checkout": False, "sparse": False, "credential_only": False}
+
+    def inspect_git(root, *args, **kwargs):
+        if args[:2] == ("worktree", "add"):
+            observed["no_checkout"] = "--no-checkout" in args
+        if args[:2] == ("sparse-checkout", "set"):
+            observed["sparse"] = args[-1] == ".auth-private/fpl-oidc-credential.enc"
+        result = original_git(root, *args, **kwargs)
+        if args[:2] == ("checkout", "-f") and Path(root).resolve() != repo.resolve():
+            assert (Path(root) / ".auth-private" / "fpl-oidc-credential.enc").exists()
+            assert not (Path(root) / "reports" / "large-private-artifact.bin").exists()
+            observed["credential_only"] = True
+        return result
+
+    monkeypatch.setattr(module, "_git", inspect_git)
+    store = module.EncryptedGitCredentialStore(str(repo), key)
+    stored = store.compare_and_swap(0, Credential(1, "READY", "dummy-private-fixture-token"))
+    assert stored.phase == "READY"
+    assert stored.version == 1
+    assert all(observed.values()), observed
+    assert git("--git-dir", str(bare), "show", "main:reports/large-private-artifact.bin") == report_payload
+    assert store.load().refresh_token == "dummy-private-fixture-token"
+
+
+def test_git_timeout_emits_allowlisted_verb_without_arguments(monkeypatch, tmp_path, capsys):
+    """Only an operation category, never a private path, reaches logs."""
+    def timed_out(argv, **kwargs):
+        raise subprocess.TimeoutExpired(argv, kwargs["timeout"])
+
+    monkeypatch.setattr(module.subprocess, "run", timed_out)
+    with pytest.raises(RotationBlocked, match="CREDENTIAL_STORE_GIT_TIMEOUT"):
+        module._git(tmp_path, "worktree", "add", "--no-checkout", "secret-private-path")
+    captured = capsys.readouterr().out
+    assert "OIDC_GIT_TIMEOUT_OPERATION=worktree" in captured
+    assert "secret-private-path" not in captured

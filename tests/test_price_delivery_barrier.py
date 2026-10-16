@@ -635,7 +635,12 @@ def _stage_b_authenticated_team():
         "free_transfers": 2,
         "hit_cost": 4,
         "players": [
-            {**row, "purchase_price": 60, "selling_price": 62}
+            {
+                **{key: val for key, val in row.items()
+                   if key not in ("sell_value", "authenticated_sell_value")},
+                "purchase_price": 60,
+                "selling_price": 62,
+            }
             for row in _team_rows(list(range(1, 16)))
         ],
         "lineage": {

@@ -89,3 +89,21 @@ Historical predeadline training-feature finalization: NOT ESTABLISHED. Semantic 
 Change timestamp: 2026-10-16T05:07:00+07:00
 Documentation sync: UPDATED
 Documentation timestamp: 2026-10-16T05:07:00+07:00
+
+## Stage 1 exact-667 Official scanner production hardening (16 Oct 2026)
+
+The original naturally acquired V6 historical source proof remains **60/60 FotMob matchDetails**, **30/30 ESPN match rosters**, **120/120 verified coach/formation team sides**, and **1,320/1,320 independently verified FotMob-to-Official FPL starter observations**, without any invented predeadline training or model-calibration admission.
+
+The earlier controlled DEEP occurrence `DEEP|2026-10-16T10:20:00+07:00` includes the visible Stage C scanner line **Official=667, eligible=667, scanned=667, coverage=COMPLETE** in private original `reports/2026-27/gw_7/20261016_102000_plus_0700/report_body.md`. That line is useful controlled runtime evidence, not an independently reconstructed natural scanner receipt.
+
+Follow-up hardening fixes an integrity gap in `build_stagec_from_canonical_inputs`: the Stage B source-membership audit must require the **season-wide fixed 667-player Official FPL authority**, not silently set its expected count to the possibly incomplete bootstrap size. An otherwise internally consistent 666/666 or 668/668 snapshot is now **FAIL**, never `COMPLETE`. Nine fail-closed regression nodes cover exact 667, truncated or overcomplete Official bootstrap, mismatched scanner membership and provider-provenance separation.
+
+**Two independent coverage scopes must never be conflated.** The canonical Official FPL scanner has 667/667 membership evidence and does not depend on FotMob identity presence. The historically verified FotMob source mapping is 489/667 configured player links, while 178 other Official elements have unproven source presence; this is **provider-wide PARTIAL/UNVERIFIED**, not 178 missing Official scanner players. When no verified provider bridge list was supplied to a specific scan, provider coverage now reports **NOT_EVALUATED** with null counts instead of a fabricated 0/667. There is no new bridge, backfilled missing row, or false provider-full claim.
+
+**Stage 1 source/observed-identity/Official scanner contract:** fully captured by above records, pending postmerge exact-667 readback of hardened code. **Stage 2 model-context/calibration contract:** coach-to-player tactical role, pre-match injury/availability, predeadline fold parameter witnesses and actual future GW7 outcomes remain independent and unverified; none is represented as Stage 1 acquisition failure. Historical GW2–GW5 predeadline reconstruction was explicitly skipped, and its admission gate remains `NOT_ESTABLISHED`.
+
+No new scheduler, cron, numeric P(start)/xMins changes, frozen GW7 forecast overwrite, Stage3, MC500K, or PR #809 edits.
+
+Change timestamp: `2026-10-16T13:03:00+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-16T13:03:00+07:00`

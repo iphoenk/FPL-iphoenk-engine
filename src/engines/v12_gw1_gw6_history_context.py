@@ -1121,6 +1121,15 @@ def build_retrospective_context(
             "cross_match_generalization_allowed": False,
         }
     by_position = Counter(row["position"] for row in players)
+    # Stage 2 verifies ONLY source-original retrospective coach, formation
+    # and opaque player slot observations. None is a calibrated next-GW role
+    # probability or medical confirmation. Use the exact same V6-bound ledger.
+    from src.models.v12_stage2_context_provenance import audit_stage2_context_provenance
+
+    longitudinal = _manager_role_longitudinal(bootstrap, tactical_matches)
+    stage2_evidence = audit_stage2_context_provenance(
+        bootstrap, longitudinal
+    )
     return {
         "contract": CONTRACT,
         "planning_target": "GW7",
@@ -1133,7 +1142,8 @@ def build_retrospective_context(
         "player_position_counts": dict(by_position),
         "source_health": {"understat": understat_source, "fotmob": match_source},
         "match_tactics_verified_team_observations": len(tactical_matches),
-        "manager_role_longitudinal": _manager_role_longitudinal(bootstrap, tactical_matches),
+        "manager_role_longitudinal": longitudinal,
+        "stage2_context_source_provenance": stage2_evidence,
         "all_clubs_tactical_coverage": _all_clubs_tactical_coverage(
             bootstrap, official_fixtures, tactical_matches, gw_ids
         ),

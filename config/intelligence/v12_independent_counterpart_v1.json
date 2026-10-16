@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "name": "V12_INDEPENDENT_COUNTERPART",
+  "mode": "advisory_fail_closed",
+  "scope": [
+    "player",
+    "starting_xi",
+    "formation",
+    "captain",
+    "vice_captain",
+    "transfer",
+    "mini_league"
+  ],
+  "sources": [
+    {
+      "name": "Official FPL",
+      "role": "canonical_identity_fixture_lineup",
+      "independence_group": "official_fpl"
+    },
+    {
+      "name": "Understat",
+      "role": "historical_xg_xa_minutes",
+      "independence_group": "understat"
+    },
+    {
+      "name": "Opta",
+      "role": "match_probabilities_underlying",
+      "independence_group": "opta"
+    },
+    {
+      "name": "FPL Toolkit",
+      "role": "independent_fpl_projection",
+      "independence_group": "fpltoolkit"
+    },
+    {
+      "name": "Club and league team news",
+      "role": "availability_confirmed_lineup",
+      "independence_group": "official_team_news"
+    },
+    {
+      "name": "Other independent models",
+      "role": "projection_sensitivity",
+      "independence_group": "other"
+    }
+  ],
+  "acceptance": {
+    "require_canonical_provenance": true,
+    "require_independent_source": true,
+    "require_as_of_before_deadline": true,
+    "require_metric_compatibility": true,
+    "require_distinct_independence_groups": true,
+    "never_silently_override_canonical": true,
+    "source_unavailable": "INSUFFICIENT_EVIDENCE",
+    "material_disagreement": "CONTESTED",
+    "only_comparable_support": "CONFIRMED",
+    "unknown": "INSUFFICIENT_EVIDENCE"
+  },
+  "report_fields": [
+    "subject",
+    "assessment_type",
+    "v12_metric",
+    "v12_value",
+    "counterpart_source",
+    "counterpart_metric",
+    "counterpart_value",
+    "source_as_of",
+    "source_independence_group",
+    "comparison_basis",
+    "delta",
+    "disagreement_reasons",
+    "verdict",
+    "confidence",
+    "recommended_next_action"
+  ],
+  "guardrails": [
+    "Do not infer a future GW lineup from last submitted picks",
+    "Do not mix xGI/90 with xPts without conversion",
+    "Do not treat correlated re-publications as independent",
+    "Do not replace canonical P1.7/MC500K or immutable GW7 forecast",
+    "Do not mark green for missing source",
+    "No new scheduler, cron or trigger"
+  ]
+}

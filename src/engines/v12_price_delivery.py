@@ -1596,6 +1596,8 @@ def _load_personal_inputs(
         as_of=as_of,
     )
     payload = dict(selected.get("payload") or {})
+    payload.pop("_price_selected_current", None)
+    payload.pop("_price_source_scoring_gw", None)
     source_class = str(selected.get("source_class") or "").upper()
     if (
         source_class == "AUTHENTICATED_CURRENT_TEAM"

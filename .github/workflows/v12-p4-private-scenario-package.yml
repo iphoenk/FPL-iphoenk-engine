@@ -236,6 +236,7 @@ jobs:
           V12_PRIVATE_CACHE_PROFILE: SECURE_ENCRYPTED_PERSONAL_CACHE
           FPL_V12_PRIVATE_CACHE_KEY_B64: ${{ secrets.FPL_V12_PRIVATE_CACHE_KEY_B64 }}
           V12_P4_MAX_WORKERS: "2"
+          V12_P4_FORCED_TRIO: "1"
           P4_RUNTIME_DATA_SHA: ${{ steps.runtime.outputs.runtime_data_sha }}
           P4_REPORT_SLOT: ${{ steps.request.outputs.report_slot }}
           OPENBLAS_CORETYPE: Haswell

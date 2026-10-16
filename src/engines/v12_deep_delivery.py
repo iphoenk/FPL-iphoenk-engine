@@ -398,6 +398,7 @@ def validate_deep_decision_content_delivery(
             "LEAGUE LANDSCAPE:",
             "DENOMINATOR SCOPES",
             "COMPETITIVE WINDOW",
+            "ALL LEAGUE PLAYER OWNERSHIP",
             "OUR15 LEAGUE",
             "OUR15 RIVALS",
             "OUR15 COMPETITIVE WINDOW",
@@ -1269,8 +1270,16 @@ def validate_deep_decision_content_delivery(
                         f"S15B_FULL_LEAGUE_ROW_MISSING={index}:{','.join(missing)}"
                     )
                     break
-        if "FULL ICON+ COMPOSITION" in upper:
-            failures.append("S15B_FULL_LEAGUE_COMPOSITION_VISIBLE_FORBIDDEN")
+        if "ALL LEAGUE PLAYER OWNERSHIP" not in upper:
+            failures.append("S15B_FULL_LEAGUE_COMPOSITION_NOT_VISIBLE")
+        if len(full_composition) != int(s15b.get("league_unique_player_count") or len(full_composition)):
+            failures.append("S15B_FULL_LEAGUE_UNIQUE_COUNT_MISMATCH")
+        if any(
+            not (row.get("player") or row.get("name") or row.get("web_name"))
+            or str(row.get("position") or "").upper() not in ("GK", "DEF", "MID", "FWD")
+            for row in full_composition
+        ):
+            failures.append("S15B_FULL_LEAGUE_IDENTITY_OR_POSITION_MISSING")
 
         for scope_key, payload_key in (
             ("LEAGUE", "league_our15_exposure"),

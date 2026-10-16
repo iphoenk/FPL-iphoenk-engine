@@ -136,6 +136,140 @@ def _validate_routes(routes: Sequence[Mapping[str, Any]], current15: Sequence[in
                 raise FormationMonteCarloError("formation route is not bound to authenticated CURRENT15")
 
 
+def _validate_forced_routes(
+    routes: Sequence[Mapping[str, Any]],
+    current15: Sequence[int],
+    planning_gw: int,
+) -> list[dict[str, Any]]:
+    """Validate exact P1.7 routes supplied for a constrained what-if.
+
+    This deliberately does not call the optimizer. A constrained comparison
+    must preserve the user-supplied XI, bench order and C/VC while still using
+    the canonical P1.4 scorer.
+    """
+    current = {int(value) for value in current15}
+    if len(current) != 15:
+        raise FormationMonteCarloError("authenticated CURRENT15 must contain 15 unique players")
+    if len(routes) < 2:
+        raise FormationMonteCarloError("forced comparison requires at least two routes")
+    route_ids = [str(row.get("route_id") or "") for row in routes]
+    if len(set(route_ids)) != len(route_ids) or any(not value for value in route_ids):
+        raise FormationMonteCarloError("forced route IDs must be unique and non-empty")
+    if "HOLD" not in route_ids:
+        raise FormationMonteCarloError("forced comparison requires HOLD as the baseline route")
+
+    normalized: list[dict[str, Any]] = []
+    for source in routes:
+        rows = list(source.get("per_gw") or [])
+        if len(rows) != HORIZON_GWS:
+            raise FormationMonteCarloError("forced route must cover GW7-GW12")
+        per_gw: list[dict[str, Any]] = []
+        for offset, raw in enumerate(rows):
+            row = dict(raw)
+            if int(row.get("gw") or 0) != planning_gw + offset:
+                raise FormationMonteCarloError("forced route horizon is not GW7-GW12")
+            starters = [int(value) for value in row.get("starting_xi") or []]
+            bench = [int(value) for value in row.get("bench_order") or []]
+            bench_gk = int(row.get("bench_gk") or 0)
+            captain = int(row.get("captain") or 0)
+            vice = int(row.get("vice_captain") or 0)
+            all_ids = starters + bench + [bench_gk]
+            if len(starters) != 11 or len(bench) != 3 or len(set(all_ids)) != 15:
+                raise FormationMonteCarloError("forced route is not a complete 15-player partition")
+            if set(all_ids) != current:
+                raise FormationMonteCarloError("forced route is not bound to authenticated CURRENT15")
+            if captain not in starters or vice not in starters or captain == vice:
+                raise FormationMonteCarloError("forced route has illegal captain/vice")
+            per_gw.append({
+                "gw": int(row["gw"]),
+                "starting_xi": starters,
+                "bench_order": bench,
+                "bench_gk": bench_gk,
+                "captain": captain,
+                "vice_captain": vice,
+            })
+        normalized.append({
+            "route_id": str(source["route_id"]),
+            "classification": str(source.get("classification") or "FORCED_LINEUP_COMPARISON"),
+            "label": str(source.get("label") or source["route_id"]),
+            "per_gw": per_gw,
+            "execution_cost_points": 0.0,
+            "execution_cost_status": "HOLD_ZERO" if str(source["route_id"]) == "HOLD" else "GROSS_FOOTBALL_ONLY",
+            "decision_net_supported": str(source["route_id"]) == "HOLD",
+        })
+    return normalized
+
+
+def run_forced_lineup_monte_carlo(
+    projections: Mapping[str, Any],
+    *,
+    current15: Sequence[int],
+    scenarios: Sequence[Mapping[str, Any]],
+    input_snapshot_id: str,
+    planning_gw: int | None = None,
+    seed: int = 120910,
+    simulator: Callable[..., Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Run exact lineup scenarios through the canonical correlated MC kernel.
+
+    The caller owns scenario construction from the authenticated P1.7/current
+    squad surface. This adapter only validates the binding and extracts the
+    paired metrics; it never invents projections or replaces the optimizer.
+    """
+    start_gw = int(planning_gw or projections.get("planning_gw") or 0)
+    if start_gw <= 0:
+        raise FormationMonteCarloError("planning GW is required")
+    if not str(input_snapshot_id).startswith("private-full-master:"):
+        raise FormationMonteCarloError("authenticated private full_master snapshot is required")
+    routes = _validate_forced_routes(list(scenarios), current15, start_gw)
+    run = (simulator or run_correlated_monte_carlo)(
+        projections,
+        routes,
+        actual_paths=MC_PATHS,
+        seed=int(seed),
+        input_snapshot_id=str(input_snapshot_id),
+        canonical=True,
+        horizons=(1, 3, 5),
+        selected_route_id="HOLD",
+    )
+    if not (
+        run.get("execution_state") == "EXECUTED"
+        and run.get("canonical_pass") is True
+        and run.get("common_random_numbers") is True
+        and run.get("correlated") is True
+        and int(run.get("actual_paths") or 0) == MC_PATHS
+        and (run.get("convergence_evidence") or {}).get("status") == "PASS"
+    ):
+        raise FormationMonteCarloError("forced lineup MC did not pass canonical 500K correlated acceptance")
+    route_by_id = {str(row["route_id"]): row for row in routes}
+    metrics = dict(run.get("metrics") or {})
+    paired = dict(run.get("paired_outputs") or {})
+    for route_id in route_by_id:
+        if route_id not in metrics or any(str(horizon) not in metrics[route_id] for horizon in (1, 3, 5)):
+            raise FormationMonteCarloError(f"forced route metrics unavailable: {route_id}")
+    return {
+        "routes": route_by_id,
+        "metrics": metrics,
+        "paired": paired,
+        "actual_paths": MC_PATHS,
+        "seed": int(seed),
+        "horizons": [1, 3, 5],
+        "integrity": {
+            "exact_route_binding": True,
+            "current15_bound": True,
+            "common_random_numbers": True,
+            "correlated_kernel": "P1.4_RUN_CORRELATED_MONTE_CARLO",
+            "canonical_pass": True,
+        },
+        "provenance": {
+            "input_snapshot_id": str(input_snapshot_id),
+            "projection_fingerprint": (run.get("model_evidence_binding") or {}).get("output_fingerprint"),
+            "route_ids": list(route_by_id),
+        },
+        "mc_run": dict(run),
+    }
+
+
 def run_formation_monte_carlo(
     projections: Mapping[str, Any],
     *,

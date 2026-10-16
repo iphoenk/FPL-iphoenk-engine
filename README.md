@@ -139,7 +139,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-16T11:57:07+07:00`
+> **Last runtime/documentation sync:** `2026-10-16T05:58:55+00:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.
@@ -471,3 +471,10 @@ Only a validated authenticated private personal snapshot may normalize its fifte
 Change timestamp: `2026-10-16T11:57:07+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-16T11:57:07+07:00`
+
+
+### Stage B verified scanner and Stage C frozen GW7 replay (2026-10-16)
+
+Stage B original controlled DEEP occurrence 2026-10-16 10:20 WIB, run 38845535386, private persisted execution proof reports 667 Official / 667 scanned / 667 distinct, coverage COMPLETE and no missing reason codes. The corresponding private receipt is READY_FULL, private remote readback PASS. This is **controlled runtime evidence**, not synthetic CI or automatic natural scheduler proof.
+
+Stage C original 667/667 player prospective GW7 forecast is readback-verified in the same occurrence, preserved unmodified. `src/engines/v12_stagec_verified_oos.py` replays the original private Git frozen forecast and receipt against independent **later settled original V6 Git blobs**, verifying original commit times, exact full-universe membership, Official fixture/team identities, proper target GW settlement, observed starter/minutes and two frozen paired baselines. It evaluates only after the target GW is genuinely finalized, with no backdating, no new math owner, no numerical retuning, and no scheduler addition. Git-backed negative tests run in the existing V12 semantic workflow. As of 2026-10-16, GW7 is unplayed/unfinished, so out-of-sample validation and Stage D numerical activation remain **PENDING** even though code/controlled B proof are complete.

@@ -46,15 +46,51 @@ def classify_price_personal_mode(
     if not public_league_available:
         reasons.append("PUBLIC_LEAGUE_UNAVAILABLE")
 
-    finance_allowed = bool(
-        resolution.get("finance_allowed") is True
-        and resolution.get("stale") is not True
-        and str(resolution.get("source_class") or "").upper()
-        in {"AUTHENTICATED_CURRENT_TEAM", "USER_CONFIRMED"}
+    # The shared selector's canonical source class and PRICE's presentation
+    # label are distinct. Never authorize finance merely by a source string.
+    canonical_source = str(resolution.get("canonical_source_class") or "").upper()
+    presentation_source = str(resolution.get("source_class") or "").upper()
+    verified_source = bool(
+        (canonical_source == "AUTHENTICATED_CURRENT_TEAM"
+         and presentation_source == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM")
+        or
+        (canonical_source == "USER_CONFIRMED"
+         and presentation_source == "USER_EXPLICIT_CURRENT_GW")
     )
+    finance_verified = bool(
+        verified_source
+        and resolution.get("finance_allowed") is True
+        and resolution.get("finance_authority_status") == "PASS"
+        and resolution.get("state") == "CURRENT"
+        and resolution.get("supportable") is True
+        and resolution.get("stale") is False
+    )
+    # Stage B verifies authority, but Stage C still must normalize the official
+    # selling_price into the executable route's sell_value. Do not claim FULL
+    # before all fifteen values are bound to the route-economics interface.
+    rows = resolution.get("rows") or []
+    finance = dict(resolution.get("finance") or {})
+    route_inputs_bound = bool(
+        finance_verified
+        and len(rows) == 15
+        and type(finance.get("bank")) is int
+        and type(finance.get("free_transfers")) is int
+        and type(finance.get("hit_cost")) is int
+        and all(
+            isinstance(row, Mapping)
+            and type(row.get("purchase_price")) is int
+            and type(row.get("sell_value")) is int
+            and row["purchase_price"] >= 0
+            and row["sell_value"] >= 0
+            for row in rows
+        )
+    )
+    finance_allowed = route_inputs_bound
     if resolution.get("stale") is True:
         reasons.append("STALE_PERSONAL_EVIDENCE")
-    elif not finance_allowed:
+    elif finance_verified and not route_inputs_bound:
+        reasons.append("SELLING_PRICE_BINDING_INCOMPLETE")
+    elif not finance_verified:
         reasons.append("PRIVATE_PERSONAL_UNAVAILABLE")
 
     public_usable = bool(public_official_available)
@@ -1578,6 +1614,55 @@ def _load_personal_inputs(
     }
 
 
+def _verified_authenticated_finance(
+    *,
+    proof: Mapping[str, Any],
+    payload: Mapping[str, Any],
+    raw_rows: Sequence[Mapping[str, Any]],
+) -> bool:
+    """Verify 15/15 financial authority without making it executable yet.
+
+    Only the already-validated current-team Official selector can authorize
+    private bank, transfers and 15 individual purchase/selling prices. An HTTP
+    200, a non-null bank or a submitted-picks snapshot alone is insufficient.
+    """
+    if not (
+        proof.get("resolution_status") == "CURRENT_VALID"
+        and proof.get("finance_allowed") is True
+        and proof.get("authenticated") is True
+        and proof.get("stale") is False
+        and str(proof.get("source_class") or "").upper()
+        == "AUTHENTICATED_CURRENT_TEAM"
+        and str(payload.get("auth_state") or "").upper() == "AUTH_AVAILABLE"
+        and str(payload.get("squad_state") or "").upper()
+        == "AUTHENTICATED_CURRENT_TEAM"
+    ):
+        return False
+    availability = dict(payload.get("availability") or {})
+    if any(
+        availability.get(key) != "AVAILABLE"
+        for key in ("bank", "free_transfers", "purchase_price", "selling_price")
+    ) or availability.get("authenticated_state") != "AUTH_AVAILABLE":
+        return False
+    if not (
+        type(payload.get("bank")) is int
+        and payload["bank"] >= 0
+        and type(payload.get("free_transfers")) is int
+        and 0 <= payload["free_transfers"] <= 5
+        and type(payload.get("hit_cost")) is int
+        and payload["hit_cost"] >= 0
+        and len(raw_rows) == 15
+    ):
+        return False
+    return all(
+        type(row.get("purchase_price")) is int
+        and type(row.get("selling_price")) is int
+        and row["purchase_price"] >= 0
+        and row["selling_price"] >= 0
+        for row in raw_rows
+    )
+
+
 def resolve_price_from_selected_evidence(
     *,
     selected: Mapping[str, Any],
@@ -1633,6 +1718,12 @@ def resolve_price_from_selected_evidence(
             "finance": {},
             "reason": "shared personal evidence did not establish 15 unique player IDs",
         }
+    finance_verified = bool(
+        current
+        and _verified_authenticated_finance(
+            proof=proof, payload=payload, raw_rows=raw_rows
+        )
+    )
     finance = (
         {
             "bank": payload.get("bank"),
@@ -1640,7 +1731,7 @@ def resolve_price_from_selected_evidence(
             "hit_cost": payload.get("hit_cost"),
             "transfers_made": payload.get("transfers_made"),
         }
-        if current else {}
+        if finance_verified else {}
     )
     return {
         "state": "CURRENT" if current else "STALE",
@@ -1649,6 +1740,9 @@ def resolve_price_from_selected_evidence(
         "element_ids": ids,
         "source_class": source_class,
         "canonical_source_class": canonical_source_class,
+        "stale": not current,
+        "finance_allowed": finance_verified,
+        "finance_authority_status": "PASS" if finance_verified else "UNAVAILABLE",
         "gw": planning_gw if current else proof.get("gw"),
         "source_scoring_gw": proof.get("source_scoring_gw"),
         "editable_planning_gw": payload.get("editable_planning_gw"),

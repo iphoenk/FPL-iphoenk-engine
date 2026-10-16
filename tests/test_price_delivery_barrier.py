@@ -614,3 +614,174 @@ def test_stage_a_rejects_unverified_authenticated_current_evidence(tmp_path, mut
     assert resolved["state"] != "CURRENT"
     assert resolved["supportable"] is False
     assert resolved["finance"] == {}
+
+
+def _stage_b_authenticated_team():
+    return {
+        "entry_id": 3462711,
+        "gw": 6,
+        "editable_planning_gw": 7,
+        "generated_at": "2026-10-16T10:30:27+07:00",
+        "auth_state": "AUTH_AVAILABLE",
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "availability": {
+            "authenticated_state": "AUTH_AVAILABLE",
+            "bank": "AVAILABLE",
+            "free_transfers": "AVAILABLE",
+            "purchase_price": "AVAILABLE",
+            "selling_price": "AVAILABLE",
+        },
+        "bank": 13,
+        "free_transfers": 2,
+        "hit_cost": 4,
+        "players": [
+            {**row, "purchase_price": 60, "selling_price": 62}
+            for row in _team_rows(list(range(1, 16)))
+        ],
+        "lineage": {
+            "authenticated": [
+                {"endpoint_class": "me", "http_status": 200, "entry_id": 3462711},
+                {"endpoint_class": "my_team", "http_status": 200, "entry_id": 3462711},
+            ]
+        },
+    }
+
+
+def _stage_b_price_resolution(tmp_path, team):
+    import json
+    from src.engines.v12_price_delivery import (
+        _load_personal_inputs, resolve_price_from_selected_evidence,
+    )
+
+    private = tmp_path / "private"
+    (private / "personal").mkdir(parents=True, exist_ok=True)
+    (private / "personal/current_team.json").write_text(
+        json.dumps(team), encoding="utf-8"
+    )
+    inputs = _load_personal_inputs(
+        runtime_data_root=tmp_path / "runtime",
+        private_data_root=private,
+        planning_gw=7,
+        report_slot="2026-10-16T10:30:00+07:00",
+    )
+    return resolve_price_from_selected_evidence(
+        selected=inputs["selected_evidence"],
+        planning_gw=7,
+        bootstrap=_bootstrap(100),
+    )
+
+
+def test_stage_b_verified_finance_is_bound_but_route_selling_values_stay_fail_closed(tmp_path):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    assert resolved["state"] == "CURRENT"
+    assert resolved["canonical_source_class"] == "AUTHENTICATED_CURRENT_TEAM"
+    assert resolved["source_class"] == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+    assert resolved["finance_authority_status"] == "PASS"
+    assert resolved["finance_allowed"] is True
+    assert resolved["finance"]["bank"] == 13
+    assert resolved["finance"]["free_transfers"] == 2
+    assert resolved["finance"]["hit_cost"] == 4
+    assert len(resolved["rows"]) == 15
+    # This is Stage C's deliberately still-unmapped Official field.
+    assert all(row["sell_value"] is None for row in resolved["rows"])
+    classification = classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=resolved,
+    )
+    assert classification["mode"] == "PUBLIC_FIRST_DEGRADED"
+    assert classification["finance_status"] == "UNAVAILABLE"
+    assert classification["executable_transfer_economics"] is False
+    assert "SELLING_PRICE_BINDING_INCOMPLETE" in classification["degradation_reasons"]
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "missing_bank",
+        "boolean_bank",
+        "missing_ft",
+        "missing_hit_cost",
+        "missing_purchase",
+        "missing_selling",
+        "price_availability_unavailable",
+        "authenticated_state_unavailable",
+    ],
+)
+def test_stage_b_incomplete_private_finance_fails_closed(tmp_path, fault):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    team = _stage_b_authenticated_team()
+    if fault == "missing_bank":
+        team["bank"] = None
+    elif fault == "boolean_bank":
+        team["bank"] = True
+    elif fault == "missing_ft":
+        team["free_transfers"] = None
+    elif fault == "missing_hit_cost":
+        team["hit_cost"] = None
+    elif fault == "missing_purchase":
+        team["players"][4]["purchase_price"] = None
+    elif fault == "missing_selling":
+        team["players"][7]["selling_price"] = None
+    elif fault == "price_availability_unavailable":
+        team["availability"]["selling_price"] = "UNAVAILABLE"
+    elif fault == "authenticated_state_unavailable":
+        team["availability"]["authenticated_state"] = "AUTH_UNAVAILABLE"
+    resolved = _stage_b_price_resolution(tmp_path, team)
+    assert resolved["finance_authority_status"] == "UNAVAILABLE"
+    assert resolved["finance_allowed"] is False
+    assert resolved["finance"] == {}
+    classification = classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=resolved,
+    )
+    assert classification["mode"] == "PUBLIC_FIRST_DEGRADED"
+    assert classification["finance_status"] == "UNAVAILABLE"
+    assert classification["executable_transfer_economics"] is False
+
+
+def test_stage_b_exact_canonical_source_and_complete_route_inputs_required_for_full(tmp_path):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    stage_c_completed = {
+        **resolved,
+        "rows": [
+            {**row, "sell_value": 62}
+            for row in resolved["rows"]
+        ],
+    }
+    result = classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=stage_c_completed,
+    )
+    assert result["mode"] == "FULL"
+    assert result["finance_status"] == "AVAILABLE"
+    assert result["executable_transfer_economics"] is True
+
+
+def test_stage_b_canonical_source_spoof_or_unverified_authority_cannot_go_full(tmp_path):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    bound = {**resolved, "rows": [{**r, "sell_value": 62} for r in resolved["rows"]]}
+    for mutation in (
+        {"canonical_source_class": "OFFICIAL_SUBMITTED_PICKS"},
+        {"source_class": "AUTHENTICATED_CURRENT_TEAM"},
+        {"finance_authority_status": "UNAVAILABLE"},
+        {"finance_allowed": False},
+        {"stale": True},
+        {"supportable": False},
+    ):
+        result = classify_price_personal_mode(
+            public_official_available=True,
+            public_league_available=True,
+            personal_resolution={**bound, **mutation},
+        )
+        assert result["mode"] != "FULL"
+        assert result["executable_transfer_economics"] is False

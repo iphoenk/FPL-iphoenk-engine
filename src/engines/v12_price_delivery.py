@@ -65,23 +65,34 @@ def classify_price_personal_mode(
         and resolution.get("supportable") is True
         and resolution.get("stale") is False
     )
-    # Stage B verifies authority, but Stage C still must normalize the official
-    # selling_price into the executable route's sell_value. Do not claim FULL
-    # before all fifteen values are bound to the route-economics interface.
+    # Stage C consumes only exact authenticated Official selling prices
+    # normalized into executable route values, never unauthenticated aliases.
     rows = resolution.get("rows") or []
     finance = dict(resolution.get("finance") or {})
     route_inputs_bound = bool(
         finance_verified
         and len(rows) == 15
+        and len({
+            row.get("element_id")
+            for row in rows if isinstance(row, Mapping)
+        }) == 15
         and type(finance.get("bank")) is int
+        and finance["bank"] >= 0
         and type(finance.get("free_transfers")) is int
+        and 0 <= finance["free_transfers"] <= 5
         and type(finance.get("hit_cost")) is int
+        and finance["hit_cost"] >= 0
         and all(
             isinstance(row, Mapping)
+            and type(row.get("element_id")) is int
+            and row["element_id"] > 0
             and type(row.get("purchase_price")) is int
+            and type(row.get("selling_price")) is int
             and type(row.get("sell_value")) is int
             and row["purchase_price"] >= 0
-            and row["sell_value"] >= 0
+            and row["selling_price"] >= 0
+            and row["sell_value"] == row["selling_price"]
+            and row.get("sell_value_authority") == "OFFICIAL_AUTHENTICATED_MY_TEAM"
             for row in rows
         )
     )
@@ -206,6 +217,8 @@ def _normalise_team_rows(
                 or official.get("now_cost"),
                 "sell_value": row.get("authenticated_sell_value", row.get("sell_value")),
                 "purchase_price": row.get("purchase_price"),
+                # Source original is kept separate from the finance binding.
+                "selling_price": row.get("selling_price"),
                 "squad_position": row.get("squad_position"),
                 "bench_order": row.get("bench_order"),
                 "captain": bool(row.get("captain")),
@@ -1724,6 +1737,18 @@ def resolve_price_from_selected_evidence(
             proof=proof, payload=payload, raw_rows=raw_rows
         )
     )
+    if finance_verified:
+        # Stage C: preserve the original authenticated provider field and
+        # bind each selling value only from the same validated private snapshot.
+        rows = [
+            {
+                **row,
+                "selling_price": raw["selling_price"],
+                "sell_value": raw["selling_price"],
+                "sell_value_authority": "OFFICIAL_AUTHENTICATED_MY_TEAM",
+            }
+            for row, raw in zip(rows, raw_rows)
+        ]
     finance = (
         {
             "bank": payload.get("bank"),

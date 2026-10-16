@@ -457,6 +457,7 @@
         "Evidence semantics",
         "Denominator scopes",
         "League position context",
+        "All league player ownership",
         "OUR15 exposure, LEAGUE",
         "OUR15 exposure, RIVALS",
         "OUR15 exposure, COMPETITIVE WINDOW",
@@ -488,6 +489,21 @@
             "Gap"
           ],
           "rows_exact": 10
+        },
+        {
+          "name": "All league player ownership",
+          "columns": [
+            "Player",
+            "Pos",
+            "Owned",
+            "Ownership",
+            "Starter",
+            "Bench",
+            "Captain",
+            "Vice",
+            "EO"
+          ],
+          "rows_min": 1
         },
         {
           "name": "OUR15 exposure, LEAGUE",

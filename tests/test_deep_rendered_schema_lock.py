@@ -29,6 +29,10 @@ def _row_for(columns: list[str], *, index: int, sid: str) -> list[str]:
     for column in columns:
         if column == "Pos" and sid == "S11":
             out.append(("GK", "DEF", "MID", "FWD")[(index - 1) // 5])
+        elif column == "Pos" and sid == "S15B":
+            out.append("MID")
+        elif column == "Ownership" and sid == "S15B":
+            out.append("100.0%")
         elif column in ratio_columns:
             out.append("1/1 (100.0%)")
         elif column == "Rank" or column == "#":
@@ -65,7 +69,15 @@ def _valid_body(*, degraded: set[str] | None = None) -> tuple[str, dict]:
         if sid == "S16B":
             continue
         state = "DEGRADED" if sid in degraded else "COMPLETE"
-        report_sections.append({"section_id": sid, "state": state, "content": {}})
+        fixture_content = (
+            {"league_full_composition": [{
+                "player": "V1", "position": "MID", "ownership_count": 1,
+                "starter_count": 1, "bench_count": 0, "captain_count": 0,
+                "vice_count": 0, "effective_multiplier_sum": 1,
+            }], "league_unique_player_count": 1}
+            if sid == "S15B" and state == "COMPLETE" else {}
+        )
+        report_sections.append({"section_id": sid, "state": state, "content": fixture_content})
         lines = [_heading(sid), f"Status: {state}"]
         spec = cfg["sections"][sid]
         if state == "COMPLETE":

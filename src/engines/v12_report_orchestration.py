@@ -5397,6 +5397,45 @@ def _render_deep_visible_contract_lines(
             [(r.get("rank"), r.get("manager"), r.get("team"), r.get("total_points"), r.get("gap_vs_us")) for r in rank_battle],
         ))
 
+        # Canonical full-league submitted-picks exposure is already computed upstream.
+        # Render all unique players (including those outside OUR15) without
+        # changing the underlying P1.8 model, denominator or frozen GW evidence.
+        full_league = [
+            dict(r) for r in payload.get("league_full_composition") or []
+            if isinstance(r, Mapping)
+        ]
+        league_denom = dict(scopes.get("LEAGUE") or {}).get("denominator")
+        full_league.sort(key=lambda r: (
+            -int(r.get("ownership_count") or 0),
+            -float(r.get("effective_multiplier_sum") or 0),
+            str(r.get("player") or r.get("name") or r.get("web_name") or ""),
+        ))
+        lines.append("### ALL LEAGUE PLAYER OWNERSHIP")
+        lines.append(
+            "Submitted-picks behavioural baseline; LEAGUE includes us. "
+            "Sorted by ownership descending. Position labels GK / DEF / MID / FWD "
+            "support the interactive position filter in native presentation."
+        )
+        full_league_rows = []
+        for r in full_league:
+            row = dict(r)
+            row.setdefault("denominator", league_denom)
+            full_league_rows.append((
+                row.get("player") or row.get("name") or row.get("web_name") or "UNAVAILABLE",
+                row.get("position") or "UNAVAILABLE",
+                _ratio(row, "ownership_count", "ownership_pct"),
+                f"{_num(row.get('ownership_pct') if row.get('ownership_pct') is not None else (100.0 * float(row.get('ownership_count') or 0) / float(league_denom or 1)))}%",
+                _ratio(row, "starter_count", "starter_pct"),
+                _ratio(row, "bench_count", "bench_pct"),
+                _ratio(row, "captain_count", "captain_pct"),
+                _ratio(row, "vice_count", "vice_pct"),
+                _ratio(row, "effective_multiplier_sum", "eo_pct"),
+            ))
+        lines.extend(_markdown_table(
+            ("Player", "Pos", "Owned", "Ownership", "Starter", "Bench", "Captain", "Vice", "EO"),
+            full_league_rows,
+        ))
+
         exposure_specs = (
             ("OUR15 LEAGUE", "league_our15_exposure", ("Player", "Owned", "Starter", "Bench", "Captain", "Vice", "EO"), True),
             ("OUR15 RIVALS", "rivals_our15_exposure", ("Player", "Owned", "Starter", "Captain", "EO"), False),

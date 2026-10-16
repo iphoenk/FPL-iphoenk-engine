@@ -260,3 +260,7 @@ that collapses the section back to percentage-only summary cannot pass.
 non-DEEP consumers, but it does not weaken the S15B visible DEEP contract.
 
 No new scheduler or authority is introduced.
+
+## S15B full league player ownership (16 Oct 2026)
+
+The existing canonical `league_full_composition` computes exposure across all unique Official FPL element identities on the submitted 58-manager league scope; this is distinct from the OUR15 and the dynamic Competitive Window. In addition to the eight locked original tables, DEEP S15B renders a ninth `ALL LEAGUE PLAYER OWNERSHIP` table with Player, Pos, Owned, Ownership, Starter, Bench, Captain, Vice, EO. Players are ordered by descending owned count; positions are GK, DEF, MID and FWD for native filtering. Every population ratio uses 58 as the denominator, including our own team, and EO may exceed 100% due to multipliers. The submitted picks represent the prior-GW behavioural baseline, **not** future private selections. The canonical report's visible lock and QA enforce one row per unique player and the position mapping; no forecasting, optimizer, scheduler or Stage3 decision authority is added. Source audit at 2026-10-16 21:30 WIB found 58/58 squads and 158 unique identities; a private additive appendix exists without rewriting immutable occurrence receipts.

@@ -103,6 +103,7 @@ def validate_deep_presentation_lock_contract(
         "S15B": [
             ("Scope","Definition","Coverage"),
             ("Rank","Manager","Team","Points","Gap"),
+            ("Player","Pos","Owned","Ownership","Starter","Bench","Captain","Vice","EO"),
             ("Player","Owned","Starter","Bench","Captain","Vice","EO"),
             ("Player","Owned","Starter","Captain","EO"),
             ("Player","Owned","Starter","Bench","Captain","Vice","EO"),
@@ -480,6 +481,36 @@ def validate_rendered_deep_presentation(
                     failures.append(
                         f"{sid}_RENDERED_ROWS_MIN={idx + 1}:{row_count}/{minimum}"
                     )
+
+        if sid == "S15B" and state == "COMPLETE":
+            s15b_content = next((
+                row.get("content") or {}
+                for row in (report or {}).get("sections") or []
+                if isinstance(row, Mapping)
+                and str(row.get("section_id") or "").upper() == "S15B"
+            ), {})
+            full_rows = [
+                row for row in s15b_content.get("league_full_composition") or []
+                if isinstance(row, Mapping)
+            ]
+            # The ninth semantic structure must retain one row per unique
+            # canonical player, not a top-N summary or a duplicate-only view.
+            if len(actual_tables) >= 3:
+                rendered_rows = actual_tables[2]["rows"]
+                if len(rendered_rows) != len(full_rows):
+                    failures.append(
+                        f"S15B_FULL_OWNERSHIP_ROWS={len(rendered_rows)}/{len(full_rows)}"
+                    )
+                if any(
+                    len(row) != 9 or row[1] not in ("GK", "DEF", "MID", "FWD")
+                    for row in rendered_rows
+                ):
+                    failures.append("S15B_FULL_OWNERSHIP_POSITION_INVALID")
+                if any(
+                    "UNAVAILABLE" in str(value).upper()
+                    for row in rendered_rows for value in row
+                ):
+                    failures.append("S15B_FULL_OWNERSHIP_VALUE_UNAVAILABLE")
 
         if sid == "S11" and state == "COMPLETE" and actual_tables:
             rows = actual_tables[0]["rows"]

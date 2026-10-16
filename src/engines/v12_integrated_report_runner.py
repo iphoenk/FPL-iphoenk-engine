@@ -3792,8 +3792,37 @@ def _mini_league_deep_detail(
         league_unique_ids,
         require_complete_eo=True,
     )
+    # Presentation-only slot semantics: Bench Boost grants positive points
+    # multipliers to bench players, but does not move them into the starting XI.
+    # Keep the existing P1.8 exposure/decision math untouched: correct only
+    # the ALL LEAGUE composition table from submitted squad positions.
+    league_lineup_slots: dict[int, dict[str, int]] = {}
+    for entry in league_entries:
+        for pick in entry.get("picks") or []:
+            element = pick_element(pick)
+            position = pick_position(pick)
+            if element is None or position is None:
+                continue
+            counts = league_lineup_slots.setdefault(element, {"starter": 0, "bench": 0})
+            if 1 <= position <= 11:
+                counts["starter"] += 1
+            elif 12 <= position <= 15:
+                counts["bench"] += 1
     for row in league_full_composition:
-        player = canonical_map.get(int(row.get("element_id") or 0)) or {}
+        element = int(row.get("element_id") or 0)
+        counts = league_lineup_slots.get(element) or {}
+        row["starter_count"] = int(counts.get("starter") or 0)
+        row["bench_count"] = int(counts.get("bench") or 0)
+        denominator = int(row.get("denominator") or 0)
+        row["starter_pct"] = (
+            round(100.0 * row["starter_count"] / denominator, 1)
+            if denominator > 0 else None
+        )
+        row["bench_pct"] = (
+            round(100.0 * row["bench_count"] / denominator, 1)
+            if denominator > 0 else None
+        )
+        player = canonical_map.get(element) or {}
         row["position"] = (
             player.get("position")
             or player.get("position_name")

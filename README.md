@@ -1,5 +1,7 @@
 # FPL iphoenk Engine v3.39.0
 
+- **P0 PRICE Stage C Official buy/sell route economics (16 Oct 2026):** The existing canonical authenticated selector and Stage B finance evidence now bind 15/15 private `selling_price` to executable `sell_value`, with explicit field equality and source authority. Targets use Official FPL bootstrap current buy prices (no predictor substitution); affordability and +/- GBP 0.1m shocks are integer tenths, with bank-after, FT remaining and incremental hit marked counterfactual. Unverified/mismatched values fail closed. End-to-end tests cover twelve-section rendered PRICE plus 15 more route and security regression nodes; exact V12 governance baseline 1,435 -> 1,451. No scheduler, PR #809, immutable GW7 forecast, Stage3, MC500K or immutable receipt changed; production PRICE FULL remains unverified until a new exact-slot occurrence. Change timestamp: `2026-10-16T11:57:07+07:00`. Documentation sync: UPDATED.
+
 - **PRICE Stage B (16 Oct 2026):** Require verified authenticated bank, FT, hit cost, and 15/15 Official purchase and selling prices before private finance authority is accepted. The legacy PRICE source label is matched to canonical evidence; selling-price route normalization remains Stage C and PRICE is not promoted to FULL. No scheduler, PR #809, frozen GW7, Stage3, or MC changes. Change timestamp: `2026-10-16T11:27:14+07:00`. Documentation sync: UPDATED.
 
 - **P0 PRICE Stage A shared CURRENT15 authority (16 Oct 2026):** PRICE now consumes the same canonical private evidence selector as DEEP, with exact report-slot as-of validation and explicit scoring-GW6 versus editable-GW7 provenance. Five reviewed regression node IDs cover authenticated 15/15 CURRENT and fail-closed expired identity, entry mismatch, wrong editable GW and post-slot evidence. The existing finance source-label gate remains intentionally DEGRADED until Stage B; no false PRICE READY_FULL, pricing normalization, scheduler, PR #809 or immutable GW7 forecast change. V12 governed test baseline 1,419 -> 1,424. Change timestamp: `2026-10-16T11:17:00+07:00`. Documentation sync: UPDATED.
@@ -137,7 +139,7 @@
 
 - **C/VC & evidence presentation integrity (12 Oct 2026):** S06/S08/S19 captain and vice identities must agree before READY_FULL; S02 labels numeric model estimates separately from unavailable exact-slot full-history and P(start) acceptance. S15 cross-section quality now uses the canonical PASS/FULL acceptance vocabulary. ChatGPT native visual 22/22 remains a separate user-visible acceptance gate, not established by embedded HTML/CSS or Markdown QA.
 
-> **Last runtime/documentation sync:** `2026-10-16T11:27:14+07:00`
+> **Last runtime/documentation sync:** `2026-10-16T11:57:07+07:00`
 - **P0 P(start) universe walk-forward and evidence resolution (14 Oct 2026):** Stage1 diagnostic uses expanding-GW paired canonical baseline vs individualized P1.1 predictions with starter/DNP/cameo/15-player equality audit, role/context split, per-position/team reliability and fail-closed predeadline archive requirements. No model parameter changes, scheduler or Monte Carlo changes. Change timestamp: `2026-10-14T05:45:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T05:45:00+07:00`.
 - **P0 natural 04:30 S16B cardinality repair (14 Oct 2026):** Exact post-match S16B validation now recognizes the legitimate numeric zero for duplicate fixtures rather than coercing zero to -1. It still rejects any duplicate, missing fixture or incomplete OWN15 reassessment. Existing required regression extended without changing collected test-node count. No scheduler, MC, model, latest, or V6 factual owner changes. Change timestamp: `2026-10-14T04:52:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:52:00+07:00`.
 - **P0 S02 evidence truthfulness (14 Oct 2026):** Chelsea form is shown as UNAVAILABLE when provider fixtures do not pass cutoff/identity gates, never as 0W-0D-0L. The P(start) differentiation audit recognizes verified player-conditioned historical selection separately from uncalibrated role/manager/availability context. Canonical probabilities, scheduler, latest pointers and model parameters remain unchanged. Change timestamp: `2026-10-14T04:25:00+07:00`; Documentation sync: `UPDATED`; Documentation timestamp: `2026-10-14T04:25:00+07:00`.
@@ -461,3 +463,11 @@ Private CURRENT15 evidence now requires complete verified financial provenance b
 Change timestamp: `2026-10-16T11:27:14+07:00`
 Documentation sync: UPDATED
 Documentation timestamp: `2026-10-16T11:27:14+07:00`
+
+### PRICE Stage C verified transfer finance (16 October 2026)
+
+Only a validated authenticated private personal snapshot may normalize its fifteen original Official `selling_price` values into canonical route `sell_value`. The verified Stage B bank, free-transfer and per-extra-transfer hit context remains protected. Incoming buy prices use the exact current Official FPL bootstrap; predictor prices never determine executable affordability. Route budget calculations use integer 0.1m units and expose hypothetical post-transfer bank, independent GBP 0.1m up/down sensitivity, FT remaining and incremental hit. Failed ownership, missing Official buy price, spoofed sale provenance, or incomplete finance evidence remains unavailable. PRICE is permitted to report FULL after all original required gates pass, but no historical receipt or natural occurrence is upgraded by this code deployment. Sixteen additional reviewed regression nodes extend the mandatory 54-file V12 governance suite to 1,451.
+
+Change timestamp: `2026-10-16T11:57:07+07:00`
+Documentation sync: UPDATED
+Documentation timestamp: `2026-10-16T11:57:07+07:00`

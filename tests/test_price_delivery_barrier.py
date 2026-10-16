@@ -942,3 +942,53 @@ def test_stage_c_invalid_transfer_ownership_does_not_gain_affordability(tmp_path
     assert len(result) == 2
     assert all(r["nominal_affordability"] == "UNKNOWN" for r in result)
     assert all(r["bank_after_tenths"] == "UNKNOWN" for r in result)
+
+
+def test_stage_c_complete_private_price_report_renders_twelve_sections_and_exact_route(tmp_path):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    price = classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=resolved,
+    )
+    assert price["mode"] == "FULL"
+    report = build_price_delivery_report(
+        canonical_text=_canonical(),
+        report_slot="2026-10-16T10:30:00+07:00",
+        planning_gw=7,
+        bootstrap=_bootstrap(120),
+        team_resolution=resolved,
+        predictor_artifact=_predictor(),
+        evaluated_universe=_universe(),
+        universe_authority="FULL",
+        transfer_routes=[
+            {"out_element_id": 1, "in_element_id": 90, "football_action": "WAIT"}
+        ],
+        mini_league={
+            "complete": True,
+            "expected_manager_count": 58,
+            "collected_manager_count": 58,
+            "generated_at": "2026-10-16T10:25:00+07:00",
+            "user_summary": {"rank": 7},
+        },
+        source_lineage={
+            "official_timestamp": "2026-10-16T10:29:00+07:00",
+            "core_logical_slot": "2026-10-16T10:00:00+07:00",
+            "core_run_id": "test-evidence-not-production",
+            "runtime_snapshot": "test-evidence-not-production",
+            "next_checkpoint": "NEXT PRICE CYCLE",
+        },
+    )
+    route = report["sections"][7]["content"]["routes"][0]
+    assert route["out_selling_price"] == 62
+    assert route["bank_before"] == 13
+    assert route["bank_after_tenths"] == 13 + 62 - (45 + 90 % 40)
+    assert route["ft_hit_economics"] == "KNOWN"
+    assert route["incremental_hit_points"] == 0
+    assert report["action"] == "WAIT"
+    body = render_price_report(report)
+    assert validate_price_report_model(report) == []
+    assert validate_price_visible_body(body, report=report) == []
+    assert [s["section_id"] for s in report["sections"]] == list(PRICE_SECTION_IDS)

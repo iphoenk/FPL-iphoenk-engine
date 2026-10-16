@@ -676,7 +676,7 @@ def _stage_b_price_resolution(tmp_path, team):
     )
 
 
-def test_stage_b_verified_finance_is_bound_but_route_selling_values_stay_fail_closed(tmp_path):
+def test_stage_b_verified_finance_now_maps_official_selling_values_in_stage_c(tmp_path):
     from src.engines.v12_price_delivery import classify_price_personal_mode
 
     resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
@@ -689,17 +689,20 @@ def test_stage_b_verified_finance_is_bound_but_route_selling_values_stay_fail_cl
     assert resolved["finance"]["free_transfers"] == 2
     assert resolved["finance"]["hit_cost"] == 4
     assert len(resolved["rows"]) == 15
-    # This is Stage C's deliberately still-unmapped Official field.
-    assert all(row["sell_value"] is None for row in resolved["rows"])
+    assert all(
+        row["sell_value"] == row["selling_price"] == 62
+        and row["sell_value_authority"] == "OFFICIAL_AUTHENTICATED_MY_TEAM"
+        for row in resolved["rows"]
+    )
     classification = classify_price_personal_mode(
         public_official_available=True,
         public_league_available=True,
         personal_resolution=resolved,
     )
-    assert classification["mode"] == "PUBLIC_FIRST_DEGRADED"
-    assert classification["finance_status"] == "UNAVAILABLE"
-    assert classification["executable_transfer_economics"] is False
-    assert "SELLING_PRICE_BINDING_INCOMPLETE" in classification["degradation_reasons"]
+    assert classification["mode"] == "FULL"
+    assert classification["finance_status"] == "AVAILABLE"
+    assert classification["executable_transfer_economics"] is True
+    assert classification["degradation_reasons"] == []
 
 
 @pytest.mark.parametrize(
@@ -753,17 +756,10 @@ def test_stage_b_exact_canonical_source_and_complete_route_inputs_required_for_f
     from src.engines.v12_price_delivery import classify_price_personal_mode
 
     resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
-    stage_c_completed = {
-        **resolved,
-        "rows": [
-            {**row, "sell_value": 62}
-            for row in resolved["rows"]
-        ],
-    }
     result = classify_price_personal_mode(
         public_official_available=True,
         public_league_available=True,
-        personal_resolution=stage_c_completed,
+        personal_resolution=resolved,
     )
     assert result["mode"] == "FULL"
     assert result["finance_status"] == "AVAILABLE"
@@ -774,7 +770,7 @@ def test_stage_b_canonical_source_spoof_or_unverified_authority_cannot_go_full(t
     from src.engines.v12_price_delivery import classify_price_personal_mode
 
     resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
-    bound = {**resolved, "rows": [{**r, "sell_value": 62} for r in resolved["rows"]]}
+    bound = resolved
     for mutation in (
         {"canonical_source_class": "OFFICIAL_SUBMITTED_PICKS"},
         {"source_class": "AUTHENTICATED_CURRENT_TEAM"},
@@ -790,3 +786,159 @@ def test_stage_b_canonical_source_spoof_or_unverified_authority_cannot_go_full(t
         )
         assert result["mode"] != "FULL"
         assert result["executable_transfer_economics"] is False
+
+
+def test_stage_c_private_snapshot_15_prices_are_not_inferred_from_public_current_prices(tmp_path):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    team = _stage_b_authenticated_team()
+    team["players"][0]["selling_price"] = 48
+    team["players"][0]["purchase_price"] = 45
+    team["players"][0]["current_price"] = 56
+    resolved = _stage_b_price_resolution(tmp_path, team)
+    assert resolved["finance_authority_status"] == "PASS"
+    assert resolved["rows"][0]["purchase_price"] == 45
+    assert resolved["rows"][0]["selling_price"] == 48
+    assert resolved["rows"][0]["sell_value"] == 48
+    assert resolved["rows"][0]["now_cost"] == 56
+    assert all(r["sell_value_authority"] == "OFFICIAL_AUTHENTICATED_MY_TEAM"
+               for r in resolved["rows"])
+    assert classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution=resolved,
+    )["mode"] == "FULL"
+
+
+@pytest.mark.parametrize(
+    "bank,sell,in_cost,expected_bank_after,nominal,plus,minus,combined",
+    [
+        (13, 48, 60, 1, True, True, True, False),
+        (12, 48, 60, 0, True, False, False, False),
+        (10, 48, 60, -2, False, False, False, False),
+        (15, 48, 60, 3, True, True, True, True),
+    ],
+)
+def test_stage_c_exact_tenths_affordability_and_01_shock(
+    tmp_path, bank, sell, in_cost, expected_bank_after,
+    nominal, plus, minus, combined,
+):
+    from src.engines.v12_price_delivery import _route_economics
+
+    team = _stage_b_authenticated_team()
+    team["bank"] = bank
+    team["players"][0]["selling_price"] = sell
+    resolved = _stage_b_price_resolution(tmp_path, team)
+    bootstrap = _bootstrap(100)
+    # Official current cost is factual even when predictor supplies a
+    # different, outdated price (never use it to decide affordability).
+    for player in bootstrap["elements"]:
+        if player["id"] == 90:
+            player["now_cost"] = in_cost
+    predictor = {"data": {"players": [
+        {"id": 90, "web_name": "IN", "now_cost": in_cost + 10}
+    ]}}
+    result = _route_economics(
+        [{"out_element_id": 1, "in_element_id": 90}],
+        team_resolution=resolved,
+        predictor_artifact=predictor,
+        official_bootstrap=bootstrap,
+    )
+    assert len(result) == 1
+    route = result[0]
+    assert route["out_selling_price"] == sell
+    assert route["in_current_price"] == in_cost
+    assert route["purchase_price_authority"] == "OFFICIAL_FPL_BOOTSTRAP"
+    assert route["selling_price_authority"] == "OFFICIAL_AUTHENTICATED_MY_TEAM"
+    assert route["bank_after_tenths"] == expected_bank_after
+    assert route["bank_after"] == expected_bank_after / 10
+    assert route["nominal_affordability"] is nominal
+    assert route["target_plus_0_1"] is plus
+    assert route["outgoing_minus_0_1"] is minus
+    assert route["combined_deterioration"] is combined
+
+
+@pytest.mark.parametrize(
+    "free_transfers,expected_hit",
+    [(0, 4), (1, 0), (2, 0), (5, 0)],
+)
+def test_stage_c_verified_ft_hit_cost_remain_counterfactual(tmp_path, free_transfers, expected_hit):
+    from src.engines.v12_price_delivery import _route_economics
+
+    team = _stage_b_authenticated_team()
+    team["free_transfers"] = free_transfers
+    resolved = _stage_b_price_resolution(tmp_path, team)
+    route = _route_economics(
+        [{"out_element_id": 1, "in_element_id": 90, "football_action": "WAIT"}],
+        team_resolution=resolved,
+        predictor_artifact=_predictor(),
+        official_bootstrap=_bootstrap(100),
+    )[0]
+    assert route["ft_hit_economics"] == "KNOWN"
+    assert route["free_transfers"] == free_transfers
+    assert route["free_transfers_after_one"] == max(free_transfers - 1, 0)
+    assert route["incremental_hit_points"] == expected_hit
+    assert route["football_action"] == "WAIT"
+    assert route["classification"] == "INFERENCE"
+    # This is a hypothetical additional single transfer, never an executed transfer.
+
+
+@pytest.mark.parametrize("fault", ["forged_sell", "forged_source", "missing_original", "boolean_sell"])
+def test_stage_c_injected_noncanonical_selling_value_never_promotes_full(tmp_path, fault):
+    from src.engines.v12_price_delivery import classify_price_personal_mode
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    rows = [dict(row) for row in resolved["rows"]]
+    if fault == "forged_sell":
+        rows[0]["sell_value"] += 1
+    elif fault == "forged_source":
+        rows[0]["sell_value_authority"] = "PUBLIC_PREDICTOR"
+    elif fault == "missing_original":
+        rows[0]["selling_price"] = None
+    elif fault == "boolean_sell":
+        rows[0]["sell_value"] = True
+    result = classify_price_personal_mode(
+        public_official_available=True,
+        public_league_available=True,
+        personal_resolution={**resolved, "rows": rows},
+    )
+    assert result["mode"] == "PUBLIC_FIRST_DEGRADED"
+    assert result["finance_status"] == "UNAVAILABLE"
+    assert result["executable_transfer_economics"] is False
+    assert "SELLING_PRICE_BINDING_INCOMPLETE" in result["degradation_reasons"]
+
+
+def test_stage_c_missing_official_target_price_never_uses_forecast_as_factual_buy(tmp_path):
+    from src.engines.v12_price_delivery import _route_economics
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    bootstrap = _bootstrap(100)
+    bootstrap["elements"] = [r for r in bootstrap["elements"] if r["id"] != 90]
+    route = _route_economics(
+        [{"out_element_id": 1, "in_element_id": 90}],
+        team_resolution=resolved,
+        predictor_artifact=_predictor(),
+        official_bootstrap=bootstrap,
+    )[0]
+    assert route["in_current_price"] is None
+    assert route["nominal_affordability"] == "UNKNOWN"
+    assert route["bank_after"] == "UNKNOWN"
+    assert route["target_plus_0_1"] == "UNKNOWN"
+
+
+def test_stage_c_invalid_transfer_ownership_does_not_gain_affordability(tmp_path):
+    from src.engines.v12_price_delivery import _route_economics
+
+    resolved = _stage_b_price_resolution(tmp_path, _stage_b_authenticated_team())
+    result = _route_economics(
+        [
+            {"out_element_id": 98, "in_element_id": 90},
+            {"out_element_id": 1, "in_element_id": 2},
+        ],
+        team_resolution=resolved,
+        predictor_artifact=_predictor(),
+        official_bootstrap=_bootstrap(100),
+    )
+    assert len(result) == 2
+    assert all(r["nominal_affordability"] == "UNKNOWN" for r in result)
+    assert all(r["bank_after_tenths"] == "UNKNOWN" for r in result)

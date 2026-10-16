@@ -14,6 +14,7 @@ import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from src.engines.v12_universe_source_coverage import audit_universe
 from src.models.v12_multiwindow_form import build_multiwindow_form_snapshot
 from src.models.v12_stageb_evidence import attach_stageb_shadow_evidence
 
@@ -784,6 +785,27 @@ def build_stagec_from_canonical_inputs(
         and scan["scanner_coverage_state"] == "COMPLETE"
         and scan["unique_scanned_count"] == len(official_ids)
     )
+    # Stage B authoritative membership gate; external mapping is independently
+    # audited and must never remove an Official FPL player from the scan.
+    try:
+        universe_gate = audit_universe(
+            official_rows,
+            [row.get("element") or row.get("id") for row in projections.get("players") or []],
+            [],
+            expected_official_count=len(official_rows),
+        )
+    except ValueError as exc:
+        # Preserve the existing Stage C diagnostic contract: malformed input
+        # degrades the scan instead of aborting the entire report. Never PASS.
+        universe_gate = {
+            "contract": "V12_OFFICIAL_FULL_UNIVERSE_COVERAGE_V1",
+            "scanner_coverage": "FAIL",
+            "failure_reason": str(exc),
+            "source_fallback": "OFFICIAL_FPL_ONLY_FOR_UNMAPPED",
+            "numeric_model_effect": "NONE",
+        }
+    scan["stageb_official_universe_gate"] = universe_gate
+    official_complete = official_complete and universe_gate["scanner_coverage"] == "PASS"
     scan["official_universe_count"] = len(official_rows)
     scan["official_eligible_count"] = len(eligible_ids)
     scan["official_eligible_missing_count"] = len(missing_eligible_ids)

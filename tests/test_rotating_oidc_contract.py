@@ -149,6 +149,37 @@ def test_marker_write_failure_sends_no_grant():
     assert http.calls == 0
 
 
+@pytest.mark.parametrize("corruption", ["phase", "transaction", "refresh"])
+def test_marker_readback_must_match_the_exact_durable_claim(corruption):
+    class DisagreeingReadbackStore(MemoryStore):
+        def load(self):
+            state = super().load()
+            if state.phase != "IN_FLIGHT":
+                return state
+            if corruption == "phase":
+                return replace(state, phase="READY")
+            if corruption == "transaction":
+                return replace(state, transaction_id="different-transaction")
+            return replace(state, refresh_token="different-refresh-placeholder")
+
+    store, http = DisagreeingReadbackStore(), FakeHTTP()
+    with pytest.raises(RotationUncertain, match="OIDC_GRANT_MARKER_PERSISTENCE_UNVERIFIED"):
+        manager(store, http).get_access_token()
+    assert store.state.phase == "IN_FLIGHT"
+    assert http.calls == 0
+
+
+def test_marker_git_transport_error_keeps_nonsecret_root_cause():
+    class UnavailableGitStore(MemoryStore):
+        def compare_and_swap(self, version, proposed):
+            raise RotationBlocked("CREDENTIAL_STORE_GIT_TIMEOUT")
+
+    store, http = UnavailableGitStore(), FakeHTTP()
+    with pytest.raises(RotationBlocked, match="^CREDENTIAL_STORE_GIT_TIMEOUT$"):
+        manager(store, http).get_access_token()
+    assert http.calls == 0
+
+
 def test_missing_refresh_replacement_is_fail_closed():
     store, http = MemoryStore(), FakeHTTP(payload={"access_token": "dummy", "expires_in": 3600})
     with pytest.raises(RotationBlocked, match="REPLACEMENT_REFRESH_TOKEN_ABSENT"):

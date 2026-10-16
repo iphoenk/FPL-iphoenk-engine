@@ -1371,18 +1371,6 @@ def build_price20(
         or "UNKNOWN"
     ).upper()
     evidence_timestamp = artifact.get("checked_at") or artifact.get("generated_at")
-    # Reject cross-mode section contamination before rendering any DEEP body.
-    # Full canonical order remains independently enforced by post-render QA.
-    if mode == "DEEP":
-        foreign_ids = [
-            str(row.get("section_id") or "").strip().upper()
-            for row in sections
-            if not str(row.get("section_id") or "").strip().upper().startsWith("S")
-        ]
-        if foreign_ids:
-            raise ReportOrchestrationError(
-                "DEEP_RENDER_CROSS_MODE_SECTIONS=" + ",".join(foreign_ids)
-            )
     owned_ids = {int(value) for value in (owned_element_ids or ())}
     target_ids = {int(value) for value in (target_element_ids or ())}
     direction_token = str(direction or "").upper()
@@ -6328,6 +6316,18 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
         for row in report.get("sections") or []
         if isinstance(row, Mapping)
     ]
+    # Reject cross-mode section contamination before rendering any DEEP body.
+    # Full canonical order remains independently enforced by post-render QA.
+    if mode == "DEEP":
+        foreign_ids = [
+            str(row.get("section_id") or "").strip().upper()
+            for row in sections
+            if not str(row.get("section_id") or "").strip().upper().startsWith("S")
+        ]
+        if foreign_ids:
+            raise ReportOrchestrationError(
+                "DEEP_RENDER_CROSS_MODE_SECTIONS=" + ",".join(foreign_ids)
+            )
     owned_ids = {
         int(item.get("element_id"))
         for section in sections

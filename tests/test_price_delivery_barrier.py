@@ -475,6 +475,33 @@ def test_m_private_personal_inputs_are_loaded_from_private_checkout_before_publi
     assert [row["element_id"] for row in loaded["current_team"]["players"]] == list(range(1, 16))
     assert loaded["current_team"]["auth_state"] == "AUTH_AVAILABLE"
 
+    forged = {
+        **team,
+        "gw": 5,
+        "editable_planning_gw": 7,
+        "generated_at": "2026-10-16T03:30:27+00:00",
+        "_price_selected_current": True,
+        "_price_source_scoring_gw": 6,
+        "lineage": {"authenticated": []},
+    }
+    (private_root / "personal/current_team.json").write_text(
+        __import__("json").dumps(forged), encoding="utf-8"
+    )
+    rejected = loader(
+        runtime_data_root=runtime_root,
+        private_data_root=private_root,
+        planning_gw=7,
+        as_of="2026-10-16T03:30:00+00:00",
+    )
+    assert "_price_selected_current" not in rejected["current_team"]
+    assert "_price_source_scoring_gw" not in rejected["current_team"]
+    assert resolve_current15(
+        planning_gw=7,
+        bootstrap=_bootstrap(100),
+        authenticated_current_team=rejected["current_team"],
+        as_of="2026-10-16T03:30:00+00:00",
+    )["state"] == "STALE"
+
 
 def test_n_expired_gw5_personal_snapshot_keeps_ids_but_is_not_current15():
     bootstrap = _bootstrap(100)

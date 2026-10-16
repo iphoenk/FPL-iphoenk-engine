@@ -399,9 +399,9 @@ def main() -> int:
     updated["governance"] = {
         **dict(updated.get("governance") or {}),
         "operational_slot_ledger_is_factual_only": True,
-        "chatgpt_scheduler_is_current_health_authority": False,
-        "github_scheduler_is_current_health_authority": True,
-        "legacy_github_scheduler_evidence_is_historical_only": False,
+        "chatgpt_scheduler_is_current_health_authority": True,
+        "github_scheduler_is_current_health_authority": False,
+        "legacy_github_scheduler_evidence_is_historical_only": True,
         "scheduler_reliability_is_separate_from_data_availability": True,
     }
     write_json(MANIFEST, updated)

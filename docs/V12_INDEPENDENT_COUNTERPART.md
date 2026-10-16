@@ -1,0 +1,3 @@
+# V12 Independent Counterpart Analysis
+
+A fail-closed advisory comparator for players, Starting XI, formation, captain/vice, transfers and mini-league. Source families: Official FPL, Understat, Opta, FPL Toolkit, club/league team news and other independent projections. Require source timestamps, matching metric and horizon, and independent lineage. Output CONFIRMED / CONTESTED / INSUFFICIENT_EVIDENCE. Do not equate xGI/90 with xPts, infer GW7 private picks from GW6, overwrite canonical P1.7/MC500K, or create a scheduler. This initial module is not yet wired into natural DEEP report publication; production acceptance requires orchestration integration, evidence adapters, QA, CI, merge and natural proof.

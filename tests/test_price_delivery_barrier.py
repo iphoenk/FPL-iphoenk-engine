@@ -497,3 +497,32 @@ def test_o_unknown_price_ownership_stays_unknown_and_internal_scope_text_never_r
         body.replace("Current squad could not be verified", "Ownership scope unresolved"),
         report=report,
     )
+
+
+def test_p_authenticated_current_team_uses_editable_planning_gw_for_price():
+    bootstrap = _bootstrap(100)
+    team = {
+        "auth_state": "AUTH_AVAILABLE",
+        "squad_state": "AUTHENTICATED_CURRENT_TEAM",
+        "entry_id": 3462711,
+        "gw": 6,
+        "editable_planning_gw": 7,
+        "generated_at": "2026-10-16T03:30:27+00:00",
+        "bank": 13,
+        "free_transfers": 1,
+        "players": _team_rows(list(range(41, 56))),
+    }
+
+    resolved = resolve_current15(
+        planning_gw=7,
+        bootstrap=bootstrap,
+        authenticated_current_team=team,
+    )
+
+    assert resolved["state"] == "CURRENT"
+    assert resolved["supportable"] is True
+    assert resolved["gw"] == 7
+    assert resolved["source_class"] == "AUTHENTICATED_OFFICIAL_CURRENT_TEAM"
+    assert resolved["element_ids"] == list(range(41, 56))
+    assert resolved["finance"]["bank"] == 13
+    assert resolved["finance"]["free_transfers"] == 1

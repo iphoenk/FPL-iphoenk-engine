@@ -214,6 +214,13 @@ def test_sparse_cas_worktree_keeps_noncredential_private_tree_untouched(checkout
     git("commit", "-m", "fixture large private report", cwd=repo)
     git("push", "origin", "main", cwd=repo)
 
+    # Persist the initial encrypted blob before inspecting a later rotation.
+    # The first enrollment naturally has NO existing file to check out.
+    seeded = module.EncryptedGitCredentialStore(str(repo), key)
+    assert seeded.compare_and_swap(
+        0, Credential(1, "READY", "dummy-initial-private-token")
+    ).version == 1
+
     original_git = module._git
     observed = {"no_checkout": False, "sparse": False, "credential_only": False}
 
@@ -231,9 +238,9 @@ def test_sparse_cas_worktree_keeps_noncredential_private_tree_untouched(checkout
 
     monkeypatch.setattr(module, "_git", inspect_git)
     store = module.EncryptedGitCredentialStore(str(repo), key)
-    stored = store.compare_and_swap(0, Credential(1, "READY", "dummy-private-fixture-token"))
+    stored = store.compare_and_swap(1, Credential(2, "READY", "dummy-private-fixture-token"))
     assert stored.phase == "READY"
-    assert stored.version == 1
+    assert stored.version == 2
     assert all(observed.values()), observed
     assert git("--git-dir", str(bare), "show", "main:reports/large-private-artifact.bin") == report_payload
     assert store.load().refresh_token == "dummy-private-fixture-token"

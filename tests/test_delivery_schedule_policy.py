@@ -145,3 +145,35 @@ def test_deadline_checkpoint_and_match_are_one_report():
     assert got.deadline_checkpoint == "T-3H"
     assert set(got.obligations) == {"MATCH", "DEADLINE:DEEP"}
     assert got.single_visible_report is True
+
+
+def test_existing_orchestrator_admits_exact_t30_final_review_not_other_deadline_modes():
+    """Strict existing full-DEEP path accepts only matching governed T-30M FINAL_REVIEW."""
+    from pathlib import Path
+
+    workflow = (
+        Path(__file__).resolve().parents[1]
+        / ".github" / "workflows" / "fpl-master-occurrence-orchestrator.yml"
+    ).read_text(encoding="utf-8")
+    assert 'if official_deadline is None:' in workflow
+    assert 'if candidate == dt and (' in workflow
+    assert 'contract == "DEEP"' in workflow
+    assert '(key == "T-30M" and contract == "FINAL_REVIEW")' in workflow
+    assert 'if len(matches) != 1:' in workflow
+    assert 'raise SystemExit("DEEP occurrence is not an exact governed deadline checkpoint")' in workflow
+
+    deadline = datetime(2026, 10, 17, 17, 0, tzinfo=WIB)
+    rows = deadline_checkpoints(deadline)
+    permitted = [
+        item for item in rows
+        if item.contract == "DEEP"
+        or (item.key == "T-30M" and item.contract == "FINAL_REVIEW")
+    ]
+    assert [x.key for x in permitted] == [
+        "T-24H", "T-12H", "T-6H", "T-3H", "T-30M",
+    ]
+    assert [x.at.strftime("%H:%M") for x in permitted[-2:]] == ["14:00", "16:30"]
+    assert all(
+        item not in permitted
+        for item in rows if item.contract in {"DELTA", "DELTA_EXECUTION", "GO_NO_GO", "FINAL_CONFIRMATION"}
+    )

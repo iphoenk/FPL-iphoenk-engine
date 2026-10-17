@@ -29,9 +29,9 @@ def test_reviewed_understat_wave_b_rows_are_exact_unique_and_provenance_complete
     wave = [row for row in rows if row.get("verification_method") == METHOD]
     wave1 = [row for row in rows if row.get("verification_method") == WAVE1_METHOD]
 
-    assert len(rows) == 587
-    assert len({str(row["source_native_id"]) for row in rows}) == 587
-    assert len({int(row["official_fpl_code"]) for row in rows}) == 587
+    assert len(rows) == 594
+    assert len({str(row["source_native_id"]) for row in rows}) == 594
+    assert len({int(row["official_fpl_code"]) for row in rows}) == 594
     assert len(wave) == 13
     assert {str(row["source_native_id"]) for row in wave} == EXPECTED_NATIVE_IDS
     assert {int(row["official_fpl_code"]) for row in wave} == EXPECTED_CODES
@@ -119,3 +119,35 @@ def test_promoted_row_keeps_row_level_reep_v1_provenance_at_runtime():
     assert coverage["canonical_player_count"] == 1
     assert coverage["identity_health"] == "GREEN"
     assert coverage["conflicting_existing_link_count"] == 0
+
+
+def test_20261017_understat_latest_pinned_registry_exact_seven_official_matches():
+    """Only distinct native ID + official code + same-season official element are admitted."""
+    source = load_verified_crosswalks()["sources"]["understat"]
+    newly_verified = [
+        row for row in source["players"]
+        if row.get("verification_commit") == "d29f988447435aeb9c574736ca380e30b8826714"
+    ]
+    expected = {
+        "14748": (204813, 179),
+        "9887": (454490, 120),
+        "8409": (494928, 573),
+        "14502": (500033, 636),
+        "11344": (512123, 614),
+        "11551": (620109, 152),
+        "12841": (638411, 612),
+    }
+    assert len(newly_verified) == 7
+    assert {str(r["source_native_id"]) for r in newly_verified} == set(expected)
+    for row in newly_verified:
+        native = str(row["source_native_id"])
+        assert (row["official_fpl_code"], row["official_fpl_element_id"]) == expected[native]
+        assert row["review_status"] == "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED"
+        assert row["verification_method"] == "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE"
+        assert row["review_reference"].startswith("FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:")
+        assert "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163" in row["evidence"]
+        assert "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988" in row["evidence"]
+        assert f"understat:player:{native}" == row["bridge_path"][0]
+        assert not any("fuzzy" in item.lower() or "player_name" in item.lower() for item in row["evidence"])
+    assert len({r["official_fpl_code"] for r in source["players"]}) == 594
+    assert len({r["source_native_id"] for r in source["players"]}) == 594

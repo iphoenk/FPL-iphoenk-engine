@@ -4702,6 +4702,8 @@ def _render_deep_visible_contract_lines(
             f"Price {consequence.get('price_state', 'UNAVAILABLE')}. "
             "News is evidence only; ACT authority remains in S14."
         )
+        from src.engines.v12_source_coverage import render_news_source_coverage
+        lines.extend(render_news_source_coverage(payload.get("news_source_coverage")))
 
     elif section_id == "S05":
         lines.append(f"GW TOPOLOGY: {payload.get('gw_topology') or 'UNAVAILABLE'}")
@@ -5367,6 +5369,14 @@ def _render_deep_visible_contract_lines(
         if not comparisons:
             lines.append("Counterpart verdict: INSUFFICIENT_EVIDENCE — no occurrence-bound independent comparable assessment supplied.")
             lines.append("Required: player, Starting XI, formation, captain/VC, transfer, and mini-league source-as-of validation.")
+        counterpart_coverage = dict(payload.get("independent_counterpart_coverage") or {})
+        if counterpart_coverage:
+            lines.append(
+                "Independent coverage gate: "
+                + str(counterpart_coverage.get("status") or "NOT_VERIFIED")
+                + " | assessment_at "
+                + str(counterpart_coverage.get("assessment_at") or "NOT RECORDED")
+            )
         else:
             rendered = []
             for item in comparisons:

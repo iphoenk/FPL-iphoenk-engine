@@ -432,6 +432,46 @@ def test_serving_projection_is_compact_explicit_and_keeps_visible_contract(tmp_p
     assert validate_serving_snapshot(snapshot) == []
 
 
+def _synthetic_coverage_fixtures():
+    stamp = "2026-09-26T11:30:00+07:00"
+    categories = [
+        {"category": category, "result": "CHECKED_NO_CHANGE",
+         "attempted_at": stamp, "source_url": "https://example.com/" + category.lower()}
+        for category in (
+            "OFFICIAL_PL_FPL", "OFFICIAL_CLUBS", "OFFICIAL_SOCIAL",
+            "BEAT_REPORTERS_NEWS", "INDEPENDENT_ANALYTICS",
+            "FPL_COMMUNITY", "USER_SUPPLIED_LEADS",
+        )
+    ]
+    clubs = [
+        {"official_club_id": str(i), "club_name": "Club " + str(i),
+         "result": "CHECKED_NO_CHANGE", "attempted_at": stamp,
+         "evidence_url": "https://example.com/club/" + str(i)}
+        for i in range(1, 21)
+    ]
+    assessments = []
+    for domain in (
+        "PLAYER_MINUTES", "STARTING_XI_FORMATION", "CAPTAIN_VICE",
+        "TRANSFER_HOLD_HITS", "COMPETITIVE_WINDOW",
+    ):
+        assessments.append({
+            "domain": domain, "verdict": "CONFIRMS", "action": "HOLD",
+            "sources": [
+                {"url": "https://example.com/a/" + domain.lower(),
+                 "as_of": stamp, "independence_group": "a"},
+                {"url": "https://example.net/b/" + domain.lower(),
+                 "as_of": stamp, "independence_group": "b"},
+            ],
+        })
+    return (
+        {"scan_id": "synthetic-test-only", "scan_at": stamp,
+         "deadline": "2026-09-26T17:00:00+07:00",
+         "deadline_source_url": "https://example.com/deadline",
+         "categories": categories, "clubs": clubs},
+        {"assessment_at": stamp, "assessments": assessments},
+    )
+
+
 def _canonical_dir(
     root: Path,
     *,
@@ -451,6 +491,7 @@ def _canonical_dir(
         }
         for section_id, label in CANONICAL_DEEP_SECTIONS
     ]
+    news_coverage, counterpart_coverage = _synthetic_coverage_fixtures()
     bundle = {
         "schema": "TEST",
         "occurrence_id": f"DEEP|{SLOT}",
@@ -483,6 +524,8 @@ def _canonical_dir(
             {"section_id": row["section_id"], "status": row["state"]}
             for row in sections
         ],
+        "news_source_coverage": news_coverage,
+        "independent_counterpart_coverage": counterpart_coverage,
         "report": {"sections": sections},
         "visible_body": f"{delivery_status}\n",
     }

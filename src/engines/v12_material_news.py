@@ -35,6 +35,16 @@ def normalize_material_news_item(item: Mapping[str, Any]) -> dict[str, Any]:
         "summary": row.get("summary") or row.get("headline") or "UNAVAILABLE",
         "source_class": source_class,
         "source_name": row.get("source_name") or "UNAVAILABLE",
+        # Preserve actual, separately observed source lineage for the
+        # fail-closed rotation-risk contract. Never infer these fields.
+        "source_url": row.get("source_url"),
+        "published_at": row.get("published_at"),
+        "observed_at": row.get("observed_at"),
+        "player_id": row.get("player_id"),
+        "quote": row.get("quote"),
+        "evidence_strength": row.get("evidence_strength"),
+        "source_type": row.get("source_type"),
+        "event_type": row.get("event_type"),
         "published_or_observed_timestamp": (
             row.get("published_or_observed_timestamp")
             or row.get("observed_at")
@@ -170,6 +180,7 @@ def build_report_time_material_news(
     our_ids = {int(value) for value in our_element_ids if int(value) > 0}
     watch_ids = {int(value) for value in watchlist_element_ids if int(value) > 0}
     player_audience: dict[str, str] = {}
+    player_id_by_exact_name: dict[str, int] = {}
     relevant_team_keys: set[str] = set()
     team_name_by_id = {
         int(row.get("id") or 0): str(row.get("name") or row.get("short_name") or "")
@@ -208,6 +219,7 @@ def build_report_time_material_news(
             key = _subject_key(name)
             if key:
                 player_audience[key] = audience
+                player_id_by_exact_name[key] = element_id
         try:
             team_id = int(raw.get("team") or 0)
         except (TypeError, ValueError):
@@ -270,6 +282,14 @@ def build_report_time_material_news(
                     "summary": summary or subject or "UNAVAILABLE",
                     "source_class": source_class,
                     "source_name": source_id,
+                    "source_url": raw.get("source_url"),
+                    "published_at": raw.get("published_at"),
+                    "observed_at": raw.get("observed_at"),
+                    "player_id": player_id_by_exact_name.get(subject_key),
+                    "quote": raw.get("quote"),
+                    "evidence_strength": raw.get("evidence_strength"),
+                    "source_type": raw.get("source_type") or source_id,
+                    "event_type": raw.get("event_type"),
                     "published_or_observed_timestamp": raw.get("observed_at"),
                     "affected_player_team": subject or "UNAVAILABLE",
                     "evidence_status": (

@@ -9424,6 +9424,8 @@ def run_deep(
         item for item in material_news
         if int(item.get("player_id") or item.get("element") or 0) == 411
         and item.get("source_url")
+        and str(item.get("source_class") or "").upper() == "OFFICIAL"
+        and str(item.get("event_type") or "").upper() == "ROTATION_RISK"
     ]
     haaland_rotation_evidence = validate_rotation_events(
         haaland_news_events,

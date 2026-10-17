@@ -180,3 +180,34 @@ def test_s04_news_cannot_claim_direct_model_mutation():
         "\n".join(lines),
     )
     assert "S04_MODEL_NUMBERS_MUTATED_IN_PRESENTATION" in failures
+
+
+
+def test_funded_s14_route_remains_visible_even_when_not_the_best_challenger():
+    from src.engines.v12_report_orchestration import _render_package_frontier_lines
+    source = {"package_routes": [
+        {"route": "HOLD", "moves": {"out": [], "in": []}},
+        {"route": "DIRECT", "moves": {"out": [{"element": 10}], "in": [{"element": 20}]}},
+        {"route": "FUNDED_SOURCE", "moves": {
+            "out": [{"element": 10}, {"element": 11}],
+            "in": [{"element": 20}, {"element": 21}]},
+         "execution_status": "FINANCE_UNVERIFIED",
+         "affordability": "UNAVAILABLE",
+         "executable": False},
+    ], "selected_route_id": "DIRECT"}
+    body = "\n".join(_render_package_frontier_lines(source, section_state="COMPLETE"))
+    assert "### FUNDED / 2-TRANSFER" in body
+    assert "FUNDED_SOURCE" in body
+    assert "FINANCE_UNVERIFIED" in body
+    assert "Affordability: UNAVAILABLE" in body
+    assert "Executability: False" in body
+
+
+def test_funded_marker_not_fabricated_without_two_transfer_route():
+    from src.engines.v12_report_orchestration import _render_package_frontier_lines
+    source = {"package_routes": [
+        {"route": "HOLD", "moves": {"out": [], "in": []}},
+        {"route": "DIRECT", "moves": {"out": [{"element": 10}], "in": [{"element": 20}]}},
+    ], "selected_route_id": "DIRECT"}
+    body = "\n".join(_render_package_frontier_lines(source, section_state="COMPLETE"))
+    assert "FUNDED / 2-TRANSFER" not in body

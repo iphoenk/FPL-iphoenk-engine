@@ -5377,7 +5377,9 @@ def _render_deep_visible_contract_lines(
                 + " | assessment_at "
                 + str(counterpart_coverage.get("assessment_at") or "NOT RECORDED")
             )
-        else:
+        # Show assessment provenance even when the formal coverage gate exists;
+        # a coverage status alone is not human-readable independent evidence.
+        if comparisons:
             rendered = []
             for item in comparisons:
                 result = assess_counterpart(

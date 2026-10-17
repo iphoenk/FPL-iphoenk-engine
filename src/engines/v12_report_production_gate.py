@@ -259,7 +259,14 @@ def evaluate_report_production_gate(
     counterpart_gate = validate_independent_counterpart_coverage(
         counterpart_coverage, require_full=delivery_status == "READY_FULL"
     )
-    if delivery_status == "READY_FULL":
+    full_candidate = (
+        delivery_status == "READY_FULL"
+        or (
+            delivery_status not in {"READY_DEGRADED", "READY_DEGRADED_PUBLIC_FIRST"}
+            and str(bundle.get("runner_status") or "").upper() == "PASS"
+        )
+    )
+    if full_candidate:
         if source_gate["status"] != "PASS":
             failures.extend(source_gate["failures"])
         if counterpart_gate["status"] != "PASS":

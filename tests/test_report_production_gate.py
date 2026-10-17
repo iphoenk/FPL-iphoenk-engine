@@ -180,3 +180,20 @@ def test_report_production_gate_rejects_s01_s19_mismatch():
     )
     assert result["status"] == "FAIL"
     assert "S01_S19_DECISION_MISMATCH" in result["failures"]
+
+
+
+def test_runner_pass_without_delivery_status_cannot_bypass_coverage_gate():
+    bundle = _bundle()
+    bundle.pop("delivery_status", None)
+    bundle.pop("news_source_coverage", None)
+    bundle.pop("independent_counterpart_coverage", None)
+    result = evaluate_report_production_gate(
+        bundle,
+        presentation_qa=_presentation_qa(),
+        serving_snapshot=_serving(),
+        visible_body_non_empty=True,
+    )
+    assert result["status"] == "FAIL"
+    assert "SOURCE_SCAN_TIMESTAMP_MISSING" in result["failures"]
+    assert "COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING" in result["failures"]

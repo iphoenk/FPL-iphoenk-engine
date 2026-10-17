@@ -116,6 +116,72 @@ def validate_rotation_events(
     }
 
 
+
+def canonical_conditional_minutes_support(
+    projections: Mapping[str, Any] | None, *, player_id: int
+) -> list[dict[str, Any]]:
+    """Bind native xMins states without inventing a new rotation mixture.
+
+    The state probabilities belong to the historical V12_PLAYER_MINUTES prior.
+    They must NOT be represented as post-press-conference P(start) estimates.
+    """
+    rows = (projections or {}).get("players") or []
+    player = next(
+        (
+            row for row in rows
+            if isinstance(row, Mapping)
+            and str(row.get("element") or "") == str(int(player_id))
+        ),
+        None,
+    )
+    if player is None:
+        return []
+    minutes = player.get("xmins")
+    if not isinstance(minutes, Mapping):
+        return []
+    distribution = minutes.get("xmins_distribution")
+    if not isinstance(distribution, Mapping):
+        return []
+    raw_states = distribution.get("states")
+    if not isinstance(raw_states, list):
+        return []
+    by_name = {
+        str(row.get("state") or "").upper(): row
+        for row in raw_states
+        if isinstance(row, Mapping)
+    }
+    groups = {
+        "STARTER": ("START_FULL", "START_SUBBED", "EARLY_SUB"),
+        "CAMEO": ("CAMEO", "LATE_CAMEO"),
+        "DNP": ("DNP",),
+    }
+    if any(name not in by_name for names in groups.values() for name in names):
+        return []
+    support: list[dict[str, Any]] = []
+    for group, names in groups.items():
+        components: list[dict[str, Any]] = []
+        for name in names:
+            row = by_name[name]
+            if not all(isinstance(row.get(field), (int, float)) and
+                       not isinstance(row.get(field), bool)
+                       for field in ("probability", "minutes_mean", "minutes_std")):
+                return []
+            components.append({
+                "native_state": name,
+                "minutes_mean": row["minutes_mean"],
+                "minutes_std": row["minutes_std"],
+                "historical_model_prior_weight": row["probability"],
+                "timing_evidence": row.get("timing_evidence"),
+            })
+        support.append({
+            "state": group,
+            "components": components,
+            "source": "V12_PLAYER_MINUTES",
+            "post_news_probability_calibrated": False,
+        })
+    return support
+
+
 def build_minutes_scenarios(
     *,
     player_id: int,

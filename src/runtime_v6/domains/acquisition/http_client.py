@@ -417,6 +417,17 @@ class AcquisitionClient:
         health = "GREEN" if status == "AVAILABLE" else ("RED" if source.get("critical") else "AMBER")
         validation_error = None
         validation_classification = "TRANSPORT_OK" if status == "AVAILABLE" else "TRANSPORT_FAILURE"
+        # TheSportsDB reports maintenance as HTTP 403, not an authentication challenge.
+        # Keep the failed attempt non-GREEN; distinguish provider outage from token errors.
+        if (
+            status == "UNAVAILABLE"
+            and str(source.get("id")) == "thesportsdb_v1"
+            and response.status_code == 403
+            and not truncated
+            and "free api temporarily disabled while we rebuild the site" in text.lower()
+        ):
+            validation_error = "provider_free_api_temporarily_disabled"
+            validation_classification = "UPSTREAM_PROVIDER_MAINTENANCE"
 
         if status == "AVAILABLE" and truncated:
             status = "TRUNCATED"

@@ -4,7 +4,7 @@ from src.runtime_v6.verified_crosswalks import load_verified_crosswalks
 
 
 EXPECTED = {
-    "understat": 587,
+    "understat": 594,
     "fotmob": 489,
     "statmuse": 303,
 }

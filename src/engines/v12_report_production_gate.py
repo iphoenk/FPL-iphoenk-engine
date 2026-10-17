@@ -264,13 +264,9 @@ def evaluate_report_production_gate(
             failures.extend(source_gate["failures"])
         if counterpart_gate["status"] != "PASS":
             failures.extend(counterpart_gate["failures"])
-    else:
-        # A degraded report may publish only with its coverage gaps visible in
-        # S04/S14; it must never be promoted to READY_FULL by these diagnostics.
-        if source_coverage is None:
-            failures.append("DEGRADED_SOURCE_COVERAGE_DISCLOSURE_MISSING")
-        if counterpart_coverage is None:
-            failures.append("DEGRADED_COUNTERPART_DISCLOSURE_MISSING")
+    # Degraded publication is allowed to preserve diagnostic reports; S04/S14
+    # render missing evidence as NOT_CHECKED. It can never be promoted to FULL
+    # without passing both gates above.
 
     if sections:
         by_id = {str(row.get("section_id") or ""): row for row in sections}

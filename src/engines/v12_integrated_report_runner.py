@@ -48,6 +48,7 @@ from src.engines.v12_monte_carlo import (
 from src.engines.v12_formation_monte_carlo import run_formation_monte_carlo
 from src.engines.v12_rotation_risk import (
     build_competitive_window,
+    canonical_conditional_minutes_support,
     build_minutes_scenarios,
     validate_rotation_events,
 )
@@ -9443,7 +9444,9 @@ def run_deep(
     }
     haaland_minutes_scenarios = build_minutes_scenarios(
         player_id=411,
-        existing_state_support=[],
+        existing_state_support=canonical_conditional_minutes_support(
+            projections, player_id=411
+        ),
         calibration_status="NOT_VERIFIED",
     )
     captain_window = build_competitive_window(

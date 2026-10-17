@@ -1,5 +1,6 @@
 from src.engines.v12_rotation_risk import (
     build_competitive_window,
+    canonical_conditional_minutes_support,
     build_minutes_scenarios,
     build_verified_rotation_event,
     resolve_captain_vice,
@@ -60,3 +61,44 @@ def test_competitive_window_fails_closed_without_nine_eo_rows():
     assert result["status"] == "INSUFFICIENT_EVIDENCE"
     assert result["required_rivals"] == 9
 
+
+
+def test_canonical_xmins_state_support_is_conditional_and_source_bound():
+    names = ("START_FULL", "START_SUBBED", "EARLY_SUB", "CAMEO", "LATE_CAMEO", "DNP")
+    values = (85, 68, 42, 19, 7, 0)
+    probabilities = (0.35, 0.25, 0.15, 0.12, 0.05, 0.08)
+    rows = [
+        {"state": name, "probability": probability, "minutes_mean": mean,
+         "minutes_std": 0 if name == "DNP" else 5,
+         "timing_evidence": "MATCH_MINUTES_DERIVED"}
+        for name, probability, mean in zip(names, probabilities, values)
+    ]
+    projections = {"players": [
+        {"element": 411, "xmins": {"xmins_distribution": {"states": rows}}},
+        {"element": 42, "xmins": {"xmins_distribution": {"states": rows}}},
+    ]}
+    support = canonical_conditional_minutes_support(projections, player_id=411)
+    assert [row["state"] for row in support] == ["STARTER", "CAMEO", "DNP"]
+    assert [len(row["components"]) for row in support] == [3, 2, 1]
+    assert support[0]["components"][0]["minutes_mean"] == 85
+    assert support[1]["components"][1]["minutes_mean"] == 7
+    assert support[2]["components"][0]["minutes_mean"] == 0
+    assert all(row["post_news_probability_calibrated"] is False for row in support)
+    model = build_minutes_scenarios(
+        player_id=411, existing_state_support=support, calibration_status="NOT_VERIFIED"
+    )
+    assert model["publication_mode"] == "CONDITIONAL_ONLY"
+    assert model["weights"] is None
+
+
+def test_canonical_minutes_support_rejects_missing_or_wrong_identity():
+    assert canonical_conditional_minutes_support({"players": []}, player_id=411) == []
+    assert canonical_conditional_minutes_support(
+        {"players": [{"element": 42, "xmins": {}}]}, player_id=411
+    ) == []
+    assert canonical_conditional_minutes_support(
+        {"players": [{"element": 411, "xmins": {"xmins_distribution": {
+            "states": [{"state": "START_FULL", "minutes_mean": 90,
+                        "minutes_std": 8, "probability": 1.0}]
+        }}}]}, player_id=411
+    ) == []

@@ -16,7 +16,45 @@ from src.engines.v12_private_publisher import (
 )
 
 
+def _coverage_fixtures():
+    stamp = "2026-09-26T11:30:00+07:00"
+    categories = [
+        {"category": category, "result": "CHECKED_NO_CHANGE",
+         "attempted_at": stamp, "source_url": "https://example.com/" + category.lower()}
+        for category in (
+            "OFFICIAL_PL_FPL", "OFFICIAL_CLUBS", "OFFICIAL_SOCIAL",
+            "BEAT_REPORTERS_NEWS", "INDEPENDENT_ANALYTICS",
+            "FPL_COMMUNITY", "USER_SUPPLIED_LEADS",
+        )
+    ]
+    clubs = [
+        {"official_club_id": str(i), "club_name": "Club " + str(i),
+         "result": "CHECKED_NO_CHANGE", "attempted_at": stamp,
+         "evidence_url": "https://example.com/club/" + str(i)}
+        for i in range(1, 21)
+    ]
+    domains = (
+        "PLAYER_MINUTES", "STARTING_XI_FORMATION", "CAPTAIN_VICE",
+        "TRANSFER_HOLD_HITS", "COMPETITIVE_WINDOW",
+    )
+    assessments = [{
+        "domain": domain, "verdict": "CONFIRMS", "action": "HOLD",
+        "sources": [
+            {"url": "https://example.com/a/" + domain.lower(), "as_of": stamp, "independence_group": "a"},
+            {"url": "https://example.net/b/" + domain.lower(), "as_of": stamp, "independence_group": "b"},
+        ],
+    } for domain in domains]
+    return (
+        {"scan_id": "synthetic-test-only", "scan_at": stamp,
+         "deadline": "2026-09-26T17:00:00+07:00",
+         "deadline_source_url": "https://example.com/deadline",
+         "categories": categories, "clubs": clubs},
+        {"assessment_at": stamp, "assessments": assessments},
+    )
+
+
 def _write_fixture(root: Path) -> dict:
+    news_coverage, counterpart_coverage = _coverage_fixtures()
     section_ids = [
         "S01", "S02", "S03", "S04", "S05", "S06", "S06B",
         "S07", "S08", "S09", "S10", "S11", "S12", "S13",
@@ -34,6 +72,8 @@ def _write_fixture(root: Path) -> dict:
         "post_render_qa": {"status": "PASS"},
         "human_facing_qa": {"status": "PASS"},
         "execution_proof": {"stage3_action": "WAIT"},
+        "news_source_coverage": news_coverage,
+        "independent_counterpart_coverage": counterpart_coverage,
         "report": {"S03": {"delta": "IDENTITY_FIXTURE"}},
     }
     proof = {

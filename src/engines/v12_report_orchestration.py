@@ -5395,10 +5395,16 @@ def _render_deep_visible_contract_lines(
                         for x in result.get("comparisons") or []
                     ) or "NO_COMPARABLE_SOURCE",
                 ))
-            lines.extend(_markdown_table(
-                ("Assessment", "Subject", "Metric", "Verdict", "Reason", "Independent evidence"),
-                rendered,
-            ))
+            # S15's locked, human-facing contract owns ONE evidence-quality table.
+            # Preserve optional counterpart detail as readable advisory lines,
+            # not a second table (including in a no-coverage P4 snapshot).
+            if rendered:
+                lines.append("Independent comparison details (advisory):")
+                for assessment, subject, metric, verdict, reason, independent in rendered:
+                    lines.append(
+                        f"- {assessment}; subject={subject}; metric={metric}; "
+                        f"verdict={verdict}; reason={reason}; sources={independent}"
+                    )
             lines.append("Independent counterpart cannot silently replace the canonical decision.")
 
     elif section_id == "S15B":

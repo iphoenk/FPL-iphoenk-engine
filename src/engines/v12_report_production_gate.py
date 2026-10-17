@@ -231,6 +231,39 @@ def evaluate_report_production_gate(
     failures.extend(_validate_truthful_section_states(sections))
     failures.extend(_validate_our15_identity(bundle, presentation_qa))
 
+    # A READY_FULL DEEP report must carry occurrence-bound source coverage and
+    # independent counterpart evidence. Rendering alone is not proof that a
+    # provider was checked; validators require explicit auditable evidence.
+    by_section = {
+        str(row.get("section_id") or ""): dict(row.get("content") or {})
+        for row in sections
+        if isinstance(row.get("content"), Mapping)
+    }
+    s04_content = by_section.get("S04", {})
+    s14_content = by_section.get("S14", {})
+    source_coverage = (
+        bundle.get("news_source_coverage")
+        or s04_content.get("news_source_coverage")
+    )
+    counterpart_coverage = (
+        bundle.get("independent_counterpart_coverage")
+        or s14_content.get("independent_counterpart_coverage")
+    )
+    from src.engines.v12_source_coverage import (
+        validate_independent_counterpart_coverage,
+        validate_news_source_coverage,
+    )
+    source_gate = validate_news_source_coverage(
+        source_coverage, require_full=delivery_status == "READY_FULL"
+    )
+    counterpart_gate = validate_independent_counterpart_coverage(
+        counterpart_coverage, require_full=delivery_status == "READY_FULL"
+    )
+    if source_gate["status"] != "PASS":
+        failures.extend(source_gate["failures"])
+    if counterpart_gate["status"] != "PASS":
+        failures.extend(counterpart_gate["failures"])
+
     if sections:
         by_id = {str(row.get("section_id") or ""): row for row in sections}
         s01 = dict((by_id.get("S01") or {}).get("content") or {})

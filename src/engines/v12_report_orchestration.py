@@ -3026,6 +3026,29 @@ def _render_package_frontier_lines(
     else:
         lines.append("No non-HOLD challenger is supportable.")
 
+    # Keep the proof of a material two-transfer route visible even if the
+    # bounded best-challenger card selected a different one. All values below
+    # come from the canonical frontier, never inferred transfer economics.
+    funded_route = next(
+        (
+            row for row in routes
+            if str(row.get("route") or "").upper() != "HOLD"
+            and isinstance(row.get("moves"), Mapping)
+            and max(
+                len((row.get("moves") or {}).get("out") or []),
+                len((row.get("moves") or {}).get("in") or []),
+            ) >= 2
+        ),
+        None,
+    )
+    if funded_route is not None:
+        lines.append("### FUNDED / 2-TRANSFER")
+        lines.append(f"Route: {funded_route.get('route') or 'UNAVAILABLE'}")
+        lines.append(f"Execution state: {funded_route.get('execution_status', 'UNAVAILABLE')}")
+        lines.append(f"Affordability: {funded_route.get('affordability', 'UNAVAILABLE')}")
+        lines.append(f"Executability: {funded_route.get('executable', 'UNAVAILABLE')}")
+        lines.append("Canonical alternative only; not necessarily the recommended route.")
+
     economics = dict(payload.get("execution_economics_authority") or {})
     route_econ = best if best else hold
     transfer_cost = dict(route_econ.get("transfer_cost") or {}) if isinstance(route_econ.get("transfer_cost"), Mapping) else {}

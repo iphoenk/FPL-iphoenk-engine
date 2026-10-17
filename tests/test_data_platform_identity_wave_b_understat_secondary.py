@@ -9,6 +9,7 @@ def test_wave_b_understat_secondary_registry_extension_is_reviewed_and_stable_id
     rows = [
         row for row in source["players"]
         if row.get("verification_method") == "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE"
+        and row.get("verification_commit") == "e5a9942affd98501db473a8d3b6a0f9e93751e8a"
     ]
     assert len(rows) == 68
     assert len({int(row["source_native_id"]) for row in rows}) == 68

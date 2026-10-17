@@ -154,8 +154,16 @@ jobs:
               matches = []
               for row in policy["deadline_checkpoints"]:
                   candidate = official_deadline - timedelta(minutes=int(row["minutes_before"]))
-                  if candidate == dt and str(row["contract"]) == "DEEP":
-                      matches.append(str(row["key"]))
+                  # T-30M is a governed FINAL_REVIEW checkpoint. The
+                  # existing full DEEP runner may serve its deadline decision,
+                  # but no DELTA, GO_NO_GO or ad-hoc slot is admitted.
+                  key = str(row["key"])
+                  contract = str(row["contract"])
+                  if candidate == dt and (
+                      contract == "DEEP"
+                      or (key == "T-30M" and contract == "FINAL_REVIEW")
+                  ):
+                      matches.append(key)
               if len(matches) != 1:
                   raise SystemExit("DEEP occurrence is not an exact governed deadline checkpoint")
               deadline_checkpoint = matches[0]

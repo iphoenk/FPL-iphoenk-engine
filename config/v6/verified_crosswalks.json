@@ -12024,6 +12024,174 @@
           "source_native_id": 8190,
           "verification_method": "WAVE1_OFFICIAL_FPL_CODE_TO_OBSERVED_UNDERSTAT_NATIVE_ID",
           "verified_at": "2026-09-15T20:06:00Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14748",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:14748",
+            "FPL-ID-Map:code:204813",
+            "official_fpl.bootstrap.elements.code:204813",
+            "official_fpl.element_id:179"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 204813,
+          "official_fpl_element_id": 179,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 14748,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:9887",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:9887",
+            "FPL-ID-Map:code:454490",
+            "official_fpl.bootstrap.elements.code:454490",
+            "official_fpl.element_id:120"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 454490,
+          "official_fpl_element_id": 120,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 9887,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:8409",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:8409",
+            "FPL-ID-Map:code:494928",
+            "official_fpl.bootstrap.elements.code:494928",
+            "official_fpl.element_id:573"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 494928,
+          "official_fpl_element_id": 573,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 8409,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:14502",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:14502",
+            "FPL-ID-Map:code:500033",
+            "official_fpl.bootstrap.elements.code:500033",
+            "official_fpl.element_id:636"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 500033,
+          "official_fpl_element_id": 636,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 14502,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:11344",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:11344",
+            "FPL-ID-Map:code:512123",
+            "official_fpl.bootstrap.elements.code:512123",
+            "official_fpl.element_id:614"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 512123,
+          "official_fpl_element_id": 614,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 11344,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:11551",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:11551",
+            "FPL-ID-Map:code:620109",
+            "official_fpl.bootstrap.elements.code:620109",
+            "official_fpl.element_id:152"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 620109,
+          "official_fpl_element_id": 152,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 11551,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
+        },
+        {
+          "bridge_path": [
+            "understat:player:12841",
+            "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:understat:12841",
+            "FPL-ID-Map:code:638411",
+            "official_fpl.bootstrap.elements.code:638411",
+            "official_fpl.element_id:612"
+          ],
+          "evidence": [
+            "github:ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv",
+            "github_blob_sha:6fcb5b232727d6c5028a356e8b69efa1bfe36163",
+            "runtime-data-v6:canonical_players:git_blob:43d6fb67fcd954d2fec1738e1555e2cb042da988",
+            "official_fpl:bootstrap.elements.code"
+          ],
+          "official_fpl_code": 638411,
+          "official_fpl_element_id": 612,
+          "review_reference": "FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714:Master.csv|Official_FPL_2026_27_code_and_element_exact",
+          "review_status": "DETERMINISTIC_SECONDARY_REGISTRY_REVIEWED",
+          "source_native_id": 12841,
+          "verification_commit": "d29f988447435aeb9c574736ca380e30b8826714",
+          "verification_method": "FPL_ID_MAP_PINNED_UNDERSTAT_NATIVE_TO_OFFICIAL_FPL_CODE",
+          "verification_release": "ChrisMusson/FPL-ID-Map@d29f988447435aeb9c574736ca380e30b8826714",
+          "verified_at": "2026-10-17T16:50:05.696Z"
         }
       ],
       "verification_status": "VERIFIED_MANUAL",

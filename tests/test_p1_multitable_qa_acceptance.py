@@ -181,3 +181,47 @@ def test_s10_has_existing_fifteen_price_rows_plus_fifteen_evidence_rows():
     assert [list(table["columns"]) for table in tables] == [row["columns"] for row in expected]
     assert "NATIVE_FIELD 0/15 populated" in rendered
     assert "NOT_CALIBRATED" in rendered
+
+
+def test_s15_counterpart_advisory_keeps_one_strict_evidence_table():
+    """No/partial/full independent evidence must never add an uncontracted S15 table."""
+    from src.engines.v12_deep_presentation_lock import _rendered_tables
+
+    assessment = {
+        "assessment_type": "CAPTAIN_VICE",
+        "canonical": {
+            "subject": "Palmer", "metric": "xPts", "value": 5.0,
+            "horizon": "GW7", "as_of": "2026-10-16T21:30:00+07:00",
+            "deadline": "2026-10-17T17:00:00+07:00",
+        },
+        "counterparts": [{
+            "source": "Independent", "independence_group": "independent",
+            "metric": "xPts", "horizon": "GW7", "value": 4.6,
+            "as_of": "2026-10-16T20:00:00+07:00",
+        }],
+    }
+    cases = [
+        ({}, "INSUFFICIENT_EVIDENCE", False),
+        ({"independent_counterpart": {"assessments": [assessment]}},
+         "Independent comparison details (advisory):", True),
+        ({"independent_counterpart": {"assessments": [assessment]},
+          "independent_counterpart_coverage": {"status": "PARTIAL"}},
+         "Independent coverage gate: PARTIAL", True),
+        ({"independent_counterpart": {"assessments": [assessment]},
+          "independent_counterpart_coverage": {"status": "PASS"}},
+         "Independent coverage gate: PASS", True),
+    ]
+    for content, marker, has_assessment in cases:
+        rendered = _visible("S15", content)
+        tables = _rendered_tables(rendered)
+        assert len(tables) == 1
+        assert tables[0]["columns"] == (
+            "Evidence domain", "Quality", "Decision impact"
+        )
+        assert marker in rendered
+        if has_assessment:
+            assert "CAPTAIN_VICE" in rendered
+            assert "source" not in tables[0]["columns"]
+            assert "Independent" in rendered
+        else:
+            assert "no occurrence-bound independent comparable assessment" in rendered

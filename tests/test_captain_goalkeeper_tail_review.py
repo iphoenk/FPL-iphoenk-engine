@@ -1,5 +1,5 @@
 """Regression coverage for CLOSE GK captain risk without a position ban."""
-from src.engines.v12_captain_frontier import decide_captain_vice, _mini_league_captain_review, _goalkeeper_tail_review
+from src.engines.v12_captain_frontier import decide_captain_vice, _mini_league_captain_review, _goalkeeper_tail_review, _select_vice
 
 
 def _candidate(element, name, position, pmf, *, pstart=.85, pdnp=.05, mean=None):
@@ -177,3 +177,57 @@ def test_close_frontier_exposes_canonical_shared_world_gate_without_gk_fabricati
     assert shared["convergence"]["gate_status"] == "PASS"
     assert shared["goalkeeper_event_calibration"]["required"] is False
     assert shared["goalkeeper_event_calibration"]["missing_event_model_is_not_synthesized"] is True
+
+
+def _vice_tie_candidates():
+    return [
+        {"element_id": 10, "player": "Secure GK", "position": "GK",
+         "p_dnp": .09, "p_start": .8299, "xmins": 71.4,
+         "expected_points": 4.81, "p_blank": .30},
+        {"element_id": 20, "player": "Attacking MID", "position": "MID",
+         "p_dnp": .09, "p_start": .8299, "xmins": 71.4,
+         "expected_points": 4.68, "p_blank": .45},
+        {"element_id": 30, "player": "Attacking FWD", "position": "FWD",
+         "p_dnp": .09, "p_start": .8299, "xmins": 71.4,
+         "expected_points": 4.49, "p_blank": .50},
+    ]
+
+
+def test_advisory_review_prefers_safe_attacking_vice_only_when_requested():
+    rows = _vice_tie_candidates()
+    baseline, _ = _select_vice(rows, captain_id=20, baseline_vice_id=10)
+    assert baseline["element_id"] == 10
+    reviewed, reason = _select_vice(
+        rows, captain_id=20, baseline_vice_id=10,
+        prefer_attacking_when_security_tied=True,
+    )
+    assert reviewed["element_id"] == 30
+    assert "VICE_REVIEW_ATTACKER_NO_WORSE_SECURITY" in reason
+
+
+def test_advisory_review_keeps_gk_when_attacker_has_worse_dnp_or_minutes():
+    rows = _vice_tie_candidates()
+    rows[2]["p_dnp"] = .10
+    reviewed, reason = _select_vice(
+        rows, captain_id=20, baseline_vice_id=10,
+        prefer_attacking_when_security_tied=True,
+    )
+    assert reviewed["element_id"] == 10
+    assert "VICE_REVIEW_ATTACKER_NO_WORSE_SECURITY" not in reason
+    rows[2]["p_dnp"] = .09
+    rows[2]["xmins"] = 70.9
+    reviewed, _ = _select_vice(
+        rows, captain_id=20, baseline_vice_id=10,
+        prefer_attacking_when_security_tied=True,
+    )
+    assert reviewed["element_id"] == 10
+
+
+def test_advisory_review_does_not_invent_missing_attacker_security():
+    rows = _vice_tie_candidates()
+    rows[2]["xmins"] = None
+    reviewed, _ = _select_vice(
+        rows, captain_id=20, baseline_vice_id=10,
+        prefer_attacking_when_security_tied=True,
+    )
+    assert reviewed["element_id"] == 10

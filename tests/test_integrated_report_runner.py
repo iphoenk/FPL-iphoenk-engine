@@ -1086,6 +1086,10 @@ def test_s15b_bench_boost_preserves_submitted_xi_and_bench(monkeypatch):
     assert full["starter_count"] == 0
     assert full["bench_count"] == 1
     assert full["effective_multiplier_sum"] == 1
+    # The rival's submitted bench overlap with ours must remain three,
+    # even when Bench Boost gives all rival substitutes positive multipliers.
+    leader = next(row for row in detail["competitive_rivals"] if row["entry_id"] == 201)
+    assert leader["bench_overlap_count"] == 3
     # All three entries have player 12 in submitted bench positions.
     ours = next(row for row in detail["league_our15_exposure"] if row["element_id"] == 12)
     full12 = next(row for row in detail["league_full_composition"] if row["element_id"] == 12)

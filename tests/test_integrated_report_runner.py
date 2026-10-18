@@ -920,7 +920,7 @@ def _ml_picks(elements, *, captain=None, vice=None, bench=None):
     return rows
 
 
-def _ml_deep_fixture(monkeypatch):
+def _ml_deep_fixture(monkeypatch, *, effective_bench_boost=False):
     monkeypatch.setattr(
         runner,
         "_captain_candidate_review",
@@ -1003,6 +1003,11 @@ def _ml_deep_fixture(monkeypatch):
             },
         }
     }
+    if effective_bench_boost:
+        # Bench Boost scores points for substitutes but never makes them XI.
+        for pick in manager_picks["entries"]["201"]["picks"]:
+            if pick["squad_position"] > 11:
+                pick["multiplier"] = 1
     exposures = []
     for element in range(1, 16):
         own = 2 if element <= 13 else 1 if element == 14 else 0
@@ -1071,6 +1076,26 @@ def _ml_deep_fixture(monkeypatch):
         operational_action="WAIT",
     )
     return mini, detail, owned
+
+
+def test_s15b_bench_boost_preserves_submitted_xi_and_bench(monkeypatch):
+    _, detail, _ = _ml_deep_fixture(monkeypatch, effective_bench_boost=True)
+    # Player 16 belongs to a rival's bench, even with Bench Boost multiplier=1.
+    full = next(row for row in detail["league_full_composition"] if row["element_id"] == 16)
+    assert full["ownership_count"] == 1
+    assert full["starter_count"] == 0
+    assert full["bench_count"] == 1
+    assert full["effective_multiplier_sum"] == 1
+    # The rival's submitted bench overlap with ours must remain three,
+    # even when Bench Boost gives all rival substitutes positive multipliers.
+    leader = next(row for row in detail["competitive_rivals"] if row["entry_id"] == 201)
+    assert leader["bench_overlap_count"] == 3
+    # All three entries have player 12 in submitted bench positions.
+    ours = next(row for row in detail["league_our15_exposure"] if row["element_id"] == 12)
+    full12 = next(row for row in detail["league_full_composition"] if row["element_id"] == 12)
+    assert (ours["starter_count"], ours["bench_count"]) == (full12["starter_count"], full12["bench_count"])
+    assert ours["starter_count"] == 0
+    assert ours["bench_count"] == 3
 
 
 def test_mini_league_deep_materializes_competitive_window_and_threats(monkeypatch):

@@ -557,6 +557,8 @@ def _select_vice(
     profiles: Sequence[Mapping[str, Any]],
     captain_id: int,
     baseline_vice_id: int | None,
+    *,
+    prefer_attacking_when_security_tied: bool = False,
 ) -> tuple[Mapping[str, Any] | None, str]:
     legal = [row for row in profiles if row.get("element_id") != captain_id]
     if not legal:
@@ -587,9 +589,45 @@ def _select_vice(
             _f(row.get("p_blank")) if _f(row.get("p_blank")) is not None else 1.0,
         ),
     )
+    # Advisory GK-captain counterpart only: when the standard vice is a GK,
+    # prefer a MID/FWD with no worse DNP, start and minutes evidence. This is
+    # NOT the canonical vice decision, an automatic LOCK, or a position ban.
+    attacking_review = False
+    if (
+        prefer_attacking_when_security_tied
+        and str(selected.get("position") or "").upper() in {"GK", "GKP"}
+    ):
+        gk_dnp = _f(selected.get("p_dnp"))
+        gk_start = _f(selected.get("p_start"))
+        gk_minutes = _f(selected.get("xmins"))
+        if all(value is not None for value in (gk_dnp, gk_start, gk_minutes)):
+            eligible_attackers = [
+                row for row in complete
+                if str(row.get("position") or "").upper() in {"MID", "FWD"}
+                and _f(row.get("p_dnp")) is not None
+                and _f(row.get("p_start")) is not None
+                and _f(row.get("xmins")) is not None
+                and _f(row.get("p_dnp")) <= gk_dnp
+                and _f(row.get("p_start")) >= gk_start
+                and _f(row.get("xmins")) >= gk_minutes
+            ]
+            if eligible_attackers:
+                selected = min(
+                    eligible_attackers,
+                    key=lambda row: (
+                        _f(row.get("p_dnp")),
+                        -_f(row.get("p_start")),
+                        -_f(row.get("xmins")),
+                        -(_f(row.get("expected_points")) or 0.0),
+                        _f(row.get("p_blank")) if _f(row.get("p_blank")) is not None else 1.0,
+                    ),
+                )
+                attacking_review = True
+
     return selected, (
-        "VICE_PRIORITIZES_LOW_DNP_HIGH_START_AND_MINUTES_SECURITY_THEN_RETURN;"
-        "CAPTAIN_VICE_DNP_CORRELATION_NOT_MODELLED_YET"
+        ("VICE_REVIEW_ATTACKER_NO_WORSE_SECURITY;" if attacking_review else "")
+        + "VICE_PRIORITIZES_LOW_DNP_HIGH_START_AND_MINUTES_SECURITY_THEN_RETURN;"
+        + "CAPTAIN_VICE_DNP_CORRELATION_NOT_MODELLED_YET"
     )
 
 
@@ -895,7 +933,10 @@ def decide_captain_vice(
     review_mini_league = None
     if review_challenger is not None:
         review_vice, _ = _select_vice(
-            profiles, int(review_challenger["element_id"]), baseline_vice_id
+            profiles,
+            int(review_challenger["element_id"]),
+            baseline_vice_id,
+            prefer_attacking_when_security_tied=True,
         )
         review_mini_league = _mini_league_captain_review(
             selected, review_challenger,

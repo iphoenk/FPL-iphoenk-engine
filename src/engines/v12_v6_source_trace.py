@@ -2,7 +2,9 @@
 
 This is provider ACQUISITION telemetry, not proof of source-category news
 review, independent counterpart assessments, or a completed deadline check.
-Never supply it as news_source_coverage or use it to promote READY_FULL.
+Never supply the whole provider trace as news_source_coverage or promote
+READY_FULL based on acquisition telemetry alone. An independently verified
+Official FPL deadline field can be projected into coverage, without scan claims.
 """
 from __future__ import annotations
 
@@ -206,3 +208,41 @@ def bind_official_deadline(
         "decision_authority": False,
     }
     return result
+
+def verified_official_deadline_source_coverage(
+    trace: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Admit only the exact verified GW deadline to source coverage.
+
+    This intentionally does NOT create a scan ID/time, seven-category scans,
+    club news checks or independent counterpart reviews.
+    """
+    if (
+        trace.get("status") != "PASS"
+        or trace.get("official_deadline_check") != "VERIFIED_FPL_BOOTSTRAP_FIELD"
+    ):
+        return {}
+    row = trace.get("official_deadline_evidence")
+    if not isinstance(row, Mapping):
+        return {}
+    if (
+        row.get("scope") != "OFFICIAL_EVENT_DEADLINE_ONLY_NOT_NEWS_SCAN"
+        or row.get("deadline_source_url")
+            != "https://fantasy.premierleague.com/api/bootstrap-static/"
+        or type(row.get("gw")) is not int
+        or row["gw"] <= 0
+        or not str(row.get("source_snapshot_id") or "").startswith(
+            "official_fpl:bootstrap:"
+        )
+        or _aware(row.get("deadline_utc")) is None
+        or _aware(row.get("checked_at")) is None
+    ):
+        return {}
+    return {
+        "deadline": row["deadline_utc"],
+        "deadline_source_url": row["deadline_source_url"],
+        "deadline_evidence_scope": row["scope"],
+        "deadline_evidence_snapshot_id": row["source_snapshot_id"],
+        "deadline_checked_at": row["checked_at"],
+        "deadline_gw": row["gw"],
+    }

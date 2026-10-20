@@ -118,7 +118,11 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_universe_scan,
 )
 from src.engines.v12_competitive_window import resolve_competitive_window
-from src.engines.v12_v6_source_trace import build_v6_source_trace, bind_official_deadline
+from src.engines.v12_v6_source_trace import (
+    build_v6_source_trace,
+    bind_official_deadline,
+    verified_official_deadline_source_coverage,
+)
 from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
@@ -8028,6 +8032,11 @@ def run_deep(
         report_slot=report_slot,
         runtime_data_root=runtime_data_root,
     )
+    # Only verified official deadline is admitted to the source gate;
+    # news scan and counterpart evidence remain unproven until acquired.
+    news_source_coverage = verified_official_deadline_source_coverage(
+        v6_source_trace
+    )
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",
@@ -9576,6 +9585,7 @@ def run_deep(
                 "material_news": material_news,
                 "news_groups": news_groups,
                 "v6_source_trace": v6_source_trace,
+                "news_source_coverage": news_source_coverage,
                 "model_developments": model_developments,
                 "decision_consequence": {
                     "transfer_state": decision_dashboard.get("TRANSFER"),
@@ -10362,11 +10372,13 @@ def run_deep(
         },
         "execution_proof": execution_proof,
         "v6_source_trace": v6_source_trace,
+        "news_source_coverage": news_source_coverage,
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
             "report_prefetch": _fingerprint(prefetch),
             "v6_source_trace": _fingerprint(v6_source_trace),
+            "news_source_coverage": _fingerprint(news_source_coverage),
             "official_fpl": _fingerprint(official["payload"]),
             "state": _fingerprint(state),
             "predictor": _fingerprint(predictor),

@@ -473,9 +473,9 @@ def test_deep_source_degraded_clears_stale_latest_native_manifest(tmp_path, monk
     bundle["root_failure"] = "SOURCE_EVIDENCE_INCOMPLETE"
     (canonical / "report_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
     # Real world parity requires the 22-section DEEP heading contract.
-    body = "FPL MASTER V12 DEEP REPORT\\n\\n"
+    body = "FPL MASTER V12 DEEP REPORT\n\n"
     for sid in DEEP_MANDATORY_SECTIONS:
-        body += f"## {sid[1:].lstrip('0')}. SECTION {sid}\\nStatus: DEGRADED\\n\\n"
+        body += f"## {sid[1:].lstrip('0')}. SECTION {sid}\nStatus: DEGRADED\n\n"
     (canonical / "serving_report.md").write_text(body, encoding="utf-8")
     (canonical / "serving_report.json").write_text('{"sections":{}}', encoding="utf-8")
     (canonical / "delivery_status.json").write_text('{"status":"READY_DEGRADED"}', encoding="utf-8")
@@ -499,7 +499,7 @@ def test_deep_source_degraded_clears_stale_latest_native_manifest(tmp_path, monk
     # keep text delivery, remove stale native latest, and never claim UI PASS.
     bundle["report_slot"] = "2026-09-26T21:30:00+07:00"
     (canonical / "report_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
-    (canonical / "serving_report.md").write_text("DEGRADED BODY WITHOUT COMPLETE HEADINGS\\n", encoding="utf-8")
+    (canonical / "serving_report.md").write_text("DEGRADED BODY WITHOUT COMPLETE HEADINGS\n", encoding="utf-8")
     second = publish_private_output(
         canonical_dir=canonical, private_root=private, run_id="degraded-2",
         season="2026-27", model_sha="a" * 40, runtime_sha="b" * 40,

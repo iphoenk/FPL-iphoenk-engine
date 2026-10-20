@@ -241,11 +241,19 @@ def consume_native_content(
     if not valid:
         rendered_content = ""
         rendered_ids = []
+    native_pitch = (
+        _native_pitch(sources["S06"], sources.get("S08"))
+        if valid and "S06" in sources else None
+    )
+    # A signed UI receipt cannot promote a malformed or overlapping XI/bench.
+    pitch_structure_valid = bool(
+        native_pitch and native_pitch["structure_integrity"] == "PASS"
+    )
     acceptance = build_native_ui_acceptance(
         manifest,
         rendered_section_ids=rendered_ids,
         rendered_content=rendered_content,
-        user_visible_acceptance=user_visible_acceptance,
+        user_visible_acceptance=user_visible_acceptance and pitch_structure_valid,
         transport_status=transport_status,
         remote_readback=remote_readback,
         files=files if valid else {},
@@ -258,7 +266,7 @@ def consume_native_content(
         "rendered_section_ids": rendered_ids,
         "components": components,
         "pitch": next((item for item in components if item["section_id"] == "S06"), None),
-        "native_pitch": _native_pitch(sources["S06"], sources.get("S08")) if "S06" in sources and valid else None,
+        "native_pitch": native_pitch,
         "consumed_chunk_paths": [str(e["path"]) for e in manifest.get("chunks") or []] if valid else [],
         "native_component_count": len(components),
         "tables": tables,

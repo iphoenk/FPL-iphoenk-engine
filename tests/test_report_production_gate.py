@@ -260,7 +260,7 @@ def test_source_coverage_rejects_duplicate_categories_and_counterpart_domains():
     assert "COUNTERPART_DOMAIN_DUPLICATE:PLAYER_MINUTES" in result["failures"]
 
 
-def test_counterpart_assessment_timestamp_must_be_parsable():
+def test_counterpart_assessment_timestamp_must_be_parsable(tmp_path):
     from src.engines.v12_source_coverage import (
         validate_independent_counterpart_coverage,
     )
@@ -269,3 +269,60 @@ def test_counterpart_assessment_timestamp_must_be_parsable():
     result = validate_independent_counterpart_coverage(counterpart)
     assert result["status"] == "FAIL"
     assert "COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING" in result["failures"]
+
+    # This fixture represents acquisition telemetry only; it can never prove
+    # seven categories, 20 separate club news checks, or independent reviews.
+    import json
+    from src.engines.v12_v6_source_trace import build_v6_source_trace
+    slot = "2026-10-20T10:52:00+07:00"
+    stamp = "2026-10-20T03:53:50+00:00"
+    fixture_files = {
+        "data/v6/health/publish_integrity.json": {
+            "status": "PASS", "logical_slot": slot, "run_id": "39366647541",
+        },
+        "data/v6/evidence/latest_index.json": {
+            "generated_at": stamp,
+            "sources": [
+                {"source_id": "official_fpl", "checked_at": stamp,
+                 "health": "GREEN", "availability": "AVAILABLE",
+                 "source_snapshot_ids": ["official_fpl:bootstrap:testhash"],
+                 "path": "data/v6/current/official_fpl.json"}
+            ],
+        },
+        "data/v6/evidence/resolved_registry.json": {
+            "sources": [{"id": "official_fpl", "category": "factual_authority"}]
+        },
+        "data/v6/normalized/canonical_teams.json": {
+            "authority": "official_fpl", "team_count": 20,
+            "teams": [{"official_fpl_team_id": i} for i in range(1, 21)],
+        },
+    }
+    for relative_path, payload in fixture_files.items():
+        target = tmp_path / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(payload), encoding="utf-8")
+    trace = build_v6_source_trace(runtime_data_root=tmp_path, report_slot=slot)
+    assert trace["status"] == "PASS"
+    assert trace["provider_count"] == 1
+    assert trace["official_club_identity_count"] == 20
+    assert trace["sufficient_for_full_source_gate"] is False
+    assert trace["club_news_verification"] == "NOT_PROVEN"
+    assert trace["seven_category_news_scan"] == "NOT_PROVEN"
+    assert trace["five_domain_independent_counterpart"] == "NOT_PROVEN"
+
+    # Real V6 observations are never accepted for a different occurrence.
+    wrong = build_v6_source_trace(
+        runtime_data_root=tmp_path, report_slot="2026-10-20T12:30:00+07:00"
+    )
+    assert wrong["status"] == "FAIL"
+    assert "V6_PUBLICATION_SLOT_MISMATCH" in wrong["failures"]
+    assert wrong["providers"] == []
+
+    # Neither a forged PASS nor a mismatched identity count can leak proof.
+    fixture_files["data/v6/health/publish_integrity.json"]["status"] = "FAIL"
+    file = tmp_path / "data/v6/health/publish_integrity.json"
+    file.write_text(json.dumps(fixture_files["data/v6/health/publish_integrity.json"]), encoding="utf-8")
+    unverified = build_v6_source_trace(runtime_data_root=tmp_path, report_slot=slot)
+    assert unverified["status"] == "FAIL"
+    assert unverified["providers"] == []
+

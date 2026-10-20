@@ -1067,7 +1067,7 @@ def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
     execution = dict(bundle.get("execution_proof") or {})
     now = datetime.now().astimezone().isoformat()
 
-    if delivery_status == "READY_FULL" or runner_status == "PASS":
+    if delivery_status == "READY_FULL":
         states = [
             "CREATED",
             "FACTS_REQUESTED",
@@ -1076,6 +1076,23 @@ def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
             "ANALYTICS_READY",
             "RENDERING",
             "PUBLISHED_FULL",
+        ]
+    elif (
+        delivery_status == "READY_DEGRADED"
+        and bundle.get("root_failure") == "SOURCE_EVIDENCE_INCOMPLETE"
+        and bundle.get("source_evidence_status") == "FAIL"
+    ):
+        # Canonical analytics completed; independent coverage did not. This
+        # is not ANALYTICS_FAILED and may never be reported as READY_FULL.
+        states = [
+            "CREATED",
+            "FACTS_REQUESTED",
+            "FACTS_READY",
+            "ANALYTICS_RUNNING",
+            "ANALYTICS_READY",
+            "SOURCE_EVIDENCE_INCOMPLETE",
+            "RENDERING",
+            "PUBLISHED_DEGRADED",
         ]
     else:
         states = [
@@ -1096,6 +1113,8 @@ def build_occurrence_state(bundle: Mapping[str, Any]) -> dict[str, Any]:
         "current_state": states[-1],
         "delivery_status": delivery_status,
         "root_failure": bundle.get("root_failure"),
+        "source_evidence_status": bundle.get("source_evidence_status"),
+        "source_evidence_failure_count": len(bundle.get("source_evidence_failures") or []),
         "root_stage": execution.get("root_stage"),
         "transitions": [
             {

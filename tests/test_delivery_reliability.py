@@ -947,8 +947,8 @@ def test_occurrence_orchestrator_allows_only_bounded_scheduler_skew():
     parse = workflow.split("      - name: Parse and validate occurrence", 1)[1].split(
         "      - name: Idempotency guard", 1
     )[0]
-    start = parse.index("          python - <<'PY'\\n") + len("          python - <<'PY'\\n")
-    end = parse.index("          PY\\n", start)
+    start = parse.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
+    end = parse.index("          PY\n", start)
     code = textwrap.dedent(parse[start:end])
 
     def check(command: str, *, owner: bool, expected_ok: bool, error: str = ""):

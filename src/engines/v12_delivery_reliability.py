@@ -1972,12 +1972,12 @@ def validate_serving_snapshot(snapshot: Mapping[str, Any]) -> list[str]:
     return failures
 
 
-def write_serving_artifacts(
-    *,
-    bundle: dict[str, Any],
-    output_dir: Path,
-) -> dict[str, Any]:
-    """Finalize canonical + serving files with atomic local replacement."""
+def downgrade_missing_source_evidence(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed on absent source evidence, without changing model mathematics.
+
+    This is a report-only classification. A mathematical PASS must never be
+    silently promoted to FULL publication when evidence provenance is missing.
+    """
     # The model and mandatory mathematics can pass while independent news
     # coverage was not acquired. Never call that FULL, and never forge source
     # scans just to unblock publication. Preserve actual analytics provenance.
@@ -2023,6 +2023,18 @@ def write_serving_artifacts(
             proof["source_evidence_failures"] = bundle["source_evidence_failures"]
             proof["source_evidence_is_natural_proof"] = False
             bundle["execution_proof"] = proof
+
+
+    return bundle
+
+
+def write_serving_artifacts(
+    *,
+    bundle: dict[str, Any],
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Finalize canonical + serving files with atomic local replacement."""
+    downgrade_missing_source_evidence(bundle)
 
     delivery_status = (
         "READY_FULL"

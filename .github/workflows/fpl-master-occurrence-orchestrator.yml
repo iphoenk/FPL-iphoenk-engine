@@ -645,7 +645,7 @@ jobs:
                   "governed": (
                       delivery_status in {"READY_DEGRADED", "READY_DEGRADED_PUBLIC_FIRST"}
                       and (
-                          root_failure in {"ANALYTICS_INCOMPLETE", "BLOCKED_UPSTREAM", "PREFETCH_NOT_TERMINAL"}
+                          root_failure in {"ANALYTICS_INCOMPLETE", "BLOCKED_UPSTREAM", "PREFETCH_NOT_TERMINAL", "SOURCE_EVIDENCE_INCOMPLETE"}
                           or (
                               delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
                               and root_failure == "PUBLIC_FIRST_PERSONAL_UNAVAILABLE"
@@ -654,6 +654,12 @@ jobs:
                       and (
                           stage3_status in {"DEGRADED", "NOT_APPLICABLE"}
                           or delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
+                          or (
+                              root_failure == "SOURCE_EVIDENCE_INCOMPLETE"
+                              and stage3_status == "PASS"
+                              and str(serving.get("source_evidence_status") or "") == "FAIL"
+                              and int(serving.get("source_evidence_failure_count") or 0) > 0
+                          )
                       )
                       and stage3.get("engineering_closure_blocks_report") is not True
                   ),

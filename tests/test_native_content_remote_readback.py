@@ -174,3 +174,27 @@ def test_final_latest_native_manifest_matches_remote_occurrence_bytes():
     assert 'if occurrence_manifest != show("latest/native_content.manifest.json"):' in text
     assert 'raise SystemExit("final latest native manifest byte parity mismatch")' in text
     assert 'raise SystemExit("final remote manifest receipt hash mismatch")' in text
+
+def test_degraded_remote_readback_rejects_prior_native_pointer(tmp_path: Path):
+    repo, _ = _fixture(tmp_path, "DEEP", ready_full=False)
+    stale = repo / "latest/native_content.manifest.json"
+    stale.write_text('{"report_slot":"PRIOR"}\n', encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "prior native pointer leaked")
+    sha = _git(repo, "rev-parse", "HEAD")
+    blocked = _run_script(tmp_path, "DEEP", sha)
+    assert blocked.returncode != 0
+    assert "degraded DEEP retains stale latest native content" in blocked.stderr
+    stale.unlink()
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "remove stale pointer")
+    sha = _git(repo, "rev-parse", "HEAD")
+    result = _run_script(tmp_path, "DEEP", sha)
+    assert result.returncode == 0, result.stderr
+
+
+def test_degraded_native_transport_is_verified_when_declared():
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert 'or native_format == "MANIFEST_CHUNKS_V1"' in text
+    assert 'receipt.get("delivery_status") == "READY_FULL"' in text
+    assert 'validate_manifest_chunks(manifest, files, canonical_body=body)' in text

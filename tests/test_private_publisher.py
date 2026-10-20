@@ -458,3 +458,55 @@ def test_private_publish_failure_diagnostic_allowlists_missing_serving_files():
     # original Git object remote proof succeeds; never mutate remote hash.
     assert 'receipt_path.parent.mkdir(parents=True, exist_ok=True)' in workflow
     assert workflow.index('receipt_path.parent.mkdir(parents=True, exist_ok=True)') < workflow.index('receipt_path.write_text(')
+
+def test_deep_source_degraded_clears_stale_latest_native_manifest(tmp_path, monkeypatch):
+    # This is a publisher transport fixture. Real report production and source
+    # gate tests remain separate and are not weakened by this patch.
+    from src.engines import v12_private_publisher as publisher_module
+    from src.runtime_v6.domains.report_plane.delivery_integrity import DEEP_MANDATORY_SECTIONS
+
+    canonical, private = tmp_path / "canonical", tmp_path / "private"
+    canonical.mkdir()
+    bundle = _write_fixture(canonical)
+    bundle["delivery_status"] = "READY_DEGRADED"
+    bundle["runner_status"] = "PARTIAL"
+    bundle["root_failure"] = "SOURCE_EVIDENCE_INCOMPLETE"
+    (canonical / "report_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
+    # Real world parity requires the 22-section DEEP heading contract.
+    body = "FPL MASTER V12 DEEP REPORT\n\n"
+    for sid in DEEP_MANDATORY_SECTIONS:
+        body += f"## {sid[1:].lstrip('0')}. SECTION {sid}\nStatus: DEGRADED\n\n"
+    (canonical / "serving_report.md").write_text(body, encoding="utf-8")
+    (canonical / "serving_report.json").write_text('{"sections":{}}', encoding="utf-8")
+    (canonical / "delivery_status.json").write_text('{"status":"READY_DEGRADED"}', encoding="utf-8")
+    monkeypatch.setattr(
+        publisher_module, "evaluate_report_production_gate",
+        lambda *args, **kwargs: {"status": "PASS", "contract": "TEST_REPORT_GATE"},
+    )
+    receipt = publish_private_output(
+        canonical_dir=canonical, private_root=private, run_id="degraded-1",
+        season="2026-27", model_sha="a" * 40, runtime_sha="b" * 40,
+    )
+    latest = private / "latest"
+    manifest = json.loads((latest / "native_content.manifest.json").read_text())
+    assert receipt["delivery_status"] == "READY_DEGRADED"
+    assert receipt["native_content_format"] == "MANIFEST_CHUNKS_V1"
+    assert manifest["report_slot"] == bundle["report_slot"]
+    assert manifest["canonical_body_sha256"] == hashlib.sha256(body.encode()).hexdigest()
+    assert receipt["native_ui_acceptance"] == "UNVERIFIED"
+
+    # The next source-degraded report has malformed native sections. It must
+    # keep text delivery, remove stale native latest, and never claim UI PASS.
+    bundle["report_slot"] = "2026-09-26T21:30:00+07:00"
+    (canonical / "report_bundle.json").write_text(json.dumps(bundle), encoding="utf-8")
+    (canonical / "serving_report.md").write_text("DEGRADED BODY WITHOUT COMPLETE HEADINGS\n", encoding="utf-8")
+    second = publish_private_output(
+        canonical_dir=canonical, private_root=private, run_id="degraded-2",
+        season="2026-27", model_sha="a" * 40, runtime_sha="b" * 40,
+    )
+    assert second["native_content_format"] == "NOT_APPLICABLE"
+    assert second["native_content_fallback_reason"] == "NATIVE_CONTENT_PARITY_UNAVAILABLE"
+    assert not (latest / "native_content.manifest.json").exists()
+    assert not (latest / "native_content.json").exists()
+    assert not (latest / "native_content").exists()
+    assert (latest / "report.md").exists()

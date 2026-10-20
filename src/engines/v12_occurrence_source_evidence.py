@@ -44,7 +44,40 @@ def _in_window(value: Any, *, slot: datetime, deadline: datetime) -> bool:
     )
 
 
-def _valid_reviewed_news(review: Mapping[str, Any], *, slot: datetime, deadline: datetime,
+def _capture_verified(row: Mapping[str, Any], *, root: Path, url: str,
+                      observed_at: Any, slot: datetime, deadline: datetime) -> bool:
+    """Verify bytes of an actual stored capture; a supplied digest is not proof."""
+    relative = str(row.get("capture_path") or "")
+    prefix = "data/v6/evidence/v12_source_reviews/captures/"
+    if not relative.startswith(prefix) or not relative.endswith(".json"):
+        return False
+    base = (root / prefix).resolve()
+    file = (root / relative).resolve()
+    if not file.is_relative_to(base):
+        return False
+    try:
+        if not file.is_file() or file.stat().st_size > 65536:
+            return False
+        raw = file.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != row.get("capture_sha256"):
+            return False
+        payload = json.loads(raw)
+        body = payload.get("reviewed_text")
+        return (
+            payload.get("contract") == "V12_SOURCE_CAPTURE_V1"
+            and payload.get("url") == url
+            and payload.get("review_status") == "REVIEWED"
+            and payload.get("observed_at") == observed_at
+            and _in_window(observed_at, slot=slot, deadline=deadline)
+            and isinstance(body, str) and 0 < len(body) <= 16384
+            and hashlib.sha256(body.encode("utf-8")).hexdigest()
+                == payload.get("reviewed_text_sha256")
+        )
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return False
+
+
+def _valid_reviewed_news(review: Mapping[str, Any], *, root: Path, slot: datetime, deadline: datetime,
                          club_ids: set[str]) -> tuple[bool, list[str]]:
     errors: list[str] = []
     seen_categories: set[str] = set()
@@ -58,8 +91,9 @@ def _valid_reviewed_news(review: Mapping[str, Any], *, slot: datetime, deadline:
         seen_categories.add(name)
         if not _in_window(row.get("attempted_at"), slot=slot, deadline=deadline):
             errors.append("REVIEW_CATEGORY_OUT_OF_WINDOW:" + name)
-        if not SHA256.fullmatch(str(row.get("capture_sha256") or "")):
-            errors.append("REVIEW_CATEGORY_CAPTURE_MISSING:" + name)
+        if not _capture_verified(row, root=root, url=str(row.get("source_url") or ""),
+                                 observed_at=row.get("attempted_at"), slot=slot, deadline=deadline):
+            errors.append("REVIEW_CATEGORY_CAPTURE_INVALID:" + name)
         if not str(row.get("source_url") or "").startswith("https://"):
             errors.append("REVIEW_CATEGORY_URL_INVALID:" + name)
         if row.get("result") not in ("CHECKED_WITH_FINDINGS", "CHECKED_NO_CHANGE"):
@@ -75,8 +109,9 @@ def _valid_reviewed_news(review: Mapping[str, Any], *, slot: datetime, deadline:
         seen_clubs.add(cid)
         if not _in_window(row.get("attempted_at"), slot=slot, deadline=deadline):
             errors.append("REVIEW_CLUB_OUT_OF_WINDOW:" + cid)
-        if not SHA256.fullmatch(str(row.get("capture_sha256") or "")):
-            errors.append("REVIEW_CLUB_CAPTURE_MISSING:" + cid)
+        if not _capture_verified(row, root=root, url=str(row.get("evidence_url") or ""),
+                                 observed_at=row.get("attempted_at"), slot=slot, deadline=deadline):
+            errors.append("REVIEW_CLUB_CAPTURE_INVALID:" + cid)
         if not str(row.get("evidence_url") or "").startswith("https://"):
             errors.append("REVIEW_CLUB_URL_INVALID:" + cid)
         if row.get("result") not in ("CHECKED_WITH_FINDINGS", "CHECKED_NO_CHANGE"):
@@ -84,7 +119,7 @@ def _valid_reviewed_news(review: Mapping[str, Any], *, slot: datetime, deadline:
     return not errors, errors
 
 
-def _verified_counterparts(review: Mapping[str, Any], *, slot: datetime,
+def _verified_counterparts(review: Mapping[str, Any], *, root: Path, slot: datetime,
                            deadline: datetime) -> tuple[dict[str, Any], list[str]]:
     errors: list[str] = []
     assessments = []
@@ -109,8 +144,8 @@ def _verified_counterparts(review: Mapping[str, Any], *, slot: datetime,
         comparable = [
             x for x in samples
             if str(x.get("url") or "").startswith("https://")
-            and SHA256.fullmatch(str(x.get("capture_sha256") or ""))
-            and _in_window(x.get("as_of"), slot=slot, deadline=deadline)
+            and _capture_verified(x, root=root, url=str(x.get("url") or ""),
+                                  observed_at=x.get("as_of"), slot=slot, deadline=deadline)
         ]
         result = assess_counterpart(canonical, comparable)
         evaluated = result.get("comparisons") or []
@@ -183,7 +218,7 @@ def build_occurrence_source_evidence(*, runtime_data_root: Path,
                 "attempted_at": checked, "source_url": "https://fantasy.premierleague.com/api/bootstrap-static/",
                 "source_snapshot_id": snapshot,
                 "claims": claims[:30], "total_claim_count": len(claims),
-                "capture_sha256": proof,
+                "review_binding_sha256": proof,
             }],
         })
         diagnostic["status"] = "OFFICIAL_FPL_SNAPSHOT_REVIEWED_PARTIAL"
@@ -210,7 +245,7 @@ def build_occurrence_source_evidence(*, runtime_data_root: Path,
     if len(official_ids) != 20:
         diagnostic.update(status="OFFICIAL_CLUB_IDENTITIES_INCOMPLETE")
         return base, counterpart, diagnostic
-    valid_news, errors = _valid_reviewed_news(news, slot=slot, deadline=deadline, club_ids=official_ids)
+    valid_news, errors = _valid_reviewed_news(news, root=runtime_data_root, slot=slot, deadline=deadline, club_ids=official_ids)
     if not valid_news:
         diagnostic.update(status="REVIEW_NEWS_REJECTED", failures=errors[:30])
         return base, counterpart, diagnostic
@@ -224,7 +259,7 @@ def build_occurrence_source_evidence(*, runtime_data_root: Path,
         return base, counterpart, diagnostic
     candidate_counter, counterpart_errors = _verified_counterparts(
         dict(receipt.get("independent_counterpart_coverage") or {}),
-        slot=slot, deadline=deadline,
+        root=runtime_data_root, slot=slot, deadline=deadline,
     )
     if counterpart_errors:
         diagnostic.update(status="REVIEW_COUNTERPART_PARTIAL",

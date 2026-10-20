@@ -260,7 +260,15 @@ def build_private_digest(
         "root_failure": (
             "PUBLIC_FIRST_PERSONAL_UNAVAILABLE"
             if delivery_status == "READY_DEGRADED_PUBLIC_FIRST"
-            else None
+            else bundle.get("root_failure")
+        ),
+        "source_evidence_status": (
+            bundle.get("source_evidence_status")
+            if report_mode == "DEEP" else None
+        ),
+        "source_evidence_failure_count": (
+            len(bundle.get("source_evidence_failures") or [])
+            if report_mode == "DEEP" else None
         ),
         "runner_status": runner_status,
         "pre_render_status": pre_render_status,

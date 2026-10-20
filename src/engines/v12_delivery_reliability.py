@@ -1959,6 +1959,52 @@ def write_serving_artifacts(
     output_dir: Path,
 ) -> dict[str, Any]:
     """Finalize canonical + serving files with atomic local replacement."""
+    # The model and mandatory mathematics can pass while independent news
+    # coverage was not acquired. Never call that FULL, and never forge source
+    # scans just to unblock publication. Preserve actual analytics provenance.
+    if (
+        str(bundle.get("report_mode") or "").upper() == "DEEP"
+        and str(bundle.get("runner_status") or "").upper() == "PASS"
+    ):
+        from src.engines.v12_source_coverage import (
+            validate_independent_counterpart_coverage,
+            validate_news_source_coverage,
+        )
+        sections = [
+            row for row in ((bundle.get("report") or {}).get("sections") or [])
+            if isinstance(row, Mapping)
+        ]
+        by_section = {
+            str(row.get("section_id") or ""): dict(row.get("content") or {})
+            for row in sections if isinstance(row.get("content"), Mapping)
+        }
+        source = (
+            bundle.get("news_source_coverage")
+            or by_section.get("S04", {}).get("news_source_coverage")
+        )
+        counterpart = (
+            bundle.get("independent_counterpart_coverage")
+            or by_section.get("S14", {}).get("independent_counterpart_coverage")
+        )
+        source_check = validate_news_source_coverage(source, require_full=True)
+        counterpart_check = validate_independent_counterpart_coverage(
+            counterpart, require_full=True
+        )
+        if source_check["status"] != "PASS" or counterpart_check["status"] != "PASS":
+            bundle["runner_status"] = "PARTIAL"
+            bundle["root_failure"] = "SOURCE_EVIDENCE_INCOMPLETE"
+            bundle["source_evidence_status"] = "FAIL"
+            # Codes only; no URLs, secrets, private players or fabricated facts.
+            bundle["source_evidence_failures"] = list(dict.fromkeys(
+                list(source_check["failures"]) + list(counterpart_check["failures"])
+            ))
+            proof = dict(bundle.get("execution_proof") or {})
+            proof["canonical_analytics_status"] = "PASS"
+            proof["source_evidence_status"] = "FAIL"
+            proof["source_evidence_failures"] = bundle["source_evidence_failures"]
+            proof["source_evidence_is_natural_proof"] = False
+            bundle["execution_proof"] = proof
+
     delivery_status = (
         "READY_FULL"
         if str(bundle.get("runner_status") or "").upper() == "PASS"

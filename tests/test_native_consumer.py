@@ -159,6 +159,25 @@ def test_native_host_receipt_gates_verified_and_rejects_tampering():
     assert accepted["acceptance"]["verification_status"] == "VERIFIED"
     assert accepted["acceptance"]["native_ui_all_chunks_consumed"] == "PASS"
 
+    # A structurally invalid pitch remains UNVERIFIED even with a correctly
+    # signed *synthetic* host receipt and full byte-for-byte manifest parity.
+    malformed = body.replace("Bench 1: K", "Bench 1: A")
+    broken_artifact = build_lossless_native_content(
+        canonical_body=malformed,
+        report_slot=manifest["report_slot"],
+        canonical_body_sha256=sha256(malformed.encode()).hexdigest(),
+    )
+    broken_manifest, broken_files = build_manifest_chunks(broken_artifact, max_chunk_bytes=512)
+    broken_manifest["occurrence_path"] = manifest["occurrence_path"]
+    broken = consume_native_content(
+        broken_manifest, broken_files, canonical_body=malformed,
+        user_visible_acceptance=True, transport_status="PASS", remote_readback="PASS",
+        native_host_receipt=_signed_native_receipt(broken_manifest, key),
+        native_host_verification_key=key,
+    )
+    assert broken["native_pitch"]["structure_integrity"] == "FAIL"
+    assert broken["acceptance"]["verification_status"] == "UNVERIFIED"
+
     tampered = dict(receipt, native_chunk_count=receipt["native_chunk_count"] - 1)
     rejected = consume_native_content(manifest, files, **dict(options, native_host_receipt=tampered))
     assert rejected["acceptance"]["verification_status"] == "UNVERIFIED"

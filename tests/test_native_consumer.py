@@ -59,6 +59,19 @@ def test_native_consumer_renders_every_section_row_profile_and_pitch_surface():
     assert result["native_pitch"]["captain"] == "I"
     assert result["native_pitch"]["vice_captain"] == "Keeper"
     assert result["native_pitch"]["captain_vice_in_xi"] is True
+    assert result["native_pitch"]["structure_integrity"] == "PASS"
+    assert result["native_pitch"]["structure_failures"] == []
+    assert result["native_pitch"]["visual_contract"]["theme"] == "PREMIUM_DARK_GREEN"
+    assert result["native_pitch"]["visual_contract"]["bench_orientation"] == "HORIZONTAL"
+    assert result["native_pitch"]["visual_contract"]["captain_vice_badges"] == "SMALL_ADJACENT_TO_NAME"
+    assert result["native_pitch"]["visual_contract"]["club_jersey_policy"] == "EXACT_OFFICIAL_CLUB_ID_REQUIRED"
+    assert [item["name"] for item in result["native_pitch"]["horizontal_bench"]] == ["GK2", "K", "L", "M"]
+    assert all(player["jersey"] is None
+               for row in result["native_pitch"]["visual_rows"]
+               for player in row["players"])
+    assert result["native_pitch"]["visual_rows"][0]["players"][0]["badge"] == "C"
+    assert result["native_pitch"]["visual_rows"][-1]["players"][0]["badge"] == "VC"
+    assert result["native_pitch"]["visual_readiness"] == "PARTIAL_CLUB_JERSEYS_UNAVAILABLE"
     assert result["native_pitch"]["rows"][0]["players"] == ["I", "J"]
     assert all("<style>" not in str(block) for block in result["pitch"]["native_blocks"])
     assert result["rendered_section_ids"] == list(DEEP_MANDATORY_SECTIONS)
@@ -67,6 +80,23 @@ def test_native_consumer_renders_every_section_row_profile_and_pitch_surface():
     assert len(result["tables"]["S15B"]["rows"]) == 60
     assert len(result["profiles"]["S16"]) == 15
     assert result["typed_panels"]["S18"]["status"] == "PRESENT"
+
+    # Malformed visual payload must never be reported structurally complete.
+    # This is a source-text fixture, not a natural or host-render acceptance.
+    malformed = body.replace("Bench 1: K", "Bench 1: A")
+    bad_artifact = build_lossless_native_content(
+        canonical_body=malformed,
+        report_slot="2026-10-12T20:00:00+07:00",
+        canonical_body_sha256=sha256(malformed.encode()).hexdigest(),
+    )
+    bad_manifest, bad_files = build_manifest_chunks(bad_artifact, max_chunk_bytes=512)
+    bad = consume_native_content(
+        bad_manifest, bad_files, canonical_body=malformed,
+        user_visible_acceptance=True, transport_status="PASS", remote_readback="PASS",
+    )
+    assert bad["native_pitch"]["structure_integrity"] == "FAIL"
+    assert "BENCH_OVERLAPS_XI" in bad["native_pitch"]["structure_failures"]
+    assert bad["acceptance"]["verification_status"] == "UNVERIFIED"
 
 
 def test_native_consumer_rejects_partial_chunk_readback():

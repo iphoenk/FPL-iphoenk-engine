@@ -1,8 +1,11 @@
 name: FPL GitHub clock
 run-name: >-
-  FPL GitHub clock ${{ github.event_name }} manual-smoke
+  FPL GitHub clock ${{ github.event_name }} operational-tick
 
 on:
+  # Independent GitHub-owned operational fallback. This is not a ChatGPT natural slot.
+  schedule:
+    - cron: "35 * * * *"
   workflow_dispatch:
   issue_comment:
     types: [created]
@@ -15,6 +18,7 @@ permissions:
 jobs:
   tick:
     if: >-
+      github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch' ||
       (
         github.event_name == 'issue_comment' &&
@@ -23,7 +27,7 @@ jobs:
         github.event.comment.body == '/fpl-clock-test'
       )
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -118,7 +122,7 @@ jobs:
             --exit-status
           echo "Fallback child terminal success: $CHILD_RUN_ID"
 
-      - name: Write manual smoke evidence
+      - name: Write origin-separated operational clock evidence
         if: always()
         env:
           LOGICAL_SLOT: ${{ steps.tick.outputs.logical_slot }}
@@ -133,5 +137,7 @@ jobs:
           if [[ "${{ job.status }}" != "success" ]]; then
             status="FAIL"
           fi
-          body="FPL_GITHUB_CLOCK | status=$status | event=$GITHUB_EVENT_NAME | schedule=manual | logical_slot=${LOGICAL_SLOT:-UNKNOWN} | observed_at=${OBSERVED_AT:-UNKNOWN} | report_mode=${REPORT_MODE:-UNKNOWN} | report_slot=${REPORT_SLOT:-NONE} | clock_run_id=$GITHUB_RUN_ID | fallback_run_id=${CHILD_RUN_ID:-NONE} | natural_clock_proof=false"
+          origin="MANUAL_SMOKE"
+          if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then origin="GITHUB_NATIVE_OPERATIONAL_SCHEDULE"; fi
+          body="FPL_GITHUB_CLOCK | status=$status | event=$GITHUB_EVENT_NAME | schedule_origin=$origin | logical_slot=${LOGICAL_SLOT:-UNKNOWN} | observed_at=${OBSERVED_AT:-UNKNOWN} | report_mode=${REPORT_MODE:-UNKNOWN} | report_slot=${REPORT_SLOT:-NONE} | clock_run_id=$GITHUB_RUN_ID | fallback_run_id=${CHILD_RUN_ID:-NONE} | natural_clock_proof=false | downstream_terminal=UNVERIFIED_DISPATCH_ONLY"
           gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body "$body"

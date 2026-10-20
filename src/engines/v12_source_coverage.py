@@ -60,6 +60,12 @@ def validate_news_source_coverage(
 
     categories = [dict(x) for x in data.get("categories") or [] if isinstance(x, Mapping)]
     by_category = {str(x.get("category") or "").upper(): x for x in categories}
+    seen_categories: set[str] = set()
+    for row in categories:
+        category_id = str(row.get("category") or "").upper()
+        if category_id in seen_categories:
+            failures.append("SOURCE_CATEGORY_DUPLICATE:" + (category_id or "UNKNOWN"))
+        seen_categories.add(category_id)
     for category in REQUIRED_SOURCE_CATEGORIES:
         row = by_category.get(category)
         if row is None:
@@ -127,6 +133,12 @@ def validate_independent_counterpart_coverage(
         dict(x) for x in data.get("assessments") or [] if isinstance(x, Mapping)
     ]
     by_domain = {str(x.get("domain") or "").upper(): x for x in assessments}
+    seen_domains: set[str] = set()
+    for row in assessments:
+        domain_id = str(row.get("domain") or "").upper()
+        if domain_id in seen_domains:
+            failures.append("COUNTERPART_DOMAIN_DUPLICATE:" + (domain_id or "UNKNOWN"))
+        seen_domains.add(domain_id)
     for domain in REQUIRED_DECISION_DOMAINS:
         row = by_domain.get(domain)
         if row is None:
@@ -148,7 +160,7 @@ def validate_independent_counterpart_coverage(
             failures.append("COUNTERPART_INDEPENDENT_EVIDENCE_INCOMPLETE:" + domain)
         if not row.get("action"):
             failures.append("COUNTERPART_ACTION_MISSING:" + domain)
-    if not data.get("assessment_at"):
+    if _parse_time(data.get("assessment_at")) is None:
         failures.append("COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING")
     unique = list(dict.fromkeys(failures))
     return {

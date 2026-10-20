@@ -233,3 +233,39 @@ def test_runner_pass_without_delivery_status_cannot_bypass_coverage_gate():
     assert _source_gap_only_analytics_pass(incomplete) is False
     assert _source_gap_only_analytics_pass(complete) is False
 
+def test_source_coverage_rejects_duplicate_categories_and_counterpart_domains():
+    # A duplicate may not overwrite an original CHECKED row in a dict.
+    from copy import deepcopy
+    from src.engines.v12_source_coverage import (
+        validate_news_source_coverage,
+        validate_independent_counterpart_coverage,
+    )
+
+    news, counterpart = _coverage_fixtures()
+    assert validate_news_source_coverage(news)["status"] == "PASS"
+    assert validate_independent_counterpart_coverage(counterpart)["status"] == "PASS"
+
+    duplicate_news = deepcopy(news)
+    duplicate_news["categories"].append(dict(duplicate_news["categories"][0]))
+    result = validate_news_source_coverage(duplicate_news)
+    assert result["status"] == "FAIL"
+    assert "SOURCE_CATEGORY_DUPLICATE:OFFICIAL_PL_FPL" in result["failures"]
+
+    duplicate_counterpart = deepcopy(counterpart)
+    duplicate_counterpart["assessments"].append(
+        dict(duplicate_counterpart["assessments"][0])
+    )
+    result = validate_independent_counterpart_coverage(duplicate_counterpart)
+    assert result["status"] == "FAIL"
+    assert "COUNTERPART_DOMAIN_DUPLICATE:PLAYER_MINUTES" in result["failures"]
+
+
+def test_counterpart_assessment_timestamp_must_be_parsable():
+    from src.engines.v12_source_coverage import (
+        validate_independent_counterpart_coverage,
+    )
+    _, counterpart = _coverage_fixtures()
+    counterpart["assessment_at"] = "not-an-iso-timestamp"
+    result = validate_independent_counterpart_coverage(counterpart)
+    assert result["status"] == "FAIL"
+    assert "COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING" in result["failures"]

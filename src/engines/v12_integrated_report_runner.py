@@ -118,7 +118,7 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_universe_scan,
 )
 from src.engines.v12_competitive_window import resolve_competitive_window
-from src.engines.v12_v6_source_trace import build_v6_source_trace
+from src.engines.v12_v6_source_trace import build_v6_source_trace, bind_official_deadline
 from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
@@ -8021,6 +8021,13 @@ def run_deep(
         else None
     )
     planning_gw = _planning_gw(bootstrap)
+    v6_source_trace = bind_official_deadline(
+        v6_source_trace,
+        bootstrap=bootstrap,
+        planning_gw=planning_gw,
+        report_slot=report_slot,
+        runtime_data_root=runtime_data_root,
+    )
     personal_resolution = _stage(
         ledger,
         "PERSONAL_EVIDENCE_RECONCILIATION",

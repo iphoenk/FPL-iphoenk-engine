@@ -4711,9 +4711,21 @@ def _render_deep_visible_contract_lines(
                 f"observed providers {trace.get('provider_count') or 0}; "
                 f"official club identities {trace.get('official_club_identity_count') or 0}/20."
             )
+            official_deadline = trace.get("official_deadline_evidence")
+            if (
+                trace.get("official_deadline_check") == "VERIFIED_FPL_BOOTSTRAP_FIELD"
+                and isinstance(official_deadline, Mapping)
+            ):
+                lines.append(
+                    f"Official FPL GW {official_deadline.get('gw')} deadline: "
+                    f"{official_deadline.get('deadline_wib')} (WIB); "
+                    f"{official_deadline.get('applicability')}. "
+                    f"[Official FPL bootstrap]({official_deadline.get('deadline_source_url')})."
+                )
             lines.append(
-                "Source-category news, club news, deadline and independent "
-                "counterpart reviews remain NOT PROVEN by provider transport alone."
+                "Source-category news, club news and independent counterpart "
+                "reviews remain NOT PROVEN by provider transport or a verified "
+                "official deadline alone."
             )
         from src.engines.v12_source_coverage import render_news_source_coverage
         lines.extend(render_news_source_coverage(payload.get("news_source_coverage")))

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -121,3 +122,87 @@ def build_v6_source_trace(*, runtime_data_root: Path, report_slot: str) -> dict[
         "factual_inputs_mutated": False,
         "producer": "EXISTING_V6_ACQUISITION_METADATA_READ_ONLY",
     }
+
+
+def bind_official_deadline(
+    trace: Mapping[str, Any],
+    *,
+    bootstrap: Mapping[str, Any],
+    planning_gw: int,
+    report_slot: str,
+    runtime_data_root: Path,
+) -> dict[str, Any]:
+    """Read an exact official FPL event deadline, without declaring news scanned.
+
+    This is one FPL bootstrap field bound to a verified V6 provider request.
+    It cannot satisfy seven-category or independent counterpart coverage alone.
+    """
+    result = dict(trace)
+    result["official_deadline_check"] = "NOT_PROVEN"
+    result.pop("official_deadline_evidence", None)
+    if result.get("status") != "PASS":
+        return result
+
+    provider = next(
+        (r for r in result.get("providers") or []
+         if isinstance(r, Mapping) and r.get("source_id") == "official_fpl"),
+        None,
+    )
+    registry = _read(runtime_data_root, REGISTRY)
+    official_config = next(
+        (r for r in registry.get("sources") or []
+         if isinstance(r, Mapping) and r.get("id") == "official_fpl"),
+        {},
+    )
+    bootstrap_request = next(
+        (r for r in official_config.get("requests") or []
+         if isinstance(r, Mapping) and r.get("id") == "bootstrap"),
+        {},
+    )
+    url = str(bootstrap_request.get("url") or "")
+    snapshots = list((provider or {}).get("snapshot_ids") or [])
+    bootstrap_snapshot = next(
+        (s for s in snapshots if isinstance(s, str)
+         and s.startswith("official_fpl:bootstrap:")),
+        None,
+    )
+    if not (
+        provider
+        and provider.get("health") == "GREEN"
+        and provider.get("availability") == "AVAILABLE"
+        and bootstrap_snapshot
+        and url == "https://fantasy.premierleague.com/api/bootstrap-static/"
+    ):
+        return result
+
+    if type(planning_gw) is not int or planning_gw <= 0:
+        return result
+    events = bootstrap.get("events")
+    if not isinstance(events, list):
+        return result
+    rows = [
+        r for r in events
+        if isinstance(r, Mapping)
+        and type(r.get("id")) is int and r.get("id") == planning_gw
+    ]
+    if len(rows) != 1:
+        return result
+    deadline = _aware(rows[0].get("deadline_time"))
+    report_time = _aware(report_slot)
+    checked = _aware(provider.get("checked_at"))
+    if deadline is None or report_time is None or checked is None:
+        return result
+
+    result["official_deadline_check"] = "VERIFIED_FPL_BOOTSTRAP_FIELD"
+    result["official_deadline_evidence"] = {
+        "gw": planning_gw,
+        "deadline_utc": deadline.astimezone(ZoneInfo("UTC")).isoformat(),
+        "deadline_wib": deadline.astimezone(ZoneInfo("Asia/Jakarta")).isoformat(),
+        "deadline_source_url": url,
+        "checked_at": provider["checked_at"],
+        "source_snapshot_id": bootstrap_snapshot,
+        "applicability": "UPCOMING" if report_time <= deadline else "PAST",
+        "scope": "OFFICIAL_EVENT_DEADLINE_ONLY_NOT_NEWS_SCAN",
+        "decision_authority": False,
+    }
+    return result

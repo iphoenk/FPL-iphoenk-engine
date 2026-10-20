@@ -63,6 +63,28 @@ def test_governed_partial_with_report_first_stage3_is_ready_degraded():
     assert result["terminality"] == "READY_DEGRADED"
     assert result["failures"] == []
 
+    # Stage3 may PASS with successful canonical mathematics while source
+    # evidence is incomplete, but never without the exact failed-source proof.
+    strict = _evidence()
+    strict["serving"]["runner_status"] = "PARTIAL"
+    strict["serving"]["source_evidence_status"] = "FAIL"
+    strict["serving"]["source_evidence_failure_count"] = 18
+    strict["delivery"] = {
+        "delivery_status": "READY_DEGRADED",
+        "root_failure": "SOURCE_EVIDENCE_INCOMPLETE",
+    }
+    strict["degradation"] = {
+        "governed": True,
+        "attributable": True,
+        "reason": "SOURCE_EVIDENCE_INCOMPLETE",
+    }
+    assert classify_occurrence(strict)["terminality"] == "READY_DEGRADED"
+    strict["serving"]["source_evidence_failure_count"] = 0
+    invalid = classify_occurrence(strict)
+    assert invalid["terminality"] == "FAILED_VERIFY"
+    assert "SOURCE_GAP_NOT_PROVEN" in invalid["failures"]
+
+
 
 def test_ungoverned_partial_fails_closed():
     evidence = _evidence()

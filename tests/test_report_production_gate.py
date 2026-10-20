@@ -218,3 +218,18 @@ def test_runner_pass_without_delivery_status_cannot_bypass_coverage_gate():
     assert complete["runner_status"] == "PASS"
     assert "source_evidence_status" not in complete
 
+    from src.engines.v12_stage3_acceptance import _source_gap_only_analytics_pass
+    # The Stage3 bridge is limited to exactly reproducible, nonfabricated
+    # source failures. It never treats arbitrary PARTIAL as mathematical PASS.
+    incomplete["delivery_status"] = "READY_DEGRADED"
+    assert _source_gap_only_analytics_pass(incomplete) is True
+    incomplete["execution_proof"]["source_evidence_failures"] = ["FAKE_PASS"]
+    assert _source_gap_only_analytics_pass(incomplete) is False
+    incomplete["execution_proof"]["source_evidence_failures"] = incomplete["source_evidence_failures"]
+    incomplete["source_evidence_failures"].append("FAKE_MISSING_SOURCE")
+    assert _source_gap_only_analytics_pass(incomplete) is False
+    incomplete["source_evidence_failures"].pop()
+    incomplete["execution_proof"]["canonical_analytics_status"] = "FAIL"
+    assert _source_gap_only_analytics_pass(incomplete) is False
+    assert _source_gap_only_analytics_pass(complete) is False
+

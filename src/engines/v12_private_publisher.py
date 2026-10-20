@@ -550,9 +550,10 @@ def publish_private_output(
     native_content_json = None
     native_manifest_json = None
     native_chunk_files: dict[str, str] = {}
+    native_fallback_reason = None
     if (
         report_mode == "DEEP"
-        and delivery_status == "READY_FULL"
+        and delivery_status in {"READY_FULL", "READY_DEGRADED"}
         and (canonical_dir / "serving_report.md").is_file()
     ):
         from src.engines.v12_native_content_parity import (
@@ -574,18 +575,24 @@ def publish_private_output(
                 canonical_body_sha256=canonical_body_sha,
                 canonical_sections=raw_sections if isinstance(raw_sections, list) else None,
             )
+            native_manifest, native_chunk_files = build_manifest_chunks(native_content)
         except NativeContentParityError as exc:
-            raise PrivatePublishError(f"NATIVE_CONTENT_PARITY_FAILED:{exc}") from exc
-        native_content_json = (
-            json.dumps(native_content, ensure_ascii=False, separators=(",", ":"), default=str)
-            + "\n"
-        )
-        native_manifest, native_chunk_files = build_manifest_chunks(native_content)
-        native_manifest["occurrence_path"] = str(report_dir.relative_to(private_root))
-        native_manifest_json = (
-            json.dumps(native_manifest, ensure_ascii=False, indent=2, sort_keys=True)
-            + "\n"
-        )
+            if delivery_status == "READY_FULL":
+                raise PrivatePublishError(f"NATIVE_CONTENT_PARITY_FAILED:{exc}") from exc
+            # Preserve a truthful DEEP text fallback for source-degraded reports.
+            # Never leave an earlier occurrence's native manifest as current.
+            native_fallback_reason = "NATIVE_CONTENT_PARITY_UNAVAILABLE"
+            native_chunk_files = {}
+        else:
+            native_content_json = (
+                json.dumps(native_content, ensure_ascii=False, separators=(",", ":"), default=str)
+                + "\n"
+            )
+            native_manifest["occurrence_path"] = str(report_dir.relative_to(private_root))
+            native_manifest_json = (
+                json.dumps(native_manifest, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n"
+            )
 
     previous_deep_baseline = None
     previous_deep_baseline_json = None
@@ -699,6 +706,17 @@ def publish_private_output(
         )
 
     if update_latest:
+        # DEEP latest is one coherent occurrence. A degraded report may have
+        # legitimate native chunks, or an honest text fallback; it must NEVER
+        # retain native transport from an older READY_FULL occurrence.
+        if report_mode == "DEEP":
+            for stale_name in ("native_content.json", "native_content.manifest.json"):
+                (latest_dir / stale_name).unlink(missing_ok=True)
+            prior_chunks = latest_dir / "native_content"
+            if prior_chunks.is_symlink() or prior_chunks.is_file():
+                prior_chunks.unlink()
+            elif prior_chunks.is_dir():
+                shutil.rmtree(prior_chunks)
         mode_lower = report_mode.lower()
         _atomic_replace_text(latest_dir / f"{mode_lower}.json", digest_json)
         _atomic_replace_text(latest_dir / f"{mode_lower}.md", digest_md)
@@ -764,6 +782,7 @@ def publish_private_output(
         ),
         "native_content_sha256": native_content_sha,
         "native_content_format": "MANIFEST_CHUNKS_V1" if native_manifest_json else "NOT_APPLICABLE",
+        "native_content_fallback_reason": native_fallback_reason,
         "native_content_manifest_sha256": sha256_bytes((native_manifest_json or "").encode("utf-8")) if native_manifest_json else None,
         "native_content_canonical_sha256": canonical_body_sha if native_manifest_json else None,
         "native_content_chunk_count": len(native_chunk_files),

@@ -365,3 +365,28 @@ def test_counterpart_assessment_timestamp_must_be_parsable(tmp_path):
     )
     assert failed["official_deadline_check"] == "NOT_PROVEN"
 
+    # Official deadline proof closes only two missing fields, not news coverage.
+    from src.engines.v12_v6_source_trace import (
+        verified_official_deadline_source_coverage,
+    )
+    from src.engines.v12_source_coverage import validate_news_source_coverage
+    coverage = verified_official_deadline_source_coverage(exact)
+    assert coverage["deadline"] == "2026-10-24T11:00:00+00:00"
+    assert coverage["deadline_gw"] == 8
+    assert "scan_at" not in coverage
+    assert "scan_id" not in coverage
+    assert "categories" not in coverage
+    assert "clubs" not in coverage
+    source_gate = validate_news_source_coverage(coverage, require_full=True)
+    assert source_gate["status"] == "FAIL"
+    assert "OFFICIAL_DEADLINE_MISSING" not in source_gate["failures"]
+    assert "OFFICIAL_DEADLINE_SOURCE_MISSING" not in source_gate["failures"]
+    assert "SOURCE_SCAN_ID_MISSING" in source_gate["failures"]
+    assert "SOURCE_CATEGORY_MISSING:OFFICIAL_CLUBS" in source_gate["failures"]
+    assert "ALL_20_CLUBS_IDENTITY_COVERAGE_INVALID" in source_gate["failures"]
+    for invalid in (wrong_gw, failed, unverified):
+        assert verified_official_deadline_source_coverage(invalid) == {}
+    false_proof = dict(exact)
+    false_proof["official_deadline_check"] = "NOT_PROVEN"
+    assert verified_official_deadline_source_coverage(false_proof) == {}
+

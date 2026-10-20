@@ -177,13 +177,15 @@ def test_production_policy_uses_chatgpt_scheduler_and_no_github_natural_cron():
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
     assert policy["scheduled_crons_utc"] == []
     assert policy["natural_schedule_redundancy_attempts_per_hour"] == 0
     assert workflow_crons == []
-    assert clock_crons == []
+    assert clock_crons == ["35 * * * *"]
+    assert policy["governance"]["external_clock_fallback_counts_as_natural_acceptance"] is False
+    assert policy["github_control_schedules"]["operational_fallback_clock_cron_utc"] == "35 * * * *"
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
-    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:FPL_MASTER_SLOT"
@@ -207,7 +209,7 @@ def test_production_policy_uses_chatgpt_scheduler_and_no_github_natural_cron():
     assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
     assert "  schedule:" not in workflow
-    assert "  schedule:" not in clock
+    assert "  schedule:" in clock
     assert "fpl-external-clock-fallback.yml" in clock
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow

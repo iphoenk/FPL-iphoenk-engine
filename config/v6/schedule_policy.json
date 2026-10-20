@@ -35,7 +35,7 @@
     "enabled": false,
     "authority": "NONE",
     "reason": "OWNER_RESTORED_CHATGPT_SCHEDULER_AUTHORITY_2026_10_07",
-    "workflow_schedule_triggers_removed": true,
+    "workflow_schedule_triggers_removed": false,
     "enabled_at": "2026-10-06T11:30:00+07:00",
     "cron_utc": "",
     "former_crons_utc": [
@@ -47,7 +47,8 @@
     "former_crons_are_historical_evidence_only": true,
     "active_crons_utc": [],
     "workflow": "fpl-github-clock.yml",
-    "disabled_at": "2026-10-07T06:03:00+07:00"
+    "disabled_at": "2026-10-07T06:03:00+07:00",
+    "operational_clock_separate_from_natural": true
   },
   "scheduled_crons_utc": [],
   "natural_schedule_redundancy_attempts_per_hour": 0,
@@ -105,7 +106,7 @@
     "push_triggered_production_acquisition_allowed": false,
     "pull_request_triggered_production_acquisition_allowed": false,
     "github_natural_scheduler_is_authority": false,
-    "github_schedule_events_are_removed": true,
+    "github_schedule_events_are_removed": false,
     "chatgpt_scheduler_is_only_hourly_authority": true,
     "chatgpt_scheduler_health_is_current_epoch_authority": true,
     "legacy_github_scheduler_evidence_is_historical_only": true,
@@ -170,12 +171,13 @@
     "natural_scheduler_redundancy_enabled": false,
     "natural_scheduler_redundancy_attempts_per_hour": 0,
     "redundant_schedule_arrivals_share_one_logical_hourly_slot": true,
-    "external_clock_fallback_enabled": false,
-    "external_clock_fallback_has_independent_cron": false,
+    "external_clock_fallback_enabled": true,
+    "external_clock_fallback_has_independent_cron": true,
     "external_clock_fallback_is_operational_only": true,
     "external_clock_fallback_counts_as_scheduler_health_proof": false,
     "external_clock_fallback_counts_as_natural_acceptance": false,
-    "v6_ingestion_has_independent_schedule": false
+    "v6_ingestion_has_independent_schedule": false,
+    "github_operational_fallback_schedule_owner": "GITHUB_ACTIONS:fpl-github-clock.yml"
   },
   "master_orchestrated": {
     "enabled": true,
@@ -242,6 +244,9 @@
     "recurring_recovery_guard_enabled": false,
     "recovery_guard_invocation": "WORKFLOW_DISPATCH_ONLY",
     "natural_scheduler_crons_utc": [],
-    "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml"
+    "only_scheduled_v6_control_workflow": "v6-scheduler-watchdog.yml",
+    "operational_fallback_clock_workflow": "fpl-github-clock.yml",
+    "operational_fallback_clock_cron_utc": "35 * * * *",
+    "operational_fallback_counts_as_chatgpt_natural_acceptance": false
   }
 }

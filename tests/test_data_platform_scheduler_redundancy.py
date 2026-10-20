@@ -23,9 +23,9 @@ def test_github_natural_cron_is_disabled_and_former_redundant_crons_are_history_
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
     assert workflow_crons == []
-    assert clock_crons == []
+    assert clock_crons == ["35 * * * *"]
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
@@ -33,7 +33,7 @@ def test_github_natural_cron_is_disabled_and_former_redundant_crons_are_history_
         "58 * * * *",
     ]
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
-    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
 
 def test_scheduler_migration_boundary_is_explicit():
     policy = _policy()
@@ -140,7 +140,7 @@ def test_only_ingestion_and_watchdog_are_scheduled_and_recovery_is_manual_only()
     }
     assert scheduled_v6 == {"v6-scheduler-watchdog.yml"}
     clock = (workflows / "fpl-github-clock.yml").read_text(encoding="utf-8")
-    assert not re.search(r"(?m)^\s*schedule\s*:", clock)
+    assert re.search(r"(?m)^\s*schedule\s*:", clock)
     recovery = (workflows / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
     assert "workflow_dispatch:" in recovery
     assert "schedule:" not in recovery

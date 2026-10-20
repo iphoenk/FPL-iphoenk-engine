@@ -44,9 +44,11 @@ def test_workflow_scheduler_matches_chatgpt_authority_policy():
     assert policy["github_natural_schedule"]["enabled"] is False
     assert policy["github_natural_schedule"]["authority"] == "NONE"
     assert policy["github_natural_schedule"]["workflow"] == "fpl-github-clock.yml"
-    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is True
+    assert policy["github_natural_schedule"]["workflow_schedule_triggers_removed"] is False
     assert workflow_crons == []
-    assert clock_crons == []
+    assert clock_crons == ["35 * * * *"]
+    assert policy["governance"]["external_clock_fallback_counts_as_natural_acceptance"] is False
+    assert policy["github_control_schedules"]["operational_fallback_clock_cron_utc"] == "35 * * * *"
     assert policy["github_natural_schedule"]["former_crons_utc"] == [
         "13 * * * *",
         "28 * * * *",
@@ -56,7 +58,7 @@ def test_workflow_scheduler_matches_chatgpt_authority_policy():
     assert policy["github_natural_schedule"]["former_crons_are_historical_evidence_only"] is True
     assert policy["governance"]["single_schedule_owner"] == "CHATGPT_AUTOMATION:FPL Master Monitor V12"
     assert policy["governance"]["v6_ingestion_has_independent_schedule"] is False
-    assert policy["governance"]["github_schedule_events_are_removed"] is True
+    assert policy["governance"]["github_schedule_events_are_removed"] is False
     assert policy["governance"]["scheduler_migration_boundary_is_explicit"] is True
     assert policy["governance"]["chatgpt_scheduler_is_only_hourly_authority"] is True
     assert policy["governance"]["scheduler_health_proof_trigger"] == "issues:FPL_MASTER_SLOT"

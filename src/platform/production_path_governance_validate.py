@@ -354,8 +354,34 @@ def validate() -> None:
                 "Dedicated FPL GitHub clock missing governed markers: "
                 + ", ".join(missing_clock)
             )
-        if SCHEDULE_TRIGGER.search(clock_text):
-            errors.append("FPL GitHub clock must remain manual-only; ChatGPT owns recurring scheduling")
+        # Explicit GitHub-owned operational fallback; it is never ChatGPT
+        # natural scheduler proof. Guard the exact schedule and trust boundary.
+        clock_policy = json.loads(
+            (ROOT / "config/v6/schedule_policy.json").read_text(encoding="utf-8")
+        )
+        clock_governance = dict(clock_policy.get("governance") or {})
+        clock_controls = dict(clock_policy.get("github_control_schedules") or {})
+        if not SCHEDULE_TRIGGER.search(clock_text) or 'cron: "35 * * * *"' not in clock_text:
+            errors.append("GitHub operational fallback must use the exact approved hourly :35 schedule")
+        if clock_text.count('cron: "35 * * * *"') != 1:
+            errors.append("GitHub operational fallback must have exactly one approved cron")
+        if (
+            clock_controls.get("operational_fallback_clock_workflow") != clock.name
+            or clock_controls.get("operational_fallback_clock_cron_utc") != "35 * * * *"
+            or clock_controls.get("operational_fallback_counts_as_chatgpt_natural_acceptance") is not False
+            or clock_governance.get("external_clock_fallback_enabled") is not True
+            or clock_governance.get("external_clock_fallback_has_independent_cron") is not True
+            or clock_governance.get("external_clock_fallback_counts_as_natural_acceptance") is not False
+        ):
+            errors.append("GitHub operational fallback has inconsistent fail-closed governance")
+        for marker in (
+            "github.event_name == 'schedule'",
+            "GITHUB_NATIVE_OPERATIONAL_SCHEDULE",
+            "natural_clock_proof=false",
+            "downstream_terminal=UNVERIFIED_DISPATCH_ONLY",
+        ):
+            if marker not in clock_text:
+                errors.append(f"GitHub operational clock missing non-natural audit marker: {marker}")
         if "/fpl-clock-start" in clock_text or "-f chain=true" in clock_text:
             errors.append("FPL GitHub clock must not contain a recurring self-chain")
         if re.search(r"HEAD:refs/heads/runtime-data-", clock_text):

@@ -28,8 +28,10 @@ def test_v6_has_chatgpt_natural_authority_plus_monitoring_watchdog() -> None:
     )
 
     clock = (WORKFLOW_DIR / "fpl-github-clock.yml").read_text(encoding="utf-8")
-    assert not SCHEDULE_KEY.search(clock)
+    assert 'schedule:\n    - cron: "35 * * * *"' in clock
     assert "fpl-external-clock-fallback.yml" in clock
+    assert "natural_clock_proof=false" in clock
+    assert "GITHUB_NATIVE_OPERATIONAL_SCHEDULE" in clock
 
     watchdog = (WORKFLOW_DIR / "v6-scheduler-watchdog.yml").read_text(encoding="utf-8")
     recovery = (WORKFLOW_DIR / "v6-core-recovery-guard.yml").read_text(encoding="utf-8")
@@ -95,7 +97,7 @@ def test_v6_ingestion_uses_single_hourly_chatgpt_natural_transport() -> None:
     assert "types: [edited]" in text
     assert "workflow_dispatch:" in text
     assert not SCHEDULE_KEY.search(text)
-    assert not SCHEDULE_KEY.search(clock)
+    assert 'schedule:\n    - cron: "35 * * * *"' in clock
     assert "fpl-external-clock-fallback.yml" in clock
     assert "gh run watch" in clock
     assert "/v6-master-acquire" not in text

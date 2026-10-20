@@ -91,3 +91,19 @@ def test_sensitive_personal_fields_are_excluded_from_public_diagnostics() -> Non
     encoded = json.dumps(payload, sort_keys=True)
     assert secret_marker not in encoded
     assert "personal_economics_authority" not in encoded
+
+def test_stage3_workflow_runs_strict_source_only_partial_bridge():
+    # The Stage3 math/integrity validator (rather than workflow heuristics)
+    # owns admissibility. Source-only PARTIAL is not automatically a failure
+    # nor automatically a PASS; the predicate recomputes evidence failures.
+    from pathlib import Path
+    workflow = Path(".github/workflows/v12-integrated-report-runner.yml").read_text(
+        encoding="utf-8"
+    )
+    assert 'from src.engines.v12_stage3_acceptance import _source_gap_only_analytics_pass' in workflow
+    assert '_source_gap_only_analytics_pass(bundle)' in workflow
+    assert 'source_only_stage3_eligible="false"' in workflow
+    assert 'source_only_stage3_eligible="$(python - <<' in workflow
+    assert '[ "$source_only_stage3_eligible" != "true" ]' in workflow
+    assert 'if [ "${RUNNER_STATUS:-UNKNOWN}" != "PASS" ] &&' in workflow
+    assert 'blocked_stage3_payload(' in workflow

@@ -1093,10 +1093,14 @@ jobs:
           if show_bytes(f"latest/{mode.lower()}.json") != show_bytes(f"{root}/digest.json"):
               raise SystemExit("mode-specific latest digest mismatch")
           
-          # Native content is the DEEP READY_FULL transport contract, not a
-          # requirement for public-first MATCH or PRICE.
-          requires_native = mode == "DEEP" and receipt.get("delivery_status") == "READY_FULL"
+          # READY_FULL requires exact native parity. A READY_DEGRADED DEEP
+          # transports native chunks when parity succeeds; otherwise it must
+          # expose current text without retaining a prior native pointer.
           native_format = receipt.get("native_content_format")
+          requires_native = mode == "DEEP" and (
+              receipt.get("delivery_status") == "READY_FULL"
+              or native_format == "MANIFEST_CHUNKS_V1"
+          )
           if requires_native:
               if native_format != "MANIFEST_CHUNKS_V1":
                   raise SystemExit("DEEP READY_FULL missing native content transport")
@@ -1141,6 +1145,11 @@ jobs:
                   raise SystemExit("DEEP missing native content without degraded evidence")
               if receipt.get("native_content_chunk_count") != 0:
                   raise SystemExit("non-native report unexpectedly declares chunks")
+              if mode == "DEEP" and (
+                  remote_exists("latest/native_content.manifest.json")
+                  or remote_exists("latest/native_content.json")
+              ):
+                  raise SystemExit("degraded DEEP retains stale latest native content")
           
           # Original Git-blob readback of paired P(start) forecast + V6 inputs.
           from src.engines.v12_pstart_remote_receipt import verify_forecast

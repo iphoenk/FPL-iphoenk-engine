@@ -121,8 +121,8 @@ from src.engines.v12_competitive_window import resolve_competitive_window
 from src.engines.v12_v6_source_trace import (
     build_v6_source_trace,
     bind_official_deadline,
-    verified_official_deadline_source_coverage,
 )
+from src.engines.v12_occurrence_source_evidence import build_occurrence_source_evidence
 from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
@@ -8032,10 +8032,15 @@ def run_deep(
         report_slot=report_slot,
         runtime_data_root=runtime_data_root,
     )
-    # Only verified official deadline is admitted to the source gate;
-    # news scan and counterpart evidence remain unproven until acquired.
-    news_source_coverage = verified_official_deadline_source_coverage(
-        v6_source_trace
+    # Admit one actual inspected FPL bootstrap snapshot, and only genuine
+    # occurrence/V6-bound upstream source review receipts for other domains.
+    # Missing club/category/counterpart reviews remain fail-closed.
+    (news_source_coverage, independent_counterpart_coverage,
+     source_review_diagnostic) = build_occurrence_source_evidence(
+        runtime_data_root=runtime_data_root,
+        trace=v6_source_trace,
+        bootstrap=bootstrap,
+        report_slot=report_slot,
     )
     personal_resolution = _stage(
         ledger,
@@ -9586,6 +9591,7 @@ def run_deep(
                 "news_groups": news_groups,
                 "v6_source_trace": v6_source_trace,
                 "news_source_coverage": news_source_coverage,
+                "source_review_diagnostic": source_review_diagnostic,
                 "model_developments": model_developments,
                 "decision_consequence": {
                     "transfer_state": decision_dashboard.get("TRANSFER"),
@@ -9757,6 +9763,7 @@ def run_deep(
                 "bgw_frontier_review_required": bool(bgw_context.get("active")),
                 "bgw_is_context_not_second_optimizer": True,
                 "haaland_rotation": rotation_overlay,
+                "independent_counterpart_coverage": independent_counterpart_coverage,
             },
             None if stage3_internal_pass else (
                 "Stage3 internal producer/wiring failure; this is NOT accepted as factual-source degradation"
@@ -9771,6 +9778,7 @@ def run_deep(
             "COMPLETE",
             {
                 "evidence_quality": evidence_quality,
+                "independent_counterpart_coverage": independent_counterpart_coverage,
                 "model_execution": {
                     "p1_1_p1_3": "EXECUTED" if projections else "FAILED",
                     "p1_6": "EXECUTED" if projections else "NOT_RUN",
@@ -10373,12 +10381,15 @@ def run_deep(
         "execution_proof": execution_proof,
         "v6_source_trace": v6_source_trace,
         "news_source_coverage": news_source_coverage,
+        "independent_counterpart_coverage": independent_counterpart_coverage,
+        "source_review_diagnostic": source_review_diagnostic,
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
             "report_prefetch": _fingerprint(prefetch),
             "v6_source_trace": _fingerprint(v6_source_trace),
             "news_source_coverage": _fingerprint(news_source_coverage),
+            "independent_counterpart_coverage": _fingerprint(independent_counterpart_coverage),
             "official_fpl": _fingerprint(official["payload"]),
             "state": _fingerprint(state),
             "predictor": _fingerprint(predictor),

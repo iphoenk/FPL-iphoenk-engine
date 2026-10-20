@@ -934,6 +934,61 @@ def test_occurrence_orchestrator_allows_only_bounded_scheduler_skew():
     assert "report_slot exceeds bounded scheduler skew" in workflow
     assert "Keep report_slot unchanged" in workflow
 
+    # Exercise the checked-in control-plane Python directly, without dispatching
+    # workflows or changing GitHub state. Manual execution is never natural.
+    import os
+    import subprocess
+    import sys
+    import tempfile
+    import textwrap
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    parse = workflow.split("      - name: Parse and validate occurrence", 1)[1].split(
+        "      - name: Idempotency guard", 1
+    )[0]
+    start = parse.index("          python - <<'PY'\n") + len("          python - <<'PY'\n")
+    end = parse.index("          PY\n", start)
+    code = textwrap.dedent(parse[start:end])
+
+    def check(command: str, *, owner: bool, expected_ok: bool, error: str = ""):
+        with tempfile.TemporaryDirectory() as folder:
+            output_path = Path(folder) / "outputs.txt"
+            env = {
+                **os.environ,
+                "COMMAND": command,
+                "OWNER_CONTROLLED": "true" if owner else "false",
+                "GITHUB_OUTPUT": str(output_path),
+            }
+            result = subprocess.run(
+                [sys.executable, "-c", code], env=env,
+                capture_output=True, text=True, check=False,
+            )
+            assert (result.returncode == 0) is expected_ok, result.stderr
+            if error:
+                assert error in result.stderr
+            if expected_ok:
+                output = output_path.read_text(encoding="utf-8")
+                assert "execution_origin=OWNER_CONTROLLED_MANUAL" in output
+                assert "report_kind=full_master" in output
+                assert "occurrence_id=DEEP|" in output
+                assert "force=false" in output
+
+    check("/fpl-master-tick report_mode=DEEP report_slot=AUTO checkpoint_time=",
+          owner=True, expected_ok=True)
+    check("/fpl-master-tick report_mode=DEEP report_slot=AUTO checkpoint_time=",
+          owner=False, expected_ok=False, error="AUTO is valid only")
+    older = (datetime.now(ZoneInfo("Asia/Jakarta")) - timedelta(minutes=30)).replace(
+        second=0, microsecond=0
+    ).isoformat()
+    check(f"/fpl-master-tick report_mode=DEEP report_slot={older} checkpoint_time=",
+          owner=True, expected_ok=False, error="no backfill or future-fill")
+    check("/fpl-master-tick report_mode=PRICE report_slot=AUTO checkpoint_time=",
+          owner=True, expected_ok=False, error="DEEP-only")
+    assert "github.actor == github.repository_owner" in workflow
+    assert "natural_acceptance_eligible:" in workflow
+    assert "natural_scheduler_proof:" in workflow
+
 
 def test_occurrence_orchestrator_does_not_reuse_pre_slot_private_latest():
     workflow = Path(".github/workflows/fpl-master-occurrence-orchestrator.yml").read_text(

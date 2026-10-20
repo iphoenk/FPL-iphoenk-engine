@@ -80,10 +80,20 @@ def _native_blocks(source: str) -> list[dict[str, Any]]:
 
 
 def _native_pitch(source: str, captain_source: str | None = None) -> dict[str, Any]:
-    """Use the canonical textual XI/bench fields, never the source HTML."""
+    """Expose canonical XI/bench as a *declarative* mobile-native pitch model.
+
+    No HTML rendering claim or guessed club kit is allowed. Official player-to-
+    club identity is not present in these S06 text fields; a host must bind a
+    verified team identifier before assigning an individual club jersey.
+    """
     fields: dict[str, str] = {}
+    keys = (
+        "Formation", "GK", "DEF", "MID", "FWD",
+        "Bench GK", "Bench 1", "Bench 2", "Bench 3",
+        "C/VC decision authority",
+    )
     for line in source.splitlines():
-        for key in ("Formation", "GK", "DEF", "MID", "FWD", "Bench GK", "Bench 1", "Bench 2", "Bench 3", "C/VC decision authority"):
+        for key in keys:
             if line.startswith(key + ":"):
                 fields[key] = line[len(key) + 1:].strip()
                 break
@@ -93,28 +103,94 @@ def _native_pitch(source: str, captain_source: str | None = None) -> dict[str, A
     )
     captain = current.group(1).strip() if current else None
     vice_captain = current.group(2).strip() if current else None
-    xi_players = {
-        name.strip()
-        for role in ("GK", "DEF", "MID", "FWD")
-        for name in fields.get(role, "").split(",")
-        if name.strip()
+    positions = ("FWD", "MID", "DEF", "GK")
+    rows = [
+        {
+            "position": role,
+            "players": [
+                p.strip() for p in fields.get(role, "").split(",") if p.strip()
+            ],
+        }
+        for role in positions
+    ]
+    xi = [player for row in rows for player in row["players"]]
+    xi_players = set(xi)
+    bench = [fields.get("Bench GK")] + [fields.get(f"Bench {i}") for i in range(1, 4)]
+    formation = fields.get("Formation")
+    legal_shapes = {
+        "3-4-3": (3, 4, 3), "3-5-2": (3, 5, 2),
+        "4-3-3": (4, 3, 3), "4-4-2": (4, 4, 2),
+        "4-5-1": (4, 5, 1), "5-2-3": (5, 2, 3),
+        "5-3-2": (5, 3, 2), "5-4-1": (5, 4, 1),
     }
+    failures: list[str] = []
+    expected = legal_shapes.get(formation)
+    if expected is None:
+        failures.append("FORMATION_NOT_LEGAL")
+    elif tuple(len(next(row["players"] for row in rows if row["position"] == pos))
+               for pos in ("DEF", "MID", "FWD")) != expected:
+        failures.append("FORMATION_XI_ROW_COUNT_MISMATCH")
+    if len(rows[-1]["players"]) != 1 or len(xi) != 11 or len(xi_players) != 11:
+        failures.append("XI_EXACT11_UNIQUE_REQUIRED")
+    if any(not name for name in bench) or len(set(bench)) != 4:
+        failures.append("BENCH_EXACT4_UNIQUE_REQUIRED")
+    if any(name in xi_players for name in bench if name):
+        failures.append("BENCH_OVERLAPS_XI")
+    captain_vice_in_xi = bool(
+        captain and vice_captain and captain != vice_captain
+        and captain in xi_players and vice_captain in xi_players
+    )
+    if not captain_vice_in_xi:
+        failures.append("CANONICAL_CVC_NOT_BOTH_IN_XI")
+    visual_rows = [
+        {
+            "position": row["position"],
+            "players": [
+                {
+                    "name": name,
+                    "badge": "C" if name == captain else "VC" if name == vice_captain else None,
+                    "club": None,
+                    "jersey": None,
+                    "jersey_status": "UNAVAILABLE_NO_VERIFIED_CLUB_ID",
+                }
+                for name in row["players"]
+            ],
+        }
+        for row in rows
+    ]
     return {
         "kind": "pitch",
         "captain": captain,
         "vice_captain": vice_captain,
-        "captain_vice_in_xi": bool(captain and vice_captain and captain != vice_captain and captain in xi_players and vice_captain in xi_players),
-        "formation": fields.get("Formation"),
-        "rows": [
-            {"position": position, "players": [p.strip() for p in fields.get(position, "").split(",") if p.strip()]}
-            for position in ("FWD", "MID", "DEF", "GK")
-        ],
+        "captain_vice_in_xi": captain_vice_in_xi,
+        "formation": formation,
+        "rows": rows,
         "bench_gk": fields.get("Bench GK"),
-        "bench": [fields.get(f"Bench {i}") for i in range(1, 4)],
+        "bench": bench[1:],
         "captain_authority": fields.get("C/VC decision authority"),
         "source": "CANONICAL_S06_TEXT",
+        "structure_integrity": "PASS" if not failures else "FAIL",
+        "structure_failures": failures,
+        "visual_readiness": (
+            "PARTIAL_CLUB_JERSEYS_UNAVAILABLE" if not failures else "DEGRADED"
+        ),
+        "visual_contract": {
+            "surface": "NATIVE_CHATGPT_COMPONENTS",
+            "theme": "PREMIUM_DARK_GREEN",
+            "pitch_background": "#063d29",
+            "row_order": list(positions),
+            "captain_vice_badges": "SMALL_ADJACENT_TO_NAME",
+            "bench_orientation": "HORIZONTAL",
+            "bench_slot_count": 4,
+            "club_jersey_policy": "EXACT_OFFICIAL_CLUB_ID_REQUIRED",
+            "interactive_controls": "HOST_SUPPORT_ONLY",
+        },
+        "visual_rows": visual_rows,
+        "horizontal_bench": [
+            {"slot": index, "name": name, "position": "GK" if index == 0 else "SUB"}
+            for index, name in enumerate(bench)
+        ],
     }
-
 
 def consume_native_content(
     manifest: Mapping[str, Any],

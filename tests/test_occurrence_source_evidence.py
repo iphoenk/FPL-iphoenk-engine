@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 
 from src.engines.v12_occurrence_source_evidence import (
     REVIEW_CONTRACT,
@@ -148,6 +149,32 @@ def _receipt():
 
 
 def _write_receipt(tmp_path, receipt):
+    prefix = "data/v6/evidence/v12_source_reviews/captures/"
+    samples = []
+    for row in receipt["news_source_coverage"]["categories"]:
+        samples.append((row, row["source_url"], row["attempted_at"]))
+    for row in receipt["news_source_coverage"]["clubs"]:
+        samples.append((row, row["evidence_url"], row["attempted_at"]))
+    for review in receipt["independent_counterpart_coverage"]["assessments"]:
+        for row in review["counterparts"]:
+            samples.append((row, row["url"], row["as_of"]))
+    for index, (row, url, observed) in enumerate(samples):
+        body = "Test fixture source capture from " + url
+        payload = {
+            "contract": "V12_SOURCE_CAPTURE_V1",
+            "url": url,
+            "review_status": "REVIEWED",
+            "observed_at": observed,
+            "reviewed_text": body,
+            "reviewed_text_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        }
+        raw = json.dumps(payload).encode("utf-8")
+        relative = prefix + str(index) + ".json"
+        dest = tmp_path / relative
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(raw)
+        row["capture_path"] = relative
+        row["capture_sha256"] = hashlib.sha256(raw).hexdigest()
     p = tmp_path / REVIEW_FILE
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(receipt), encoding="utf-8")
@@ -189,3 +216,29 @@ def test_counterpart_metric_mismatch_does_not_gain_fake_green(tmp_path):
     )
     assert diagnostic["status"] == "REVIEW_PARTIAL_FAIL_CLOSED"
     assert validate_independent_counterpart_coverage(counterpart)["status"] == "FAIL"
+
+
+def test_nonexistent_capture_never_counts_as_independent_review(tmp_path):
+    candidate = _receipt()
+    _write_receipt(tmp_path, candidate)
+    (tmp_path / candidate["news_source_coverage"]["clubs"][0]["capture_path"]).unlink()
+    news, counterpart, diagnostic = build_occurrence_source_evidence(
+        runtime_data_root=tmp_path, trace=_trace(),
+        bootstrap=_bootstrap(), report_slot=SLOT,
+    )
+    assert diagnostic["status"] == "REVIEW_NEWS_REJECTED"
+    assert not counterpart
+    assert news["source_scan_scope"] == "OFFICIAL_FPL_BOOTSTRAP_ONLY"
+
+
+def test_tampered_capture_hash_fails_closed(tmp_path):
+    candidate = _receipt()
+    _write_receipt(tmp_path, candidate)
+    path = tmp_path / candidate["news_source_coverage"]["categories"][0]["capture_path"]
+    path.write_text('{"tampered":true}', encoding="utf-8")
+    _, counterpart, diagnostic = build_occurrence_source_evidence(
+        runtime_data_root=tmp_path, trace=_trace(),
+        bootstrap=_bootstrap(), report_slot=SLOT,
+    )
+    assert diagnostic["status"] == "REVIEW_NEWS_REJECTED"
+    assert not counterpart

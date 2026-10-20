@@ -118,6 +118,7 @@ from src.engines.v12_contextual_dynamics import (
     build_post_match_universe_scan,
 )
 from src.engines.v12_competitive_window import resolve_competitive_window
+from src.engines.v12_v6_source_trace import build_v6_source_trace
 from src.engines.v12_material_news import (
     build_official_fpl_material_news,
     build_report_time_material_news,
@@ -7988,6 +7989,13 @@ def run_deep(
         }
     )
 
+    # Provider acquisition trace only: never an independent news scan, owner
+    # evidence, or permission to promote source coverage to READY_FULL.
+    v6_source_trace = build_v6_source_trace(
+        runtime_data_root=runtime_data_root,
+        report_slot=report_slot,
+    )
+
     official = _stage(
         ledger,
         "V6_OFFICIAL_FACTS",
@@ -9560,6 +9568,7 @@ def run_deep(
                 ),
                 "material_news": material_news,
                 "news_groups": news_groups,
+                "v6_source_trace": v6_source_trace,
                 "model_developments": model_developments,
                 "decision_consequence": {
                     "transfer_state": decision_dashboard.get("TRANSFER"),
@@ -10345,10 +10354,12 @@ def run_deep(
             "failures": human_failures,
         },
         "execution_proof": execution_proof,
+        "v6_source_trace": v6_source_trace,
         "report": report,
         "visible_body": body,
         "source_fingerprints": {
             "report_prefetch": _fingerprint(prefetch),
+            "v6_source_trace": _fingerprint(v6_source_trace),
             "official_fpl": _fingerprint(official["payload"]),
             "state": _fingerprint(state),
             "predictor": _fingerprint(predictor),

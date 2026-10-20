@@ -326,3 +326,42 @@ def test_counterpart_assessment_timestamp_must_be_parsable(tmp_path):
     assert unverified["status"] == "FAIL"
     assert unverified["providers"] == []
 
+    # The deadline is real only with the exact V6 publication, official
+    # bootstrap snapshot ID and an authentic GW event field.
+    from src.engines.v12_v6_source_trace import bind_official_deadline
+    fixture_files["data/v6/health/publish_integrity.json"]["status"] = "PASS"
+    file.write_text(
+        json.dumps(fixture_files["data/v6/health/publish_integrity.json"]),
+        encoding="utf-8",
+    )
+    valid_trace = build_v6_source_trace(runtime_data_root=tmp_path, report_slot=slot)
+    registry_file = tmp_path / "data/v6/evidence/resolved_registry.json"
+    registry = fixture_files["data/v6/evidence/resolved_registry.json"]
+    registry["sources"][0]["requests"] = [{
+        "id": "bootstrap",
+        "url": "https://fantasy.premierleague.com/api/bootstrap-static/",
+    }]
+    registry_file.write_text(json.dumps(registry), encoding="utf-8")
+    bootstrap = {"events": [{"id": 8, "deadline_time": "2026-10-24T11:00:00Z"}]}
+    exact = bind_official_deadline(
+        valid_trace, bootstrap=bootstrap, planning_gw=8,
+        report_slot=slot, runtime_data_root=tmp_path,
+    )
+    assert exact["official_deadline_check"] == "VERIFIED_FPL_BOOTSTRAP_FIELD"
+    assert exact["official_deadline_evidence"]["deadline_wib"] == "2026-10-24T18:00:00+07:00"
+    assert exact["seven_category_news_scan"] == "NOT_PROVEN"
+    assert exact["sufficient_for_full_source_gate"] is False
+
+    wrong_gw = bind_official_deadline(
+        valid_trace, bootstrap=bootstrap, planning_gw=9,
+        report_slot=slot, runtime_data_root=tmp_path,
+    )
+    assert wrong_gw["official_deadline_check"] == "NOT_PROVEN"
+    no_source = dict(valid_trace)
+    no_source["providers"] = []
+    failed = bind_official_deadline(
+        no_source, bootstrap=bootstrap, planning_gw=8,
+        report_slot=slot, runtime_data_root=tmp_path,
+    )
+    assert failed["official_deadline_check"] == "NOT_PROVEN"
+

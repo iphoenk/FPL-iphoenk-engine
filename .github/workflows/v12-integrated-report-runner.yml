@@ -855,7 +855,31 @@ jobs:
           runtime_sha="$(git -C ../runtime-data rev-parse HEAD)"
           mkdir -p artifacts/v12-private-delivery
 
-          if [ "${RUNNER_STATUS:-UNKNOWN}" != "PASS" ]; then
+          # The Stage3 validator already has a strict canonical analytics
+          # bridge for source-only READY_DEGRADED; do not bypass it solely
+          # because the presentation runner is PARTIAL. The helper recomputes
+          # actual source failures from the bundle and fails closed.
+          source_only_stage3_eligible="false"
+          if [ "${RUNNER_STATUS:-UNKNOWN}" = "PARTIAL" ]; then
+            source_only_stage3_eligible="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          from src.engines.v12_stage3_acceptance import _source_gap_only_analytics_pass
+
+          try:
+              bundle = json.loads(
+                  Path("artifacts/v12-report/report_bundle.json").read_text(
+                      encoding="utf-8"
+                  )
+              )
+              verified = isinstance(bundle, dict) and _source_gap_only_analytics_pass(bundle)
+          except (OSError, TypeError, ValueError, KeyError, AttributeError):
+              verified = False
+          print("true" if verified else "false")
+          PY
+            )"
+          fi
+          if [ "${RUNNER_STATUS:-UNKNOWN}" != "PASS" ] && [ "$source_only_stage3_eligible" != "true" ]; then
             python - <<'PY'
           import json
           import os

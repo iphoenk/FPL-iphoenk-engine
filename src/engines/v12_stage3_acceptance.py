@@ -270,6 +270,72 @@ def _truthful_source_degraded_sections(
     return allowed, failures
 
 
+def _source_gap_only_analytics_pass(bundle: Mapping[str, Any]) -> bool:
+    """Bind a report-only PARTIAL to the original canonical analytics PASS.
+
+    This is NOT an exception to math/Stage3 safety gates: validate() still
+    checks actual MC500K paths, convergence, mandatory stages, QA and lineage.
+    The source-gap codes must be reproducible from the actual evidence payload
+    and identical to the runner and execution proof's allowlisted failures.
+    """
+    if (
+        str(bundle.get("runner_status") or "").upper() != "PARTIAL"
+        or str(bundle.get("delivery_status") or "").upper() != "READY_DEGRADED"
+        or str(bundle.get("root_failure") or "") != "SOURCE_EVIDENCE_INCOMPLETE"
+        or str(bundle.get("source_evidence_status") or "") != "FAIL"
+    ):
+        return False
+    proof = bundle.get("execution_proof")
+    if not isinstance(proof, Mapping) or (
+        proof.get("canonical_analytics_status") != "PASS"
+        or proof.get("source_evidence_status") != "FAIL"
+        or proof.get("source_evidence_is_natural_proof") is not False
+    ):
+        return False
+    declared = bundle.get("source_evidence_failures")
+    proven = proof.get("source_evidence_failures")
+    if (
+        not isinstance(declared, list) or not declared
+        or not all(isinstance(code, str) and code for code in declared)
+        or declared != proven or len(set(declared)) != len(declared)
+    ):
+        return False
+    from src.engines.v12_source_coverage import (
+        validate_independent_counterpart_coverage,
+        validate_news_source_coverage,
+    )
+    sections = [
+        row for row in ((bundle.get("report") or {}).get("sections") or [])
+        if isinstance(row, Mapping)
+    ]
+    by_section = {
+        str(row.get("section_id") or ""): dict(row.get("content") or {})
+        for row in sections if isinstance(row.get("content"), Mapping)
+    }
+    source = (
+        bundle.get("news_source_coverage")
+        or by_section.get("S04", {}).get("news_source_coverage")
+    )
+    counterpart = (
+        bundle.get("independent_counterpart_coverage")
+        or by_section.get("S14", {}).get("independent_counterpart_coverage")
+    )
+    source_check = validate_news_source_coverage(source, require_full=True)
+    counterpart_check = validate_independent_counterpart_coverage(
+        counterpart, require_full=True
+    )
+    actual = list(dict.fromkeys(
+        list(source_check["failures"]) + list(counterpart_check["failures"])
+    ))
+    return bool(
+        actual == declared
+        and (
+            source_check["status"] != "PASS"
+            or counterpart_check["status"] != "PASS"
+        )
+    )
+
+
 def validate(
     bundle: Mapping[str, Any],
     *,
@@ -292,7 +358,11 @@ def validate(
         if not condition:
             failures.append(code)
 
-    require(bundle.get("runner_status") == "PASS", "INTEGRATED_RUNNER_NOT_PASS")
+    source_only_partial = _source_gap_only_analytics_pass(bundle)
+    require(
+        bundle.get("runner_status") == "PASS" or source_only_partial,
+        "INTEGRATED_RUNNER_NOT_PASS",
+    )
     require(
         str((bundle.get("pre_render_qa") or {}).get("status") or "").upper()
         == "PASS",
@@ -549,6 +619,7 @@ def validate(
     status = "PASS" if not failures else "FAIL"
     acceptance_class = (
         "INTEGRITY_FAIL" if failures
+        else "ANALYTICS_PASS_SOURCE_EVIDENCE_DEGRADED" if source_only_partial
         else "VERIFIED_PUBLIC_FALLBACK" if "S02" in truthful_source_degraded
         else "AUTHENTICATED_BOUND" if auth_bound
         else "NON_AUTHENTICATED_ACCEPTANCE"
@@ -570,6 +641,13 @@ def validate(
         "report_slot": bundle.get("report_slot"),
         "planning_gw": bundle.get("planning_gw"),
         "integrated_runner": bundle.get("runner_status"),
+        "canonical_analytics_status": (
+            "PASS" if source_only_partial else bundle.get("runner_status")
+        ),
+        "report_delivery_status": bundle.get("delivery_status"),
+        "source_evidence_status": (
+            "FAIL" if source_only_partial else bundle.get("source_evidence_status")
+        ),
         "pre_render": (bundle.get("pre_render_qa") or {}).get("status"),
         "post_render": (bundle.get("post_render_qa") or {}).get("status"),
         "human_facing": (bundle.get("human_facing_qa") or {}).get("status"),

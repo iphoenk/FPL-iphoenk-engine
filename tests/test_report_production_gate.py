@@ -197,3 +197,24 @@ def test_runner_pass_without_delivery_status_cannot_bypass_coverage_gate():
     assert result["status"] == "FAIL"
     assert "SOURCE_SCAN_TIMESTAMP_MISSING" in result["failures"]
     assert "COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING" in result["failures"]
+
+    # Classified delivery can be safely DEGRADED, never falsely FULL. The
+    # production source gate above is intentionally NOT relaxed.
+    from src.engines.v12_delivery_reliability import downgrade_missing_source_evidence
+    incomplete = _bundle()
+    incomplete.pop("news_source_coverage")
+    incomplete.pop("independent_counterpart_coverage")
+    downgrade_missing_source_evidence(incomplete)
+    assert incomplete["runner_status"] == "PARTIAL"
+    assert incomplete["root_failure"] == "SOURCE_EVIDENCE_INCOMPLETE"
+    assert incomplete["source_evidence_status"] == "FAIL"
+    assert "SOURCE_SCAN_TIMESTAMP_MISSING" in incomplete["source_evidence_failures"]
+    assert "COUNTERPART_ASSESSMENT_TIMESTAMP_MISSING" in incomplete["source_evidence_failures"]
+    assert incomplete["execution_proof"]["canonical_analytics_status"] == "PASS"
+    assert incomplete["execution_proof"]["source_evidence_is_natural_proof"] is False
+
+    complete = _bundle()
+    downgrade_missing_source_evidence(complete)
+    assert complete["runner_status"] == "PASS"
+    assert "source_evidence_status" not in complete
+

@@ -21,6 +21,7 @@ _ALLOWED_DEGRADED_REASONS = {
     "BLOCKED_UPSTREAM",
     "PREFETCH_NOT_TERMINAL",
     "PUBLIC_FIRST_PERSONAL_UNAVAILABLE",
+    "SOURCE_EVIDENCE_INCOMPLETE",
 }
 
 
@@ -167,7 +168,21 @@ def classify_occurrence(evidence: Mapping[str, Any]) -> dict[str, Any]:
             _add(failures, "DEGRADATION_REASON_NOT_BOUND")
         if stage3_status == "DEGRADED" and engineering_blocks:
             _add(failures, "STAGE3_DEGRADATION_BLOCKS_REPORT")
-        if stage3_status not in {"DEGRADED", "NOT_APPLICABLE"}:
+        # When mathematics passed but independently sourced news/coverage did
+        # not, Stage3 PASS remains true. Publish only as DEGRADED with explicit
+        # failed coverage evidence bound into the exact private digest.
+        source_gap = root_failure == "SOURCE_EVIDENCE_INCOMPLETE"
+        sourced_gap_proven = (
+            source_gap
+            and _status(serving.get("source_evidence_status")) == "FAIL"
+            and isinstance(serving.get("source_evidence_failure_count"), int)
+            and serving["source_evidence_failure_count"] > 0
+        )
+        if source_gap and not sourced_gap_proven:
+            _add(failures, "SOURCE_GAP_NOT_PROVEN")
+        if stage3_status not in {"DEGRADED", "NOT_APPLICABLE"} and not (
+            sourced_gap_proven and stage3_status == "PASS"
+        ):
             _add(failures, "READY_DEGRADED_WITHOUT_GOVERNED_STAGE3_STATE")
 
     terminality = READY_FULL if delivery_status == READY_FULL else delivery_status

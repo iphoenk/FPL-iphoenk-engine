@@ -4702,6 +4702,19 @@ def _render_deep_visible_contract_lines(
             f"Price {consequence.get('price_state', 'UNAVAILABLE')}. "
             "News is evidence only; ACT authority remains in S14."
         )
+        trace = payload.get("v6_source_trace")
+        if isinstance(trace, Mapping):
+            lines.append("### V6 ACQUISITION PROVENANCE (NOT A NEWS SCAN)")
+            lines.append(
+                f"Publisher integrity {trace.get('v6_publish_integrity') or 'UNVERIFIED'}; "
+                f"provider trace {trace.get('status') or 'UNVERIFIED'}; "
+                f"observed providers {trace.get('provider_count') or 0}; "
+                f"official club identities {trace.get('official_club_identity_count') or 0}/20."
+            )
+            lines.append(
+                "Source-category news, club news, deadline and independent "
+                "counterpart reviews remain NOT PROVEN by provider transport alone."
+            )
         from src.engines.v12_source_coverage import render_news_source_coverage
         lines.extend(render_news_source_coverage(payload.get("news_source_coverage")))
 
@@ -6611,6 +6624,7 @@ def render_deep_text(report: Mapping[str, Any]) -> str:
                 "routes",
                 "frontier",
                 "stagec_universe_intelligence",
+                "v6_source_trace",
                 *visible_excluded,
             ),
         )

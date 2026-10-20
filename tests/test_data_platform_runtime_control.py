@@ -209,7 +209,7 @@ def test_production_policy_uses_chatgpt_scheduler_and_no_github_natural_cron():
     assert "python -m src.runtime_v6.domains.publication.production_validate preflight" in workflow
     assert "python -m src.runtime_v6.domains.publication.production_validate publishable" in workflow
     assert "  schedule:" not in workflow
-    assert "  schedule:" not in clock
+    assert "  schedule:" in clock
     assert "fpl-external-clock-fallback.yml" in clock
     assert "  push:" not in workflow
     assert "  pull_request:" not in workflow

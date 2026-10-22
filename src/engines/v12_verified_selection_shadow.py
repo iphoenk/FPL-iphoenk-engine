@@ -89,6 +89,12 @@ def evaluate_official_selection_shadow(
     A result is never a production or calibrated probability: the caller
     must not publish it to lineup, transfer, C/VC or V12 engine inputs.
     """
+    if not isinstance(player, Mapping):
+        player = {}
+    if not isinstance(receipt, Mapping):
+        receipt = {}
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        rows = []
     pid = _int(player.get("id"))
     cutoff = _time(evidence_cutoff_at)
     deadline = _time(target_deadline_at)
@@ -143,7 +149,7 @@ def evaluate_official_selection_shadow(
         if not isinstance(starter, bool) or minutes is None or (starter and minutes == 0):
             reject("SELECTION_RESULT_INVALID")
             continue
-        if raw.get("official_status") == "DNP" and (starter or minutes != 0):
+        if str(raw.get("official_status") or "").upper() == "DNP" and (starter or minutes != 0):
             reject("OFFICIAL_DNP_CONTRADICTION")
             continue
         normalized = {

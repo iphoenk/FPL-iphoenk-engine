@@ -11,7 +11,7 @@ from hashlib import sha256
 import json
 from typing import Mapping
 
-from src.engines.v12_verified_selection_shadow import evaluate_official_selection_shadow
+from src.engines.v12_player_minutes import build_player_selection_evidence, estimate_player_minutes
 
 
 def _utc(value):
@@ -37,7 +37,7 @@ def evaluate_v6_official_history_shadow(
     original-Git-readback proof. The canonical adapter remains fail-closed
     until the caller supplies independently authenticated receipt.
     """
-    pid = player.get("id")
+    pid = player.get("id") if isinstance(player, Mapping) else None
     cutoff = _utc(evidence_cutoff_at)
     deadline = _utc(target_deadline_at)
     rejects = defaultdict(int)
@@ -53,7 +53,7 @@ def evaluate_v6_official_history_shadow(
         if not isinstance(gw, int) or isinstance(gw, bool) or gw >= target_gw or gw < 1 or part.get("coverage", {}).get("status") != "PASS" or part.get("coverage", {}).get("gw_official_finalized") is not True or part.get("coverage", {}).get("fixture_identity_status") != "PASS":
             rejects["NOT_FINALIZED_OR_FUTURE"] += 1
             continue
-        asof = _utc(part.get("original_full_history_as_of"))
+        asof = _utc(part.get("original_full_history_generated_at"))
         if asof is None or asof > cutoff:
             rejects["AFTER_CUTOFF"] += 1
             continue
@@ -79,17 +79,36 @@ def evaluate_v6_official_history_shadow(
                 continue
             records.append({"gw": gw, "fixture": fixture["fixture"], "starter": started, "minutes": minutes})
         accepted.append(gw)
+    selection = build_player_selection_evidence(player, [
+        {"gw": x["gw"], "match_id": str(x["fixture"]), "starter": x["starter"],
+         "minutes": x["minutes"], "official_status": "FINAL" if x["minutes"] else "DNP"}
+        for x in records
+    ]) if len(records) >= 3 else {"status": "INSUFFICIENT_EVIDENCE"}
+    estimate = None
+    if selection.get("status") == "AVAILABLE":
+        enriched = dict(player)
+        enriched["starts"] = selection["starts"]
+        enriched["minutes"] = selection["minutes"]
+        estimate = estimate_player_minutes(enriched, {
+            "team_matches_played": len(records), "selection_evidence": selection,
+        })
     # Do not claim authenticated original Git source from arbitrary input.
     return {
         "contract": "V6_OFFICIAL_HISTORY_SHADOW_BRIDGE_V1",
-        "status": "INPUT_READY_UNAUTHENTICATED" if len(records) >= 3 else "INSUFFICIENT_EVIDENCE",
+        "status": "READY_SHADOW_UNATTESTED" if estimate else "INSUFFICIENT_EVIDENCE",
         "player_id": pid,
         "target_gw": target_gw,
         "verified_local_fixture_rows": len(records),
         "accepted_gws": sorted(set(accepted)),
         "rejected": dict(sorted(rejects.items())),
         "local_payload_sha256": sha256(json.dumps(records,sort_keys=True,separators=(",",":")).encode()).hexdigest(),
-        "probabilities": None,
+        "probabilities": ({
+            "p_start": estimate["start_probability"],
+            "p_regular_cameo": estimate["regular_cameo_probability"],
+            "p_late_cameo": estimate["late_cameo_probability"],
+            "p_dnp": estimate["dnp_probability"],
+        } if estimate else None),
+        "expected_minutes": estimate["expected_minutes"] if estimate else None,
         "calibration": "NOT_VERIFIED",
         "source_authentication": "NOT_ATTESTED",
         "shadow_only": True,

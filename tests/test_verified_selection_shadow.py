@@ -183,3 +183,18 @@ def test_no_unverified_probabilities_are_published():
     for status in [evaluate(), evaluate(STABLE[:2]), evaluate(receipt={})]:
         assert status["publication_authorized"] is False
         assert status["eligible_for_live_scoring"] is False
+
+def test_malformed_source_container_returns_unverified_not_exception():
+    output = evaluate_official_selection_shadow(
+        None, None, None, target_gw=8, evidence_cutoff_at=CUTOFF,
+        target_deadline_at=DEADLINE,
+    )
+    assert output["status"] == "UNVERIFIED"
+    assert output["probabilities"] is None
+
+
+def test_case_insensitive_dnp_never_allows_cameo_minutes():
+    bad = {**row(51, 5, False, 17), "official_status": "dnp"}
+    result = evaluate([*STABLE[:2], bad])
+    assert result["status"] == "INSUFFICIENT_VERIFIED_EVIDENCE"
+    assert result["rejected"]["OFFICIAL_DNP_CONTRADICTION"] == 1

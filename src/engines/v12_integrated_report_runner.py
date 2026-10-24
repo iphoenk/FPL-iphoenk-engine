@@ -7052,7 +7052,7 @@ def refresh_price_only_state(
             + list(final_delivery_barrier.get("failures") or [])
         )
     )
-    parsed_ids, _, _ = _parse_sections(body)
+    parsed_ids, _, _ = _parse_sections(body, "DEEP")
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
         for row in new_report.get("sections") or []
@@ -7742,7 +7742,7 @@ def refresh_mini_league_only_state(
             + list(final_delivery_barrier.get("failures") or [])
         )
     )
-    parsed_ids, _, _ = _parse_sections(body)
+    parsed_ids, _, _ = _parse_sections(body, "DEEP")
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
         for row in new_report.get("sections") or []
@@ -10157,7 +10157,7 @@ def run_deep(
         + validate_deep_human_facing_manifest(human_manifest)
         + list(final_delivery_barrier.get("failures") or [])
     ))
-    parsed_ids, _, _ = _parse_sections(body)
+    parsed_ids, _, _ = _parse_sections(body, "DEEP")
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
         for row in report.get("sections") or []

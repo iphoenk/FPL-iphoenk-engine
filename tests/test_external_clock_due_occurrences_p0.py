@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from ops.render_external_clock import due_report_occurrences
+from ops.render_external_clock import due_report_occurrences, reconcile_due_occurrences
 
 
 WIB = ZoneInfo("Asia/Jakarta")
@@ -37,3 +37,17 @@ def test_bounded_horizon(hours):
 def test_naive_time_rejected():
     with pytest.raises(ValueError):
         due_report_occurrences(datetime(2026, 10, 25, 12, 0))
+
+
+def test_reconciliation_requires_verified_terminal_state():
+    now = datetime(2026, 10, 25, 13, 45, tzinfo=WIB)
+    due = due_report_occurrences(now, 12)
+    deep = next(row for row in due if row["checkpoint_time"] == "12:30")
+    key = f'DEEP|{deep["report_slot"]}'
+    missing = reconcile_due_occurrences(now, set(), set(), 12)
+    assert key in {row["occurrence_id"] for row in missing["missing"]}
+    active = reconcile_due_occurrences(now, set(), {key}, 12)
+    assert key in {row["occurrence_id"] for row in active["active"]}
+    published = reconcile_due_occurrences(now, {key}, {key}, 12)
+    assert key in {row["occurrence_id"] for row in published["published"]}
+    assert key not in {row["occurrence_id"] for row in published["active"]}

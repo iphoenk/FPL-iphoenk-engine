@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-10-24T16:13:14.277602+00:00",
+  "effective_at": "2026-10-24T16:13:07.739544+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+    "8c74963cfbd19f77f9e4efdc6c2af90fa78786d32ab49f4241c2c2a409f6a034",
+    "a0d9afa6b90f445de2f80e56faff9cd5636a9de7445c44f6a68fd88ed434afe3"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_CHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494073",
+        "source_native_league_id": "4328",
+        "event_name": "Chelsea vs Tottenham Hotspur",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "8",
+        "timestamp": "2026-10-24T16:30:00",
+        "date_event": "2026-10-24",
+        "time_event": "16:30:00",
+        "home": {
+          "source_native_id": "133610",
+          "name": "Chelsea"
+        },
+        "away": {
+          "source_native_id": "133616",
+          "name": "Tottenham Hotspur"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494079",
+        "source_native_league_id": "4328",
+        "event_name": "Coventry City vs Fulham",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "8",
+        "timestamp": "2026-10-24T14:00:00",
+        "date_event": "2026-10-24",
+        "time_event": "14:00:00",
+        "home": {
+          "source_native_id": "133625",
+          "name": "Coventry City"
+        },
+        "away": {
+          "source_native_id": "133600",
+          "name": "Fulham"
+        },
+        "home_score": "0",
+        "away_score": "1",
+        "status": "FT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}

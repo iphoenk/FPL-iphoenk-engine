@@ -55,6 +55,27 @@ jobs:
           print(json.dumps(row, sort_keys=True))
           PY
 
+      - name: Audit bounded due checkpoints without backfill
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from ops.render_external_clock import due_report_occurrences
+          rows = due_report_occurrences(datetime.now(timezone.utc), 36)
+          # Candidates are NOT missing publications until checked against the
+          # exact private serving/receipt and active orchestrator evidence.
+          # Audit only; this step never dispatches historical occurrences.
+          print(json.dumps({
+              "event": "FPL_DUE_OCCURRENCE_CANDIDATES",
+              "status": "UNVERIFIED_PUBLICATION_STATE",
+              "candidate_count": len(rows),
+              "candidates": rows,
+              "historical_dispatch": False,
+          }, sort_keys=True))
+          PY
+
       - name: Dispatch exact operational fallback
         id: child
         env:

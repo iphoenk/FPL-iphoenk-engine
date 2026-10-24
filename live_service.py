@@ -7,6 +7,7 @@ from src.engine import run
 from src.settings import LIVE_POLL_SECONDS, LIVE_STREAM_HEARTBEAT_SECONDS
 from src.utils import DATA, read_json
 from src.version import ENGINE_VERSION, SERVICE_TITLE
+from canonical_service import decision as canonical_decision
 
 POLL = LIVE_POLL_SECONDS
 REFRESH_API_KEY=os.getenv("FPL_REFRESH_API_KEY")
@@ -65,6 +66,11 @@ def team(): return read_json(DATA/"team.json",{})
 
 @app.get("/prices")
 def prices(): return read_json(DATA/"prices.json",{})
+
+# Canonical V12 is a read-only route on the same service image.  The decision
+# implementation remains isolated in canonical_service so the live refresh
+# lane cannot become a second decision engine.
+app.add_api_route("/api/decision", canonical_decision, methods=["GET"])
 
 @app.post("/refresh")
 async def refresh(x_fpl_refresh_key:str|None=Header(default=None)):

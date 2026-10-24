@@ -17,7 +17,7 @@ def test_delayed_clock_enumerates_multiple_due_deep_slots():
 
 
 def test_price_london_dst_transition():
-    before = due_report_occurrences(datetime(2026, 10, 25, 6, 15, tzinfo=WIB), 3)
+    before = due_report_occurrences(datetime(2026, 10, 25, 6, 45, tzinfo=WIB), 3)
     assert any(row["report_mode"] == "PRICE" and row["checkpoint_time"] == "05:30" for row in before)
     after = due_report_occurrences(datetime(2026, 10, 26, 7, 15, tzinfo=WIB), 3)
     assert any(row["report_mode"] == "PRICE" and row["checkpoint_time"] == "06:30" for row in after)

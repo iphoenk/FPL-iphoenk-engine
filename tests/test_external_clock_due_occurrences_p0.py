@@ -1,0 +1,39 @@
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+import pytest
+
+from ops.render_external_clock import due_report_occurrences
+
+
+WIB = ZoneInfo("Asia/Jakarta")
+
+
+def test_delayed_clock_enumerates_multiple_due_deep_slots():
+    rows = due_report_occurrences(datetime(2026, 10, 25, 23, 12, tzinfo=WIB), 24)
+    deep = [row["checkpoint_time"] for row in rows if row["report_mode"] == "DEEP"]
+    assert deep == ["04:30", "12:30", "21:30"]
+    assert len({(row["report_mode"], row["report_slot"]) for row in rows}) == len(rows)
+
+
+def test_price_london_dst_transition():
+    before = due_report_occurrences(datetime(2026, 10, 25, 6, 15, tzinfo=WIB), 3)
+    assert any(row["report_mode"] == "PRICE" and row["checkpoint_time"] == "05:30" for row in before)
+    after = due_report_occurrences(datetime(2026, 10, 26, 7, 15, tzinfo=WIB), 3)
+    assert any(row["report_mode"] == "PRICE" and row["checkpoint_time"] == "06:30" for row in after)
+
+
+def test_future_occurrences_are_never_emitted():
+    rows = due_report_occurrences(datetime(2026, 10, 25, 11, 0, tzinfo=WIB), 2)
+    assert not any(row["checkpoint_time"] == "12:30" for row in rows)
+
+
+@pytest.mark.parametrize("hours", [0, 73])
+def test_bounded_horizon(hours):
+    with pytest.raises(ValueError):
+        due_report_occurrences(datetime(2026, 10, 25, 12, 0, tzinfo=WIB), hours)
+
+
+def test_naive_time_rejected():
+    with pytest.raises(ValueError):
+        due_report_occurrences(datetime(2026, 10, 25, 12, 0))

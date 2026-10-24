@@ -53,6 +53,33 @@ def due_report_occurrences(now: datetime, lookback_hours: int = 36) -> list[dict
     return [slots[key] for key in sorted(slots)]
 
 
+def reconcile_due_occurrences(
+    now: datetime,
+    published: set[str],
+    active: set[str],
+    lookback_hours: int = 36,
+) -> dict[str, list[dict[str, str]]]:
+    """Audit due slots without dispatching or forging historical success.
+
+    Published means verified terminal private publication, not workflow success.
+    Active means a confirmed queued/in-progress exact occurrence. Neither
+    state may be inferred from a clock tick or an issue comment alone.
+    """
+    rows = due_report_occurrences(now, lookback_hours)
+    result: dict[str, list[dict[str, str]]] = {
+        "published": [], "active": [], "missing": []
+    }
+    for row in rows:
+        occurrence_id = f'{row["report_mode"]}|{row["report_slot"]}'
+        bucket = (
+            "published" if occurrence_id in published
+            else "active" if occurrence_id in active
+            else "missing"
+        )
+        result[bucket].append({**row, "occurrence_id": occurrence_id})
+    return result
+
+
 def resolve_tick(now: datetime) -> dict[str, str]:
     if now.tzinfo is None:
         raise ValueError("now must be timezone-aware")

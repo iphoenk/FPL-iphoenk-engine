@@ -19,7 +19,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
 from ops.audit_due_occurrences import (
@@ -233,9 +233,25 @@ class GhStore:
         self._call(["-X", "PUT", f"/repos/{self._repo}/contents/{path}", "--input", "-"], json.dumps(body).encode())
 
 
-def issue_comments(repo: str, run: Callable[..., Any] = subprocess.run) -> list[str]:
+RECEIPT_LOOKBACK = timedelta(hours=6)
+
+
+def issue_comments(
+    repo: str, since: datetime, run: Callable[..., Any] = subprocess.run
+) -> list[str]:
+    """Receipt comments of the current run only.
+
+    Issue #431 holds >1400 comments; reading them all every run is slow and,
+    through a paginating proxy, truncated. The receipt is posted seconds before
+    this step, so a bounded `since` window is sufficient and deterministic.
+    """
+    stamp = since.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     proc = run(
-        ["gh", "api", "--paginate", f"/repos/{repo}/issues/431/comments?per_page=100", "--jq", ".[].body | @json"],
+        [
+            "gh", "api", "--paginate",
+            f"/repos/{repo}/issues/431/comments?per_page=100&since={stamp}",
+            "--jq", ".[].body | @json",
+        ],
         capture_output=True, text=True, timeout=120,
     )
     if proc.returncode:
@@ -256,10 +272,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if not token:
             raise ReadOnly("PRIVATE_TOKEN_UNAVAILABLE")
-        if not receipt_present(issue_comments(repo), oid, args.run_id):
+        now = datetime.now(timezone.utc)
+        if not receipt_present(issue_comments(repo, now - RECEIPT_LOOKBACK), oid, args.run_id):
             raise Unverified(["RECEIPT_NOT_FOUND"])
         entry = build_entry(
-            GhReader(token), args.mode, args.slot, now=datetime.now(timezone.utc), orchestrator_run=args.run_id
+            GhReader(token), args.mode, args.slot, now=now, orchestrator_run=args.run_id
         )
         event["action"] = advance(GhStore(token), entry)
     except Unverified as exc:

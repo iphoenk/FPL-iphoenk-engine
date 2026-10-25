@@ -80,3 +80,13 @@ If documentation and runtime conflict, treat it as documentation drift and repai
 - additional same-PR documentation changes whenever runtime/architecture/governance truth would otherwise become stale.
 
 The PR template includes the required fields.
+
+## Single integration owner for the README sync line (25 Oct 2026)
+
+Governance requires every PR's `Documentation timestamp` to equal the README `Last runtime/documentation sync` line, so every PR touches that one line and concurrent PRs conflict on it. To keep this safe without weakening the check:
+
+1. One integration owner (the session or person designated by the repository owner in the PR conversation) is the only one who rewrites that line when integrating. Author sessions put their own `Change timestamp` in the PR metadata and add their README bullet, but do not resolve a sync-line conflict themselves.
+2. The owner merges one PR at a time: bring the branch up to date with `main`, set the sync line and the PR `Documentation timestamp` to one new timestamp later than both, wait for green CI on that exact head, then merge. Any movement of `main` repeats the revalidation.
+3. Overlapping PRs (same README region, same governance baseline `BASELINE_TOTAL` or `REQUIRED_FILES`) are never merged concurrently.
+4. `BASELINE_TOTAL` is recomputed by the owner at integration (collect-only over `REQUIRED_FILES`), never by guess.
+5. This is process only. The equality check itself is unchanged; relaxing it would be a gate change requiring explicit owner authorization.

@@ -15,6 +15,7 @@ from test_p0b_missed_slot_reconciliation import (
     FakeReader,
     _j,
     private_files,
+    synthetic_deep_body,
 )
 
 NOW = datetime(2026, 10, 25, 6, 0, tzinfo=timezone.utc)
@@ -48,7 +49,7 @@ class MemStore:
 
 def test_entry_for_verified_deep_binds_hashes_and_never_claims_natural_proof():
     entry = _entry()
-    body_sha = hashlib.sha256(b"# report\n").hexdigest()
+    body_sha = hashlib.sha256(synthetic_deep_body(7, DEEP_SLOT)).hexdigest()
     assert entry["occurrence_id"] == f"DEEP|{DEEP_SLOT}"
     assert entry["canonical_body_sha256"] == entry["latest_report_md_sha256"] == body_sha
     assert entry["terminality"] == "READY_FULL" and entry["remote_readback"] == "PASS"
@@ -63,7 +64,7 @@ def test_entry_for_price_has_no_deep_only_fields():
 
 def test_native_manifest_must_match_body_and_pass_readback():
     files = private_files("DEEP", DEEP_SLOT)
-    body_sha = hashlib.sha256(b"# report\n").hexdigest()
+    body_sha = hashlib.sha256(synthetic_deep_body(7, DEEP_SLOT)).hexdigest()
     good = {"canonical_body_sha256": body_sha, "remote_readback": "PASS", "verification_status": "REMOTE_READBACK_PASS"}
     files["latest/native_content.manifest.json"] = _j(good)
     entry = vp.build_entry(FakeReader(files), "DEEP", DEEP_SLOT, now=NOW, orchestrator_run="1")
@@ -140,7 +141,7 @@ def test_advance_writes_once_then_is_idempotent_and_holds_no_report_content():
     assert vp.advance(store, entry) == vp.ADVANCED
     assert vp.advance(store, entry) == vp.NOOP and store.puts == 1
     raw = store.files[vp.POINTER_PATH][0]
-    assert b"# report" not in raw and json.loads(raw)["schema"] == vp.SCHEMA
+    assert b"Verbruggen" not in raw and json.loads(raw)["schema"] == vp.SCHEMA
 
 
 def test_compare_and_swap_retries_conflict_then_gives_up():

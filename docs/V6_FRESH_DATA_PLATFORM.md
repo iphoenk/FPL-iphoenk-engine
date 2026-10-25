@@ -218,6 +218,8 @@ A stored GREEN label is not sufficient by itself. Consumers must evaluate curren
 
 Mode-specific report freshness may be stricter than the generic V6 freshness target.
 
+`assess_snapshot` measures `state` and `age_minutes` from the manifest publication time (`generated_at`) only. Since F01 it states this explicitly: `freshness_basis` is `PUBLICATION_TIME_ONLY` and `source_time_semantics` separates `publication_generated_at` and `checked_at` from `source_acquired_at` / `source_published_at`. The manifest carries no authoritative source times, so those two are `null` with `source_time_status` `UNKNOWN`; they are never reconstructed from fetch or publish timestamps. A republished old source therefore still shows FRESH, and consumers must not read FRESH as source freshness. The 90-minute limit and 5-minute clock skew are unchanged.
+
 A degraded secondary source must degrade only the affected claims. It must not erase healthy Official FPL facts or force a due report to disappear.
 
 ## Runtime branch governance

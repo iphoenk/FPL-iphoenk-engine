@@ -306,7 +306,13 @@ def private_files(mode, slot, *, gw=7, latest_slot=None, body=b"# report\n", sta
         f"{d}/{body_name}": body,
     }
     if mode == "DEEP":
-        files[f"{d}/delivery_status.json"] = _j({"delivery_status": status, "root_failure": ""})
+        files[f"{d}/delivery_status.json"] = _j(
+            {"delivery_status": status, "root_failure": "", "generated_at": "2026-10-25T05:41:00+00:00"}
+        )
+        files[f"{d}/presentation_qa.json"] = _j(
+            {"section_count": 22, "expected_section_count": 22, "section_order_exact": True,
+             "root_failure_count": 0, "visible_report_body_non_empty": True}
+        )
         files["latest/report.md"] = body
     latest_digest = dict(digest)
     if latest_slot:
@@ -512,3 +518,161 @@ def test_gh_runs_parses_jsonl_and_failure_raises_read_error():
     bad = lambda cmd, **kw: _Proc(1, "", "x")  # noqa: E731
     with pytest.raises(aud.ReadError):
         aud.gh_runs("o/r", since, run=bad)
+
+
+# ---- clock cadence diagnosis (audit-only) -------------------------------------
+from ops import clock_cadence as cc  # noqa: E402
+
+
+def _utc(s):
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def test_diagnosis_distinguishes_platform_gap_from_dispatch_defect():
+    slot = "2026-10-25T12:30:00+07:00"  # 05:30Z; resolver window 05:25Z..06:30Z
+    ticks = cc.parse_ticks(["2026-10-25T05:12:19Z", "2026-10-25T07:20:00Z"])
+    assert cc.diagnose_missing(slot, ticks) == cc.NO_TICK_IN_WINDOW
+    ticks.append(_utc("2026-10-25T05:50:00Z"))
+    assert cc.diagnose_missing(slot, sorted(ticks)) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, None) == cc.TICK_EVIDENCE_UNAVAILABLE
+
+
+def test_diagnosis_window_edges_match_resolver_constants():
+    slot = "2026-10-25T12:30:00+07:00"
+    edge_lo = _utc("2026-10-25T05:30:00Z") + timedelta(minutes=cc.RESOLVER_WINDOW_MINUTES[0])
+    edge_hi = _utc("2026-10-25T05:30:00Z") + timedelta(minutes=cc.RESOLVER_WINDOW_MINUTES[1])
+    assert cc.diagnose_missing(slot, [edge_lo]) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, [edge_hi]) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, [edge_hi + timedelta(seconds=1)]) == cc.NO_TICK_IN_WINDOW
+
+
+def test_cadence_summary_and_annotation_never_change_state():
+    now = _utc("2026-10-25T07:00:00Z")
+    ticks = cc.parse_ticks(["bad", "2026-10-25T05:12:19Z", "2026-10-25T00:29:51Z", "2026-10-24T21:50:26Z"])
+    assert len(ticks) == 3  # unparsable dropped
+    summary = cc.cadence_summary(now, ticks, 12)
+    assert summary["ticks_observed"] == 3 and summary["ticks_expected"] == 12
+    assert summary["delivery_ratio"] == 0.25
+    assert summary["minutes_since_last_tick"] == 107.7
+    rows = [
+        {"report_slot": "2026-10-25T12:30:00+07:00", "state": "MISSING"},
+        {"report_slot": "2026-10-25T04:30:00+07:00", "state": "FAILED"},
+    ]
+    out, _ = cc.annotate(rows, ticks, now, 12)
+    assert [r["state"] for r in out] == ["MISSING", "FAILED"]
+    assert out[0]["diagnosis"] == cc.NO_TICK_IN_WINDOW and "diagnosis" not in out[1]
+    assert "diagnosis" not in rows[0]  # input not mutated
+
+
+def test_audit_record_carries_cadence_and_survives_tick_api_failure():
+    now = _utc("2026-10-25T07:00:00Z")
+
+    class Empty:
+        def read_bytes(self, path):
+            raise aud.NotFound(path)
+
+        def list_dir(self, path):
+            raise aud.NotFound(path)
+
+    rec = aud.audit(now, Empty(), lambda: [], 12, lambda: ["2026-10-25T05:12:19Z"])
+    assert rec["clock_cadence"]["ticks_observed"] == 1
+    assert all(r["diagnosis"] for r in rec["rows"] if r["state"] == "MISSING")
+    assert rec["natural_execution_created"] is False
+
+    def boom():
+        raise aud.ReadError("CLOCK_RUNS_API_FAILED")
+
+    rec = aud.audit(now, Empty(), lambda: [], 12, boom)
+    assert rec["clock_cadence"] is None
+    assert all(r["diagnosis"] == cc.TICK_EVIDENCE_UNAVAILABLE for r in rec["rows"] if r["state"] == "MISSING")
+
+
+def test_gh_clock_ticks_adapter():
+    class P:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    got = aud.gh_clock_ticks("o/r", _utc("2026-10-25T00:00:00Z"), run=lambda *a, **k: P(0, "2026-10-25T05:12:19Z\n\n"))
+    assert got == ["2026-10-25T05:12:19Z"]
+    with pytest.raises(aud.ReadError):
+        aud.gh_clock_ticks("o/r", _utc("2026-10-25T00:00:00Z"), run=lambda *a, **k: P(1, ""))
+
+
+# ---- future-only recovery plan (advisory; no dispatch path) -------------------
+from ops import recovery_plan as rp  # noqa: E402
+
+
+def _row(mode, slot, state="MISSING", diagnosis=cc.NO_TICK_IN_WINDOW):
+    row = {"occurrence_id": f"{mode}|{slot}", "report_mode": mode, "report_slot": slot, "state": state}
+    if diagnosis:
+        row["diagnosis"] = diagnosis
+    return row
+
+
+def _decision(plan, mode, slot):
+    return next(d for d in plan["decisions"] if d["occurrence_id"] == f"{mode}|{slot}")["decision"]
+
+
+NOW_PLAN = _utc("2026-10-25T07:20:00Z")  # 14:20 WIB: DEEP 12:30 is 110 min overdue, next DEEP 21:30 not due
+
+
+def test_plan_marks_only_current_platform_gap_slot_eligible_and_never_dispatches():
+    rows = [_row("DEEP", "2026-10-25T12:30:00+07:00"), _row("DEEP", "2026-10-25T04:30:00+07:00")]
+    plan = rp.plan(NOW_PLAN, rows)
+    assert _decision(plan, "DEEP", "2026-10-25T12:30:00+07:00") == rp.ELIGIBLE
+    assert _decision(plan, "DEEP", "2026-10-25T04:30:00+07:00") == rp.HISTORICAL  # 590 min
+    only = plan["eligible"][0]
+    assert only["idempotency_key"] == "RECOVERY|DEEP|2026-10-25T12:30:00+07:00"
+    assert only["label"] == "RECOVERY" and only["natural_acceptance_eligible"] is False
+    assert plan["dispatch_enabled"] is False and plan["dispatch"] == "NOT_PERFORMED_AUTHORIZATION_REQUIRED"
+
+
+def test_plan_rejects_defect_failed_mode_superseded_and_unevidenced_rows(monkeypatch):
+    slot = "2026-10-25T12:30:00+07:00"
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, diagnosis=cc.TICK_NO_DISPATCH)]), "DEEP", slot) == rp.DEFECT
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, diagnosis=None)]), "DEEP", slot) == rp.NO_DIAGNOSIS
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, state="VERIFIED_PUBLISHED")]), "DEEP", slot) == rp.NOT_MISSING
+    failed = [_row("DEEP", slot), _row("DEEP", "2026-10-25T04:30:00+07:00", state="FAILED")]
+    assert _decision(rp.plan(NOW_PLAN, failed), "DEEP", slot) == rp.RETRY_LOOP
+    after_next = _utc("2026-10-25T14:40:00Z")  # 21:40 WIB: DEEP 21:30 has started
+    assert _decision(rp.plan(after_next, [_row("DEEP", slot)]), "DEEP", slot) == rp.HISTORICAL
+    monkeypatch.setattr(rp, "MAX_OVERDUE_MINUTES", 10_000)  # isolate the supersession rule
+    assert _decision(rp.plan(after_next, [_row("DEEP", slot)]), "DEEP", slot) == rp.SUPERSEDED
+
+
+def test_plan_is_bounded_to_the_newest_candidate_per_mode_and_ignores_old_slots():
+    older = "2026-10-25T04:30:00+07:00"
+    newer = "2026-10-25T12:30:00+07:00"
+    plan = rp.plan(_utc("2026-10-25T07:50:00Z"), [_row("DEEP", older), _row("DEEP", newer)])  # 14:50 WIB
+    assert [d["occurrence_id"] for d in plan["eligible"]] == [f"DEEP|{newer}"]
+    assert _decision(plan, "DEEP", older) == rp.HISTORICAL
+
+
+def test_plan_requires_tz_aware_now_and_is_independent_per_mode():
+    with pytest.raises(ValueError):
+        rp.plan(datetime(2026, 10, 25, 7, 20), [])
+    now = _utc("2026-10-25T07:20:00Z")
+    plan = rp.plan(now, [_row("DEEP", "2026-10-25T12:30:00+07:00"), _row("PRICE", "2026-10-25T05:30:00+07:00")])
+    assert _decision(plan, "PRICE", "2026-10-25T05:30:00+07:00") == rp.HISTORICAL  # 05:30 WIB is 530 min old
+    assert {d["report_mode"] for d in plan["eligible"]} == {"DEEP"}
+
+
+def test_recovery_plan_module_has_no_dispatch_capability():
+    source = Path(rp.__file__).read_text(encoding="utf-8")
+    for forbidden in ("subprocess", "workflow_dispatch", "gh api", "requests", "urllib", "os.system"):
+        assert forbidden not in source
+    assert rp.DISPATCH_ENABLED is False
+
+
+def test_audit_record_embeds_plan_without_changing_states():
+    class Empty:
+        def read_bytes(self, path):
+            raise aud.NotFound(path)
+
+        def list_dir(self, path):
+            raise aud.NotFound(path)
+
+    rec = aud.audit(NOW_PLAN, Empty(), lambda: [], 36, lambda: [])
+    assert rec["recovery_plan"]["dispatch_enabled"] is False
+    assert rec["historical_dispatch"] is False and rec["backfill"] is False
+    assert {r["state"] for r in rec["rows"]} <= {"MISSING", "UNKNOWN"}

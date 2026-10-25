@@ -51,3 +51,30 @@ def test_semantic_change_still_requires_direct_current_head_multi_cpu():
     assert '"DIRECT_CURRENT_HEAD_MULTI_CPU"' in text
     assert "if not direct_multi_cpu and not verified_transitive:" in text
     assert "semantic_unchanged=false" in text
+
+
+def test_acceptance_artifact_retention_is_90_days_and_every_proof_check_is_still_enforced():
+    from pathlib import Path
+
+    import yaml
+
+    text = Path(".github/workflows/repository-governance.yml").read_text(encoding="utf-8")
+    steps = yaml.safe_load(text)["jobs"]["runtime-cross-cpu-compare"]["steps"]
+    upload = next(s for s in steps if s.get("name") == "Upload cross-CPU acceptance")
+    assert upload["with"]["retention-days"] == 90 and upload["if"] == "always()"
+    assert upload["with"]["if-no-files-found"] == "error"
+    # Longer retention must not relax any gate: the verifier still requires all of these.
+    verify = next(s for s in steps if s.get("name", "").startswith("Verify frozen cross-CPU registry"))["run"]
+    for required in (
+        'run.get("status") != "completed"',
+        'run.get("head_sha") != proof["proof_head"]',
+        'run.get("event") != "pull_request"',
+        "not row.get(\"expired\")",
+        "len(candidates) != 1",
+        '"proof_mode": accepted.get("proof_mode") == "DIRECT_CURRENT_HEAD_MULTI_CPU"',
+        '"multi_cpu": int(accepted.get("distinct_physical_cpu_models_current_run") or 0) >= 2',
+        '"output": accepted.get("output_sha256") == proof["output_sha256"]',
+    ):
+        assert required in verify, required
+    enforce = next(s for s in steps if s.get("name", "").startswith("Enforce direct or verified-transitive"))["run"]
+    assert "git merge-base --is-ancestor" in enforce and "len(rows) < 8" in enforce

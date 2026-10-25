@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
+from ops import clock_cadence, recovery_plan
 from ops.occurrence_reconciliation import (
     build_audit_record,
     classify_due_occurrences,
@@ -302,6 +303,7 @@ def audit(
     reader: Reader,
     runs: Callable[[], Sequence[Mapping[str, Any]]],
     lookback_hours: int = 36,
+    clock_ticks: Callable[[], Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     from ops.render_external_clock import due_report_occurrences
 
@@ -331,7 +333,17 @@ def audit(
         unknown=unknown,
         lookback_hours=lookback_hours,
     )
-    return build_audit_record(now, rows, lookback_hours)
+    ticks = None
+    if clock_ticks is not None:
+        try:
+            ticks = clock_cadence.parse_ticks(clock_ticks())
+        except ReadError:
+            ticks = None
+    rows, cadence = clock_cadence.annotate(rows, ticks, now, lookback_hours)
+    record = build_audit_record(now, rows, lookback_hours)
+    record["clock_cadence"] = cadence
+    record["recovery_plan"] = recovery_plan.plan(now, rows)
+    return record
 
 
 class GhReader:
@@ -389,6 +401,21 @@ def gh_runs(repo: str, since: datetime, run: Callable[..., Any] = subprocess.run
     return [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
 
 
+def gh_clock_ticks(repo: str, since: datetime, run: Callable[..., Any] = subprocess.run) -> list[str]:
+    created = since.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    proc = run(
+        [
+            "gh", "api", "--paginate",
+            f"/repos/{repo}/actions/workflows/fpl-github-clock.yml/runs?per_page=100&event=schedule&created=>={created}",
+            "--jq", ".workflow_runs[].created_at",
+        ],
+        capture_output=True, text=True, timeout=120,
+    )
+    if proc.returncode:
+        raise ReadError("CLOCK_RUNS_API_FAILED")
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lookback-hours", type=int, default=36)
@@ -407,6 +434,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             GhReader(token),
             lambda: gh_runs(repo, now - timedelta(hours=args.lookback_hours + 2)),
             args.lookback_hours,
+            lambda: gh_clock_ticks(repo, now - timedelta(hours=args.lookback_hours + 2)),
         )
     except Exception as exc:  # audit must never break the clock
         from ops.render_external_clock import due_report_occurrences

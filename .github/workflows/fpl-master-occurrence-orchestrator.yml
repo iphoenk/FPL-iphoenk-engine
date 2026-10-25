@@ -753,3 +753,21 @@ jobs:
             READY_FULL|READY_DEGRADED|READY_DEGRADED_PUBLIC_FIRST|READY_REUSED) exit 0 ;;
             *) exit 1 ;;
           esac
+
+      - name: Advance verified serving pointer
+        # Runs only after verification AND the receipt step both succeeded
+        # (implicit success()). latest/verified.json is the consumer contract:
+        # it is advanced by compare-and-swap, monotonically, after the module
+        # independently re-verifies terminality, bindings, hashes, readback and
+        # the receipt comment. It never changes this workflow's verdict.
+        if: steps.guard.outputs.skip != 'true' && steps.verify.outcome == 'success'
+        continue-on-error: true
+        env:
+          FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+          REPORT_MODE: ${{ steps.parse.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.parse.outputs.report_slot }}
+          PYTHONPATH: ${{ github.workspace }}/occurrence-verifier-source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ops.verified_pointer --mode "$REPORT_MODE" --slot "$REPORT_SLOT" --run-id "$GITHUB_RUN_ID"

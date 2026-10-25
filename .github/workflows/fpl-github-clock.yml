@@ -162,6 +162,14 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Expose effective recovery-dispatch switch
+        env:
+          FPL_RECOVERY_DISPATCH_VALUE: ${{ vars.FPL_RECOVERY_DISPATCH }}
+        shell: bash
+        run: |
+          if [ "$FPL_RECOVERY_DISPATCH_VALUE" = "ENABLED" ]; then state=ENABLED; else state="DISABLED (value is not exactly ENABLED)"; fi
+          echo "::notice title=FPL_RECOVERY_DISPATCH::$state"
+
       - name: Audit due occurrences without dispatch or backfill
         continue-on-error: true
         env:
@@ -175,12 +183,17 @@ jobs:
           data = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "missed-slot-audit.json")))
           print("### FPL missed-slot audit (audit only: no dispatch, no backfill)")
           print("")
-          print("| occurrence | state | reason |")
-          print("| --- | --- | --- |")
+          print("| occurrence | state | reason | clock diagnosis |")
+          print("| --- | --- | --- | --- |")
           for row in data["rows"]:
-              print(f"| `{row['occurrence_id']}` | {row['state']} | {row['reason']} |")
+              print(f"| `{row['occurrence_id']}` | {row['state']} | {row['reason']} | {row.get('diagnosis', '')} |")
           print("")
           print("counts: " + json.dumps(data["counts"], sort_keys=True))
+          print("")
+          print("clock cadence: " + json.dumps(data.get("clock_cadence"), sort_keys=True))
+          plan = data.get("recovery_plan") or {}
+          print("")
+          print("recovery plan (advisory, dispatch disabled): eligible=" + json.dumps([d["occurrence_id"] for d in plan.get("eligible", [])]) + " dispatch=" + str(plan.get("dispatch")))
           PY
 
       - name: Persist missed-slot audit evidence
@@ -191,3 +204,44 @@ jobs:
           path: ${{ runner.temp }}/missed-slot-audit.json
           if-no-files-found: ignore
           retention-days: 30
+
+  recovery-dispatch:
+    # PREPARED AND DISABLED. Runs only when the owner sets the repository
+    # variable FPL_RECOVERY_DISPATCH to exactly ENABLED after separate approval.
+    # Consumes the advisory plan of the audit job; at most one future-only,
+    # idempotent, #431-announced dispatch of the existing orchestrator per run.
+    # Never backfills, never retries a failed occurrence, creates no scheduler.
+    needs: missed-slot-audit
+    if: >-
+      vars.FPL_RECOVERY_DISPATCH == 'ENABLED' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write
+      issues: write
+    concurrency:
+      group: fpl-recovery-dispatch
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FPL_RECOVERY_DISPATCH: ${{ vars.FPL_RECOVERY_DISPATCH }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: fpl-missed-slot-audit-${{ github.run_id }}
+          path: audit
+
+      - name: Governed recovery dispatch (future-only, idempotent, labelled)
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ops.recovery_dispatch --audit audit/missed-slot-audit.json

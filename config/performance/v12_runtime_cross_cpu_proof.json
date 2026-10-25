@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "authority": "FPL_V12_RUNTIME_CROSS_CPU_FROZEN_PROOF",
-  "proof_head": "d0697e8902cd04c4c60989c1c289ca2af8597d5c",
-  "proof_run_id": 38101198457,
-  "proof_artifact_name": "v12-runtime-cross-cpu-acceptance-38101198457",
+  "proof_head": "e0346d96cc51abbae0125127a438cd12e188ad52",
+  "proof_run_id": 40183897457,
+  "proof_artifact_name": "v12-runtime-cross-cpu-acceptance-40183897457",
   "proof_mode": "DIRECT_CURRENT_HEAD_MULTI_CPU",
-  "distinct_physical_cpu_models": 3,
+  "distinct_physical_cpu_models": 4,
   "output_sha256": "89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87",
   "runtime_cache_identity": {
     "python_major_minor": "3.12",
@@ -17,6 +17,6 @@
     ],
     "openblas_num_threads": 1
   },
-  "source_pr": 960,
-  "source_note": "Direct current-head 8-probe PASS on PR #960 at 2026-10-11T01:16Z; 3 distinct physical CPU models, bit-identical output. Artifact 11688285789 exists until 2026-10-25; re-registry after run #36287336832 artifact became unavailable."
+  "source_pr": 1183,
+  "source_note": "Direct current-head 8-probe PASS on PR #1183 (run 40183897457, head e0346d96, an ancestor of main) at 2026-10-25T10:14Z; 4 distinct physical CPU models (AMD EPYC 7763 x5, AMD EPYC 9V74 x1, Intel Xeon Platinum 8573C x1, Intel Xeon Platinum 8370C x1), bit-identical output 89f41be0 (unchanged from the prior registry). Acceptance artifact 12594569816 has 90-day retention and expires 2027-01-23; re-register before then. runtime_cache_identity is carried over from the prior proof because the acceptance artifact does not record it; it is only consulted for the transitive path, which stays fail-closed."
 }

@@ -270,3 +270,7 @@ Every PR must carry the timestamp and documentation-sync metadata defined in `do
 ## League membership context (F02)
 
 `build_league_membership_context` (report_plane/league_prefetch.py) turns official standings pages into `FPL_LEAGUE_CONTEXT_V1`: unique members, coverage (`COMPLETE`/`PARTIAL`/`EMPTY` with reasons), rank ties and provenance. Membership is `CURRENT_AT_OBSERVED_AT`; joins/leavers are computed only against an explicit baseline and are otherwise null (`NO_BASELINE_EVIDENCE`), so a current membership is never presented as historical. Pages from another league, repeated pages and an empty page that still claims a next page make coverage `PARTIAL`. `fetch_all_standings` now de-duplicates entries and stops on a repeated or premature-empty page instead of running to the page cap. No Awards utility or forecast is computed here.
+
+## Provider identity regression coverage (F03)
+
+`tests/test_data_platform_identity_field_coverage.py` pins that provider joins are anchored on the official FPL `code`: duplicate display names across clubs, club moves, reused element ids in a new season and Unicode names (for example "Groß") never create or move a link; unconfigured external players are not fuzzy-mapped; a conflicting existing link or a duplicated official code fails closed; and a missing `coverage_ratio` is never read as full coverage. No production code changed for F03 because none of these behaviors were reproducible as defects.

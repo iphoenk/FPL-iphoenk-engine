@@ -140,7 +140,7 @@ def valid_visible_body(
     }
 
     for section_id in section_ids:
-        if section_id == "S15B" and not include_14b:
+        if section_id == "S14B" and not include_14b:
             continue
         if section_id.startswith("PRICE"):
             index = int(section_id.removeprefix("PRICE"))

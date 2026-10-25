@@ -235,7 +235,7 @@ def _finalize_deep_state(
             + list(final_delivery_barrier.get("failures") or [])
         )
     )
-    parsed_ids, _, _ = _parse_sections(body)
+    parsed_ids, _, _ = _parse_sections(body, "DEEP")
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
         for row in new_report.get("sections") or []
@@ -563,7 +563,7 @@ def refresh_revalidated_base_state(
             + list(final_delivery_barrier.get("failures") or [])
         )
     )
-    parsed_ids, _, _ = _parse_sections(body)
+    parsed_ids, _, _ = _parse_sections(body, "DEEP")
     rendered_states = {
         str(row.get("section_id") or ""): str(row.get("state") or "")
         for row in report.get("sections") or []

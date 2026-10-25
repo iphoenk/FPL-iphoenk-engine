@@ -10,6 +10,7 @@ content was actually visible to the user.
 from collections import Counter
 from hashlib import sha256
 import re
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from .delivery_integrity import RANK20_REQUIRED_FIELDS, validate_rank20
@@ -98,15 +99,62 @@ def _normalize_section_id(token: str) -> str:
     return f"S{int(match.group(1)):02d}{match.group(2).upper()}"
 
 
-def _section_matches(body: str) -> list[re.Match[str]]:
-    matches = [
-        *_SECTION_EXPLICIT_RE.finditer(body),
-        *_SECTION_NUMBERED_RE.finditer(body),
-        *_MATCH_SECTION_RE.finditer(body),
-        *_PRICE_SECTION_RE.finditer(body),
-        *_POST_ALL_MATCH_SECTION_RE.finditer(body),
-        *_FINAL_LOCK_SECTION_RE.finditer(body),
-    ]
+# Single authority for which heading grammars each report family may own.
+# Headings of a foreign family (for example the ``#### MATCH n`` fixture
+# sub-headings inside DEEP S16B.1) are body content, never section identity.
+# The mapping is immutable so no mode can mutate another mode's grammar.
+_FAMILY_SECTION_PATTERNS: Mapping[str, tuple[re.Pattern[str], ...]] = MappingProxyType({
+    "DEEP": (_SECTION_EXPLICIT_RE, _SECTION_NUMBERED_RE, _FINAL_LOCK_SECTION_RE),
+    "MATCH": (_MATCH_SECTION_RE,),
+    "PRICE": (_PRICE_SECTION_RE,),
+    "POST_ALL_MATCH": (_POST_ALL_MATCH_SECTION_RE,),
+})
+_ALL_SECTION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    _SECTION_EXPLICIT_RE,
+    _SECTION_NUMBERED_RE,
+    _MATCH_SECTION_RE,
+    _PRICE_SECTION_RE,
+    _POST_ALL_MATCH_SECTION_RE,
+    _FINAL_LOCK_SECTION_RE,
+)
+
+
+class UnknownSectionFamilyError(ValueError):
+    """Raised when a caller names a report family with no section grammar."""
+
+
+def section_family_for_ids(section_ids: Sequence[str]) -> str | None:
+    """Infer the single report family an expected catalog belongs to.
+
+    Returns None for an empty or mixed catalog so callers fail closed instead of
+    silently choosing a grammar.
+    """
+    ids = [str(value or "").strip().upper() for value in section_ids]
+    if not ids:
+        return None
+    if all(value.startswith("POST_ALL_MATCH") for value in ids):
+        return "POST_ALL_MATCH"
+    if all(value.startswith("MATCH") for value in ids):
+        return "MATCH"
+    if all(value.startswith("PRICE") for value in ids):
+        return "PRICE"
+    if all(
+        re.fullmatch(r"S\d{2}B?", value) or value == "GW_LOCK_PACKAGE" or value.endswith("GW_LOCK_PACKAGE")
+        for value in ids
+    ):
+        return "DEEP"
+    return None
+
+
+def _section_matches(body: str, family: str | None = None) -> list[re.Match[str]]:
+    if family is None:
+        patterns = _ALL_SECTION_PATTERNS
+    else:
+        key = str(family).strip().upper()
+        if key not in _FAMILY_SECTION_PATTERNS:
+            raise UnknownSectionFamilyError(f"UNKNOWN_SECTION_FAMILY={family}")
+        patterns = _FAMILY_SECTION_PATTERNS[key]
+    matches = [match for pattern in patterns for match in pattern.finditer(body)]
     return sorted(matches, key=lambda match: match.start())
 
 
@@ -123,8 +171,11 @@ def _matched_section_id(match: re.Match[str]) -> str:
     return _normalize_section_id(groups.get("section") or "")
 
 
-def _parse_sections(body: str) -> tuple[list[str], dict[str, list[str]], int | None]:
-    matches = _section_matches(body)
+def _parse_sections(
+    body: str,
+    family: str | None = None,
+) -> tuple[list[str], dict[str, list[str]], int | None]:
+    matches = _section_matches(body, family)
     section_ids: list[str] = []
     content_by_id: dict[str, list[str]] = {}
     for index, match in enumerate(matches):
@@ -446,7 +497,10 @@ def validate_visible_report_body(
     if not body.strip():
         failures.append("VISIBLE_BODY_EMPTY")
 
-    section_ids, section_content, first_section_start = _parse_sections(body)
+    section_ids, section_content, first_section_start = _parse_sections(
+        body,
+        section_family_for_ids(expected_section_ids),
+    )
     if _body_has_progress_placeholder(body, first_section_start):
         failures.append("VISIBLE_BODY_PROGRESS_PLACEHOLDER")
     if any(pattern.search(body) for pattern in _TRUNCATION_PATTERNS):

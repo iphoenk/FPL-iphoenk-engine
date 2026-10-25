@@ -386,6 +386,24 @@ def test_13_missing_fall20_fails_pre_render():
 
 
 def test_14_single_degraded_field_does_not_remove_structural_section():
+    # The mini-league contract state is derived from the ICON+ MINI-LEAGUE section (S15B).
+    # S14B is "3-GW SQUAD STAGING"; degrading it says nothing about the mini-league denominator.
+    manifest = _manifest()
+    for row in manifest:
+        if row["section_id"] == "S15B":
+            row["status"] = "PARTIAL"
+    result = _pre(
+        section_manifest=manifest,
+        mini_league_denominator_complete=False,
+    )
+    assert result["status"] == "PASS"
+    assert result["mini_league_contract_state"] == "DEGRADED"
+    assert "S15B" in result["expected_section_ids"]
+
+
+def test_14b_incomplete_denominator_with_healthy_mini_league_section_fails_closed():
+    # Counterpart that keeps the gate honest: a degraded S14B with an incomplete mini-league
+    # denominator must not be treated as a degraded mini-league section.
     manifest = _manifest()
     for row in manifest:
         if row["section_id"] == "S14B":
@@ -394,9 +412,9 @@ def test_14_single_degraded_field_does_not_remove_structural_section():
         section_manifest=manifest,
         mini_league_denominator_complete=False,
     )
-    assert result["status"] == "PASS"
-    assert result["mini_league_contract_state"] == "DEGRADED"
-    assert "S14B" in result["expected_section_ids"]
+    assert result["status"] == "FAIL"
+    assert result["mini_league_contract_state"] == "INCOMPLETE"
+    assert "MINI_LEAGUE_DENOMINATOR_INCOMPLETE" in result["failed_checks"]
 
 
 def test_15_weather_available_requires_real_attempt_metadata():

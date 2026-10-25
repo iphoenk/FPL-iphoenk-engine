@@ -24,9 +24,9 @@ F01 #1184, F02 #1187, F03 #1189, F04 #1190, F05 #1191, F06 #1192, E01 #1193, E02
 | `python -m src.runtime_v6.domains.governance.authority_contract` | exit 0 |
 | `python -m src.runtime_v6.domains.governance.architecture_independence_validate` | exit 0 |
 | `python src/platform/repository_test_naming_validate.py` | exit 0 |
-| `pytest tests/test_p0_5_deadline_report_plane_stage1.py` | 1 failed, 17 passed |
+| `pytest tests/test_p0_5_deadline_report_plane_stage1.py` | 1 failed, 17 passed (at capture; 19 passed after the test fix) |
 
-Known failing test on main: `test_14_single_degraded_field_does_not_remove_structural_section` (`assert 'FAIL' == 'PASS'`). It fails locally on unmodified main and predates the pack; main CI is green, so CI either does not run it in this form or the result depends on the environment. Cause not investigated; not fixed here.
+Known failing test on main at capture: `test_14_single_degraded_field_does_not_remove_structural_section` (`assert 'FAIL' == 'PASS'`). Cause found afterwards: the test degraded S14B (3-GW SQUAD STAGING) while the QA gate derives the mini-league state from S15B (ICON+ MINI-LEAGUE), so the gate was right and the fixture wrong. `tests/test_p0_5_deadline_report_plane_stage1.py` is not referenced by any CI shard or workflow, which is why main CI stayed green. The test was corrected in the PR that follows this document; the file is still not registered in CI (a governance-shard change that was not made).
 
 ## Environment-dependent failures (sandbox with 2 CPUs)
 

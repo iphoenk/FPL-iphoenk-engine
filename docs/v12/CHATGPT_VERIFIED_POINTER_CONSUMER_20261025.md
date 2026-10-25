@@ -35,7 +35,12 @@ SOURCE (READ-ONLY). Do not write to GitHub: no issue edit, no comment, no workfl
    an older occurrence as current.
 7. If occurrence_id and sequence equal the last ones you presented in this conversation, say
    "No new verified report since <occurrence_id>" instead of repeating the report.
-Then render the verified canonical body in the existing five-section format.
+Then render the verified canonical body under EXACTLY five top-level sections, in this order, and no other
+top-level heading: 1 OVERVIEW & ACTION, 2 OUR15 & XI, 3 ANALYTICS, 4 MINI-LEAGUE & COMPETITIVE, 5 FINAL DECISION & QA.
+Place the canonical sections verbatim (see section 4 mapping); never recompute, reword or invent a value.
+Keep the compact mobile-first layout, the green pitch, C/VC labels on the player names and the horizontal four-player
+bench (S06 block) whenever the host renders it. In the degraded case still print the five headings, each with
+"NOT AVAILABLE", under the line "READ-ONLY DEGRADED | NOT CANONICAL V12".
 ```
 
 Why this is sufficient: `latest/*` can describe an occurrence whose verification failed (DEEP 2026-10-23T21:30,
@@ -71,3 +76,26 @@ The frozen proof (`config/performance/v12_runtime_cross_cpu_proof.json`) now poi
 | NATURAL_CHATGPT_OBSERVED | all above for a naturally scheduled occurrence (`origin` SCHEDULED_OR_FALLBACK) and an unmodified hourly task run | independent observation x3 | 0/3 |
 
 A RECOVERY-origin or manual occurrence can reach the first four levels but never the fifth.
+
+
+## 4. Mandatory presentation contract (five sections)
+
+Authority: `config/intelligence/v12_five_section_presentation_v1.json`, implemented and tested in
+`src/engines/v12_five_section_presentation.py` (presentation only, no calculation).
+
+| Top-level section | Canonical sections (verbatim, canonical order) |
+| --- | --- |
+| 1 OVERVIEW & ACTION | S01, S03, S04, S05, S09, S10, S18 |
+| 2 OUR15 & XI | S02, S06, S06B, S07, S08 |
+| 3 ANALYTICS | S11, S12, S13, S14, S14B, S16, S16B (when due) |
+| 4 MINI-LEAGUE & COMPETITIVE | S15B |
+| 5 FINAL DECISION & QA | S15, S17, S19 |
+
+Producer side (fail closed): `ops/verified_pointer.py` builds the five-section view of the DEEP body and validates it
+before any pointer write: exactly five sections in order; every canonical section present once and verbatim; XI of 11
+without duplicates; bench of 4 disjoint from the XI; XI consistent between S06 and S19; planning GW equal to the history
+path GW; logical slot equal to the occurrence slot; C and VC distinct, inside the XI and identical across S08, S18 and S19;
+a DEGRADED report state stays explicit; the S06 pitch block is not dropped. Any failure raises
+`PRESENTATION_CONTRACT_FAILED` and `latest/verified.json` is not advanced, so the report is never presented as canonical.
+Entries carry `presentation_contract: FIVE_SECTION_V1_PASS`. The consumer must also refuse an entry without it.
+Not changed: report production, the publisher, `latest/*`, the ChatGPT task, the scheduler, #431 and recovery activation.

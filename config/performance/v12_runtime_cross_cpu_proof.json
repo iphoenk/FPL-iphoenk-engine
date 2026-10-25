@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "authority": "FPL_V12_RUNTIME_CROSS_CPU_FROZEN_PROOF",
-  "proof_head": "d0697e8902cd04c4c60989c1c289ca2af8597d5c",
-  "proof_run_id": 38101198457,
-  "proof_artifact_name": "v12-runtime-cross-cpu-acceptance-38101198457",
+  "proof_head": "50bdf5d1ff67104341107f43fea88d5ce7e7d165",
+  "proof_run_id": 40148055764,
+  "proof_artifact_name": "v12-runtime-cross-cpu-acceptance-40148055764",
   "proof_mode": "DIRECT_CURRENT_HEAD_MULTI_CPU",
   "distinct_physical_cpu_models": 3,
   "output_sha256": "89f41be085a1e387eb87ee86dfecfb5d4cf4c2924a20221ee27c09f757c4db87",
@@ -17,6 +17,6 @@
     ],
     "openblas_num_threads": 1
   },
-  "source_pr": 960,
-  "source_note": "Direct current-head 8-probe PASS on PR #960 at 2026-10-11T01:16Z; 3 distinct physical CPU models, bit-identical output. Artifact 11688285789 exists until 2026-10-25; re-registry after run #36287336832 artifact became unavailable."
+  "source_pr": 1176,
+  "source_note": "Direct current-head 8-probe PASS on PR #1176 (run 40148055764, head 50bdf5d, an ancestor of main) at 2026-10-25T00:48Z; 3 distinct physical CPU models (AMD EPYC 7763 x2, AMD EPYC 9V74 x4, Intel Xeon Platinum 8573C x2), bit-identical output 89f41be0. Re-registry after the previous artifact (run 38101198457) expired on 2026-10-25. Artifact 12580954940 expires 2026-11-08; re-register again before then. runtime_cache_identity is carried over from the prior proof because the acceptance artifact does not record it; it is only consulted for the transitive path, which stays fail-closed."
 }

@@ -140,6 +140,15 @@ def recovery_announced(comments: Sequence[str], oid: str) -> bool:
     return any(c.startswith("FPL_RECOVERY_DISPATCH") and "label=RECOVERY" in c and marker in c for c in comments)
 
 
+def external_clock_announced(comments: Sequence[str], oid: str) -> bool:
+    """True when #431 carries the pre-dispatch EXTERNAL_INDEPENDENT_CLOCK announcement for this exact occurrence."""
+    marker = f"occurrence_id={oid} |"
+    return any(
+        c.startswith("FPL_EXTERNAL_CLOCK_TRIGGER") and "label=EXTERNAL_INDEPENDENT_CLOCK" in c and marker in c
+        for c in comments
+    )
+
+
 def build_entry(
     reader: Reader, mode: str, slot: str, *, now: datetime, orchestrator_run: str, origin: str = "SCHEDULED_OR_FALLBACK"
 ) -> dict[str, Any]:
@@ -345,7 +354,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         comments = issue_comments(repo, now - RECEIPT_LOOKBACK)
         if not receipt_present(comments, oid, args.run_id):
             raise Unverified(["RECEIPT_NOT_FOUND"])
-        origin = "RECOVERY" if recovery_announced(comments, oid) else "SCHEDULED_OR_FALLBACK"
+        # Most conservative label wins: any recovery or external-clock involvement is never reported as scheduled.
+        if recovery_announced(comments, oid):
+            origin = "RECOVERY"
+        elif external_clock_announced(comments, oid):
+            origin = "EXTERNAL_CLOCK"
+        else:
+            origin = "SCHEDULED_OR_FALLBACK"
         entry = build_entry(
             GhReader(token), args.mode, args.slot, now=now, orchestrator_run=args.run_id, origin=origin
         )

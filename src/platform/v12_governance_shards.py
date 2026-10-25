@@ -82,9 +82,10 @@ REQUIRED_FILES = [
     "tests/test_p0b_missed_slot_reconciliation.py",
     "tests/test_verified_pointer.py",
     "tests/test_five_section_presentation.py",
+    "tests/test_external_clock_gate.py",
     "tests/test_recovery_dispatch.py"
 ]
-BASELINE_TOTAL = 1652
+BASELINE_TOTAL = 1687
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

@@ -176,7 +176,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          exact_title="FPL Master occurrence $REPORT_MODE $REPORT_SLOT"
+          # Must equal the orchestrator run-name: FPL <scheduler_authority> occurrence <mode> <slot>
+          exact_title="FPL EXTERNAL_CLOCK_FALLBACK occurrence $REPORT_MODE $REPORT_SLOT"
           existing="$(
             gh run list \
               --repo "$GITHUB_REPOSITORY" \

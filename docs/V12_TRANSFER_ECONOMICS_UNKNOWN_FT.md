@@ -1,0 +1,5 @@
+# Transfer economics: unknown FT shadow value (E03)
+
+`build_transfer_economics` keeps three FT-shadow semantics apart: `DYNAMIC_CANONICAL` (derived from future optimization; a genuine 0.0 is kept), `LEGACY_HEURISTIC_NOT_CANONICAL` (a fixed value passed in) and `UNAVAILABLE`. For `UNAVAILABLE`, `future_ft_shadow_value` is now `null`, matching `ft_shadow.ft_shadow_value`; before this change the top-level field was `0.0`, which made an unknown opportunity cost look like a measured zero. Package utility and the Monte Carlo path coerce `None` to `0.0` explicitly, so route scoring is numerically unchanged. Hit points, buy-back cost, sell-value loss and the FT shadow value remain separate fields, and economics stay out of the football score (`included_in_football_score=false`).
+
+Not covered: the plan's hit-once-over-3-GW breakeven calculation (hold [3,3,3], buy [5,5,5], hit 4, net 2, breakeven GW2). No breakeven computation exists in `src/engines`, so there was nothing to pin; building it would be new feature work. Sell-price floor, duplicate-club budget joint transfers, WC/FH baselines and TC/BB incremental benefit were not re-tested here.

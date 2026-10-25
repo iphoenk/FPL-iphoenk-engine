@@ -125,6 +125,11 @@ def score_entry(
             baseline_source = "OFFICIAL_PUBLISHED_STANDING_DIFFERENCE"
     net = gross - hit if hit is not None else None
     overall = previous + net if previous is not None and net is not None else None
+    # Additive (E01): captain and bench parts of gross, never netted against the hit. The effective
+    # captain is whoever carries a >=2 multiplier right now; if nobody does it is unknown, not 0.
+    effective_captain = next((pid for pid in (c_id, v_id) if factors[pid] >= 2), None)
+    captain_points = live_points[effective_captain] * factors[effective_captain] if effective_captain is not None else None
+    bench_raw_points = sum(live_points[i] for i in ids if factors[i] == 0)
     return {
         "status": "PROVISIONAL" if pending or vice_pending else "CALCULATED",
         "gross_points": gross,
@@ -139,6 +144,9 @@ def score_entry(
         "calculated_autosub_applied": subs_applied,
         "vice_takeover_provisional": vice_pending,
         "multipliers": factors,
+        "effective_captain_id": effective_captain,
+        "captain_points": captain_points,
+        "bench_raw_points": bench_raw_points,
         "entry_history_available": bool(history),
         "hit_verified": hit is not None,
     }

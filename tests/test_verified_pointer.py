@@ -214,3 +214,17 @@ def test_cli_without_token_never_fails_the_orchestrator(monkeypatch, capsys):
     rc = vp.main(["--mode", "DEEP", "--slot", DEEP_SLOT, "--run-id", "1"])
     out = json.loads(capsys.readouterr().out)
     assert rc == 0 and out["action"] == "NOT_ADVANCED_NOT_WRITABLE"
+
+
+def test_receipt_comments_are_read_with_a_bounded_since_window_and_failures_raise():
+    seen = []
+
+    def run(cmd, **kw):
+        seen.append(cmd)
+        return _Proc(0, json.dumps("receipt body") + "\n\n", "")
+
+    assert vp.issue_comments("o/r", datetime(2026, 10, 25, 1, 0, tzinfo=timezone.utc), run=run) == ["receipt body"]
+    assert "since=2026-10-25T01:00:00Z" in seen[0][3] and "issues/431/comments" in seen[0][3]
+
+    with pytest.raises(vp.ReadError):
+        vp.issue_comments("o/r", NOW, run=lambda cmd, **kw: _Proc(1, "", "boom"))

@@ -183,6 +183,9 @@ jobs:
           print("counts: " + json.dumps(data["counts"], sort_keys=True))
           print("")
           print("clock cadence: " + json.dumps(data.get("clock_cadence"), sort_keys=True))
+          plan = data.get("recovery_plan") or {}
+          print("")
+          print("recovery plan (advisory, dispatch disabled): eligible=" + json.dumps([d["occurrence_id"] for d in plan.get("eligible", [])]) + " dispatch=" + str(plan.get("dispatch")))
           PY
 
       - name: Persist missed-slot audit evidence

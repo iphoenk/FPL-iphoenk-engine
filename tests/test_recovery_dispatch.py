@@ -123,3 +123,67 @@ def test_workflow_job_is_gated_serialized_and_leaves_the_tick_job_untouched():
 def test_module_does_not_import_a_scheduler_or_other_dispatch_surface():
     source = Path(rd.__file__).read_text(encoding="utf-8")
     assert "cron" not in source and "schedule:" not in source
+
+
+import subprocess as _sp
+
+
+class Raiser(Recorder):
+    def __init__(self, raise_on):
+        super().__init__()
+        self.raise_on = raise_on
+
+    def __call__(self, argv, **kw):
+        if self.raise_on in argv:
+            raise _sp.TimeoutExpired(argv, 60)
+        return super().__call__(argv, **kw)
+
+
+def test_dispatch_timeout_reports_unknown_state_and_never_retries():
+    rec = Raiser("workflow")
+    out = rd.execute(PLAN, [], "o/r", run=rec)
+    assert out["action"] == "DISPATCH_STATE_UNKNOWN"
+    assert len(rec.calls) == 1 and "comment" in rec.calls[0]  # only the evidence comment succeeded
+
+
+def test_comment_timeout_prevents_dispatch():
+    rec = Raiser("comment")
+    out = rd.execute(PLAN, [], "o/r", run=rec)
+    assert out["action"] == "NOT_DISPATCHED_EVIDENCE_COMMENT_FAILED"
+    assert not any("workflow" in c for c in rec.calls)
+
+
+def test_recheck_finding_a_run_created_meanwhile_blocks_the_dispatch():
+    rec = Recorder()
+    run = [{"displayTitle": rd.run_title(CAND), "status": "queued", "conclusion": ""}]
+    out = rd.execute(PLAN, [], "o/r", run=rec, recheck=lambda: run)
+    assert out["action"] == "SKIPPED_ALREADY_ATTEMPTED_ON_RECHECK"
+    assert not any("workflow" in c for c in rec.calls)
+
+
+def test_runs_listing_timeout_is_a_reported_error_not_a_dispatch(monkeypatch):
+    def boom(*a, **k):
+        raise _sp.TimeoutExpired("gh", 60)
+
+    monkeypatch.setattr(rd.subprocess, "run", boom)
+    with pytest.raises(RuntimeError):
+        rd._recent_runs("o/r")
+
+
+def test_repeated_audit_with_the_attempt_visible_is_idempotent():
+    rec = Recorder()
+    prior = [{"displayTitle": rd.run_title(CAND), "status": "completed", "conclusion": "success"}]
+    assert rd.execute(PLAN, prior, "o/r", run=rec)["action"].startswith("SKIPPED")
+    assert rec.calls == []
+
+
+def test_overdue_boundary_is_180_inclusive():
+    assert rp.MAX_OVERDUE_MINUTES == 180
+
+
+def test_audit_job_exposes_effective_switch_without_write_permissions():
+    wf = yaml.safe_load(WORKFLOW.read_text())
+    audit = wf["jobs"]["missed-slot-audit"]
+    assert audit["permissions"] == {"contents": "read", "actions": "read"}
+    text = WORKFLOW.read_text()
+    assert "::notice title=FPL_RECOVERY_DISPATCH::" in text and "vars.FPL_RECOVERY_DISPATCH" in text

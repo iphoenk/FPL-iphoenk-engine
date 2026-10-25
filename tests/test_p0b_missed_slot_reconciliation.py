@@ -306,7 +306,13 @@ def private_files(mode, slot, *, gw=7, latest_slot=None, body=b"# report\n", sta
         f"{d}/{body_name}": body,
     }
     if mode == "DEEP":
-        files[f"{d}/delivery_status.json"] = _j({"delivery_status": status, "root_failure": ""})
+        files[f"{d}/delivery_status.json"] = _j(
+            {"delivery_status": status, "root_failure": "", "generated_at": "2026-10-25T05:41:00+00:00"}
+        )
+        files[f"{d}/presentation_qa.json"] = _j(
+            {"section_count": 22, "expected_section_count": 22, "section_order_exact": True,
+             "root_failure_count": 0, "visible_report_body_non_empty": True}
+        )
         files["latest/report.md"] = body
     latest_digest = dict(digest)
     if latest_slot:

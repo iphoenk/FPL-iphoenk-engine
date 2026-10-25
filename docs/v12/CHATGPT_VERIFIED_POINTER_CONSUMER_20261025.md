@@ -19,16 +19,20 @@ Owner check (one minute, read-only): run the task once manually in the existing 
 Add to the task prompt, ahead of report rendering:
 
 ```
-SOURCE (READ-ONLY). Do not write to GitHub: no issue edit, no comment, no workflow dispatch.
+SOURCE (READ-ONLY). Do not write to GitHub: no issue edit, no comment, no workflow dispatch, no rerun.
 1. Read latest/verified.json from iphoenk/fpl-reports-private (main).
-2. Require schema == "FPL_VERIFIED_POINTER_V1". Use modes.DEEP (use modes.PRICE only for the 05:30 WIB price slot).
+2. Require schema == "FPL_VERIFIED_POINTER_V1". Use modes.DEEP (use modes.PRICE only for the PRICE slot).
 3. Require entry.remote_readback == "PASS" and entry.receipt_verified == true.
-4. For DEEP read latest/report.md; for PRICE read <entry.history_path>/report_body.md.
+4. Read the body at the immutable path entry.body_path (never latest/report.md: it can belong to another occurrence).
    Compute SHA-256 of the exact bytes; it MUST equal entry.canonical_body_sha256.
-5. If any step fails, or the file is absent: print "READ-ONLY DEGRADED: no verified report available (<reason>)".
-   Never fall back to unverified latest/* files and never invent values.
-6. Always print: source occurrence_id, report_slot, verified_at_utc, age (now - verified_at_utc),
-   terminality (READY_DEGRADED must be shown as DEGRADED) and entry.sequence.
+5. If any step fails, or the file is absent: print "READ-ONLY DEGRADED | NOT CANONICAL V12: no verified report
+   available (<reason>)". Never fall back to unverified latest/* files and never invent values.
+6. Always print: source occurrence_id, original report_slot (WIB), entry.generated_at, verified_at_utc,
+   delivery lateness (verified_at_utc - report_slot), age (now - verified_at_utc), entry.origin
+   (RECOVERY must be labelled "RECOVERY delivery"), terminality (READY_DEGRADED shown as DEGRADED), entry.sequence.
+   Timing: the ChatGPT task runs at HH:30, the repository clock at HH:35 WIB, so a report published after
+   the task's HH:30 run appears at the next hourly run; show original slot and delivery time, never relabel
+   an older occurrence as current.
 7. If occurrence_id and sequence equal the last ones you presented in this conversation, say
    "No new verified report since <occurrence_id>" instead of repeating the report.
 Then render the verified canonical body in the existing five-section format.
@@ -55,3 +59,16 @@ The frozen proof (`config/performance/v12_runtime_cross_cpu_proof.json`) points 
 3. Re-register through a focused PR changing only the registry JSON, README sync and PR metadata; the gate script is not touched.
 4. Durable option (needs approval): raise `retention-days` of the acceptance upload from 14 to 90. It does not change any check;
    it only lengthens the evidence lifetime.
+
+
+## 3. Separate evidence levels (never merge them)
+
+| Level | Meaning | Evidence | Status 2026-10-25 |
+| --- | --- | --- | --- |
+| PRIVATE_PUBLISHED | exact occurrence passes private readback and terminality | audit VERIFIED_PUBLISHED | none since 2026-10-24 |
+| POINTER_VERIFIED | `latest/verified.json` holds the occurrence, ADVANCED event in the orchestrator step | step summary and file | not yet produced (file 404) |
+| CHATGPT_READABLE | the task can read the pointer and the body path and the SHA-256 matches | ChatGPT run transcript supplied by the owner | UNVERIFIED |
+| CHATGPT_RENDERED | the verified body is shown in the five-section layout | ChatGPT output supplied by the owner | UNVERIFIED |
+| NATURAL_CHATGPT_OBSERVED | all above for a naturally scheduled occurrence (`origin` SCHEDULED_OR_FALLBACK) and an unmodified hourly task run | independent observation x3 | 0/3 |
+
+A RECOVERY-origin or manual occurrence can reach the first four levels but never the fifth.

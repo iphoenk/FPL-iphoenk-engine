@@ -193,3 +193,20 @@ def test_failed_contract_leaves_the_pointer_unchanged():
         vp.build_entry(FakeReader(private_files("DEEP", later, body=synthetic_deep_body(7, later, vice="Haaland"))),
                        "DEEP", later, now=NOW, orchestrator_run="2")
     assert store.files == before and json.loads(before["latest/verified.json"][0])["modes"]["DEEP"]
+
+
+def test_non_lock_provisional_pair_uses_baseline_wording_and_is_validated_not_skipped():
+    """Regression: the renderer words a non-LOCK pair 'Current C baseline'; that is a valid report, not a defect."""
+    body = _body(cv_state="PREPARE")
+    assert "Current C baseline: Haaland; Current VC baseline: Groß; state PREPARE." in body
+    assert _check(body) == []
+    facts = fs.extract_facts(fs.parse_canonical(body))
+    assert facts["cv"]["S08"] == ("Haaland", "Groß") and facts["cv_state"] == {"S08": "PREPARE", "S19": "PREPARE"}
+
+
+def test_baseline_pair_is_still_checked_for_membership_distinctness_and_state():
+    assert "CV_NOT_IN_XI" in _check(_body(cv_state="PREPARE", captain="Salah"))
+    assert "CV_SAME_PLAYER" in _check(_body(cv_state="PREPARE", vice="Haaland"))
+    body = _body(cv_state="PREPARE").replace("Captain baseline: Haaland (PREPARE)", "Captain baseline: Haaland (LOCK)")
+    assert "CV_STATE_INCONSISTENT" in _check(body)
+    assert "CV_MISSING_S08" in _check(_body(cv_state="PREPARE").replace("Current C baseline: Haaland;", ""))

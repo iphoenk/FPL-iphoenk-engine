@@ -450,8 +450,17 @@ def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actua
     for label, low, high in SAMPLE_BUCKETS:
         subset = [(f, a) for f, a in pairs if f.get("evidence_sample_size") is not None and int(f["evidence_sample_size"]) >= low and (high is None or int(f["evidence_sample_size"]) <= high)]
         by_sample[label] = {**_metrics(subset), "bucket_min": low, "bucket_max": high}
+    settled_elements = {int(f["element"]) for f, _ in pairs}
+    unsettled = sorted({int(f["element"]) for f in forecasts if f.get("element") is not None} - settled_elements)
     return {
         "overall": _metrics(pairs),
+        # Forecasts without a settled actual are reported, never silently dropped from the denominator.
+        "coverage": {
+            "forecast_count": len(settled_elements) + len(unsettled),
+            "settled_count": len(settled_elements),
+            "unsettled_count": len(unsettled),
+            "unsettled_elements": unsettled,
+        },
         "by_confidence_bucket": by_conf,
         "by_sample_size_bucket": by_sample,
         "governance": {

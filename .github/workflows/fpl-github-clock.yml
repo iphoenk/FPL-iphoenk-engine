@@ -7,6 +7,20 @@ on:
   schedule:
     - cron: "35 * * * *"
   workflow_dispatch:
+    inputs:
+      trigger_origin:
+        description: "MANUAL_SMOKE (default) or EXTERNAL_INDEPENDENT_CLOCK (independent scheduler; needs repository variable FPL_EXTERNAL_CLOCK=ENABLED)"
+        required: false
+        default: MANUAL_SMOKE
+        type: choice
+        options:
+          - MANUAL_SMOKE
+          - EXTERNAL_INDEPENDENT_CLOCK
+      external_trigger_id:
+        description: "Opaque id of the external scheduler invocation (audit only)"
+        required: false
+        default: ""
+        type: string
   issue_comment:
     types: [created]
 
@@ -19,7 +33,10 @@ jobs:
   tick:
     if: >-
       github.event_name == 'schedule' ||
-      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_dispatch' &&
+        (inputs.trigger_origin != 'EXTERNAL_INDEPENDENT_CLOCK' || vars.FPL_EXTERNAL_CLOCK == 'ENABLED')
+      ) ||
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.number == 431 &&
@@ -55,8 +72,40 @@ jobs:
           print(json.dumps(row, sort_keys=True))
           PY
 
+      - name: Bound and de-duplicate the external trigger
+        id: external
+        continue-on-error: true  # for external origin an unset output means no dispatch (fail closed)
+        env:
+          TRIGGER_ORIGIN: ${{ inputs.trigger_origin }}
+          REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
+          FPL_EXTERNAL_CLOCK: ${{ vars.FPL_EXTERNAL_CLOCK }}
+        shell: bash
+        run: python -m ops.external_clock_gate
+
+      - name: Announce external trigger provenance before any dispatch
+        if: steps.external.outputs.proceed == 'true' && inputs.trigger_origin == 'EXTERNAL_INDEPENDENT_CLOCK'
+        env:
+          REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
+          REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
+          EXTERNAL_TRIGGER_ID: ${{ inputs.external_trigger_id }}
+          ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > "$RUNNER_TEMP/external-announcement.txt"
+          import os
+          from ops.external_clock_gate import announcement
+          print(announcement(
+              {"report_mode": os.environ["REPORT_MODE"], "report_slot": os.environ["REPORT_SLOT"]},
+              external_trigger_id=os.environ["EXTERNAL_TRIGGER_ID"], actor=os.environ["ACTOR"],
+          ))
+          PY
+          gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/external-announcement.txt"
+
       - name: Dispatch exact operational fallback
         id: child
+        if: (steps.external.outputs.proceed == 'true' || inputs.trigger_origin != 'EXTERNAL_INDEPENDENT_CLOCK')
         env:
           LOGICAL_SLOT: ${{ steps.tick.outputs.logical_slot }}
           OBSERVED_AT: ${{ steps.tick.outputs.observed_at }}
@@ -112,6 +161,7 @@ jobs:
           echo "Created fallback child run: $run_id"
 
       - name: Wait for exact fallback child
+        if: (steps.external.outputs.proceed == 'true' || inputs.trigger_origin != 'EXTERNAL_INDEPENDENT_CLOCK')
         env:
           CHILD_RUN_ID: ${{ steps.child.outputs.run_id }}
         shell: bash
@@ -123,13 +173,15 @@ jobs:
           echo "Fallback child terminal success: $CHILD_RUN_ID"
 
       - name: Write origin-separated operational clock evidence
-        if: always()
+        if: always() && (steps.external.outputs.proceed == 'true' || inputs.trigger_origin != 'EXTERNAL_INDEPENDENT_CLOCK')
+        # A skipped external trigger (disabled, nothing due, duplicate, prior failure) writes nothing.
         env:
           LOGICAL_SLOT: ${{ steps.tick.outputs.logical_slot }}
           OBSERVED_AT: ${{ steps.tick.outputs.observed_at }}
           REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
           REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
           CHILD_RUN_ID: ${{ steps.child.outputs.run_id }}
+          TRIGGER_ORIGIN: ${{ inputs.trigger_origin }}
         shell: bash
         run: |
           set -euo pipefail
@@ -139,6 +191,7 @@ jobs:
           fi
           origin="MANUAL_SMOKE"
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then origin="GITHUB_NATIVE_OPERATIONAL_SCHEDULE"; fi
+          if [[ "${TRIGGER_ORIGIN:-}" == "EXTERNAL_INDEPENDENT_CLOCK" ]]; then origin="EXTERNAL_INDEPENDENT_CLOCK"; fi
           body="FPL_GITHUB_CLOCK | status=$status | event=$GITHUB_EVENT_NAME | schedule_origin=$origin | logical_slot=${LOGICAL_SLOT:-UNKNOWN} | observed_at=${OBSERVED_AT:-UNKNOWN} | report_mode=${REPORT_MODE:-UNKNOWN} | report_slot=${REPORT_SLOT:-NONE} | clock_run_id=$GITHUB_RUN_ID | fallback_run_id=${CHILD_RUN_ID:-NONE} | natural_clock_proof=false | downstream_terminal=UNVERIFIED_DISPATCH_ONLY"
           gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body "$body"
 
@@ -147,7 +200,7 @@ jobs:
     # readback and orchestrator run state. It runs beside, never before, the
     # tick job: it cannot delay, replace, or fail the clock, never dispatches,
     # never back-fills, and never creates natural-execution proof.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.trigger_origin != 'EXTERNAL_INDEPENDENT_CLOCK')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

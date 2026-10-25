@@ -65,11 +65,12 @@ def test_zero_copy_revalidation_executes_qa_and_preserves_large_files(monkeypatc
         "validate_final_delivery_barrier",
         lambda **kwargs: calls.append("final") or {"status": "PASS", "failures": []},
     )
-    monkeypatch.setattr(
-        selective,
-        "_parse_sections",
-        lambda body: (["S01"], {}, {}),
-    )
+    def _parse_deep_only(body, family=None):
+        # P0-C: DEEP post-render parsing must be scoped to the DEEP family.
+        assert family == "DEEP"
+        return (["S01"], {}, {})
+
+    monkeypatch.setattr(selective, "_parse_sections", _parse_deep_only)
 
     slot = "2026-09-28T21:20:00+07:00"
     report_bundle_path = tmp_path / "report_bundle.json"

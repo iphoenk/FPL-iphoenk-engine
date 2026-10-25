@@ -452,7 +452,9 @@ def build_transfer_economics(
         }
         shadow_semantics = "LEGACY_HEURISTIC_NOT_CANONICAL"
     else:
-        shadow_value = 0.0
+        # Unknown stays unknown: downstream arithmetic coerces None to 0.0 explicitly, but the
+        # surfaced economics must not present an unavailable shadow value as a numeric zero.
+        shadow_value = None
         shadow = {
             "status": "UNAVAILABLE",
             "ft_shadow_value": None,

@@ -141,3 +141,53 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "schedule" ]]; then origin="GITHUB_NATIVE_OPERATIONAL_SCHEDULE"; fi
           body="FPL_GITHUB_CLOCK | status=$status | event=$GITHUB_EVENT_NAME | schedule_origin=$origin | logical_slot=${LOGICAL_SLOT:-UNKNOWN} | observed_at=${OBSERVED_AT:-UNKNOWN} | report_mode=${REPORT_MODE:-UNKNOWN} | report_slot=${REPORT_SLOT:-NONE} | clock_run_id=$GITHUB_RUN_ID | fallback_run_id=${CHILD_RUN_ID:-NONE} | natural_clock_proof=false | downstream_terminal=UNVERIFIED_DISPATCH_ONLY"
           gh issue comment 431 --repo "$GITHUB_REPOSITORY" --body "$body"
+
+  missed-slot-audit:
+    # Read-only reconciliation of due DEEP/PRICE occurrences against private
+    # readback and orchestrator run state. It runs beside, never before, the
+    # tick job: it cannot delay, replace, or fail the clock, never dispatches,
+    # never back-fills, and never creates natural-execution proof.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Audit due occurrences without dispatch or backfill
+        continue-on-error: true
+        env:
+          FPL_PRIVATE_REPORTS_TOKEN: ${{ secrets.FPL_PRIVATE_REPORTS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ops.audit_due_occurrences --lookback-hours 36 --output "$RUNNER_TEMP/missed-slot-audit.json"
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          data = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "missed-slot-audit.json")))
+          print("### FPL missed-slot audit (audit only: no dispatch, no backfill)")
+          print("")
+          print("| occurrence | state | reason |")
+          print("| --- | --- | --- |")
+          for row in data["rows"]:
+              print(f"| `{row['occurrence_id']}` | {row['state']} | {row['reason']} |")
+          print("")
+          print("counts: " + json.dumps(data["counts"], sort_keys=True))
+          PY
+
+      - name: Persist missed-slot audit evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fpl-missed-slot-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/missed-slot-audit.json
+          if-no-files-found: ignore
+          retention-days: 30

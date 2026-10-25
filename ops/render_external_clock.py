@@ -13,6 +13,54 @@ LONDON = ZoneInfo("Europe/London")
 DEFAULT_REPO = "iphoenk/FPL-iphoenk-engine"
 WORKFLOW = "fpl-external-clock-fallback.yml"
 
+# Governed report-slot acceptance windows, in minutes relative to the slot.
+# The resolver here must never admit an occurrence that the downstream
+# fallback workflow would reject (RESOLVER subset of DOWNSTREAM); the gap is
+# reported by the missed-slot audit as MISSING instead of being silently
+# dropped or back-filled. tests/test_p0b_missed_slot_reconciliation.py binds
+# DOWNSTREAM_WINDOW_MINUTES to the literal in fpl-external-clock-fallback.yml.
+RESOLVER_WINDOW_MINUTES = (-5, 60)
+DOWNSTREAM_WINDOW_MINUTES = (-5, 70)
+
+
+def due_report_occurrences(now: datetime, lookback_hours: int = 36) -> list[dict[str, str]]:
+    """Enumerate real due checkpoints; publication state must be checked separately.
+
+    This is a pure candidate generator, not permission to backfill or dispatch.
+    Only occurrences within the bounded recovery horizon are returned.
+    """
+    if now.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+    if not 1 <= lookback_hours <= 72:
+        raise ValueError("lookback_hours must be in [1, 72]")
+    end = now.astimezone(timezone.utc)
+    start = end - timedelta(hours=lookback_hours)
+    slots: dict[str, dict[str, str]] = {}
+    local = end.astimezone(WIB)
+    london = end.astimezone(LONDON)
+    for offset in range(-4, 2):
+        day = (local + timedelta(days=offset)).date()
+        for hour, minute in ((4, 30), (12, 30), (21, 30)):
+            slot = datetime(day.year, day.month, day.day, hour, minute, tzinfo=WIB)
+            utc = slot.astimezone(timezone.utc)
+            if start <= utc <= end:
+                slots[slot.isoformat()] = {
+                    "report_mode": "DEEP",
+                    "report_slot": slot.isoformat(),
+                    "checkpoint_time": slot.strftime("%H:%M"),
+                }
+        london_day = (london + timedelta(days=offset)).date()
+        london_slot = datetime(london_day.year, london_day.month, london_day.day, 23, 30, tzinfo=LONDON)
+        slot = london_slot.astimezone(WIB)
+        utc = slot.astimezone(timezone.utc)
+        if start <= utc <= end:
+            slots[slot.isoformat()] = {
+                "report_mode": "PRICE",
+                "report_slot": slot.isoformat(),
+                "checkpoint_time": slot.strftime("%H:%M"),
+            }
+    return [slots[key] for key in sorted(slots)]
+
 
 def resolve_tick(now: datetime) -> dict[str, str]:
     if now.tzinfo is None:
@@ -56,7 +104,11 @@ def resolve_tick(now: datetime) -> dict[str, str]:
     eligible: list[tuple[float, str, datetime]] = []
     for mode, slot in candidates:
         delta = observed_wib - slot
-        if timedelta(minutes=-5) <= delta <= timedelta(minutes=60):
+        if (
+            timedelta(minutes=RESOLVER_WINDOW_MINUTES[0])
+            <= delta
+            <= timedelta(minutes=RESOLVER_WINDOW_MINUTES[1])
+        ):
             eligible.append((abs(delta.total_seconds()), mode, slot))
 
     report_mode = "NONE"

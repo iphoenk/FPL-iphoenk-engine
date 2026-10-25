@@ -48,8 +48,7 @@ owner; this proposal deliberately does not guess the prompt's current text.
 
 ## 3. Cross-CPU proof revalidation before 2026-11-08
 
-The frozen proof (`config/performance/v12_runtime_cross_cpu_proof.json`) points to run 40148055764; its artifact expires
-2026-11-08. Without weakening any gate:
+The frozen proof (`config/performance/v12_runtime_cross_cpu_proof.json`) now points to run 40183897457 (artifact 12594569816, 90-day retention, expires 2027-01-23); the previous run 40148055764 expired on 2026-11-08. Without weakening any gate:
 
 1. On or before 2026-11-03, list recent successful `pull_request` runs of `Repository governance` and their
    `v12-runtime-cross-cpu-acceptance-<run>` artifacts that are not expired.

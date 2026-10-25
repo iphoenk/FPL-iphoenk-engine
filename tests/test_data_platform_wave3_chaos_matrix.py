@@ -281,3 +281,83 @@ def test_last_good_recovery_is_allowed_only_for_nonvolatile_fields():
         last_good_available=True,
         field_is_volatile=True,
     ) == "UNAVAILABLE"
+
+
+# ---------------------------------------------------------------------------
+# F06: resilience evidence (fixtures only; nothing here touches production or dispatches anything)
+# ---------------------------------------------------------------------------
+from src.runtime_v6.consumer import assess_snapshot  # noqa: E402
+from src.runtime_v6.domains.observability import health as _health  # noqa: E402
+from src.runtime_v6.domains.observability.current_health import (  # noqa: E402
+    classify_evidence,
+    consumer_impact,
+    current_report_semantics,
+)
+from tests.test_data_platform_consumer import _write_snapshot  # noqa: E402
+
+_F06_NOW = datetime(2026, 10, 25, 12, 0, tzinfo=timezone.utc)
+
+
+def test_f06_source_429_and_timeout_are_transport_degradation_not_green():
+    attempts = [{"status": "AVAILABLE"}, {"status": "HTTP_429"}, {"status": "TIMEOUT"}]
+    assert _health._transport_health({}, {"attempts": attempts}) == "AMBER"
+    assert _health._transport_health({}, {"attempts": attempts[1:]}) == "RED"
+    assert _health._transport_health({}, {"attempts": attempts[:1]}) == "GREEN"
+
+
+def test_f06_cached_old_source_is_not_fresh():
+    old = (_F06_NOW.replace(hour=0)).isoformat()
+    assert _health._freshness_health({"check_freshness_minutes": 90}, {"checked_at": old}) in {"AMBER", "RED"}
+    assert _health._freshness_health({"critical": True}, {}) == "RED"
+    assert _health._freshness_health({}, {}) == "AMBER"
+
+
+def test_f06_missing_manifest_requires_direct_fallback(tmp_path):
+    r = assess_snapshot(tmp_path, now=_F06_NOW)
+    assert r["state"] == "INVALID" and r["failures"] == ["MISSING_MANIFEST"] and r["direct_fallback_eligible"] is True
+
+
+def test_f06_partial_publish_without_integrity_file_is_invalid(tmp_path):
+    _write_snapshot(tmp_path, _F06_NOW.isoformat())
+    (tmp_path / "health" / "publish_integrity.json").unlink()
+    r = assess_snapshot(tmp_path, now=_F06_NOW)
+    assert r["state"] == "INVALID" and r["failures"] == ["MISSING_PUBLISH_INTEGRITY"] and r["usable"] is False
+
+
+def test_f06_corrupt_manifest_is_unreadable_not_green(tmp_path):
+    _write_snapshot(tmp_path, _F06_NOW.isoformat())
+    (tmp_path / "manifest.json").write_text("{not json", encoding="utf-8")
+    r = assess_snapshot(tmp_path, now=_F06_NOW)
+    assert r["state"] == "INVALID" and r["failures"][0].startswith("UNREADABLE_RUNTIME")
+
+
+def test_f06_readback_digest_mismatch_is_invalid_with_both_digests_visible(tmp_path):
+    _write_snapshot(tmp_path, _F06_NOW.isoformat())
+    (tmp_path / "normalized" / "canonical_players.json").write_text(json.dumps({"player_count": 2}), encoding="utf-8")
+    r = assess_snapshot(tmp_path, now=_F06_NOW)
+    assert r["state"] == "INVALID" and "PUBLISH_TREE_DIGEST_MISMATCH" in r["failures"]
+    assert r["stored_tree_sha256"] and r["recomputed_tree_sha256"] and r["stored_tree_sha256"] != r["recomputed_tree_sha256"]
+
+
+def test_f06_report_plane_outage_does_not_invalidate_official_facts(tmp_path):
+    _write_snapshot(tmp_path, _F06_NOW.isoformat())
+    snapshot = assess_snapshot(tmp_path, now=_F06_NOW)
+    assert snapshot["state"] == "FRESH" and snapshot["usable"] is True
+    semantics = current_report_semantics(
+        runtime_control={"report_prefetch": True, "schedule_kind": "REPORT_PREFETCH"},
+        prefetch_health={"public_core_status": "STALE", "fresh_for_target_report": False},
+    )
+    assert semantics["report_mode"] == "DEGRADED"
+    impact = consumer_impact(snapshot_usable=snapshot["usable"], report_plane_available=False)
+    assert impact["official_facts"] == "VALID" and impact["report_plane"] == "UNAVAILABLE"
+    assert impact["official_facts_depend_on_report_plane"] == "NO" and impact["direct_fallback"] == "NOT_NEEDED"
+
+
+def test_f06_incomplete_or_failed_audit_proof_is_unknown_not_missing_or_verified():
+    assert classify_evidence({"run": True, "artifact": True})["state"] == "VERIFIED"
+    assert classify_evidence({"run": True, "artifact": False})["state"] == "MISSING"
+    incomplete = classify_evidence({"run": True, "artifact": None})
+    assert incomplete["state"] == "UNKNOWN" and incomplete["unknown_checks"] == ["artifact"]
+    assert classify_evidence({"run": False, "artifact": None})["state"] == "UNKNOWN"
+    assert classify_evidence({})["state"] == "UNKNOWN" and classify_evidence(None)["state"] == "UNKNOWN"
+    assert consumer_impact(snapshot_usable=None, report_plane_available=None)["official_facts"] == "UNKNOWN"

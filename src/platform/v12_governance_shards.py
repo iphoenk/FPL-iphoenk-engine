@@ -83,7 +83,7 @@ REQUIRED_FILES = [
     "tests/test_verified_pointer.py",
     "tests/test_recovery_dispatch.py"
 ]
-BASELINE_TOTAL = 1605
+BASELINE_TOTAL = 1606
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

@@ -661,7 +661,7 @@ jobs:
         with:
           name: v12-runtime-cross-cpu-acceptance-${{ github.run_id }}
           path: runtime-cross-cpu-acceptance.json
-          retention-days: 14
+          retention-days: 90
           if-no-files-found: error
 
   v6-verify:

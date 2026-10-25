@@ -91,6 +91,45 @@ def find_history_dir(reader: Reader, slot: str, *, max_gw_dirs: int = 4) -> str:
     raise NotFound(f"{base}/*/{token}")
 
 
+_SECTION_FAMILY_RE = {
+    "DEEP": re.compile(r"S\d{2}B?"),
+    "PRICE": re.compile(r"PRICE\d{1,2}"),
+    "MATCH": re.compile(r"MATCH\d{1,2}"),
+}
+
+
+def binding_failures(
+    reader: Reader, history: str, mode: str, digest: Mapping[str, Any], stage3_bytes: bytes
+) -> list[str]:
+    """Cross-artifact bindings that prove all files belong to ONE occurrence.
+
+    The occurrence directory is addressed by slot, but its artifacts must also
+    bind to each other by content: the digest must name the exact bundle
+    bytes, the private execution proof must name the exact Stage3 bytes, and
+    the published section catalog must belong to the report's own family (a
+    DEEP digest listing MATCH sections is the P0-C contamination signature).
+    """
+    failures: list[str] = []
+    try:
+        bundle_sha = hashlib.sha256(reader.read_bytes(f"{history}/report_bundle.json")).hexdigest()
+    except NotFound:
+        bundle_sha = ""
+    if not bundle_sha or bundle_sha != str(digest.get("canonical_bundle_sha256") or ""):
+        failures.append("BUNDLE_DIGEST_BINDING_MISMATCH")
+    try:
+        proof = _json(reader, f"{history}/execution_proof_private.json")
+        stage3_bound = str(proof.get("canonical_stage3_acceptance_sha256") or "")
+    except NotFound:
+        stage3_bound = ""
+    if not stage3_bound or stage3_bound != hashlib.sha256(stage3_bytes).hexdigest():
+        failures.append("STAGE3_BINDING_MISMATCH")
+    pattern = _SECTION_FAMILY_RE.get(mode)
+    ids = [str(i).strip().upper() for i in digest.get("section_ids") or []]
+    if pattern is not None and ids and not all(pattern.fullmatch(i) for i in ids):
+        failures.append("SECTION_CATALOG_FAMILY_MISMATCH")
+    return failures
+
+
 def build_evidence(
     reader: Reader, mode: str, slot: str
 ) -> dict[str, Any]:
@@ -100,6 +139,7 @@ def build_evidence(
     body_name = "serving_report.md" if mode == "DEEP" else "report_body.md"
     serving = _json(reader, f"{history}/digest.json")
     receipt = _json(reader, f"{history}/delivery_receipt.json")
+    stage3_bytes = reader.read_bytes(f"{history}/stage3_acceptance.json")
     stage3 = _json(reader, f"{history}/stage3_acceptance.json")
     body = reader.read_bytes(f"{history}/{body_name}")
     body_sha = hashlib.sha256(body).hexdigest()
@@ -165,6 +205,7 @@ def build_evidence(
         )
     )
     return {
+        "_binding_failures": binding_failures(reader, history, mode, serving, stage3_bytes),
         "report_mode": mode,
         "report_slot": slot,
         "occurrence_id": oid,
@@ -227,7 +268,12 @@ def verify_occurrence(reader: Reader, mode: str, slot: str) -> tuple[str, Any]:
         return "NOT_FOUND", str(exc)
     except ReadError as exc:
         return "ERROR", str(exc)
-    return "VERIFIED", classify_occurrence(evidence)
+    result = dict(classify_occurrence(evidence))
+    extra = [f for f in evidence.get("_binding_failures") or [] if f not in result["failures"]]
+    if extra:
+        result["failures"] = [*result["failures"], *extra]
+        result["terminality"] = "FAILED_VERIFY"
+    return "VERIFIED", result
 
 
 def classify_runs(

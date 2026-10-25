@@ -271,7 +271,11 @@ def private_files(mode, slot, *, gw=7, latest_slot=None, body=b"# report\n", sta
     sha = hashlib.sha256(body).hexdigest()
     oid = occurrence_id(mode, slot)
     d = f"reports/{aud.season_for(slot)}/gw_{gw}/{aud.slot_token(slot)}"
+    bundle = b'{"bundle": true}\n'
+    stage3_bytes = _j({"status": "PASS"})
     digest = {
+        "section_ids": [f"S{i:02d}" for i in range(1, 4)] if mode == "DEEP" else [f"{mode}{i}" for i in range(1, 4)],
+        "canonical_bundle_sha256": hashlib.sha256(bundle).hexdigest(),
         "report_mode": mode,
         "report_slot": slot,
         "occurrence_id": oid,
@@ -294,7 +298,11 @@ def private_files(mode, slot, *, gw=7, latest_slot=None, body=b"# report\n", sta
     files = {
         f"{d}/digest.json": _j(digest),
         f"{d}/delivery_receipt.json": _j(receipt),
-        f"{d}/stage3_acceptance.json": _j({"status": "PASS"}),
+        f"{d}/stage3_acceptance.json": stage3_bytes,
+        f"{d}/report_bundle.json": bundle,
+        f"{d}/execution_proof_private.json": _j(
+            {"canonical_stage3_acceptance_sha256": hashlib.sha256(stage3_bytes).hexdigest()}
+        ),
         f"{d}/{body_name}": body,
     }
     if mode == "DEEP":
@@ -369,6 +377,36 @@ def test_invalid_json_is_error_not_verified():
     d = f"reports/{aud.season_for(PRICE_SLOT)}/gw_7/{aud.slot_token(PRICE_SLOT)}"
     files[f"{d}/digest.json"] = b"{not json"
     assert aud.verify_occurrence(FakeReader(files), "PRICE", PRICE_SLOT)[0] == "ERROR"
+
+
+def _dir(mode, slot, gw=7):
+    return f"reports/{aud.season_for(slot)}/gw_{gw}/{aud.slot_token(slot)}"
+
+
+def test_stage3_file_from_another_occurrence_is_rejected_by_hash_binding():
+    files = private_files("DEEP", DEEP_SLOT)
+    files[f"{_dir('DEEP', DEEP_SLOT)}/stage3_acceptance.json"] = _j({"status": "PASS", "other": 1})
+    result = aud.verify_occurrence(FakeReader(files), "DEEP", DEEP_SLOT)[1]
+    assert result["terminality"] == "FAILED_VERIFY" and "STAGE3_BINDING_MISMATCH" in result["failures"]
+
+
+def test_bundle_not_matching_digest_is_rejected():
+    files = private_files("DEEP", DEEP_SLOT)
+    files[f"{_dir('DEEP', DEEP_SLOT)}/report_bundle.json"] = b'{"bundle": "other"}\n'
+    result = aud.verify_occurrence(FakeReader(files), "DEEP", DEEP_SLOT)[1]
+    assert "BUNDLE_DIGEST_BINDING_MISMATCH" in result["failures"]
+
+
+def test_deep_digest_with_match_section_ids_is_the_p0c_contamination_signature():
+    files = private_files("DEEP", DEEP_SLOT)
+    path = f"{_dir('DEEP', DEEP_SLOT)}/digest.json"
+    digest = json.loads(files[path])
+    digest["section_ids"] = ["S01", "MATCH1", "MATCH2"]
+    files[path] = _j(digest)
+    files["latest/deep.json"] = _j(digest)
+    result = aud.verify_occurrence(FakeReader(files), "DEEP", DEEP_SLOT)[1]
+    assert "SECTION_CATALOG_FAMILY_MISMATCH" in result["failures"]
+    assert result["terminality"] == "FAILED_VERIFY"
 
 
 def test_occurrence_found_in_previous_gw_directory():

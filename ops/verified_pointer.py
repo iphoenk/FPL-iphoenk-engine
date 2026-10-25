@@ -100,6 +100,21 @@ def _require_presentation_qa(reader: Reader, history: str) -> None:
         raise Unverified(["PRESENTATION_QA_FAILED"])
 
 
+def _require_five_section_contract(reader: Reader, history: str, slot: str) -> None:
+    """Fail closed unless the DEEP body satisfies the mandatory five-section presentation contract."""
+    import re
+
+    from src.engines import v12_five_section_presentation as contract
+
+    match = re.search(r"/gw_(\d+)/", history)
+    wib = datetime.fromisoformat(slot).astimezone(timezone(timedelta(hours=7)))
+    slot_text = f"{wib.day} {wib:%b %Y}, {wib:%H:%M} WIB"
+    body = reader.read_bytes(f"{history}/serving_report.md").decode("utf-8")
+    failures = contract.gate(body, expected_gw=int(match.group(1)) if match else -1, expected_slot_wib=slot_text)
+    if failures:
+        raise Unverified(["PRESENTATION_CONTRACT_FAILED"] + failures)
+
+
 def _optional_json(reader: Reader, path: str) -> dict[str, Any]:
     try:
         data = json.loads(reader.read_bytes(path))
@@ -145,6 +160,7 @@ def build_entry(
 
     if mode == "DEEP":
         _require_presentation_qa(reader, history)
+        _require_five_section_contract(reader, history, slot)
 
     latest_bytes = reader.read_bytes(f"latest/{_SERVING[mode]}")
     latest = json.loads(latest_bytes)
@@ -183,6 +199,7 @@ def build_entry(
         "generated_at": _generated_at(reader, history, mode),
         "runtime_sha": _runtime_sha(reader, history),
         "origin": origin,
+        "presentation_contract": "FIVE_SECTION_V1_PASS" if mode == "DEEP" else "NOT_APPLICABLE",
         "canonical_body_sha256": body_sha,
         "canonical_bundle_sha256": str(digest.get("canonical_bundle_sha256") or ""),
         "digest_sha256": _sha(digest_bytes),

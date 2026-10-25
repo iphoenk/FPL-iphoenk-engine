@@ -1,0 +1,2052 @@
+{
+ "cases": [
+  {
+   "expected": {
+    "baseline_verified": true,
+    "bench_raw_points": 6,
+    "captain_points": 16,
+    "effective_captain_id": 10,
+    "gross_points": 41,
+    "hit": 4,
+    "hit_verified": true,
+    "live_overall_points": 137,
+    "net_points": 37,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "basic_gross_net_captain_bench_separate",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 4
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 100
+   }
+  },
+  {
+   "expected": {
+    "gross_points": 41,
+    "hit": null,
+    "hit_verified": false,
+    "live_overall_points": null,
+    "net_points": null,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "unknown_hit_is_null_not_zero",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "points": 41
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 100
+   }
+  },
+  {
+   "expected": {
+    "baseline_source": "OFFICIAL_PUBLISHED_STANDING_DIFFERENCE",
+    "baseline_verified": false,
+    "gross_points": 24,
+    "live_overall_points": 224,
+    "net_points": 24,
+    "previous_overall_points": 200,
+    "status": "CALCULATED"
+   },
+   "kwargs": {
+    "published_standing": {
+     "gw_score": 20,
+     "league_total": 220
+    }
+   },
+   "live_points": {
+    "1": 2,
+    "10": 2,
+    "11": 2,
+    "12": 2,
+    "13": 2,
+    "14": 2,
+    "15": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2,
+    "5": 2,
+    "6": 2,
+    "7": 2,
+    "8": 2,
+    "9": 2
+   },
+   "name": "picks0_standing20_live24_keeps_basis",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0,
+     "points": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ]
+   }
+  },
+  {
+   "expected": {
+    "autosub_state": "OFFICIAL_APPLIED",
+    "calculated_autosub_applied": 1,
+    "gross_points": 43,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "autosub_pre_published_multipliers_applied_once",
+   "record": {
+    "automatic_subs": [
+     {
+      "element_in": 12,
+      "element_out": 3
+     }
+    ],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "autosub_state": "OFFICIAL_APPLIED",
+    "calculated_autosub_applied": 0,
+    "gross_points": 43,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "autosub_post_published_is_idempotent",
+   "record": {
+    "automatic_subs": [
+     {
+      "element_in": 12,
+      "element_out": 3
+     }
+    ],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 0,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 1,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "captain_points": 12,
+    "effective_captain_id": 11,
+    "gross_points": 31,
+    "status": "PROVISIONAL",
+    "vice_takeover_provisional": true
+   },
+   "kwargs": {
+    "finished_teams": [
+     1
+    ],
+    "live_minutes": {
+     "10": 0,
+     "11": 90
+    },
+    "player_teams": {
+     "10": 1,
+     "11": 2
+    }
+   },
+   "live_points": {
+    "1": 2,
+    "10": 0,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "captain_dnp_vice_takeover_is_provisional",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "captain_points": 0,
+    "effective_captain_id": 10,
+    "gross_points": 25,
+    "status": "CALCULATED",
+    "vice_takeover_provisional": false
+   },
+   "kwargs": {
+    "finished_teams": [],
+    "live_minutes": {
+     "10": 0,
+     "11": 90
+    },
+    "player_teams": {
+     "10": 1,
+     "11": 2
+    }
+   },
+   "live_points": {
+    "1": 2,
+    "10": 0,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "captain_not_yet_confirmed_dnp_no_takeover",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "bench_raw_points": 6,
+    "captain_points": 24,
+    "gross_points": 49,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "triple_captain_uses_x3",
+   "record": {
+    "active_chip": "3xc",
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 3,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "captain_points": 18,
+    "effective_captain_id": 11,
+    "gross_points": 37,
+    "status": "PROVISIONAL"
+   },
+   "kwargs": {
+    "finished_teams": [
+     1
+    ],
+    "live_minutes": {
+     "10": 0,
+     "11": 90
+    },
+    "player_teams": {
+     "10": 1,
+     "11": 2
+    }
+   },
+   "live_points": {
+    "1": 2,
+    "10": 0,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "triple_captain_vice_takeover_uses_x3",
+   "record": {
+    "active_chip": "3xc",
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 3,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "bench_raw_points": 0,
+    "captain_points": 16,
+    "gross_points": 47,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "bench_boost_counts_all_fifteen",
+   "record": {
+    "active_chip": "bboost",
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 1,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 1,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 1,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 1,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "bench_raw_points": -4,
+    "captain_points": -2,
+    "gross_points": -12,
+    "live_overall_points": 34,
+    "net_points": -16,
+    "status": "CALCULATED"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": -1,
+    "10": -1,
+    "11": -1,
+    "12": -1,
+    "13": -1,
+    "14": -1,
+    "15": -1,
+    "2": -1,
+    "3": -1,
+    "4": -1,
+    "5": -1,
+    "6": -1,
+    "7": -1,
+    "8": -1,
+    "9": -1
+   },
+   "name": "negative_team_points_are_valid",
+   "record": {
+    "automatic_subs": [],
+    "entry_history": {
+     "event_transfers_cost": 4
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 50
+   }
+  },
+  {
+   "expected": {
+    "autosub_state": "PENDING",
+    "status": "PROVISIONAL"
+   },
+   "kwargs": {
+    "finished_teams": [
+     5
+    ],
+    "live_minutes": {
+     "3": 0
+    },
+    "player_teams": {
+     "3": 5
+    }
+   },
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "unconfirmed_dnp_starter_stays_provisional_never_final",
+   "record": {
+    "entry_history": {
+     "event_transfers_cost": 0
+    },
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ],
+    "previous_overall_authority": "OFFICIAL_PREVIOUS_GW_HISTORY",
+    "previous_overall_points": 0
+   }
+  },
+  {
+   "expected": {
+    "reason": "INVALID_SUBMITTED_PICKS",
+    "status": "UNAVAILABLE"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "5": 1,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "invalid_picks_unavailable",
+   "record": {
+    "entry_history": {},
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ]
+   }
+  },
+  {
+   "expected": {
+    "reason": "LIVE_PLAYER_POINTS_MISSING",
+    "status": "UNAVAILABLE"
+   },
+   "kwargs": {},
+   "live_points": {
+    "1": 2,
+    "10": 8,
+    "11": 6,
+    "12": 2,
+    "13": 1,
+    "14": 0,
+    "15": 3,
+    "2": 1,
+    "3": 0,
+    "4": 3,
+    "6": 5,
+    "7": 2,
+    "8": 4,
+    "9": 1
+   },
+   "name": "missing_live_points_unavailable_not_zero",
+   "record": {
+    "entry_history": {},
+    "picks": [
+     {
+      "captain": false,
+      "element_id": 1,
+      "multiplier": 1,
+      "squad_position": 1,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 2,
+      "multiplier": 1,
+      "squad_position": 2,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 3,
+      "multiplier": 1,
+      "squad_position": 3,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 4,
+      "multiplier": 1,
+      "squad_position": 4,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 5,
+      "multiplier": 1,
+      "squad_position": 5,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 6,
+      "multiplier": 1,
+      "squad_position": 6,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 7,
+      "multiplier": 1,
+      "squad_position": 7,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 8,
+      "multiplier": 1,
+      "squad_position": 8,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 9,
+      "multiplier": 1,
+      "squad_position": 9,
+      "vice_captain": false
+     },
+     {
+      "captain": true,
+      "element_id": 10,
+      "multiplier": 2,
+      "squad_position": 10,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 11,
+      "multiplier": 1,
+      "squad_position": 11,
+      "vice_captain": true
+     },
+     {
+      "captain": false,
+      "element_id": 12,
+      "multiplier": 0,
+      "squad_position": 12,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 13,
+      "multiplier": 0,
+      "squad_position": 13,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 14,
+      "multiplier": 0,
+      "squad_position": 14,
+      "vice_captain": false
+     },
+     {
+      "captain": false,
+      "element_id": 15,
+      "multiplier": 0,
+      "squad_position": 15,
+      "vice_captain": false
+     }
+    ]
+   }
+  }
+ ],
+ "note": "Hand-computed expectations for score_entry. Shared with the dashboard JS score-context tests; synthetic data only.",
+ "schema": "AUDIT_SCORE_CASES_V1"
+}

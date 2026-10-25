@@ -267,7 +267,34 @@ def _j(obj):
     return (json.dumps(obj, sort_keys=True) + "\n").encode()
 
 
-def private_files(mode, slot, *, gw=7, latest_slot=None, body=b"# report\n", status="READY_FULL"):
+def synthetic_deep_body(gw, slot, *, status="READY_FULL", captain="Haaland", vice="Groß", xi=None, bench=None):
+    """Minimal canonical-shaped DEEP body: 22 sections, 11+4 squad, consistent C/VC."""
+    from datetime import datetime, timedelta, timezone
+
+    t = datetime.fromisoformat(slot).astimezone(timezone(timedelta(hours=7)))
+    xi = xi or ["Verbruggen", "Calafiori", "Konsa", "De Cuyper", "Gvardiol", "Rogers", "Tavernier", "Groß",
+                "Palmer", "Mbeumo", "Haaland"]
+    bench = bench or ["Tzolakis", "João Pedro", "Ajayi", "Barry"]
+    ids = ["1", "2", "3", "4", "5", "6", "6B", "7", "8", "9", "10", "11", "12", "13", "14", "14B", "15", "15B",
+           "16", "17", "18", "19"]
+    extra = {
+        "6": f"XI: {', '.join(xi)}\nBench: {', '.join(bench)}\n<style>.s06-dashboard{{}}</style>",
+        "8": f"Current C: {captain}; Current VC: {vice}; state LOCK.",
+        "18": f"Canonical C/VC: {captain} / {vice}; frontier CLOSE.",
+        "19": f"XI: formation 4-5-1; {', '.join(reversed(xi))}\nCaptain: {captain} (LOCK); Vice: {vice}.",
+    }
+    lines = ["FPL MASTER V12 — DEEP REPORT", f"Planning GW: GW{gw}",
+             f"Logical report slot: {t.day} {t:%b %Y}, {t:%H:%M} WIB",
+             f"Report: {'🟡 READY_DEGRADED' if 'DEGRADED' in status else '🟢 READY_FULL'} · Exact occurrence",
+             "Sections: 22/22 lifecycle-visible · S16B not due", ""]
+    for i in ids:
+        lines += [f"## {i}. SECTION {i}", "Status: COMPLETE", extra.get(i, f"content {i}"), ""]
+    return ("\n".join(lines)).encode()
+
+
+def private_files(mode, slot, *, gw=7, latest_slot=None, body=None, status="READY_FULL"):
+    if body is None:
+        body = synthetic_deep_body(gw, slot, status=status) if mode == "DEEP" else b"# report\n"
     sha = hashlib.sha256(body).hexdigest()
     oid = occurrence_id(mode, slot)
     d = f"reports/{aud.season_for(slot)}/gw_{gw}/{aud.slot_token(slot)}"

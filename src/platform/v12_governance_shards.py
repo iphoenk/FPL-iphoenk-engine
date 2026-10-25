@@ -80,9 +80,10 @@ REQUIRED_FILES = [
     "tests/test_deep_cross_mode_render_guard.py",
     "tests/test_section_family_catalogs.py",
     "tests/test_p0b_missed_slot_reconciliation.py",
-    "tests/test_verified_pointer.py"
+    "tests/test_verified_pointer.py",
+    "tests/test_recovery_dispatch.py"
 ]
-BASELINE_TOTAL = 1592
+BASELINE_TOTAL = 1605
 CORE_SHARDS = tuple(f"core-{i:02}" for i in range(12))
 HOT_SHARDS = (
     "hot-35", "hot-36-1207", "hot-36-4319", "hot-36-6471",

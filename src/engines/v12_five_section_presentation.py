@@ -78,8 +78,10 @@ def extract_facts(parsed: Mapping[str, Any]) -> dict[str, Any]:
     slot = _SLOT_RE.search(header)
     xi = _names(_line(s06, "XI") or "")
     bench = _names(_line(s06, "Bench") or "")
-    cv = re.search(r"Current C:\s*(.+?);\s*Current VC:\s*(.+?);", s08)
-    s19_cv = re.search(r"(?m)^Captain:\s*(.+?)\s*\([^)]*\);\s*Vice:\s*(.+?)\.?\s*$", s19)
+    # The renderer words the pair "Current C/VC" when LOCK and "Current C/VC baseline" otherwise
+    # (provisional, state shown); both are the canonical pair and are validated identically.
+    cv = re.search(r"Current C(?: baseline)?:\s*(.+?);\s*Current VC(?: baseline)?:\s*(.+?);\s*state\s+(\w+)", s08)
+    s19_cv = re.search(r"(?m)^Captain(?: baseline)?:\s*(.+?)\s*\(([^)]*)\);\s*Vice(?: baseline)?:\s*(.+?)\.?\s*$", s19)
     s18_cv = re.search(r"(?m)^Canonical C/VC:\s*(.+?)\s*/\s*(.+?);", s18)
     s19_xi_line = _line(s19, "XI") or ""
     s19_xi = _names(s19_xi_line.split(";", 1)[1]) if ";" in s19_xi_line else []
@@ -91,8 +93,9 @@ def extract_facts(parsed: Mapping[str, Any]) -> dict[str, Any]:
         "xi": xi,
         "bench": bench,
         "s19_xi": s19_xi,
+        "cv_state": {"S08": cv.group(3) if cv else None, "S19": s19_cv.group(2) if s19_cv else None},
         "cv": {"S08": (cv.group(1), cv.group(2)) if cv else None,
-               "S19": (s19_cv.group(1), s19_cv.group(2)) if s19_cv else None,
+               "S19": (s19_cv.group(1), s19_cv.group(3)) if s19_cv else None,
                "S18": (s18_cv.group(1), s18_cv.group(2)) if s18_cv else None},
     }
 
@@ -193,6 +196,9 @@ def validate_view(
         failures.append("CV_MISSING_S08")
     if len(set(pairs.values())) > 1:
         failures.append("CV_INCONSISTENT_ACROSS_SECTIONS")
+    states = {v for v in facts["cv_state"].values() if v}
+    if len(states) > 1:
+        failures.append("CV_STATE_INCONSISTENT")
     for pair in pairs.values():
         cap, vice = pair
         if cap == vice:

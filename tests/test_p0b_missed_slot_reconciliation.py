@@ -267,7 +267,7 @@ def _j(obj):
     return (json.dumps(obj, sort_keys=True) + "\n").encode()
 
 
-def synthetic_deep_body(gw, slot, *, status="READY_FULL", captain="Haaland", vice="Groß", xi=None, bench=None):
+def synthetic_deep_body(gw, slot, *, status="READY_FULL", captain="Haaland", vice="Groß", xi=None, bench=None, cv_state="LOCK"):
     """Minimal canonical-shaped DEEP body: 22 sections, 11+4 squad, consistent C/VC."""
     from datetime import datetime, timedelta, timezone
 
@@ -279,9 +279,12 @@ def synthetic_deep_body(gw, slot, *, status="READY_FULL", captain="Haaland", vic
            "16", "17", "18", "19"]
     extra = {
         "6": f"XI: {', '.join(xi)}\nBench: {', '.join(bench)}\n<style>.s06-dashboard{{}}</style>",
-        "8": f"Current C: {captain}; Current VC: {vice}; state LOCK.",
+        "8": (f"Current C: {captain}; Current VC: {vice}; state LOCK." if cv_state == "LOCK"
+              else f"Current C baseline: {captain}; Current VC baseline: {vice}; state {cv_state}."),
         "18": f"Canonical C/VC: {captain} / {vice}; frontier CLOSE.",
-        "19": f"XI: formation 4-5-1; {', '.join(reversed(xi))}\nCaptain: {captain} (LOCK); Vice: {vice}.",
+        "19": f"XI: formation 4-5-1; {', '.join(reversed(xi))}\n"
+              + (f"Captain: {captain} (LOCK); Vice: {vice}." if cv_state == "LOCK"
+                 else f"Captain baseline: {captain} ({cv_state}); Vice baseline: {vice}."),
     }
     lines = ["FPL MASTER V12 — DEEP REPORT", f"Planning GW: GW{gw}",
              f"Logical report slot: {t.day} {t:%b %Y}, {t:%H:%M} WIB",

@@ -512,3 +512,81 @@ def test_gh_runs_parses_jsonl_and_failure_raises_read_error():
     bad = lambda cmd, **kw: _Proc(1, "", "x")  # noqa: E731
     with pytest.raises(aud.ReadError):
         aud.gh_runs("o/r", since, run=bad)
+
+
+# ---- clock cadence diagnosis (audit-only) -------------------------------------
+from ops import clock_cadence as cc  # noqa: E402
+
+
+def _utc(s):
+    return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+
+def test_diagnosis_distinguishes_platform_gap_from_dispatch_defect():
+    slot = "2026-10-25T12:30:00+07:00"  # 05:30Z; resolver window 05:25Z..06:30Z
+    ticks = cc.parse_ticks(["2026-10-25T05:12:19Z", "2026-10-25T07:20:00Z"])
+    assert cc.diagnose_missing(slot, ticks) == cc.NO_TICK_IN_WINDOW
+    ticks.append(_utc("2026-10-25T05:50:00Z"))
+    assert cc.diagnose_missing(slot, sorted(ticks)) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, None) == cc.TICK_EVIDENCE_UNAVAILABLE
+
+
+def test_diagnosis_window_edges_match_resolver_constants():
+    slot = "2026-10-25T12:30:00+07:00"
+    edge_lo = _utc("2026-10-25T05:30:00Z") + timedelta(minutes=cc.RESOLVER_WINDOW_MINUTES[0])
+    edge_hi = _utc("2026-10-25T05:30:00Z") + timedelta(minutes=cc.RESOLVER_WINDOW_MINUTES[1])
+    assert cc.diagnose_missing(slot, [edge_lo]) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, [edge_hi]) == cc.TICK_NO_DISPATCH
+    assert cc.diagnose_missing(slot, [edge_hi + timedelta(seconds=1)]) == cc.NO_TICK_IN_WINDOW
+
+
+def test_cadence_summary_and_annotation_never_change_state():
+    now = _utc("2026-10-25T07:00:00Z")
+    ticks = cc.parse_ticks(["bad", "2026-10-25T05:12:19Z", "2026-10-25T00:29:51Z", "2026-10-24T21:50:26Z"])
+    assert len(ticks) == 3  # unparsable dropped
+    summary = cc.cadence_summary(now, ticks, 12)
+    assert summary["ticks_observed"] == 3 and summary["ticks_expected"] == 12
+    assert summary["delivery_ratio"] == 0.25
+    assert summary["minutes_since_last_tick"] == 107.7
+    rows = [
+        {"report_slot": "2026-10-25T12:30:00+07:00", "state": "MISSING"},
+        {"report_slot": "2026-10-25T04:30:00+07:00", "state": "FAILED"},
+    ]
+    out, _ = cc.annotate(rows, ticks, now, 12)
+    assert [r["state"] for r in out] == ["MISSING", "FAILED"]
+    assert out[0]["diagnosis"] == cc.NO_TICK_IN_WINDOW and "diagnosis" not in out[1]
+    assert "diagnosis" not in rows[0]  # input not mutated
+
+
+def test_audit_record_carries_cadence_and_survives_tick_api_failure():
+    now = _utc("2026-10-25T07:00:00Z")
+
+    class Empty:
+        def read_bytes(self, path):
+            raise aud.NotFound(path)
+
+        def list_dir(self, path):
+            raise aud.NotFound(path)
+
+    rec = aud.audit(now, Empty(), lambda: [], 12, lambda: ["2026-10-25T05:12:19Z"])
+    assert rec["clock_cadence"]["ticks_observed"] == 1
+    assert all(r["diagnosis"] for r in rec["rows"] if r["state"] == "MISSING")
+    assert rec["natural_execution_created"] is False
+
+    def boom():
+        raise aud.ReadError("CLOCK_RUNS_API_FAILED")
+
+    rec = aud.audit(now, Empty(), lambda: [], 12, boom)
+    assert rec["clock_cadence"] is None
+    assert all(r["diagnosis"] == cc.TICK_EVIDENCE_UNAVAILABLE for r in rec["rows"] if r["state"] == "MISSING")
+
+
+def test_gh_clock_ticks_adapter():
+    class P:
+        def __init__(self, rc, out):
+            self.returncode, self.stdout = rc, out
+
+    got = aud.gh_clock_ticks("o/r", _utc("2026-10-25T00:00:00Z"), run=lambda *a, **k: P(0, "2026-10-25T05:12:19Z\n\n"))
+    assert got == ["2026-10-25T05:12:19Z"]
+    with pytest.raises(aud.ReadError):
+        aud.gh_clock_ticks("o/r", _utc("2026-10-25T00:00:00Z"), run=lambda *a, **k: P(1, ""))

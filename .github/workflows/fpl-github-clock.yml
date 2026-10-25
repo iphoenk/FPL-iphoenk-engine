@@ -175,12 +175,14 @@ jobs:
           data = json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "missed-slot-audit.json")))
           print("### FPL missed-slot audit (audit only: no dispatch, no backfill)")
           print("")
-          print("| occurrence | state | reason |")
-          print("| --- | --- | --- |")
+          print("| occurrence | state | reason | clock diagnosis |")
+          print("| --- | --- | --- | --- |")
           for row in data["rows"]:
-              print(f"| `{row['occurrence_id']}` | {row['state']} | {row['reason']} |")
+              print(f"| `{row['occurrence_id']}` | {row['state']} | {row['reason']} | {row.get('diagnosis', '')} |")
           print("")
           print("counts: " + json.dumps(data["counts"], sort_keys=True))
+          print("")
+          print("clock cadence: " + json.dumps(data.get("clock_cadence"), sort_keys=True))
           PY
 
       - name: Persist missed-slot audit evidence

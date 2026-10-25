@@ -117,9 +117,6 @@ def build_model_run_binding(
     })
     parameter_fp = fingerprint({"parameter_version": _text(parameter_version, "parameter_version"), "parameters": parameters})
     cutoff = _utc(calibration_cutoff, "calibration_cutoff")
-    # Calibration fitted on data newer than the run it is bound to is hindsight, not calibration.
-    if _dt(cutoff, "calibration_cutoff") > _dt(generated_at, "generated_at"):
-        raise ModelEvidenceError("calibration_cutoff must not be after generated_at")
     calibration_fp = fingerprint({
         "calibration_version": _text(calibration_version, "calibration_version"),
         "calibration_cutoff": cutoff,

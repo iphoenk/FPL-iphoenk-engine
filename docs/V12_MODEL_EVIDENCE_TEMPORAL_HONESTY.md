@@ -1,8 +1,8 @@
 # Model evidence: temporal and coverage honesty (E04)
 
-Two gaps found by the 2026-10-25 audit and closed here, both additive or fail-closed and neither changing a score, weight or rule.
+Two gaps found by the 2026-10-25 audit: one closed (additive coverage), one recorded and deliberately left open. No score, weight or rule changed.
 
-1. `build_model_run_binding` now rejects a `calibration_cutoff` later than `generated_at` (`ModelEvidenceError`). Equal is accepted. The four shipped configs (`v12_monte_carlo`, `v12_package_utility`, `v12_mini_league_overlay`, `v12_lineup_optimizer`) carry September cutoffs, which a regression test pins. Limit: the binding does not know the target deadline, so "before the target" is enforced against the run time only; the deadline rule stays in `freeze_prediction`.
+1. NOT FIXED, recorded: `build_model_run_binding` accepts a `calibration_cutoff` later than `generated_at`. A blanket guard was tried and reverted: it fail-closed 34 `test_mini_league_overlay` tests, because the shipped overlay cutoff (2026-09-20T02:01:16Z) postdates the fixture run times, i.e. historical replays bind a later configured cutoff. Production runs use the current time and would pass, but replay behaviour is a design decision. `tests/test_audit_model_evidence_temporal.py` pins the current behaviour.
 2. `prediction_calibration_metrics` adds `coverage` (`forecast_count`, `settled_count`, `unsettled_count`, `unsettled_elements`). Forecasts without a settled actual used to disappear from `sample_size`; they are now counted. Metrics themselves are unchanged.
 
 Already covered by existing suites, not re-tested: post-deadline forecast rejection and immutable freeze (`test_model_evidence_calibration`, `test_model_evidence_execution_binding`), settlement only after a finished event, fingerprints independent of wall clock, FPL availability flags as observation rather than a direct start probability (`test_player_minutes_finite_state`).

@@ -162,6 +162,14 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
+      - name: Expose effective recovery-dispatch switch
+        env:
+          FPL_RECOVERY_DISPATCH_VALUE: ${{ vars.FPL_RECOVERY_DISPATCH }}
+        shell: bash
+        run: |
+          if [ "$FPL_RECOVERY_DISPATCH_VALUE" = "ENABLED" ]; then state=ENABLED; else state="DISABLED (value is not exactly ENABLED)"; fi
+          echo "::notice title=FPL_RECOVERY_DISPATCH::$state"
+
       - name: Audit due occurrences without dispatch or backfill
         continue-on-error: true
         env:

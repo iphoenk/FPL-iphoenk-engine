@@ -82,7 +82,52 @@ def receipt_present(comments: Sequence[str], oid: str, run_id: str) -> bool:
     return False
 
 
-def build_entry(reader: Reader, mode: str, slot: str, *, now: datetime, orchestrator_run: str) -> dict[str, Any]:
+def _require_presentation_qa(reader: Reader, history: str) -> None:
+    """DEEP requires the occurrence's own presentation QA: 22 sections, exact order, no root failure."""
+    try:
+        qa = json.loads(reader.read_bytes(f"{history}/presentation_qa.json"))
+    except NotFound:
+        raise Unverified(["PRESENTATION_QA_MISSING"])
+    except ValueError:
+        raise Unverified(["PRESENTATION_QA_INVALID"])
+    ok = (
+        qa.get("section_count") == qa.get("expected_section_count") == 22
+        and qa.get("section_order_exact") is True
+        and qa.get("root_failure_count") == 0
+        and qa.get("visible_report_body_non_empty") is True
+    )
+    if not ok:
+        raise Unverified(["PRESENTATION_QA_FAILED"])
+
+
+def _optional_json(reader: Reader, path: str) -> dict[str, Any]:
+    try:
+        data = json.loads(reader.read_bytes(path))
+    except (NotFound, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _generated_at(reader: Reader, history: str, mode: str) -> str | None:
+    name = "delivery_status.json" if mode == "DEEP" else "execution_proof.json"
+    value = _optional_json(reader, f"{history}/{name}").get("generated_at")
+    return str(value) if value else None
+
+
+def _runtime_sha(reader: Reader, history: str) -> str | None:
+    value = _optional_json(reader, f"{history}/delivery_receipt.json").get("runtime_sha")
+    return str(value) if value else None
+
+
+def recovery_announced(comments: Sequence[str], oid: str) -> bool:
+    """True when #431 carries the RECOVERY announcement for this exact occurrence."""
+    marker = f"occurrence_id={oid} |"
+    return any(c.startswith("FPL_RECOVERY_DISPATCH") and "label=RECOVERY" in c and marker in c for c in comments)
+
+
+def build_entry(
+    reader: Reader, mode: str, slot: str, *, now: datetime, orchestrator_run: str, origin: str = "SCHEDULED_OR_FALLBACK"
+) -> dict[str, Any]:
     oid = occurrence_id(mode, slot)
     outcome, result = verify_occurrence(reader, mode, slot)
     if outcome != "VERIFIED":
@@ -97,6 +142,9 @@ def build_entry(reader: Reader, mode: str, slot: str, *, now: datetime, orchestr
     body_sha = _sha(reader.read_bytes(f"{history}/{body_name}"))
     if body_sha != str(digest.get("canonical_body_sha256") or ""):
         raise Unverified(["BODY_SHA_MISMATCH"])
+
+    if mode == "DEEP":
+        _require_presentation_qa(reader, history)
 
     latest_bytes = reader.read_bytes(f"latest/{_SERVING[mode]}")
     latest = json.loads(latest_bytes)
@@ -131,6 +179,10 @@ def build_entry(reader: Reader, mode: str, slot: str, *, now: datetime, orchestr
         "report_slot": slot,
         "terminality": result["terminality"],
         "history_path": history,
+        "body_path": f"{history}/{body_name}",
+        "generated_at": _generated_at(reader, history, mode),
+        "runtime_sha": _runtime_sha(reader, history),
+        "origin": origin,
         "canonical_body_sha256": body_sha,
         "canonical_bundle_sha256": str(digest.get("canonical_bundle_sha256") or ""),
         "digest_sha256": _sha(digest_bytes),
@@ -273,10 +325,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         if not token:
             raise ReadOnly("PRIVATE_TOKEN_UNAVAILABLE")
         now = datetime.now(timezone.utc)
-        if not receipt_present(issue_comments(repo, now - RECEIPT_LOOKBACK), oid, args.run_id):
+        comments = issue_comments(repo, now - RECEIPT_LOOKBACK)
+        if not receipt_present(comments, oid, args.run_id):
             raise Unverified(["RECEIPT_NOT_FOUND"])
+        origin = "RECOVERY" if recovery_announced(comments, oid) else "SCHEDULED_OR_FALLBACK"
         entry = build_entry(
-            GhReader(token), args.mode, args.slot, now=now, orchestrator_run=args.run_id
+            GhReader(token), args.mode, args.slot, now=now, orchestrator_run=args.run_id, origin=origin
         )
         event["action"] = advance(GhStore(token), entry)
     except Unverified as exc:

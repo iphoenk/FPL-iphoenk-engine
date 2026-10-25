@@ -85,30 +85,45 @@ def execute(
     runs: Sequence[Mapping[str, Any]],
     repo: str,
     run: Callable[..., Any] = subprocess.run,
+    recheck: Callable[[], Sequence[Mapping[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     candidate = select(plan)
     if candidate is None:
         return {"action": "NO_ELIGIBLE_CANDIDATE"}
     if already_attempted(runs, candidate):
         return {"action": "SKIPPED_ALREADY_ATTEMPTED", "occurrence_id": candidate["occurrence_id"]}
-    comment = run(
-        ["gh", "issue", "comment", "431", "--repo", repo, "--body", evidence_comment(candidate, candidate.get("overdue_minutes"))],
-        capture_output=True, text=True, timeout=60,
-    )
+    try:
+        comment = run(
+            ["gh", "issue", "comment", "431", "--repo", repo, "--body", evidence_comment(candidate, candidate.get("overdue_minutes"))],
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.SubprocessError:
+        return {"action": "NOT_DISPATCHED_EVIDENCE_COMMENT_FAILED", "occurrence_id": candidate["occurrence_id"]}
     if comment.returncode:
         return {"action": "NOT_DISPATCHED_EVIDENCE_COMMENT_FAILED", "occurrence_id": candidate["occurrence_id"]}
-    dispatched = run(dispatch_argv(candidate, repo), capture_output=True, text=True, timeout=60)
+    # Re-check immediately before the write: narrows the check-then-act window
+    # against the scheduled path (which also cannot select an overdue slot).
+    if recheck is not None and already_attempted(recheck(), candidate):
+        return {"action": "SKIPPED_ALREADY_ATTEMPTED_ON_RECHECK", "occurrence_id": candidate["occurrence_id"]}
+    try:
+        dispatched = run(dispatch_argv(candidate, repo), capture_output=True, text=True, timeout=60)
+    except subprocess.SubprocessError:
+        # Outcome unknown: never retry blindly; the next run sees any created run by title.
+        return {"action": "DISPATCH_STATE_UNKNOWN", "occurrence_id": candidate["occurrence_id"]}
     if dispatched.returncode:
         return {"action": "DISPATCH_FAILED", "occurrence_id": candidate["occurrence_id"]}
     return {"action": "DISPATCHED_RECOVERY", "occurrence_id": candidate["occurrence_id"]}
 
 
 def _recent_runs(repo: str, run: Callable[..., Any] = subprocess.run) -> list[dict[str, Any]]:
-    proc = run(
+    try:
+        proc = run(
         ["gh", "run", "list", "--repo", repo, "--workflow", ORCHESTRATOR, "--event", "workflow_dispatch",
          "--branch", "main", "--limit", "100", "--json", "displayTitle,status,conclusion"],
         capture_output=True, text=True, timeout=60,
-    )
+        )
+    except subprocess.SubprocessError as exc:
+        raise RuntimeError("RUNS_LIST_TIMEOUT") from exc
     if proc.returncode:
         raise RuntimeError("RUNS_LIST_FAILED")
     return json.loads(proc.stdout or "[]")
@@ -125,7 +140,7 @@ def main(argv: Sequence[str] | None = None, environ: Mapping[str, str] | None = 
     repo = env.get("GITHUB_REPOSITORY", "iphoenk/FPL-iphoenk-engine")
     try:
         plan = json.loads(open(args.audit, encoding="utf-8").read()).get("recovery_plan") or {}
-        result = execute(plan, _recent_runs(repo), repo)
+        result = execute(plan, _recent_runs(repo), repo, recheck=lambda: _recent_runs(repo))
     except (OSError, ValueError, RuntimeError) as exc:
         result = {"action": "NOT_DISPATCHED_ERROR", "reason": type(exc).__name__}
     print(json.dumps({"event": "FPL_RECOVERY_DISPATCH", **result}, sort_keys=True))

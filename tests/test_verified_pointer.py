@@ -228,3 +228,50 @@ def test_receipt_comments_are_read_with_a_bounded_since_window_and_failures_rais
 
     with pytest.raises(vp.ReadError):
         vp.issue_comments("o/r", NOW, run=lambda cmd, **kw: _Proc(1, "", "boom"))
+
+
+def test_entry_carries_immutable_body_path_origin_and_generated_time():
+    entry = _entry()
+    assert entry["body_path"] == f"{entry['history_path']}/serving_report.md"
+    assert entry["origin"] == "SCHEDULED_OR_FALLBACK" and entry["generated_at"] == "2026-10-25T05:41:00+00:00"
+    price = _entry("PRICE", PRICE_SLOT)
+    assert price["body_path"].endswith("/report_body.md") and price["generated_at"] is None
+
+
+def test_recovery_origin_requires_announcement_for_this_exact_occurrence():
+    oid = f"DEEP|{DEEP_SLOT}"
+    from ops import recovery_dispatch as rd
+
+    ann = rd.evidence_comment({"occurrence_id": oid, "idempotency_key": f"RECOVERY|{oid}"}, 90)
+    assert vp.recovery_announced([ann], oid)
+    assert not vp.recovery_announced([ann], f"DEEP|{LATER_DEEP}")
+    assert not vp.recovery_announced(["unrelated"], oid)
+
+
+@pytest.mark.parametrize("mutate", ["missing", "wrong_count", "order", "root_failure", "empty", "bad_json"])
+def test_deep_without_passing_presentation_qa_is_never_a_candidate(mutate):
+    files = private_files("DEEP", DEEP_SLOT)
+    key = next(k for k in files if k.endswith("/presentation_qa.json"))
+    qa = json.loads(files[key])
+    if mutate == "missing":
+        del files[key]
+    elif mutate == "bad_json":
+        files[key] = b"{not json"
+    else:
+        qa.update({"wrong_count": {"section_count": 21}, "order": {"section_order_exact": False},
+                   "root_failure": {"root_failure_count": 1}, "empty": {"visible_report_body_non_empty": False}}[mutate])
+        files[key] = json.dumps(qa).encode()
+    with pytest.raises(vp.Unverified):
+        vp.build_entry(FakeReader(files), "DEEP", DEEP_SLOT, now=NOW, orchestrator_run="9001")
+
+
+def test_invalid_candidate_leaves_existing_pointer_byte_identical():
+    store = MemStore()
+    good = vp.build_entry(FakeReader(private_files("DEEP", EARLIER_DEEP)), "DEEP", EARLIER_DEEP, now=NOW, orchestrator_run="1")
+    vp.advance(store, good)
+    before = dict(store.files)
+    bad_files = private_files("DEEP", LATER_DEEP)
+    del bad_files[next(k for k in bad_files if k.endswith("/presentation_qa.json"))]
+    with pytest.raises(vp.Unverified):
+        vp.build_entry(FakeReader(bad_files), "DEEP", LATER_DEEP, now=NOW, orchestrator_run="2")
+    assert store.files == before

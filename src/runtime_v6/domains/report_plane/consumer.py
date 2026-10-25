@@ -314,6 +314,18 @@ def assess_snapshot(
         "evaluated_at": now.isoformat(),
         "age_minutes": round(age_minutes, 3) if age_minutes is not None else None,
         "max_age_minutes": int(max_age_minutes),
+        # Additive (F01): state/age above are measured from the manifest publication time only.
+        # The manifest does not carry authoritative source acquisition/publication times, so they
+        # are reported as unknown rather than reconstructed from fetch or publish timestamps.
+        "freshness_basis": "PUBLICATION_TIME_ONLY",
+        "source_time_semantics": {
+            "publication_generated_at": generated_at.isoformat() if generated_at else None,
+            "checked_at": now.isoformat(),
+            "source_acquired_at": None,
+            "source_published_at": None,
+            "source_time_status": "UNKNOWN",
+            "source_time_reason": "MANIFEST_DOES_NOT_CARRY_AUTHORITATIVE_SOURCE_TIMES",
+        },
         "manifest_overall": manifest.get("overall"),
         "runtime_control_health": control.get("health"),
         "runtime_schedule_kind": control.get("schedule_kind"),

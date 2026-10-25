@@ -218,6 +218,8 @@ A stored GREEN label is not sufficient by itself. Consumers must evaluate curren
 
 Mode-specific report freshness may be stricter than the generic V6 freshness target.
 
+`assess_snapshot` measures `state` and `age_minutes` from the manifest publication time (`generated_at`) only. Since F01 it states this explicitly: `freshness_basis` is `PUBLICATION_TIME_ONLY` and `source_time_semantics` separates `publication_generated_at` and `checked_at` from `source_acquired_at` / `source_published_at`. The manifest carries no authoritative source times, so those two are `null` with `source_time_status` `UNKNOWN`; they are never reconstructed from fetch or publish timestamps. A republished old source therefore still shows FRESH, and consumers must not read FRESH as source freshness. The 90-minute limit and 5-minute clock skew are unchanged.
+
 A degraded secondary source must degrade only the affected claims. It must not erase healthy Official FPL facts or force a due report to disappear.
 
 ## Runtime branch governance
@@ -264,3 +266,19 @@ This file is a runtime projection, not a runtime authority.
 Whenever scheduler ownership, trigger transport, V6 workflow behavior, source activation, runtime publication, recovery semantics, authority boundaries, or production governance changes, this document and any affected README/architecture document must be updated in the **same pull request**.
 
 Every PR must carry the timestamp and documentation-sync metadata defined in `docs/REPOSITORY_DOCUMENTATION_SYNC_POLICY.md`. Repository governance enforces the contract.
+
+## League membership context (F02)
+
+`build_league_membership_context` (report_plane/league_prefetch.py) turns official standings pages into `FPL_LEAGUE_CONTEXT_V1`: unique members, coverage (`COMPLETE`/`PARTIAL`/`EMPTY` with reasons), rank ties and provenance. Membership is `CURRENT_AT_OBSERVED_AT`; joins/leavers are computed only against an explicit baseline and are otherwise null (`NO_BASELINE_EVIDENCE`), so a current membership is never presented as historical. Pages from another league, repeated pages and an empty page that still claims a next page make coverage `PARTIAL`. `fetch_all_standings` now de-duplicates entries and stops on a repeated or premature-empty page instead of running to the page cap. No Awards utility or forecast is computed here.
+
+## Provider identity regression coverage (F03)
+
+`tests/test_data_platform_identity_field_coverage.py` pins that provider joins are anchored on the official FPL `code`: duplicate display names across clubs, club moves, reused element ids in a new season and Unicode names (for example "Groß") never create or move a link; unconfigured external players are not fuzzy-mapped; a conflicting existing link or a duplicated official code fails closed; and a missing `coverage_ratio` is never read as full coverage. No production code changed for F03 because none of these behaviors were reproducible as defects.
+
+## Official event context (F04)
+
+`official_event_context(bootstrap_event, fixtures, as_of=...)` (report_plane/official_gw_history.py) returns `OFFICIAL_FPL_EVENT_CONTEXT_V1`: per-fixture ids, status, `checked`, coverage and an `observation_class`. A finished event that is not `data_checked` is `PENDING_CHECK`, never final; some-but-not-all finished fixtures is `PARTIAL_FINALITY`; `fixtures=None` (failed fetch) is `UNAVAILABLE` with unknown counts, while `[]` is a valid `BLANK_GAMEWEEK`. Postponed fixtures are listed separately; a double gameweek keeps two fixture entries per team; malformed, duplicate or other-event rows are rejected one by one and make coverage `PARTIAL`. Facts observed at or after the deadline are `RETROSPECTIVE_POST_DEADLINE_FACTS`, never prospective, and fixture ids do not depend on the timezone of `as_of`. It is a pure function: it triggers no backfill and has no consumer yet.
+
+## Dashboard facts projection (F05)
+
+`build_dashboard_facts_projection(validated_snapshot, allowlist, *, now)` (publication/dashboard_facts_projection.py) returns `FPL_V6_DASHBOARD_FACTS_V1`, an allowlisted facts-only view: only the sections `health`, `identity`, `coverage`, `provenance` and `official_facts` can be requested, and only the listed fields are copied. A forbidden field name (picks, plans, tokens, scheduler control, licensed/raw provider data) or a secret-like value inside requested content raises `ProjectionBoundaryError` with a message that never contains the value. The core `status` (`FRESH`, `STALE`, `INVALID`, `IDENTITY_UNVERIFIED`, `UNKNOWN`) depends only on the validated snapshot, never on optional news. The role carries zero authority and `publication.public_export` is `false`. It is pure (no network, no logging) and is a schema/fixture boundary only: it is not wired into `artifact_catalog` or any workflow and does not export anything.

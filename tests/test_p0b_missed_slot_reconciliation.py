@@ -590,3 +590,83 @@ def test_gh_clock_ticks_adapter():
     assert got == ["2026-10-25T05:12:19Z"]
     with pytest.raises(aud.ReadError):
         aud.gh_clock_ticks("o/r", _utc("2026-10-25T00:00:00Z"), run=lambda *a, **k: P(1, ""))
+
+
+# ---- future-only recovery plan (advisory; no dispatch path) -------------------
+from ops import recovery_plan as rp  # noqa: E402
+
+
+def _row(mode, slot, state="MISSING", diagnosis=cc.NO_TICK_IN_WINDOW):
+    row = {"occurrence_id": f"{mode}|{slot}", "report_mode": mode, "report_slot": slot, "state": state}
+    if diagnosis:
+        row["diagnosis"] = diagnosis
+    return row
+
+
+def _decision(plan, mode, slot):
+    return next(d for d in plan["decisions"] if d["occurrence_id"] == f"{mode}|{slot}")["decision"]
+
+
+NOW_PLAN = _utc("2026-10-25T07:20:00Z")  # 14:20 WIB: DEEP 12:30 is 110 min overdue, next DEEP 21:30 not due
+
+
+def test_plan_marks_only_current_platform_gap_slot_eligible_and_never_dispatches():
+    rows = [_row("DEEP", "2026-10-25T12:30:00+07:00"), _row("DEEP", "2026-10-25T04:30:00+07:00")]
+    plan = rp.plan(NOW_PLAN, rows)
+    assert _decision(plan, "DEEP", "2026-10-25T12:30:00+07:00") == rp.ELIGIBLE
+    assert _decision(plan, "DEEP", "2026-10-25T04:30:00+07:00") == rp.HISTORICAL  # 590 min
+    only = plan["eligible"][0]
+    assert only["idempotency_key"] == "RECOVERY|DEEP|2026-10-25T12:30:00+07:00"
+    assert only["label"] == "RECOVERY" and only["natural_acceptance_eligible"] is False
+    assert plan["dispatch_enabled"] is False and plan["dispatch"] == "NOT_PERFORMED_AUTHORIZATION_REQUIRED"
+
+
+def test_plan_rejects_defect_failed_mode_superseded_and_unevidenced_rows(monkeypatch):
+    slot = "2026-10-25T12:30:00+07:00"
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, diagnosis=cc.TICK_NO_DISPATCH)]), "DEEP", slot) == rp.DEFECT
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, diagnosis=None)]), "DEEP", slot) == rp.NO_DIAGNOSIS
+    assert _decision(rp.plan(NOW_PLAN, [_row("DEEP", slot, state="VERIFIED_PUBLISHED")]), "DEEP", slot) == rp.NOT_MISSING
+    failed = [_row("DEEP", slot), _row("DEEP", "2026-10-25T04:30:00+07:00", state="FAILED")]
+    assert _decision(rp.plan(NOW_PLAN, failed), "DEEP", slot) == rp.RETRY_LOOP
+    after_next = _utc("2026-10-25T14:40:00Z")  # 21:40 WIB: DEEP 21:30 has started
+    assert _decision(rp.plan(after_next, [_row("DEEP", slot)]), "DEEP", slot) == rp.HISTORICAL
+    monkeypatch.setattr(rp, "MAX_OVERDUE_MINUTES", 10_000)  # isolate the supersession rule
+    assert _decision(rp.plan(after_next, [_row("DEEP", slot)]), "DEEP", slot) == rp.SUPERSEDED
+
+
+def test_plan_is_bounded_to_the_newest_candidate_per_mode_and_ignores_old_slots():
+    older = "2026-10-25T04:30:00+07:00"
+    newer = "2026-10-25T12:30:00+07:00"
+    plan = rp.plan(_utc("2026-10-25T07:50:00Z"), [_row("DEEP", older), _row("DEEP", newer)])  # 14:50 WIB
+    assert [d["occurrence_id"] for d in plan["eligible"]] == [f"DEEP|{newer}"]
+    assert _decision(plan, "DEEP", older) == rp.HISTORICAL
+
+
+def test_plan_requires_tz_aware_now_and_is_independent_per_mode():
+    with pytest.raises(ValueError):
+        rp.plan(datetime(2026, 10, 25, 7, 20), [])
+    now = _utc("2026-10-25T07:20:00Z")
+    plan = rp.plan(now, [_row("DEEP", "2026-10-25T12:30:00+07:00"), _row("PRICE", "2026-10-25T05:30:00+07:00")])
+    assert _decision(plan, "PRICE", "2026-10-25T05:30:00+07:00") == rp.HISTORICAL  # 05:30 WIB is 530 min old
+    assert {d["report_mode"] for d in plan["eligible"]} == {"DEEP"}
+
+
+def test_recovery_plan_module_has_no_dispatch_capability():
+    source = Path(rp.__file__).read_text(encoding="utf-8")
+    for forbidden in ("subprocess", "workflow_dispatch", "gh api", "requests", "urllib", "os.system"):
+        assert forbidden not in source
+    assert rp.DISPATCH_ENABLED is False
+
+
+def test_audit_record_embeds_plan_without_changing_states():
+    class Empty:
+        def read_bytes(self, path):
+            raise aud.NotFound(path)
+
+        def list_dir(self, path):
+            raise aud.NotFound(path)
+
+    rec = aud.audit(NOW_PLAN, Empty(), lambda: [], 36, lambda: [])
+    assert rec["recovery_plan"]["dispatch_enabled"] is False
+    assert rec["historical_dispatch"] is False and rec["backfill"] is False
+    assert {r["state"] for r in rec["rows"]} <= {"MISSING", "UNKNOWN"}

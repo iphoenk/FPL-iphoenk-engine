@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
-from ops import clock_cadence
+from ops import clock_cadence, recovery_plan
 from ops.occurrence_reconciliation import (
     build_audit_record,
     classify_due_occurrences,
@@ -342,6 +342,7 @@ def audit(
     rows, cadence = clock_cadence.annotate(rows, ticks, now, lookback_hours)
     record = build_audit_record(now, rows, lookback_hours)
     record["clock_cadence"] = cadence
+    record["recovery_plan"] = recovery_plan.plan(now, rows)
     return record
 
 

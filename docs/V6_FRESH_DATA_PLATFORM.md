@@ -266,3 +266,7 @@ This file is a runtime projection, not a runtime authority.
 Whenever scheduler ownership, trigger transport, V6 workflow behavior, source activation, runtime publication, recovery semantics, authority boundaries, or production governance changes, this document and any affected README/architecture document must be updated in the **same pull request**.
 
 Every PR must carry the timestamp and documentation-sync metadata defined in `docs/REPOSITORY_DOCUMENTATION_SYNC_POLICY.md`. Repository governance enforces the contract.
+
+## League membership context (F02)
+
+`build_league_membership_context` (report_plane/league_prefetch.py) turns official standings pages into `FPL_LEAGUE_CONTEXT_V1`: unique members, coverage (`COMPLETE`/`PARTIAL`/`EMPTY` with reasons), rank ties and provenance. Membership is `CURRENT_AT_OBSERVED_AT`; joins/leavers are computed only against an explicit baseline and are otherwise null (`NO_BASELINE_EVIDENCE`), so a current membership is never presented as historical. Pages from another league, repeated pages and an empty page that still claims a next page make coverage `PARTIAL`. `fetch_all_standings` now de-duplicates entries and stops on a repeated or premature-empty page instead of running to the page cap. No Awards utility or forecast is computed here.

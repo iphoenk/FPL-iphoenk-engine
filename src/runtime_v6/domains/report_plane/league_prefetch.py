@@ -23,6 +23,7 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
     lineages: list[dict[str, Any]] = []
     failures = []
     complete = False
+    seen_entry_ids: set[int] = set()
     for page in range(1, 1001):
         result = (
             client.classic_standings(league_id, page)
@@ -42,8 +43,17 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
         payload = result.get("payload") or {}
         standings = payload.get("standings") or {}
         page_rows = standings.get("results") or []
+        page_ids = frozenset(
+            int(row["entry"]) for row in page_rows if isinstance(row, dict) and row.get("entry") is not None
+        )
+        if page_ids and page_ids <= seen_entry_ids:
+            # A repeated page (pagination loop) must not inflate membership or run to the page cap.
+            failures.append({"page": page, "status": "DUPLICATE_PAGE", "http_status": None, "error": None})
+            break
         for row in page_rows:
             if not isinstance(row, dict) or row.get("entry") is None:
+                continue
+            if int(row["entry"]) in seen_entry_ids:
                 continue
             rows.append(
                 {
@@ -56,6 +66,7 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
                     "last_rank": row.get("last_rank"),
                 }
             )
+        seen_entry_ids |= page_ids
         lineages.append(
             lineage(
                 result,
@@ -63,6 +74,10 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
                 pagination_coverage={"page": page, "rows_on_page": len(page_rows)},
             )
         )
+        if not page_rows and bool(standings.get("has_next")):
+            # An empty page that still claims a next page is not a valid end of the standings.
+            failures.append({"page": page, "status": "EMPTY_PAGE_BEFORE_END", "http_status": None, "error": None})
+            break
         if not bool(standings.get("has_next")):
             complete = True
             break
@@ -72,6 +87,96 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
         "pages_collected": len(lineages),
         "failed_pages": failures,
         "lineage": lineages,
+    }
+
+
+LEAGUE_CONTEXT_VERSION = "FPL_LEAGUE_CONTEXT_V1"
+
+
+def build_league_membership_context(
+    pages: list[dict[str, Any]],
+    *,
+    season: str,
+    league_id: int,
+    gw: int,
+    observed_at: str,
+    baseline_member_ids: set[int] | None = None,
+) -> dict[str, Any]:
+    """Facts-only league membership from official standings pages.
+
+    Membership is the set observed at ``observed_at``. It is never presented as historical
+    membership: joins/leavers are computed only against an explicit baseline and are otherwise null.
+    No Awards utility, forecast or recommendation belongs here.
+    """
+    members: dict[int, dict[str, Any]] = {}
+    reasons: list[str] = []
+    seen_pages: list[frozenset[int]] = []
+    pages_collected = 0
+    duplicate_entries = 0
+    ended = False
+    for index, page in enumerate(pages or [], start=1):
+        league = page.get("league") if isinstance(page, dict) else None
+        if isinstance(league, dict) and league.get("id") is not None and int(league["id"]) != int(league_id):
+            reasons.append("LEAGUE_MISMATCH")
+            break
+        standings = (page.get("standings") if isinstance(page, dict) else None) or {}
+        rows = [r for r in (standings.get("results") or []) if isinstance(r, dict) and r.get("entry") is not None]
+        ids = frozenset(int(r["entry"]) for r in rows)
+        if ids and any(ids <= earlier for earlier in seen_pages):
+            reasons.append("DUPLICATE_PAGE")
+            break
+        seen_pages.append(ids)
+        pages_collected += 1
+        for row in rows:
+            entry = int(row["entry"])
+            if entry in members:
+                duplicate_entries += 1
+                continue
+            members[entry] = {
+                "entry_id": entry,
+                "manager_name": row.get("player_name"),
+                "team_name": row.get("entry_name"),
+                "rank": row.get("rank"),
+                "last_rank": row.get("last_rank"),
+                "total": row.get("total"),
+                "event_total": row.get("event_total"),
+            }
+        has_next = bool(standings.get("has_next"))
+        if not rows and has_next:
+            reasons.append("EMPTY_PAGE_BEFORE_END")
+            break
+        if not has_next:
+            ended = True
+            break
+    if not ended and not reasons:
+        reasons.append("NEXT_PAGE_MISSING" if pages_collected else "NO_PAGES")
+    ordered = sorted(members.values(), key=lambda m: (m["rank"] is None, m["rank"] or 0, m["entry_id"]))
+    by_rank: dict[Any, list[int]] = {}
+    for m in ordered:
+        if m["rank"] is not None:
+            by_rank.setdefault(m["rank"], []).append(m["entry_id"])
+    current_ids = set(members)
+    return {
+        "version": LEAGUE_CONTEXT_VERSION,
+        "season": season,
+        "league_id": int(league_id),
+        "gameweek": int(gw),
+        "observed_at": observed_at,
+        "authority": "OFFICIAL_FPL",
+        "membership_basis": "CURRENT_AT_OBSERVED_AT",
+        "members": ordered,
+        "coverage": {
+            "status": "EMPTY" if not members else ("COMPLETE" if ended and not reasons else "PARTIAL"),
+            "pages_collected": pages_collected,
+            "members_collected": len(members),
+            "duplicate_entries": duplicate_entries,
+            "expected_members": None,
+            "reasons": reasons,
+        },
+        "rank_ties": {str(rank): ids for rank, ids in by_rank.items() if len(ids) > 1},
+        "joins": sorted(current_ids - baseline_member_ids) if baseline_member_ids is not None else None,
+        "leavers": sorted(baseline_member_ids - current_ids) if baseline_member_ids is not None else None,
+        "membership_change_basis": "EXPLICIT_BASELINE" if baseline_member_ids is not None else "NO_BASELINE_EVIDENCE",
     }
 
 

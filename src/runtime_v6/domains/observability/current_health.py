@@ -126,3 +126,41 @@ def build_current_status_view(
     status_kwargs["target_report_freshness"] = semantics["target_report_freshness"]
     status_kwargs["report_delivery"] = semantics["report_delivery"]
     return build_status_view(**status_kwargs)
+
+
+def classify_evidence(checks: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Tri-state evidence classification (F06).
+
+    ``True`` = check ran and passed, ``False`` = check ran and the evidence is absent/wrong,
+    ``None`` or a missing key = the check could not run or the proof is incomplete.
+    Incomplete or failed evidence collection is UNKNOWN: it is neither MISSING nor VERIFIED.
+    """
+    values = dict(checks or {})
+    if not values:
+        return {"state": "UNKNOWN", "unknown_checks": [], "failed_checks": []}
+    unknown = sorted(name for name, value in values.items() if value is None)
+    failed = sorted(name for name, value in values.items() if value is False)
+    if unknown:
+        state = "UNKNOWN"
+    elif failed:
+        state = "MISSING"
+    else:
+        state = "VERIFIED"
+    return {"state": state, "unknown_checks": unknown, "failed_checks": failed}
+
+
+def consumer_impact(
+    *,
+    snapshot_usable: bool | None,
+    report_plane_available: bool | None,
+) -> dict[str, str]:
+    """Which consumer capability survives which failure (F06). Pure, no side effects."""
+    official = "UNKNOWN" if snapshot_usable is None else ("VALID" if snapshot_usable else "NOT_USABLE")
+    report = "UNKNOWN" if report_plane_available is None else ("AVAILABLE" if report_plane_available else "UNAVAILABLE")
+    return {
+        "official_facts": official,
+        "report_plane": report,
+        # A report-plane outage never invalidates official facts that were validated on their own.
+        "official_facts_depend_on_report_plane": "NO",
+        "direct_fallback": "ELIGIBLE" if official != "VALID" else "NOT_NEEDED",
+    }

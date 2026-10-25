@@ -468,31 +468,39 @@ def test_cli_never_breaks_the_clock_without_token(tmp_path, monkeypatch):
 
 
 class _Proc:
-    def __init__(self, rc=0, out="", err=""):
+    def __init__(self, rc=0, out=b"", err=b""):
         self.returncode, self.stdout, self.stderr = rc, out, err
 
 
-def test_gh_reader_maps_404_to_not_found_and_other_errors_to_read_error_without_token():
+def test_gh_reader_uses_raw_media_type_maps_errors_and_never_leaks_token():
     secret = "ghp_SECRET_TOKEN_VALUE"
     calls = []
 
     def run(cmd, env=None, **kw):
         calls.append((cmd, env["GH_TOKEN"]))
-        path = cmd[2]
+        path = cmd[-1]
         if "missing" in path:
-            return _Proc(1, "", "gh: Not Found (HTTP 404)")
+            return _Proc(1, b"", b"gh: Not Found (HTTP 404)")
         if "boom" in path:
-            return _Proc(1, "", "gh: Server Error (HTTP 502)")
-        import base64
-        return _Proc(0, base64.b64encode(b"hello").decode() + "\n")
+            return _Proc(1, b"", b"gh: Server Error (HTTP 502)")
+        if "empty" in path:
+            return _Proc(0, b"")
+        if "--jq" in cmd:
+            return _Proc(0, b"gw_7\ngw_8\n")
+        return _Proc(0, b"\x00raw\xffbytes")
 
     reader = aud.GhReader(secret, run=run)
-    assert reader.read_bytes("a/ok") == b"hello"
+    assert reader.read_bytes("a/ok") == b"\x00raw\xffbytes"  # binary-safe, no decode
+    assert reader.list_dir("a/dir") == ["gw_7", "gw_8"]
     with pytest.raises(aud.NotFound):
         reader.read_bytes("a/missing")
     with pytest.raises(aud.ReadError) as err:
         reader.read_bytes("a/boom")
+    with pytest.raises(aud.ReadError, match="EMPTY_READ"):
+        reader.read_bytes("a/empty")  # >1MB contents-API symptom must never hash as b""
     assert secret not in str(err.value)
+    raw_calls = [cmd for cmd, _ in calls if "contents/a/ok" in cmd[-1]]
+    assert "Accept: application/vnd.github.raw" in raw_calls[0]
     assert all(token == secret for _, token in calls)
     assert all(secret not in " ".join(cmd) for cmd, _ in calls)  # never on argv
 

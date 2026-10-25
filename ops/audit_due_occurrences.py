@@ -15,7 +15,6 @@ failures are reported as UNKNOWN for the affected occurrences.
 from __future__ import annotations
 
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -336,35 +335,43 @@ def audit(
 
 
 class GhReader:
-    """`gh api` backed private-repo reader; the token never reaches logs."""
+    """`gh api` backed private-repo reader; the token never reaches logs/argv.
+
+    File bytes are read with the raw media type: the JSON contents API returns
+    an EMPTY ``content`` for files over 1 MB, which would silently hash as the
+    empty string. An empty read is therefore also treated as a read failure.
+    """
 
     def __init__(self, token: str, repo: str = PRIVATE_REPO, run: Callable[..., Any] = subprocess.run):
         self._token, self._repo, self._run = token, repo, run
 
-    def _gh(self, args: list[str]) -> str:
-        proc = self._run(
-            ["gh", "api", *args],
-            env={**os.environ, "GH_TOKEN": self._token},
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
+    def _gh(self, args: list[str]) -> bytes:
+        env = {**os.environ}
+        if self._token:
+            env["GH_TOKEN"] = self._token
+        proc = self._run(["gh", "api", *args], env=env, capture_output=True, timeout=60)
         if proc.returncode:
-            err = (proc.stderr or "") + (proc.stdout or "")
-            if "HTTP 404" in err:
-                raise NotFound(args[0])
-            lines = err.strip().splitlines()
+            err = (proc.stderr or b"") + (proc.stdout or b"")
+            text = err.decode("utf-8", "replace") if isinstance(err, bytes) else str(err)
+            if "HTTP 404" in text:
+                raise NotFound(args[-1])
+            lines = text.strip().splitlines()
             detail = lines[-1][:120] if lines else ""
             raise ReadError(f"GH_API_FAILED:{detail}" if detail else "GH_API_FAILED")
-        return proc.stdout
+        out = proc.stdout
+        return out if isinstance(out, bytes) else str(out).encode("utf-8")
 
     def read_bytes(self, path: str) -> bytes:
-        out = self._gh([f"/repos/{self._repo}/contents/{path}?ref=main", "--jq", ".content"])
-        return base64.b64decode("".join(out.split()))
+        data = self._gh(
+            ["-H", "Accept: application/vnd.github.raw", f"/repos/{self._repo}/contents/{path}?ref=main"]
+        )
+        if not data:
+            raise ReadError(f"EMPTY_READ:{path}")
+        return data
 
     def list_dir(self, path: str) -> list[str]:
         out = self._gh([f"/repos/{self._repo}/contents/{path}?ref=main", "--jq", ".[].name"])
-        return [line for line in out.splitlines() if line]
+        return [line for line in out.decode("utf-8").splitlines() if line]
 
 
 def gh_runs(repo: str, since: datetime, run: Callable[..., Any] = subprocess.run) -> list[dict[str, Any]]:

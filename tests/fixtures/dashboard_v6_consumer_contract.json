@@ -1,0 +1,95 @@
+{
+ "_comment": "Reduced frozen shape of runtime-data-v6 data/v6 files read by iphoenk/fpl-iphoenk-dashboard multiuser-decision-server.mjs (captured 2026-10-27 from runtime-data-v6 aa5addcc). Contains no private data.",
+ "publish_integrity": {
+  "schema_version": 5,
+  "status": "PASS",
+  "observed_at": "2026-10-27T00:45:57.673372+00:00",
+  "logical_slot": "2026-10-27T00:00:00+00:00",
+  "run_id": "40428424526"
+ },
+ "latest_index": {
+  "schema_version": 2,
+  "generated_at": "2026-10-27T00:45:56.890726+00:00",
+  "source_count": 13,
+  "sources": [
+   {
+    "source_id": "statsbomb",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-26T15:30:18.923581+00:00"
+   },
+   {
+    "source_id": "espn",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:52.882508+00:00"
+   },
+   {
+    "source_id": "vaastav_fpl",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.017213+00:00"
+   },
+   {
+    "source_id": "opta_the_analyst",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.023297+00:00"
+   },
+   {
+    "source_id": "official_fpl",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.063403+00:00"
+   },
+   {
+    "source_id": "thesportsdb_v1",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.077927+00:00"
+   },
+   {
+    "source_id": "premierleague_stats",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.149886+00:00"
+   },
+   {
+    "source_id": "fotmob",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.402316+00:00"
+   },
+   {
+    "source_id": "statmuse",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.438738+00:00"
+   },
+   {
+    "source_id": "rotowire",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.507119+00:00"
+   },
+   {
+    "source_id": "understat",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:53.899503+00:00"
+   },
+   {
+    "source_id": "wikidata",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:54.830977+00:00"
+   },
+   {
+    "source_id": "official_price_predictor",
+    "health": "GREEN",
+    "availability": "AVAILABLE",
+    "checked_at": "2026-10-27T00:45:54.833824+00:00"
+   }
+  ]
+ }
+}

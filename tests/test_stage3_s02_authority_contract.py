@@ -328,3 +328,87 @@ def test_missing_public_provenance_does_not_supply_owned15():
     result = _select([candidate])
     assert result["resolution_status"] == "UNAVAILABLE"
     assert result["rows"] == []
+
+
+# --- S02 observation chronology: governed occurrence window (P3, 27 Oct 2026) ---
+from datetime import datetime, timedelta, timezone
+
+from src.engines.v12_stage3_acceptance import S02_OBSERVATION_WINDOW_MINUTES
+
+
+def _with_observation(value, *, generated=None, slot=SLOT):
+    section, submitted = deepcopy(_public_evidence())
+    section["content"]["current15_authority"]["observed_at"] = value
+    submitted["generated_at"] = generated if generated is not None else value
+    return _verified_s02_public_fallback(
+        section, submitted, planning_gw=7, report_slot=slot
+    )
+
+
+def _iso(slot, minutes, tz=timezone.utc):
+    base = datetime.fromisoformat(slot)
+    return (base + timedelta(minutes=minutes)).astimezone(tz).isoformat()
+
+
+def test_window_matches_downstream_occurrence_window():
+    from ops.render_external_clock import DOWNSTREAM_WINDOW_MINUTES
+
+    assert S02_OBSERVATION_WINDOW_MINUTES == DOWNSTREAM_WINDOW_MINUTES
+
+
+def test_production_26_oct_late_tick_observation_is_accepted():
+    # Real shape: slot 21:30 WIB, observation 15:33:40.016323Z (+63m40s).
+    slot = "2026-10-26T21:30:00+07:00"
+    observed = "2026-10-26T15:33:40.016323+00:00"
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" not in _with_observation(observed, slot=slot)
+
+
+@pytest.mark.parametrize("minutes", [-5, 0, 15, 56, 63, 70])
+def test_observation_inside_governed_window_is_accepted(minutes):
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" not in _with_observation(_iso(SLOT, minutes))
+
+
+@pytest.mark.parametrize("minutes", [-6, -60, 71, 240, 24 * 60])
+def test_observation_outside_governed_window_fails_closed(minutes):
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _with_observation(_iso(SLOT, minutes))
+
+
+def test_stale_observation_from_previous_occurrence_fails_closed():
+    previous_slot = "2026-10-26T12:30:00+07:00"
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _with_observation(
+        _iso(previous_slot, 5), slot="2026-10-26T21:30:00+07:00"
+    )
+
+
+@pytest.mark.parametrize("value", [None, "", "not-a-time", "2026-10-11T00:43:00"])
+def test_missing_invalid_or_naive_timestamp_fails_closed(value):
+    section, submitted = deepcopy(_public_evidence())
+    section["content"]["current15_authority"]["observed_at"] = value
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _errors(section, submitted)
+    section, submitted = deepcopy(_public_evidence())
+    submitted["generated_at"] = value
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _errors(section, submitted)
+
+
+def test_observed_and_generated_must_agree_within_five_seconds():
+    observed = _iso(SLOT, 10)
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" not in _with_observation(
+        observed, generated=_iso(SLOT, 10, tz=timezone(timedelta(hours=7)))
+    )
+    skewed = (datetime.fromisoformat(observed) + timedelta(seconds=6)).isoformat()
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _with_observation(observed, generated=skewed)
+
+
+def test_naive_slot_fails_closed():
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" in _with_observation(
+        OBSERVED, slot="2026-10-11T07:44:00"
+    )
+
+
+@pytest.mark.parametrize("zone", [timezone.utc, timezone(timedelta(hours=7)), timezone(timedelta(hours=1))])
+def test_equivalent_instants_in_any_offset_are_equal_across_dst_boundary(zone):
+    # London DST end (25 Oct 2026 01:00Z): the same instant must validate in any offset.
+    slot = "2026-10-25T23:30:00+00:00"
+    assert "S02_OBSERVATION_TIMESTAMP_INVALID" not in _with_observation(
+        _iso(slot, 20, tz=zone), slot=slot
+    )

@@ -28,6 +28,15 @@ def _read(root: Path, name: str) -> dict[str, Any]:
         return {}
 
 
+# V6 acquisition may complete late inside the governed occurrence window
+# (-5..+70 min after the logical slot; ops.render_external_clock
+# DOWNSTREAM_WINDOW_MINUTES, pinned by a test). Earlier acquisitions stay
+# bounded by the existing 90-minute look-back. GitHub schedule ticks are
+# best-effort: DEEP 2026-10-26T21:30+07:00 started at +56 min.
+V6_ACQUISITION_LOOKBACK_MINUTES = 90
+V6_ACQUISITION_UPPER_MINUTES = 70
+
+
 def _aware(raw: Any) -> datetime | None:
     try:
         value = datetime.fromisoformat(str(raw or "").replace("Z", "+00:00"))
@@ -46,7 +55,7 @@ def build_v6_source_trace(*, runtime_data_root: Path, report_slot: str) -> dict[
     slot_time, acquired_at = _aware(report_slot), _aware(index.get("generated_at"))
     if slot_time is None or acquired_at is None:
         failures.append("V6_ACQUISITION_TIME_INVALID")
-    elif not slot_time - timedelta(minutes=90) <= acquired_at <= slot_time + timedelta(minutes=15):
+    elif not slot_time - timedelta(minutes=V6_ACQUISITION_LOOKBACK_MINUTES) <= acquired_at <= slot_time + timedelta(minutes=V6_ACQUISITION_UPPER_MINUTES):
         failures.append("V6_ACQUISITION_OUTSIDE_OCCURRENCE_WINDOW")
     if integrity.get("status") != "PASS":
         failures.append("V6_PUBLISH_INTEGRITY_NOT_PASS")
@@ -70,7 +79,7 @@ def build_v6_source_trace(*, runtime_data_root: Path, report_slot: str) -> dict[
         sid = str(row.get("source_id") or "")
         checked_at = _aware(row.get("checked_at"))
         if checked_at is None or slot_time is None or not (
-            slot_time - timedelta(minutes=90) <= checked_at <= slot_time + timedelta(minutes=15)
+            slot_time - timedelta(minutes=V6_ACQUISITION_LOOKBACK_MINUTES) <= checked_at <= slot_time + timedelta(minutes=V6_ACQUISITION_UPPER_MINUTES)
         ):
             failures.append("V6_SOURCE_ATTEMPT_TIME_INVALID:" + sid)
         snapshots = [str(x) for x in row.get("source_snapshot_ids") or [] if isinstance(x, str)]

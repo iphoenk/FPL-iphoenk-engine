@@ -16,6 +16,7 @@ from typing import Any, Iterable, Mapping, Sequence
 SCHEMA_VERSION = "FPL_MASTER_V12_MODEL_EVIDENCE_V1"
 FROZEN = "FROZEN_AWAITING_SETTLEMENT"
 SETTLED = "SETTLED"
+MINUTES_COHORTS = (("LOW_MINUTES", 0, 30), ("MID_MINUTES", 30, 60), ("HIGH_MINUTES", 60, None))
 SAMPLE_BUCKETS = (("LOW_SAMPLE", 0, 49), ("MEDIUM_SAMPLE", 50, 149), ("HIGH_SAMPLE", 150, None))
 
 
@@ -442,6 +443,40 @@ def _metrics(pairs) -> dict[str, Any]:
         "spearman_rank": _r(_spearman(pp, ap)),
     }
 
+def _finite(value: Any) -> float | None:
+    """Numeric value or None. Strings, booleans and non-finite numbers are unknown, never coerced to 0."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if math.isfinite(float(value)) else None
+
+
+def _baseline_comparison(pairs) -> dict[str, Any]:
+    """Model vs reference projections carried in the frozen forecast row as baseline_xpts {name: value}.
+
+    Same players for model and baseline; no winner is declared (a few gameweeks cannot select a model)."""
+    names = sorted({str(k) for f, _ in pairs if isinstance(f.get("baseline_xpts"), Mapping) for k, v in f["baseline_xpts"].items() if _finite(v) is not None})
+    if not names:
+        return {"status": "NO_BASELINE_PROVIDED", "comparison_is_diagnostic_only": True}
+    out: dict[str, Any] = {}
+    for name in names:
+        sub = [(f, a, _finite(f["baseline_xpts"][name])) for f, a in pairs if isinstance(f.get("baseline_xpts"), Mapping) and _finite(f["baseline_xpts"].get(name)) is not None]
+        actual = [_num(a["points"], "points") for _, a, _ in sub]
+        base = [b for _, _, b in sub]
+        model = [_num(f["xpts"], "xpts") for f, _, _ in sub]
+        base_mae, model_mae = _avg([abs(b - y) for b, y in zip(base, actual)]), _avg([abs(m - y) for m, y in zip(model, actual)])
+        out[name] = {
+            "status": SETTLED,
+            "sample_size": len(sub),
+            "xpts_mae": _r(base_mae),
+            "spearman_rank": _r(_spearman(base, actual)),
+            "model_xpts_mae_same_players": _r(model_mae),
+            "model_spearman_rank_same_players": _r(_spearman(model, actual)),
+            "model_minus_baseline_mae": _r(model_mae - base_mae),
+            "comparison_is_diagnostic_only": True,
+        }
+    return out
+
+
 def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actuals: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     pairs = _pairs(forecasts, actuals)
     confidence = {str(f.get("projection_confidence") or "UNSPECIFIED") for f, _ in pairs}
@@ -452,6 +487,13 @@ def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actua
         by_sample[label] = {**_metrics(subset), "bucket_min": low, "bucket_max": high}
     settled_elements = {int(f["element"]) for f, _ in pairs}
     unsettled = sorted({int(f["element"]) for f in forecasts if f.get("element") is not None} - settled_elements)
+    positions = sorted({str(f.get("position") or "UNSPECIFIED") for f, _ in pairs})
+    by_position = {label: _metrics([(f, a) for f, a in pairs if str(f.get("position") or "UNSPECIFIED") == label]) for label in positions}
+    # Minutes cohorts follow the PREDICTED minutes frozen before the deadline, never the realised minutes (that would be hindsight).
+    by_minutes = {}
+    for label, low, high in MINUTES_COHORTS:
+        subset = [(f, a) for f, a in pairs if f.get("xmins") is not None and _num(f["xmins"], "xmins") >= low and (high is None or _num(f["xmins"], "xmins") < high)]
+        by_minutes[label] = {**_metrics(subset), "min_predicted_minutes": low, "max_predicted_minutes_exclusive": high}
     return {
         "overall": _metrics(pairs),
         # Forecasts without a settled actual are reported, never silently dropped from the denominator.
@@ -460,9 +502,18 @@ def prediction_calibration_metrics(forecasts: Sequence[Mapping[str, Any]], actua
             "settled_count": len(settled_elements),
             "unsettled_count": len(unsettled),
             "unsettled_elements": unsettled,
+            "cohort": {
+                "basis": "FROZEN_FORECAST_PLAYERS",
+                "players_outside_the_frozen_forecast_are_excluded": True,
+                "forecast_count": len(settled_elements) + len(unsettled),
+                "settled_count": len(settled_elements),
+            },
         },
         "by_confidence_bucket": by_conf,
         "by_sample_size_bucket": by_sample,
+        "by_position": by_position,
+        "by_minutes_cohort": by_minutes,
+        "baselines": _baseline_comparison(pairs),
         "governance": {
             "prediction_error_separate_from_decision_error": True,
             "bucket_metrics_are_diagnostic_only": True,
@@ -505,6 +556,51 @@ def decision_calibration_metrics(evidence: Mapping[str, Any] | None) -> dict[str
     return {"metrics": m, "governance": {"prediction_error_separate_from_decision_error": True, "exact_fpl_costs_required_for_cost_adjusted_metrics": True, "legacy_fixed_change_penalty_forbidden": True, "one_result_rule_creation_forbidden": True}}
 
 
+def _rank_stats(pred: Sequence[float], real: Sequence[float], mae_key: str) -> dict[str, Any]:
+    return {"sample_size": len(pred), mae_key: _r(_avg([abs(p - r) for p, r in zip(pred, real)])), "spearman_rank": _r(_spearman(pred, real)) if len(pred) >= 3 else None}
+
+
+def decision_ranking_metrics(decision_snapshot: Mapping[str, Any] | None, forecasts: Sequence[Mapping[str, Any]], actuals: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """MAE and Spearman for the captain candidates and transfer comparisons frozen before the deadline.
+
+    Only elements named in the frozen decision snapshot are scored. The exact FPL hit cost is never invented:
+    after-hit metrics use only comparisons with a numeric exact_hit_cost."""
+    snap = dict(decision_snapshot or {})
+    fmap = {int(f["element"]): f for f in forecasts if f.get("element") is not None}
+    amap = {int(a["element"]): a for a in actuals if a.get("element") is not None}
+    no_sample = {"status": "NO_GENUINE_PREDEADLINE_SAMPLE", "sample_size": 0}
+
+    lineup = snap.get("lineup") or {}
+    candidates = [int(x) for x in (lineup.get("captain_candidates") or []) if _finite(x) is not None]
+    captain: dict[str, Any] = dict(no_sample)
+    if candidates:
+        have = [e for e in dict.fromkeys(candidates) if e in fmap and e in amap]
+        missing = [e for e in dict.fromkeys(candidates) if e not in have]
+        pred, real = [_num(fmap[e]["xpts"], "xpts") for e in have], [_num(amap[e]["points"], "points") for e in have]
+        captain = {**_rank_stats(pred, real, "xpts_mae"), "status": SETTLED if len(have) >= 3 else "INSUFFICIENT_CANDIDATES_FOR_RANK" if have else "NO_SETTLED_SAMPLE", "candidates_without_data": missing, "chosen_captain_realized_rank": None}
+        chosen = _finite(lineup.get("captain"))
+        if chosen is not None and int(chosen) in have:
+            ranks = _avg_ranks([-v for v in real])  # rank 1 = highest realised points; ties share the average rank
+            captain["chosen_captain_realized_rank"] = _r(ranks[have.index(int(chosen))])
+
+    comparisons = [c for c in ((snap.get("comparator") or {}).get("comparisons") or []) if isinstance(c, Mapping)]
+    rows = []
+    for c in comparisons:
+        o, i = _finite(c.get("player_out")), _finite(c.get("player_in"))
+        if o is None or i is None or int(o) not in fmap or int(i) not in fmap or int(o) not in amap or int(i) not in amap:
+            continue
+        o, i = int(o), int(i)
+        rows.append((_num(fmap[i]["xpts"], "xpts") - _num(fmap[o]["xpts"], "xpts"), _num(amap[i]["points"], "points") - _num(amap[o]["points"], "points"), _finite(c.get("exact_hit_cost"))))
+    pre_hit: dict[str, Any] = dict(no_sample)
+    after_hit: dict[str, Any] = {"status": "UNAVAILABLE_EXACT_HIT_COST", "sample_size": 0}
+    if rows:
+        pre_hit = {**_rank_stats([r[0] for r in rows], [r[1] for r in rows], "xpts_delta_mae"), "status": SETTLED}
+        costed = [r for r in rows if r[2] is not None]
+        if costed:
+            after_hit = {**_rank_stats([r[0] - r[2] for r in costed], [r[1] - r[2] for r in costed], "net_delta_mae"), "status": SETTLED, "hit_cost_subtracted_from_predicted_and_realized": True}
+    return {"captain": captain, "transfer": {"pre_hit": pre_hit, "after_hit": after_hit}, "governance": {"diagnostic_only": True, "exact_hit_cost_never_invented": True, "one_result_rule_creation_forbidden": True}}
+
+
 def settle_frozen_record(record: Mapping[str, Any], *, actual_rows: Sequence[Mapping[str, Any]], decision_outcome_evidence: Mapping[str, Any] | None, event_finished: bool, settled_at: Any) -> dict[str, Any]:
     if record.get("status") != FROZEN:
         raise ModelEvidenceError("only frozen records may be settled")
@@ -524,6 +620,7 @@ def settle_frozen_record(record: Mapping[str, Any], *, actual_rows: Sequence[Map
         "actual_outcome_fingerprint": fingerprint([dict(x) for x in actual_rows]),
         "prediction_calibration": prediction,
         "decision_calibration": decision_calibration_metrics(decision_outcome_evidence),
+        "decision_ranking_calibration": decision_ranking_metrics(record.get("frozen_decision_snapshot"), (record.get("frozen_forecast") or {}).get("players") or [], actual_rows),
         "anti_hindsight": {**dict(record.get("anti_hindsight") or {}), "frozen_evidence_verified_before_settlement": True, "actuals_not_embedded_in_frozen_fingerprint": True},
     })
     return out
@@ -564,7 +661,8 @@ def aggregate_settled_ledgers(records: Iterable[Mapping[str, Any]]) -> dict[str,
     for name in names:
         values = [float(metric["value"]) for r in settled if (metric := ((((r.get("decision_calibration") or {}).get("metrics") or {}).get(name)) or {})).get("status") == SETTLED and metric.get("value") is not None]
         summary[name] = {"status": SETTLED if values else "NO_SETTLED_SAMPLE", "sample_size": len(values), "mean": _r(_avg(values))}
-    return {"schema_version": SCHEMA_VERSION, "settled_record_count": len(settled), "prediction_sample_size": prediction_n, "decision_metrics": summary, "calibration_confidence": "LOW" if prediction_n < 50 else "MEDIUM" if prediction_n < 150 else "HIGH", "governance": {"updates_require_settled_samples": True, "explicit_sample_size_required": True, "automatic_methodology_weight_mutation": False}}
+    gameweeks = sorted({int(r["planning_gw"]) for r in settled if _finite(r.get("planning_gw")) and int(r["planning_gw"]) > 0})
+    return {"schema_version": SCHEMA_VERSION, "settled_record_count": len(settled), "prediction_sample_size": prediction_n, "gameweek_count": len(gameweeks), "gameweeks": gameweeks, "evidence_scope": {"conclusive_model_comparison": False, "reason": "few gameweeks cannot rank models; a walk-forward design is required first"}, "decision_metrics": summary, "calibration_confidence": "LOW" if prediction_n < 50 else "MEDIUM" if prediction_n < 150 else "HIGH", "governance": {"updates_require_settled_samples": True, "explicit_sample_size_required": True, "automatic_methodology_weight_mutation": False, "model_selection_from_aggregate_forbidden": True}}
 
 
 def tactical_role_calibration_metrics(

@@ -27,6 +27,12 @@ REQUIRED_STAGE3_STAGES = {
     "P1_8_MINI_LEAGUE_BINDING",
 }
 POSITIONS = {"GK", "DEF", "MID", "FWD"}
+# Governed acquisition window of one occurrence, in minutes relative to the
+# logical report_slot. It mirrors ops.render_external_clock.DOWNSTREAM_WINDOW_MINUTES
+# (the latest an occurrence may still be legitimately dispatched); a unit test
+# pins the two together. GitHub schedule ticks are best-effort, so acquisition
+# can complete up to ~65 minutes after the slot without being cross-occurrence.
+S02_OBSERVATION_WINDOW_MINUTES = (-5, 70)
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -142,12 +148,14 @@ def _verified_s02_public_fallback(
     observed = _parse_aware(authority.get("observed_at"))
     generated = _parse_aware(submitted.get("generated_at"))
     slot = _parse_aware(report_slot)
+    lo_min, hi_min = S02_OBSERVATION_WINDOW_MINUTES
     check(
         observed is not None and generated is not None and slot is not None
         and abs((observed - generated).total_seconds()) <= 5
-        # The report_slot is logical. Governed acquisition can complete a few
-        # minutes after it, without becoming future-dated or cross-occurrence.
-        and generated <= slot + timedelta(minutes=15),
+        # report_slot is logical. Acquisition may complete late inside the
+        # governed occurrence window, but never before it opens (cross-
+        # occurrence) nor after it closes (future-dated / next occurrence).
+        and slot + timedelta(minutes=lo_min) <= generated <= slot + timedelta(minutes=hi_min),
         "OBSERVATION_TIMESTAMP_INVALID",
     )
     check(

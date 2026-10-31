@@ -113,6 +113,8 @@ jobs:
 
       - name: Dispatch authoritative operational V6 fallback
         id: core
+        # A core dispatch failure must not suppress the due report attempt.
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -170,7 +172,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if gh run watch "$CORE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status; then
+          if [[ -n "$CORE_RUN_ID" ]] && gh run watch "$CORE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status; then
             echo "core_status=PASS" >> "$GITHUB_OUTPUT"
             echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
           else
@@ -217,10 +219,10 @@ jobs:
           echo "Dispatched visible fallback: $REPORT_MODE $REPORT_SLOT"
 
       - name: Preserve V6 failure as clock-job failure after report dispatch
-        if: steps.core_wait.outputs.core_status == 'FAIL'
+        if: steps.core.outcome == 'failure' || steps.core_wait.outputs.core_status == 'FAIL'
         shell: bash
         run: |
-          echo "::error::Operational V6 failed; visible report dispatch was still attempted"
+          echo "::error::Operational V6 dispatch or execution failed; visible report dispatch was still attempted"
           exit 1
 
       - name: Write external-clock audit evidence

@@ -71,6 +71,33 @@ def test_other_occurrences_do_not_block_and_unknown_run_state_fails_closed():
     assert gate.decide(EXT, TICK, None, ENABLED)["reason"] == "RUN_STATE_UNKNOWN_FAIL_CLOSED"
 
 
+def test_fallback_guard_blocks_all_prior_exact_slot_attempts_fail_closed():
+    """Regression: failed/cancelled runs must never be automatically re-dispatched."""
+    assert 'runs_json="$(gh run list' in FALLBACK_TEXT
+    assert '--limit 100' in FALLBACK_TEXT
+    assert 'if type != "array" then error("invalid run listing")' in FALLBACK_TEXT
+    assert 'if [[ "$existing" != "NONE" ]]; then' in FALLBACK_TEXT
+    assert 'no automatic retry' in FALLBACK_TEXT
+    guard = FALLBACK_TEXT.index('if [[ "$existing" != "NONE" ]]; then')
+    dispatch = FALLBACK_TEXT.index('gh workflow run fpl-master-occurrence-orchestrator.yml')
+    assert guard < dispatch
+    assert '.status == "completed" and .conclusion == "success"' not in FALLBACK_TEXT
+
+
+def test_v6_failure_cannot_suppress_due_visible_report_or_hide_core_failure():
+    """Report continuity: V6 FAIL != REPORT FAIL; operational core still fails."""
+    assert 'continue-on-error: true' in FALLBACK_TEXT
+    assert 'core_status=FAIL' in FALLBACK_TEXT
+    assert "steps.core.outcome == 'failure'" in FALLBACK_TEXT
+    assert '[[ -n "$CORE_RUN_ID" ]] && gh run watch' in FALLBACK_TEXT
+    assert "if: steps.core_wait.outputs.core_status == 'FAIL'" in FALLBACK_TEXT
+    wait = FALLBACK_TEXT.index('- name: Wait for exact operational V6 fallback')
+    dispatch = FALLBACK_TEXT.index('- name: Dispatch visible report fallback idempotently')
+    core_fail = FALLBACK_TEXT.index('- name: Preserve V6 failure as clock-job failure')
+    assert dispatch < wait < core_fail
+    assert 'exit 1' in FALLBACK_TEXT[core_fail:]
+
+
 def test_run_title_equals_the_orchestrator_run_name_format_and_the_fallback_guard():
     assert "format('FPL {0} occurrence {1} {2}', inputs.scheduler_authority, inputs.report_mode, inputs.report_slot)" in ORCH_TEXT
     assert 'exact_title="FPL EXTERNAL_CLOCK_FALLBACK occurrence $REPORT_MODE $REPORT_SLOT"' in FALLBACK_TEXT

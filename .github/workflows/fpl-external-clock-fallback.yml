@@ -178,29 +178,25 @@ jobs:
           set -euo pipefail
           # Must equal the orchestrator run-name: FPL <scheduler_authority> occurrence <mode> <slot>
           exact_title="FPL EXTERNAL_CLOCK_FALLBACK occurrence $REPORT_MODE $REPORT_SLOT"
-          existing="$(
-            gh run list \
-              --repo "$GITHUB_REPOSITORY" \
-              --workflow fpl-master-occurrence-orchestrator.yml \
-              --event workflow_dispatch \
-              --branch main \
-              --limit 50 \
-              --json databaseId,displayTitle,status,conclusion,createdAt \
-            | jq -r --arg title "$exact_title" '
-                map(select(.displayTitle == $title))
-                | sort_by(.createdAt)
-                | last
-                | select(
-                    .status == "queued" or
-                    .status == "in_progress" or
-                    (.status == "completed" and .conclusion == "success")
-                  )
-                | .databaseId // empty
-              '
-          )"
+          # Fail closed on ANY prior exact-slot attempt, including failure,
+          # cancellation or timeout. Never retry an occurrence automatically.
+          # A listing failure must abort rather than risk duplicate dispatch.
+          runs_json="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow fpl-master-occurrence-orchestrator.yml \
+            --event workflow_dispatch \
+            --branch main \
+            --limit 100 \
+            --json databaseId,displayTitle,status,conclusion,createdAt)"
+          existing="$(jq -er --arg title "$exact_title" '
+            if type != "array" then error("invalid run listing") else
+              [ .[] | select(.displayTitle == $title) ]
+              | if length == 0 then "NONE" else (sort_by(.createdAt) | last | .databaseId | tostring) end
+            end
+          ' <<< "$runs_json")"
 
-          if [[ -n "$existing" ]]; then
-            echo "Exact visible occurrence already active/successful: $existing"
+          if [[ "$existing" != "NONE" ]]; then
+            echo "Exact visible occurrence already attempted (no automatic retry): $existing"
             exit 0
           fi
 

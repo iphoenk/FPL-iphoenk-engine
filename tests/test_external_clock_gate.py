@@ -94,7 +94,7 @@ def test_v6_failure_cannot_suppress_due_visible_report_or_hide_core_failure():
     wait = FALLBACK_TEXT.index('- name: Wait for exact operational V6 fallback')
     dispatch = FALLBACK_TEXT.index('- name: Dispatch visible report fallback idempotently')
     core_fail = FALLBACK_TEXT.index('- name: Preserve V6 failure as clock-job failure')
-    assert wait < dispatch < core_fail
+    assert dispatch < wait < core_fail
     assert 'exit 1' in FALLBACK_TEXT[core_fail:]
 
 

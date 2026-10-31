@@ -88,6 +88,8 @@ def test_v6_failure_cannot_suppress_due_visible_report_or_hide_core_failure():
     """Report continuity: V6 FAIL != REPORT FAIL; operational core still fails."""
     assert 'continue-on-error: true' in FALLBACK_TEXT
     assert 'core_status=FAIL' in FALLBACK_TEXT
+    assert "steps.core.outcome == 'failure'" in FALLBACK_TEXT
+    assert '[[ -n "$CORE_RUN_ID" ]] && gh run watch' in FALLBACK_TEXT
     assert "if: steps.core_wait.outputs.core_status == 'FAIL'" in FALLBACK_TEXT
     wait = FALLBACK_TEXT.index('- name: Wait for exact operational V6 fallback')
     dispatch = FALLBACK_TEXT.index('- name: Dispatch visible report fallback idempotently')

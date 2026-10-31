@@ -84,6 +84,18 @@ def test_fallback_guard_blocks_all_prior_exact_slot_attempts_fail_closed():
     assert '.status == "completed" and .conclusion == "success"' not in FALLBACK_TEXT
 
 
+def test_v6_failure_cannot_suppress_due_visible_report_or_hide_core_failure():
+    """Report continuity: V6 FAIL != REPORT FAIL; operational core still fails."""
+    assert 'continue-on-error: true' in FALLBACK_TEXT
+    assert 'core_status=FAIL' in FALLBACK_TEXT
+    assert "if: steps.core_wait.outputs.core_status == 'FAIL'" in FALLBACK_TEXT
+    wait = FALLBACK_TEXT.index('- name: Wait for exact operational V6 fallback')
+    dispatch = FALLBACK_TEXT.index('- name: Dispatch visible report fallback idempotently')
+    core_fail = FALLBACK_TEXT.index('- name: Preserve V6 failure as clock-job failure')
+    assert wait < dispatch < core_fail
+    assert 'exit 1' in FALLBACK_TEXT[core_fail:]
+
+
 def test_run_title_equals_the_orchestrator_run_name_format_and_the_fallback_guard():
     assert "format('FPL {0} occurrence {1} {2}', inputs.scheduler_authority, inputs.report_mode, inputs.report_slot)" in ORCH_TEXT
     assert 'exact_title="FPL EXTERNAL_CLOCK_FALLBACK occurrence $REPORT_MODE $REPORT_SLOT"' in FALLBACK_TEXT

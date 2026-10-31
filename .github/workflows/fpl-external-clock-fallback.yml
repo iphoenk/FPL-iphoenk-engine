@@ -161,15 +161,22 @@ jobs:
           echo "Created exact V6 child run: $run_id"
 
       - name: Wait for exact operational V6 fallback
+        id: core_wait
+        # A failed V6 run must not suppress a due visible V12 report.
+        # Preserve the failure as an explicit job output for downstream audit.
+        continue-on-error: true
         env:
           CORE_RUN_ID: ${{ steps.core.outputs.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-          gh run watch "$CORE_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --exit-status
-          echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
+          if gh run watch "$CORE_RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status; then
+            echo "core_status=PASS" >> "$GITHUB_OUTPUT"
+            echo "Operational V6 fallback terminal success: $CORE_RUN_ID"
+          else
+            echo "core_status=FAIL" >> "$GITHUB_OUTPUT"
+            echo "::warning::Operational V6 failed; continuing truthful V12 fallback"
+          fi
 
       - name: Dispatch visible report fallback idempotently
         if: inputs.report_mode != 'NONE'
@@ -208,6 +215,13 @@ jobs:
             -f checkpoint_time="$CHECKPOINT_TIME" \
             -f scheduler_authority=EXTERNAL_CLOCK_FALLBACK
           echo "Dispatched visible fallback: $REPORT_MODE $REPORT_SLOT"
+
+      - name: Preserve V6 failure as clock-job failure after report dispatch
+        if: steps.core_wait.outputs.core_status == 'FAIL'
+        shell: bash
+        run: |
+          echo "::error::Operational V6 failed; visible report dispatch was still attempted"
+          exit 1
 
       - name: Write external-clock audit evidence
         if: always()

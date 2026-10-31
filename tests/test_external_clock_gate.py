@@ -71,6 +71,19 @@ def test_other_occurrences_do_not_block_and_unknown_run_state_fails_closed():
     assert gate.decide(EXT, TICK, None, ENABLED)["reason"] == "RUN_STATE_UNKNOWN_FAIL_CLOSED"
 
 
+def test_fallback_guard_blocks_all_prior_exact_slot_attempts_fail_closed():
+    """Regression: failed/cancelled runs must never be automatically re-dispatched."""
+    assert 'runs_json="$(gh run list' in FALLBACK_TEXT
+    assert '--limit 100' in FALLBACK_TEXT
+    assert 'if type != "array" then error("invalid run listing")' in FALLBACK_TEXT
+    assert 'if [[ "$existing" != "NONE" ]]; then' in FALLBACK_TEXT
+    assert 'no automatic retry' in FALLBACK_TEXT
+    guard = FALLBACK_TEXT.index('if [[ "$existing" != "NONE" ]]; then')
+    dispatch = FALLBACK_TEXT.index('gh workflow run fpl-master-occurrence-orchestrator.yml')
+    assert guard < dispatch
+    assert '.status == "completed" and .conclusion == "success"' not in FALLBACK_TEXT
+
+
 def test_run_title_equals_the_orchestrator_run_name_format_and_the_fallback_guard():
     assert "format('FPL {0} occurrence {1} {2}', inputs.scheduler_authority, inputs.report_mode, inputs.report_slot)" in ORCH_TEXT
     assert 'exact_title="FPL EXTERNAL_CLOCK_FALLBACK occurrence $REPORT_MODE $REPORT_SLOT"' in FALLBACK_TEXT

@@ -422,3 +422,20 @@ def test_public_s15b_provenance_missing_cannot_claim_full():
     assert "independent provenance: UNVERIFIED" in txt
     assert "standings PARTIAL" in txt
     assert "FULL | 2/2" not in txt
+
+
+
+def test_public_fpl_client_does_not_inspect_oidc_or_account_credentials(monkeypatch):
+    from src.runtime_v6.domains.acquisition import official_fpl_client as client_mod
+
+    def forbidden_env_read():
+        raise AssertionError("Public S15B must not load or rotate OIDC")
+
+    monkeypatch.setattr(client_mod, "auth_material_from_env", forbidden_env_read)
+    monkeypatch.setenv("FPL_AUTH_MODE", "rotating_oidc")
+    monkeypatch.setenv("FPL_OIDC_CLIENT_ID", "do-not-read")
+    client = client_mod.OfficialFPLClient(public_only=True)
+    assert client.auth_material is None
+    assert client.auth_available is False
+    assert client.auth_configuration_state == "UNAVAILABLE"
+    assert client.secret_values == ()

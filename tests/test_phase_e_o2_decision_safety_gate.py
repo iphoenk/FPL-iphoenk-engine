@@ -227,3 +227,19 @@ def test_o2_validator_allows_current_valid_and_clamped_states():
         _report("PREVIOUS_GW_IDENTITY_FALLBACK", s08="PREPARE", xi="PREPARE", cap="PREPARE", s19="PROVISIONAL_PRIORITY"), ""
     )
     assert not [f for f in clamped if f.startswith("O2_")]
+
+
+def test_o2_unchecked_transfer_gap_blocks_unless_snapshot_is_fresh():
+    base = {"resolution_status": "CURRENT_VALID", "transfer_gap_check": "NOT_PERFORMED_NO_TRANSFER_EVIDENCE"}
+    old = evaluate_decision_safety_gate({**base, "snapshot_age_minutes": 360.0})
+    assert old["executable"] is False and old["reason_codes"] == ["OUR15_TRANSFER_GAP_UNCHECKED"]
+    unknown_age = evaluate_decision_safety_gate(base)
+    assert unknown_age["executable"] is False
+    fresh = evaluate_decision_safety_gate({**base, "snapshot_age_minutes": 5.0})
+    assert fresh["executable"] is True
+    passed = evaluate_decision_safety_gate({"resolution_status": "CURRENT_VALID", "transfer_gap_check": "PASSED", "snapshot_age_minutes": 360.0})
+    assert passed["executable"] is True
+    failed = evaluate_decision_safety_gate({"resolution_status": "CURRENT_VALID", "transfer_gap_check": "FAILED_TRANSFER_AFTER_SNAPSHOT", "snapshot_age_minutes": 1.0})
+    assert failed["executable"] is False
+    legacy = evaluate_decision_safety_gate({"resolution_status": "CURRENT_VALID"})
+    assert legacy["executable"] is True

@@ -69,3 +69,24 @@ def test_integration_official_source_cutoff_helper():
     assert runner._official_source_cutoff({"payload": {"checked_at": "2026-10-30T06:25:37.1+00:00"}}).isoformat().startswith("2026-10-30T06:25:37")
     assert runner._official_source_cutoff({"payload": {"checked_at": "2026-10-30T06:25:37"}}) is None
     assert runner._official_source_cutoff({}) is None
+
+
+def test_integration_default_production_shape_no_transfer_feed_is_not_executable(tmp_path):
+    # Archive readable, snapshot hours older than the cutoff, no transfer evidence:
+    # identity is valid but unverifiable against transfers -> gate must block LOCK.
+    res = _resolve(tmp_path, "20261030_123000", archive=True, transfers=False)
+    assert res["resolution_status"] == "CURRENT_VALID"
+    assert res["transfer_gap_check"] == "NOT_PERFORMED_NO_TRANSFER_EVIDENCE"
+    gate = evaluate_decision_safety_gate(res)
+    assert gate["executable"] is False and gate["reason_codes"] == ["OUR15_TRANSFER_GAP_UNCHECKED"]
+    assert {EVA, NJ} <= _ids(res)
+
+
+def test_integration_unparseable_cutoff_is_not_silently_legacy(tmp_path):
+    report = FX["reports"]["20261030_123000"]
+    root = make_private_root(tmp_path, runtime_utc=RUNTIME["20261030_123000"])
+    res = runner._personal_evidence_resolution(
+        tmp_path / "rt", None, planning_gw=9, private_data_root=root, allow_legacy_private_sources=False,
+        report_slot=report["slot"], source_cutoff="UNPARSEABLE_SOURCE_CUTOFF", bootstrap=BOOTSTRAP,
+    )
+    assert res["resolution_status"] != "CURRENT_VALID"

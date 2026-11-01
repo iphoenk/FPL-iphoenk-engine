@@ -1498,7 +1498,7 @@ def _personal_evidence_resolution(
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
     report_slot: str | None = None,
-    source_cutoff: datetime | None = None,
+    source_cutoff: datetime | str | None = None,
     bootstrap: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     # O1: point-in-time inputs.  Public transfers come from an optional
@@ -1526,8 +1526,8 @@ def _personal_evidence_resolution(
         allow_legacy_private_sources=allow_legacy_private_sources,
         require_private_personal=require_private_personal,
         enforce_public_disclosure=not allow_legacy_private_sources,
-        source_cutoff=source_cutoff,
-        include_snapshot_archive=source_cutoff is not None,
+        source_cutoff=source_cutoff if isinstance(source_cutoff, datetime) else None,
+        include_snapshot_archive=isinstance(source_cutoff, datetime),
         public_transfers=public_transfers,
         element_meta=element_meta,
     )
@@ -8146,7 +8146,7 @@ def run_deep(
             allow_legacy_private_sources=allow_legacy_private_sources,
             require_private_personal=require_private_personal,
             report_slot=report_slot,
-            source_cutoff=_official_source_cutoff(official),
+            source_cutoff=_official_source_cutoff(official) or "UNPARSEABLE_SOURCE_CUTOFF",
             bootstrap=bootstrap,
         ),
         required=True,

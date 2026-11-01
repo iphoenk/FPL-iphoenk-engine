@@ -143,7 +143,8 @@ def test_o1_t1_25_oct_matches_evidence_at_that_time(tmp_path):
 def test_o1_t2_26_oct_barry_and_joao_pedro_still_valid(tmp_path):
     result = resolve(tmp_path, "20261026_213000", runtime_utc=RUNTIME["20261026_213000"])
     assert {BARRY, JOAO} <= ids(result) and not ({EVA, NJ} & ids(result))
-    assert result["resolution_status"] in {"CURRENT_VALID", "PUBLIC_INFERRED"}
+    assert result["resolution_status"] == "CURRENT_VALID"
+    assert result["transfer_gap_check"] == "PASSED"
 
 
 def test_o1_t3_29_oct_evanilson_and_njackson_present(tmp_path):
@@ -178,7 +179,8 @@ def test_o1_t6_snapshot_after_cutoff_rejected_as_future_evidence(tmp_path):
         if "062903" not in p.name
     ]
     result2 = resolve(tmp_path / "b", "20261030_123000", runtime_utc=RUNTIME["20261030_123000"], mutate=only_future)
-    assert result2["resolution_status"] != "CURRENT_VALID" or "062903" not in str(result2["source"])
+    assert "062903" not in str(result2["source"])
+    assert result2["resolution_status"] == "PUBLIC_INFERRED"
 
 
 def test_o1_t7_previously_unread_archive_snapshot_now_selectable(tmp_path):
@@ -444,3 +446,20 @@ def test_o1_archive_search_is_bounded(tmp_path):
     assert parse_snapshot_filename_ts("current_team_2026-10-30T002253.325877_plus_0000.json") == _utc(
         "2026-10-30T00:22:53.325877+00:00"
     )
+
+
+def test_o1_unparseable_cutoff_fails_closed_for_mutable_evidence():
+    cand = [{
+        "source": "x", "source_class": "AUTHENTICATED_CURRENT_TEAM", "observed_at": "2026-10-25T14:00:00+00:00",
+        "gw": 8, "auth_state": "AUTH_AVAILABLE", "payload": _snapshot_payload(FX["snapshots"][0]),
+    }]
+    res = select_personal_evidence(cand, planning_gw=9, expected_entry_id=ENTRY,
+                                   as_of="2026-10-25T21:30:00+07:00", source_cutoff="UNPARSEABLE_SOURCE_CUTOFF")
+    assert res["resolution_status"] == "UNAVAILABLE"
+    naive = select_personal_evidence(cand, planning_gw=9, expected_entry_id=ENTRY, source_cutoff="2026-10-25T14:36:12")
+    assert naive["resolution_status"] == "UNAVAILABLE"
+
+
+def test_o1_selected_snapshot_age_is_reported(tmp_path):
+    res = resolve(tmp_path, "20261030_123000", runtime_utc=RUNTIME["20261030_123000"])
+    assert 300 < res["snapshot_age_minutes"] < 400  # 00:22:53Z vs 06:25:38Z cutoff

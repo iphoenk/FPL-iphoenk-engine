@@ -58,6 +58,7 @@ def select_personal_evidence(
         if source_cutoff
         else None
     )
+    cutoff_invalid = bool(source_cutoff) and cutoff_ts is None
     if cutoff_ts is not None:
         cutoff_ts = cutoff_ts.astimezone(timezone.utc)
     normalized: list[dict[str, Any]] = []
@@ -130,6 +131,7 @@ def select_personal_evidence(
                 or editable_gw == planning_gw
             )
             and ts is not None
+            and not cutoff_invalid
             and (
                 ts <= cutoff_ts
                 if cutoff_ts is not None
@@ -142,10 +144,14 @@ def select_personal_evidence(
             )
         )
         mutable_class = source_class in {"AUTHENTICATED_CURRENT_TEAM", "USER_CONFIRMED"}
+        # A cutoff that was supplied but cannot be parsed fails closed: no
+        # mutable evidence may be treated as available at an unknown time.
         future_evidence = bool(
-            cutoff_ts is not None
-            and mutable_class
-            and (ts is None or ts > cutoff_ts)
+            mutable_class
+            and (
+                cutoff_invalid
+                or (cutoff_ts is not None and (ts is None or ts > cutoff_ts))
+            )
         )
         previous_gw = gw is not None and gw < planning_gw
         # Submitted picks remain a public identity snapshot even when the
@@ -236,6 +242,11 @@ def select_personal_evidence(
             ),
             "candidate_count": len(normalized),
             "transfer_gap_check": gap_check if cutoff_ts is not None else None,
+            "snapshot_age_minutes": (
+                round((cutoff_ts - selected["timestamp"]).total_seconds() / 60.0, 3)
+                if cutoff_ts is not None and selected["timestamp"] is not None
+                else None
+            ),
         }
 
     # O1: a public reconstruction (previous finished GW picks + public transfers

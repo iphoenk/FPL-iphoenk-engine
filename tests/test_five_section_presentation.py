@@ -294,11 +294,12 @@ def test_public_s15b_is_not_silent_canonical_upgrade():
 
 
 class _PublicS15BClient:
-    def __init__(self, base, *, broken=False, missing=None, mismatch=False):
+    def __init__(self, base, *, broken=False, missing=None, mismatch=False, wrong_league=False):
         self.base = base
         self.broken = broken
         self.missing = missing
         self.mismatch = mismatch
+        self.wrong_league = wrong_league
         self.public_calls = []
 
     def bootstrap(self):
@@ -323,7 +324,7 @@ class _PublicS15BClient:
             rows[1]["entry"] = 3462711
         return {"status": "LIVE", "checked_at": "2026-11-01T15:00:00Z",
                 "http_status": 200, "endpoint_class": "classic_standings",
-                "payload": {"league": {"id": league_id}, "standings": {
+                "payload": {"league": {"id": 999 if self.wrong_league else league_id}, "standings": {
                     "results": rows, "has_next": False,
                 }}}
 
@@ -361,6 +362,7 @@ def test_public_s15b_end_to_end_uses_existing_v6_facts_and_direct_official():
     assert fs.validate_view(output) == []
     assert "Player One (1)" in output
     assert "FULL | 2/2" in output
+    assert "1 | 7 | 60 | +10" in output  # rank neighbour above OUR
     assert "100.0%" in output  # captain multiplier 2/2 managers
     assert "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL" in output
 
@@ -413,6 +415,12 @@ def test_public_s15b_never_uses_hidden_gw_and_blocks_duplicate_members():
     assert "UNAVAILABLE: no official standings rows" in txt
     assert snap["standings"]["complete"] is False
     assert snap["standings"]["failed_pages"][0]["status"] == "DUPLICATE_OR_INVALID_ENTRY"
+    wrong = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, wrong_league=True),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        transport="official",
+    )
+    assert wrong["standings"]["failed_pages"][0]["status"] == "LEAGUE_ID_MISMATCH"
 
 
 def test_public_s15b_provenance_missing_cannot_claim_full():

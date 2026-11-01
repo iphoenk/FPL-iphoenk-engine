@@ -37,6 +37,9 @@ class DeliveryDecision:
     quiet_window: bool
     quiet_suppressed: bool
     single_visible_report: bool
+    material_match_override: bool = False
+    material_match_event_key: str | None = None
+    material_match_reason: str | None = None
 
 
 def load_delivery_schedule(path: Path = _POLICY_PATH) -> dict[str, Any]:
@@ -145,6 +148,90 @@ def precompute_window(
     )
 
 
+
+def assess_verified_match_materiality(
+    evidence: Mapping[str, Any] | None,
+    *,
+    observed_at: datetime,
+    last_delivered_event_key: str | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Allow a quiet-hour MATCH only for a proven, new owner-relevant change.
+
+    Caller must bind the before/after values to Official FPL published match
+    facts and disclosed, locked submitted picks. Neither a static fixture
+    schedule nor a self-declared material=True flag is enough to alert.
+    This is a visibility policy, not a second report scheduler or scorer.
+    """
+    p = dict(policy or load_delivery_schedule())
+    cfg = p.get("quiet_window") or {}
+    fail = lambda reason: {
+        "eligible": False, "reason": reason, "event_key": None,
+        "classification": "UNVERIFIED",
+    }
+    if cfg.get("material_match_override") is not True:
+        return fail("MATERIAL_MATCH_EXCEPTION_DISABLED")
+    if not isinstance(evidence, Mapping):
+        return fail("NO_OFFICIAL_MATCH_CHANGE_EVIDENCE")
+    if (evidence.get("authority") != "OFFICIAL_FPL"
+            or evidence.get("owner_locked_picks_verified") is not True
+            or evidence.get("official_event_facts_verified") is not True):
+        return fail("OFFICIAL_OR_LOCKED_PICKS_UNVERIFIED")
+    gw = evidence.get("scoring_gw")
+    fixture_id = evidence.get("official_fixture_id")
+    if (type(gw) is not int or gw <= 0
+            or type(fixture_id) is not int or fixture_id <= 0):
+        return fail("GW_OR_OFFICIAL_FIXTURE_ID_INVALID")
+    try:
+        checked = datetime.fromisoformat(
+            str(evidence["checked_at"]).replace("Z", "+00:00")
+        )
+    except (KeyError, ValueError, TypeError):
+        return fail("OFFICIAL_MATCH_CHECK_TIME_UNAVAILABLE")
+    observed = _aware(observed_at)
+    if checked.tzinfo is None or checked.utcoffset() is None:
+        return fail("OFFICIAL_MATCH_CHECK_TIME_NOT_AWARE")
+    age = (observed - checked).total_seconds()
+    limit = int(cfg.get("material_match_max_age_minutes", 75))
+    if age < 0 or age > 60 * limit:
+        return fail("OFFICIAL_MATCH_CHECK_STALE_OR_FUTURE")
+
+    kind = str(evidence.get("event_kind") or "").upper()
+    prior = evidence.get("previous_value")
+    current = evidence.get("current_value")
+    if kind == "OWNER_MATCH_STARTED":
+        proven = (evidence.get("owner_fixture_verified") is True
+                  and prior == "NOT_STARTED" and current == "LIVE")
+    elif kind == "OWNER_MATCH_FINISHED":
+        proven = (evidence.get("owner_fixture_verified") is True
+                  and prior in {"LIVE", "PROVISIONAL_90"}
+                  and current == "FINAL")
+    elif kind == "OWNER_POINTS_CHANGED":
+        proven = (evidence.get("owner_fixture_verified") is True
+                  and type(prior) is int and type(current) is int
+                  and current != prior and prior >= 0 and current >= 0)
+    elif kind == "CAPTAIN_POINTS_CHANGED":
+        proven = (evidence.get("captain_locked_verified") is True
+                  and evidence.get("owner_fixture_verified") is True
+                  and type(prior) is int and type(current) is int
+                  and prior >= 0 and current >= 0 and prior != current)
+    elif kind == "LEAGUE_RANK_CHANGED":
+        proven = (evidence.get("league_coverage_full") is True
+                  and type(prior) is int and type(current) is int
+                  and prior >= 1 and current >= 1 and prior != current)
+    else:
+        return fail("EVENT_KIND_NOT_MATERIAL")
+    if not proven:
+        return fail("MATCH_CHANGE_NOT_INDEPENDENTLY_PROVEN")
+    event_key = f"GW{gw}|FIX{fixture_id}|{kind}|{prior}>{current}"
+    if event_key == last_delivered_event_key:
+        return fail("MATCH_EVENT_ALREADY_DELIVERED")
+    return {
+        "eligible": True, "reason": "VERIFIED_OWNER_MATCH_CHANGE",
+        "event_key": event_key, "classification": "OFFICIAL_FACT",
+    }
+
+
 def resolve_delivery_decision(
     observed_at: datetime,
     *,
@@ -152,6 +239,8 @@ def resolve_delivery_decision(
     match_live: bool = False,
     post_all_match: bool = False,
     owner_adhoc: bool = False,
+    match_material_evidence: Mapping[str, Any] | None = None,
+    last_delivered_match_event_key: str | None = None,
     tolerance_seconds: int = 60,
     policy: Mapping[str, Any] | None = None,
 ) -> DeliveryDecision:
@@ -194,11 +283,22 @@ def resolve_delivery_decision(
             hours=float(p["quiet_window"]["deadline_override_from_hours"])
         )
 
-    # Explicit owner requests and deadline T-3..lock bypass quiet suppression.
+    material_match = assess_verified_match_materiality(
+        match_material_evidence,
+        observed_at=observed,
+        last_delivered_event_key=last_delivered_match_event_key,
+        policy=p,
+    ) if quiet and (match_live or post_all_match) else {
+        "eligible": False, "reason": "NOT_QUIET_MATCH", "event_key": None,
+        "classification": "NOT_APPLICABLE",
+    }
+    # A new Official owner-relevant change may bypass quiet hours; static
+    # kickoff guesses, stale evidence, and duplicated events may not.
     quiet_suppressed = bool(
         quiet
         and not owner_adhoc
         and not deadline_override
+        and not (material_match["eligible"] and (match_live or post_all_match))
         and not any(item in {"DEEP", "PRICE"} for item in obligations)
     )
     visible = bool(obligations) and not quiet_suppressed
@@ -228,4 +328,7 @@ def resolve_delivery_decision(
         quiet_window=quiet,
         quiet_suppressed=quiet_suppressed,
         single_visible_report=True,
+        material_match_override=bool(material_match["eligible"]),
+        material_match_event_key=material_match["event_key"],
+        material_match_reason=material_match["reason"],
     )

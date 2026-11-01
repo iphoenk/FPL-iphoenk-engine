@@ -12,7 +12,11 @@
   "quiet_window": {
     "start": "21:30",
     "end": "04:30",
-    "deadline_override_from_hours": 3
+    "deadline_override_from_hours": 3,
+    "material_match_override": true,
+    "material_match_max_age_minutes": 75,
+    "material_match_requires_owner_and_official": true,
+    "material_match_duplicate_suppression": true
   },
   "precompute": {
     "start_minutes_before": 15,

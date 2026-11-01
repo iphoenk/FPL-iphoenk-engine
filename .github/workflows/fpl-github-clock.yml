@@ -65,7 +65,20 @@ jobs:
           from datetime import datetime, timezone
           from ops.render_external_clock import resolve_tick
 
-          row = resolve_tick(datetime.now(timezone.utc))
+          now = datetime.now(timezone.utc)
+          row = resolve_tick(now)
+          if os.environ.get("GITHUB_EVENT_NAME") == "schedule" and row["report_mode"] == "NONE":
+              # Existing hourly clock, no new trigger authority or private auth.
+              # Network failures must not block ordinary V6 public core upkeep.
+              try:
+                  from ops.match_clock_facts import public_kickoff_match_candidate
+                  match = public_kickoff_match_candidate(now)
+              except Exception:
+                  match = None
+                  print("PUBLIC_MATCH_TRIGGER=UNAVAILABLE_FAIL_CLOSED")
+              if match:
+                  row.update(match)
+                  print("PUBLIC_MATCH_TRIGGER=OFFICIAL_VERIFIED_FIRST_CHECKPOINT")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
               for key, value in row.items():
                   fh.write(f"{key}={value}\n")
@@ -112,6 +125,7 @@ jobs:
           REPORT_MODE: ${{ steps.tick.outputs.report_mode }}
           REPORT_SLOT: ${{ steps.tick.outputs.report_slot }}
           CHECKPOINT_TIME: ${{ steps.tick.outputs.checkpoint_time }}
+          MATCH_PUBLIC_PROOF: ${{ steps.tick.outputs.match_public_proof }}
         shell: bash
         run: |
           set -euo pipefail
@@ -123,7 +137,8 @@ jobs:
             -f observed_at="$OBSERVED_AT" \
             -f report_mode="$REPORT_MODE" \
             -f report_slot="$REPORT_SLOT" \
-            -f checkpoint_time="$CHECKPOINT_TIME"
+            -f checkpoint_time="$CHECKPOINT_TIME" \
+            -f match_public_proof="${MATCH_PUBLIC_PROOF:-}"
 
           exact_title="FPL external clock $LOGICAL_SLOT $REPORT_MODE"
           run_id=""

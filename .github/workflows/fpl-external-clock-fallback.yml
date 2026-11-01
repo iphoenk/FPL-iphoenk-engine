@@ -14,7 +14,7 @@ on:
         required: true
         type: string
       report_mode:
-        description: "NONE, DEEP, or PRICE"
+        description: "NONE, DEEP, PRICE, or Official-verified MATCH"
         required: true
         default: "NONE"
         type: choice
@@ -22,6 +22,12 @@ on:
           - NONE
           - DEEP
           - PRICE
+          - MATCH
+      match_public_proof:
+        description: "Bounded Official FPL first-checkpoint proof for MATCH (empty otherwise)"
+        required: false
+        default: ""
+        type: string
       report_slot:
         description: "Exact +07:00 report occurrence when report_mode is not NONE"
         required: false
@@ -51,6 +57,7 @@ jobs:
       REPORT_MODE: ${{ inputs.report_mode }}
       REPORT_SLOT: ${{ inputs.report_slot }}
       CHECKPOINT_TIME: ${{ inputs.checkpoint_time }}
+      MATCH_PUBLIC_PROOF: ${{ inputs.match_public_proof }}
     steps:
       - name: Validate governed external tick
         id: validate
@@ -75,8 +82,8 @@ jobs:
               raise SystemExit("external clock observation is outside the governed logical-slot window")
 
           mode = os.environ["REPORT_MODE"].upper()
-          if mode not in {"NONE", "DEEP", "PRICE"}:
-              raise SystemExit("report_mode must be NONE, DEEP, or PRICE")
+          if mode not in {"NONE", "DEEP", "PRICE", "MATCH"}:
+              raise SystemExit("report_mode must be NONE, DEEP, PRICE, or MATCH")
 
           slot_raw = os.environ.get("REPORT_SLOT", "").strip()
           checkpoint = os.environ.get("CHECKPOINT_TIME", "").strip()
@@ -102,6 +109,15 @@ jobs:
                   london = slot.astimezone(ZoneInfo("Europe/London"))
                   if london.strftime("%H:%M") != "23:30":
                       raise SystemExit("PRICE checkpoint must bind 23:30 Europe/London")
+              if mode == "MATCH":
+                  if checkpoint != slot.strftime("%H:%M") or slot.minute != 30:
+                      raise SystemExit("MATCH checkpoint must be an existing HH:30 occurrence")
+                  if os.environ.get("MATCH_PUBLIC_PROOF") != "OFFICIAL_FPL_OWNER_KICKOFF":
+                      raise SystemExit("MATCH requires an Official FPL public kickoff proof")
+                  if slot.hour in {4, 12, 21} and slot.minute == 30:
+                      raise SystemExit("MATCH must be embedded in the existing fixed DEEP slot")
+                  if slot.astimezone(ZoneInfo("Europe/London")).strftime("%H:%M") == "23:30":
+                      raise SystemExit("MATCH must be embedded in the existing PRICE slot")
 
           print({
               "logical_slot": logical.isoformat(),

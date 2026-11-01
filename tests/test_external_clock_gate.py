@@ -285,3 +285,141 @@ def test_deploy_config_is_inactive_and_secret_free():
     assert cfg["vars"]["EXTERNAL_CLOCK_ENABLED"] == "false"
     blob = (ROOT / "deploy/external-clock/worker.js").read_text() + (ROOT / "deploy/external-clock/wrangler.toml").read_text()
     assert not re.search(r"gh[pousr]_[A-Za-z0-9]{20,}|github_pat_", blob)
+
+
+
+# BARATAYUDA MATCH: native GitHub clock reuses existing fallback/orchestrator,
+# with public-only Official FPL data; all network mocked in these tests.
+def _match_public_facts(*, kicked="2026-11-01T15:15:00Z", started=True,
+                        owner=True, current=True, deadline="2026-10-30T17:00:00Z",
+                        picks=15):
+    fixture = {
+        "id": 9876, "event": 10, "team_h": 1, "team_a": 2,
+        "started": started, "finished": False, "finished_provisional": False,
+        "kickoff_time": kicked,
+    }
+    raw = {
+        "fixtures/": [fixture],
+        "bootstrap-static/": {
+            "events": [{"id": 10, "is_current": current, "deadline_time": deadline}],
+            "elements": [
+                {"id": i, "team": 1 if owner and i == 1 else 3}
+                for i in range(1, 16)
+            ],
+        },
+        "entry/3462711/event/10/picks/": {
+            "picks": [
+                {"element": i, "position": i, "multiplier": 2 if i == 1 else 1,
+                 "is_captain": i == 1, "is_vice_captain": i == 2}
+                for i in range(1, picks + 1)
+            ],
+        },
+    }
+    calls = []
+    def fetch(path):
+        calls.append(path)
+        return raw[path]
+    return raw, fetch, calls
+
+
+def test_match_clock_public_official_owner_kickoff_first_checkpoint():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, calls = _match_public_facts()
+    now = datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc)
+    candidate = public_kickoff_match_candidate(now, fetch=fetch)
+    assert candidate["report_mode"] == "MATCH"
+    assert candidate["report_slot"] == "2026-11-01T22:30:00+07:00"
+    assert candidate["checkpoint_time"] == "22:30"
+    assert candidate["match_public_proof"] == "OFFICIAL_FPL_OWNER_KICKOFF"
+    assert candidate["match_event_key"].startswith("GW10|FIX9876|")
+    assert calls == ["fixtures/", "bootstrap-static/", "entry/3462711/event/10/picks/"]
+
+
+def test_match_clock_no_live_fixture_does_not_fetch_owner_data():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, calls = _match_public_facts(started=False)
+    candidate = public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    )
+    assert candidate is None
+    assert calls == ["fixtures/"]
+
+
+def test_match_clock_does_not_repeat_old_kickoff_next_hour():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, calls = _match_public_facts()
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 16, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+    assert calls == ["fixtures/"]
+
+
+def test_match_clock_quiet_hour_requires_our_15_fixture():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, _ = _match_public_facts(owner=False)
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+
+
+def test_match_clock_never_uses_predeadline_hidden_picks():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, calls = _match_public_facts(deadline="2026-11-02T10:00:00Z")
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+    assert "entry/3462711/event/10/picks/" not in calls
+
+
+def test_match_clock_rejects_incomplete_submitted_15():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, _ = _match_public_facts(picks=14)
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+
+
+def test_match_clock_rejects_future_kickoff_even_if_started_flagged():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, _ = _match_public_facts(kicked="2026-11-01T15:50:00Z")
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+
+
+def test_match_clock_fails_closed_without_current_scoring_gw():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    _, fetch, _ = _match_public_facts(current=False)
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+
+
+def test_match_clock_rejects_official_payload_shape_conflict():
+    from ops.match_clock_facts import public_kickoff_match_candidate
+    raw, fetch, _ = _match_public_facts()
+    raw["entry/3462711/event/10/picks/"]["picks"][0]["position"] = 2
+    assert public_kickoff_match_candidate(
+        datetime(2026, 11, 1, 15, 35, tzinfo=timezone.utc), fetch=fetch
+    ) is None
+
+
+def test_match_auto_clock_workflow_is_public_only_and_reuses_existing_cron():
+    import yaml
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    clock = (root / ".github/workflows/fpl-github-clock.yml").read_text()
+    fallback = (root / ".github/workflows/fpl-external-clock-fallback.yml").read_text()
+    facts = (root / "ops/match_clock_facts.py").read_text()
+    parsed = yaml.safe_load(clock)
+    assert (parsed.get("on") or parsed.get(True))["schedule"] == [{"cron": "35 * * * *"}]
+    assert 'os.environ.get("GITHUB_EVENT_NAME") == "schedule"' in clock
+    assert 'public_kickoff_match_candidate(now)' in clock
+    assert "-f match_public_proof=" in clock
+    assert "OFFICIAL_FPL_OWNER_KICKOFF" in fallback
+    assert 'if mode == "MATCH":' in fallback
+    assert "MATCH must be embedded in the existing fixed DEEP slot" in fallback
+    assert "MATCH must be embedded in the existing PRICE slot" in fallback
+    assert 'if mode not in {"NONE", "DEEP", "PRICE", "MATCH"}:' in fallback
+    assert "FPL_OIDC_" not in facts and "FPL_ACCESS_TOKEN" not in facts
+    assert "workflow_dispatch" not in facts and "GitHub" not in facts.replace("GitHub clock", "")

@@ -430,6 +430,11 @@ def test_public_s15b_provenance_missing_cannot_claim_full():
     assert "independent provenance: UNVERIFIED" in txt
     assert "standings PARTIAL" in txt
     assert "FULL | 2/2" not in txt
+    raw = _official_s15b()
+    raw["standings"]["managers"][0]["entry_id"] = 3456711
+    txt = fs.render_official_s15b_factual(raw)
+    assert "standings PARTIAL" in txt
+    assert "Owner entry 3462711: rank UNAVAILABLE" in txt
 
 
 

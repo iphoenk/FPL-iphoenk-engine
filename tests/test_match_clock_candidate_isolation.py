@@ -49,7 +49,10 @@ def test_same_gw_second_owner_fixture_survives_first_materiality_rejection():
 
     with patch("ops.match_clock_facts.assess_verified_match_materiality",
                side_effect=materiality):
-        result = public_kickoff_match_candidate(now, fetch=fetch)
+        result = public_kickoff_match_candidate(now, fetch=fetch, previous_fixture_states={
+            fid: {"id": fid, "event": 9, "started": False, "finished": False}
+            for fid in (101, 102)
+        })
     assert seen == [101, 102]
     assert result is not None
     assert result["report_mode"] == "MATCH"
@@ -77,4 +80,17 @@ def test_first_checkpoint_does_not_replay_at_next_hour():
                  "started": True, "finished": False,
                  "finished_provisional": False,
                  "kickoff_time": "2026-11-01T20:00:00Z"}]
+    assert public_kickoff_match_candidate(now, fetch=fetch) is None
+
+def test_current_live_without_previous_official_snapshot_fails_closed():
+    now = datetime(2026, 11, 1, 20, 35, tzinfo=timezone.utc)
+    def fetch(path):
+        if path == "fixtures/":
+            return [{"id": 101, "event": 9, "team_h": 1, "team_a": 2,
+                     "started": True, "finished": False,
+                     "finished_provisional": False,
+                     "kickoff_time": "2026-11-01T20:00:00Z"}]
+        if path == "bootstrap-static/":
+            return {"events": [], "elements": []}
+        raise AssertionError(path)
     assert public_kickoff_match_candidate(now, fetch=fetch) is None

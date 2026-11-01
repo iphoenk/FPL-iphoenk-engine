@@ -229,7 +229,7 @@ def _official_s15b(full=True, deadline=True):
             ],
         }
     return {
-        "league_id": 9477, "owner_entry_id": 3462711,
+        "league_id": 9477, "owner_entry_id": 3462711, "transport": "OFFICIAL_DIRECT",
         "standings": {
             "authority": "OFFICIAL_FPL", "league_id": 9477, "generated_at": "2026-11-01T14:30:00Z",
             "complete": True, "failed_pages": [], "expected_manager_count": 2, "managers": managers,
@@ -290,3 +290,134 @@ def test_public_s15b_is_not_silent_canonical_upgrade():
     assert fs.validate_view(out) == []
     # Existing canonical validation requires original body; public rows cannot impersonate it.
     assert "CANONICAL_BODY_REQUIRED" in fs.validate_view(out.replace(fs.load_config()["degraded_marker"], "STATUS"))
+
+
+
+class _PublicS15BClient:
+    def __init__(self, base, *, broken=False, missing=None, mismatch=False):
+        self.base = base
+        self.broken = broken
+        self.missing = missing
+        self.mismatch = mismatch
+        self.public_calls = []
+
+    def bootstrap(self):
+        self.public_calls.append("bootstrap")
+        if self.broken:
+            return {"status": "UNAVAILABLE"}
+        return {"status": "LIVE", "payload": {
+            "events": [
+                {"id": 9, "deadline_time": "2026-10-30T13:00:00Z"},
+                {"id": 10, "deadline_time": "2026-11-07T13:00:00Z"},
+            ],
+            "elements": [{"id": 1, "web_name": "Player One"}],
+        }}
+
+    def classic_standings(self, league_id, page):
+        self.public_calls.append("standings")
+        rows = [
+            {"entry": 3462711, "rank": 2, "total": 50, "player_name": "Owner", "entry_name": "Our team"},
+            {"entry": 7, "rank": 1, "total": 60, "player_name": "Rival", "entry_name": "Other team"},
+        ]
+        if self.mismatch:
+            rows[1]["entry"] = 3462711
+        return {"status": "LIVE", "checked_at": "2026-11-01T15:00:00Z",
+                "http_status": 200, "endpoint_class": "classic_standings",
+                "payload": {"league": {"id": league_id}, "standings": {
+                    "results": rows, "has_next": False,
+                }}}
+
+    def submitted_picks(self, entry_id, gw):
+        self.public_calls.append("submitted_picks")
+        if self.missing == entry_id:
+            return {"status": "UNAVAILABLE", "http_status": 503}
+        return {"status": "LIVE", "checked_at": "2026-11-01T15:00:00Z",
+                "http_status": 200, "endpoint_class": "submitted_picks",
+                "payload": {"active_chip": None, "entry_history": {"event": gw},
+                            "picks": [
+                                {"element": i + (100 if entry_id == 7 else 0),
+                                 "position": i, "multiplier": (2 if i == 1 else 1 if i <= 11 else 0),
+                                 "is_captain": i == 1, "is_vice_captain": i == 2}
+                                for i in range(1, 16)
+                            ]}}
+
+
+def test_public_s15b_end_to_end_uses_existing_v6_facts_and_direct_official():
+    from datetime import datetime, timezone
+    clients = []
+    def factory(base):
+        client = _PublicS15BClient(base)
+        clients.append(client)
+        return client
+    snap = fs.acquire_public_s15b(
+        client_factory=factory, now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    assert snap["transport"] == "OFFICIAL_DIRECT" and snap["snapshot_gw"] == 9
+    assert snap["standings"]["expected_manager_count"] == 2
+    assert snap["submitted_picks"]["submitted_picks_available_count"] == 2
+    assert clients[0].public_calls.count("submitted_picks") == 2
+    assert set(clients[0].public_calls) == {"bootstrap", "standings", "submitted_picks"}
+    output = fs.build_degraded_fallback("OIDC unavailable", public_s15b_snapshot=snap)
+    assert fs.validate_view(output) == []
+    assert "Player One (1)" in output
+    assert "FULL | 2/2" in output
+    assert "100.0%" in output  # captain multiplier 2/2 managers
+    assert "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL" in output
+
+
+def test_public_s15b_auto_dashboard_fallback_never_promotes_full_or_eo():
+    from datetime import datetime, timezone
+    clients = []
+    def factory(base):
+        client = _PublicS15BClient(base, broken="fantasy.premierleague.com" in base)
+        clients.append(client)
+        return client
+    snap = fs.acquire_public_s15b(
+        client_factory=factory, transport="auto", now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    assert snap["transport"] == "DASHBOARD_PROXY"
+    assert snap["official_fetch_failures"] == ["official: ValueError"]
+    txt = fs.render_official_s15b_factual(snap)
+    assert "independent provenance: UNVERIFIED" in txt
+    assert "standings PARTIAL" in txt
+    assert "UNAVAILABLE" in txt
+    assert "FULL | 2/2" not in txt
+    assert len(clients) == 2
+
+
+def test_public_s15b_direct_partial_picks_keeps_sample_denominator():
+    from datetime import datetime, timezone
+    snap = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, missing=7),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    txt = fs.render_official_s15b_factual(snap)
+    assert "PARTIAL | 1/2" in txt
+    assert "EO requires FULL multiplier coverage" in txt
+    assert "| UNAVAILABLE" in txt
+
+
+def test_public_s15b_never_uses_hidden_gw_and_blocks_duplicate_members():
+    from datetime import datetime, timezone
+    import pytest
+    with pytest.raises(ValueError, match="HIDDEN_OR_INVALID_GAMEWEEK"):
+        fs.acquire_public_s15b(
+            client_factory=lambda base: _PublicS15BClient(base), disclosed_gw=10,
+            now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        )
+    snap = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, mismatch=True),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    txt = fs.render_official_s15b_factual(snap)
+    assert "Submitted picks: GW9" in txt
+    assert "standings PARTIAL" in txt
+
+
+def test_public_s15b_provenance_missing_cannot_claim_full():
+    raw = _official_s15b()
+    raw.pop("transport")
+    txt = fs.render_official_s15b_factual(raw)
+    assert "independent provenance: UNVERIFIED" in txt
+    assert "standings PARTIAL" in txt
+    assert "FULL | 2/2" not in txt

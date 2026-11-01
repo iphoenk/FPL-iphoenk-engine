@@ -146,6 +146,7 @@ class OfficialFPLClient:
         backoff_seconds: float = 0.4,
         session_factory: Callable[[], requests.Session] = requests.Session,
         auth_material: AuthMaterial | None = None,
+        public_only: bool = False,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
@@ -153,7 +154,10 @@ class OfficialFPLClient:
         self.backoff_seconds = max(0.0, backoff_seconds)
         self.session_factory = session_factory
         self.auth_configuration_error: str | None = None
-        if auth_material is not None:
+        if public_only:
+            # Independent factual S15B must never resolve or rotate credentials.
+            self.auth_material = None
+        elif auth_material is not None:
             self.auth_material = auth_material
         else:
             try:

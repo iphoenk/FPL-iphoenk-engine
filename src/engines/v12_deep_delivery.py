@@ -326,6 +326,32 @@ def validate_deep_decision_content_delivery(
     def state(section_id: str) -> str:
         return str((sections.get(section_id) or {}).get("state") or "").upper()
 
+    # O2 defence in depth: an executable Captain/XI is invalid without
+    # CURRENT_VALID OUR15 evidence recorded in the same report.
+    s02_resolution = (content("S02").get("personal_resolution") or {})
+    if isinstance(s02_resolution, Mapping) and s02_resolution:
+        resolution_status = str(s02_resolution.get("status") or "").upper()
+        if resolution_status != "CURRENT_VALID":
+            dashboard = content("S01").get("decision_dashboard") or {}
+            judgement_status = str(
+                (content("S19").get("final_judgement") or {}).get("recommendation_status") or ""
+            ).upper()
+            executable_surfaces = [
+                name
+                for name, value in (
+                    ("S08_CAPTAIN_LOCK", content("S08").get("decision_state")),
+                    ("S01_CAPTAIN_LOCK", dashboard.get("CAPTAIN")),
+                    ("S01_XI_LOCK", dashboard.get("XI")),
+                    ("S19_EXECUTABLE_LOCK", "LOCK" if judgement_status == "EXECUTABLE_LOCK" else None),
+                )
+                if str(value or "").upper() == "LOCK"
+            ]
+            if executable_surfaces:
+                failures.append(
+                    "O2_EXECUTABLE_DECISION_WITHOUT_CURRENT_OUR15:"
+                    + ",".join(executable_surfaces)
+                )
+
     s14 = content("S14")
     routes = [
         dict(row) for row in s14.get("package_routes") or []

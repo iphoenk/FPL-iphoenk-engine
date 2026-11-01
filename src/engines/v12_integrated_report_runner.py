@@ -33,6 +33,11 @@ from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
 from src.engines.v12_captain_frontier import decide_captain_vice
+from src.engines.v12_decision_safety_gate import (
+    clamp_state as _gate_clamp_state,
+    evaluate_decision_safety_gate,
+    gate_summary as _gate_summary,
+)
 from src.engines.v12_report_freshness_provenance import attach_report_provenance
 from src.engines.v12_mini_league_overlay import (
     attach_mini_league_overlay,
@@ -4420,6 +4425,7 @@ def _captain_decision_surface(
     lineup_state: str,
     mini_detail: Mapping[str, Any],
     projections: Mapping[str, Any] | None = None,
+    our15_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One canonical C/VC decision surface.
 
@@ -4693,6 +4699,14 @@ def _captain_decision_surface(
     )
     if decision_state not in {"WAIT", "PREPARE", "LOCK"}:
         decision_state = "PREPARE"
+    # O2: never publish an executable captain when OUR15 or critical evidence
+    # cannot be proven; clamp only (LOCK->PREPARE, or WAIT when unavailable).
+    gate_clamped_from: str | None = None
+    if our15_gate is not None:
+        clamped_state = _gate_clamp_state(decision_state, our15_gate)
+        if clamped_state != decision_state:
+            gate_clamped_from = decision_state
+            decision_state = clamped_state
 
     classification = str(decision.get("classification") or "FRAGILE").upper()
     mini_override = bool(decision.get("mini_league_override_applied"))
@@ -4706,6 +4720,12 @@ def _captain_decision_surface(
         reconciliation += (
             " Competitive evidence did not force a switch; no exposure-only "
             "candidate is allowed outside the football frontier."
+        )
+
+    if gate_clamped_from is not None:
+        reconciliation += (
+            f" DECISION SAFETY GATE: {gate_clamped_from} lowered to {decision_state}; "
+            + _gate_summary(our15_gate)
         )
 
     review_pair = dict(decision.get("review_pair") or {})
@@ -4773,6 +4793,9 @@ def _captain_decision_surface(
             "frontier_candidate_count": len(decorated_frontier),
         },
         "reconciliation_reason": reconciliation,
+        "decision_safety_gate": (
+            dict(our15_gate) if our15_gate is not None else None
+        ),
         "authority": (
             "P1.7 final-XI legality + P1.3B canonical one-GW return distributions "
             "+ P1.8 LEAGUE/COMPETITIVE context; no second football optimizer"
@@ -4965,7 +4988,11 @@ def _decision_dashboard(
     price_radar: Mapping[str, Any] | None,
     auth_state: str,
     finance: Mapping[str, Any] | None,
+    our15_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    gate = our15_gate
+    if gate is None and isinstance(captain_surface.get("decision_safety_gate"), Mapping):
+        gate = captain_surface.get("decision_safety_gate")
     battle = dict((lineup or {}).get("main_starting_xi_battle") or {})
     xi_state = (
         "WAIT"
@@ -4980,6 +5007,10 @@ def _decision_dashboard(
     ).upper()
     if captain_state not in {"WAIT", "PREPARE", "LOCK"}:
         captain_state = "WAIT"
+    captain_near_tie = captain_state == "PREPARE"
+    if gate is not None:
+        xi_state = _gate_clamp_state(xi_state, gate)
+        captain_state = _gate_clamp_state(captain_state, gate)
 
     price_rows = [
         dict(row)
@@ -5023,7 +5054,9 @@ def _decision_dashboard(
         blockers.append("EXECUTION_FINANCE_DEGRADED")
     if not chip_available:
         blockers.append("CHIP_AUTHORITY_UNAVAILABLE")
-    if captain_state == "PREPARE":
+    if gate is not None and gate.get("executable") is False:
+        blockers.extend(str(code) for code in gate.get("reason_codes") or [])
+    if captain_near_tie:
         blockers.append("CAPTAIN_NEAR_TIE_OR_FRESH_EVIDENCE_PENDING")
     if price_rows and not fresh_rows:
         blockers.append("PRICE_PREDICTOR_STALE")
@@ -5043,7 +5076,9 @@ def _decision_dashboard(
         "KEY_DRIVER": (
             "P1.2 package utility + canonical P1.4 MC + P1.8 bounded mini-league overlay"
         ),
-        "CURRENT_BLOCKERS": blockers,
+        "CURRENT_BLOCKERS": list(dict.fromkeys(blockers)),
+        "DECISION_EXECUTABLE": bool(gate is None or gate.get("executable") is True),
+        "DECISION_SAFETY_GATE": dict(gate) if gate is not None else None,
         "finance_available": finance_available,
         "price_fresh_count": len(fresh_rows),
         "price_row_count": len(price_rows),
@@ -7378,12 +7413,19 @@ def refresh_mini_league_only_state(
         calendar_context=calendar_context,
     )
     lineup_state = "COMPLETE"
+    frozen_s02 = dict((section_payloads.get("S02") or {}).get("content") or {})
+    frozen_resolution = dict(frozen_s02.get("personal_resolution") or {})
+    frozen_resolution.setdefault(
+        "resolution_status", frozen_resolution.get("status")
+    )
+    our15_gate = evaluate_decision_safety_gate(frozen_resolution)
     captain_surface = _captain_decision_surface(
         owned=owned,
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
         projections=projections,
+        our15_gate=our15_gate,
     )
 
     captain_frontier_ids = {
@@ -7496,6 +7538,7 @@ def refresh_mini_league_only_state(
         price_radar=dict(warm.get("price_radar") or {}),
         auth_state=auth_state,
         finance=finance,
+        our15_gate=our15_gate,
     )
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
@@ -9193,12 +9236,30 @@ def run_deep(
         "bgw_context": dict(bgw_context),
         "bgw_reoptimization_trigger": bool(bgw_context.get("active")),
     }
+    our15_gate = evaluate_decision_safety_gate(
+        personal_resolution,
+        critical_evidence={
+            "V6_PUBLISH_INTEGRITY": (v6_source_trace or {}).get("v6_publish_integrity"),
+            "OFFICIAL_TEAM_IDENTITY": (
+                "FAIL"
+                if "V6_OFFICIAL_TEAM_IDENTITY_NOT_PROVEN"
+                in ((v6_source_trace or {}).get("failures") or [])
+                else "PASS"
+            ),
+        },
+        our15_consistency_failures=(
+            []
+            if len({_surface_element(row) for row in owned}) == 15
+            else ["OUR15_NOT_15_UNIQUE_ELEMENTS"]
+        ),
+    )
     captain_surface = _captain_decision_surface(
         owned=owned,
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
         projections=projections,
+        our15_gate=our15_gate,
     )
     chip_state = (finance or {}).get("chips")
     chip_available = (

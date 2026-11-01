@@ -1,0 +1,154 @@
+{
+ "20261025_213000": {
+  "current15_authority": {
+   "applicable_gw": 9,
+   "auth_state": "AUTH_AVAILABLE",
+   "entry_id": 3462711,
+   "finance_availability": "AVAILABLE",
+   "observed_at": "2026-10-25T14:39:09.968062+00:00",
+   "planning_gw": 9,
+   "resolution_status": "CURRENT_VALID",
+   "source": "PRIVATE:personal/current_team.json",
+   "source_class": "AUTHENTICATED_CURRENT_TEAM",
+   "stale": false
+  },
+  "our15_element_ids": [
+   8,
+   31,
+   40,
+   68,
+   109,
+   115,
+   124,
+   154,
+   165,
+   249,
+   279,
+   391,
+   411,
+   427,
+   572
+  ],
+  "personal_resolution": {
+   "gw": 9,
+   "observed_at": "2026-10-25T14:39:09.968062+00:00",
+   "source": "PRIVATE:personal/current_team.json",
+   "stale": false,
+   "status": "CURRENT_VALID"
+  }
+ },
+ "20261026_213000": {
+  "current15_authority": {
+   "applicable_gw": 8,
+   "auth_state": "UNAVAILABLE",
+   "entry_id": 3462711,
+   "finance_availability": "DEGRADED",
+   "observed_at": "2026-10-26T15:33:40.016323+00:00",
+   "planning_gw": 9,
+   "resolution_status": "PREVIOUS_GW_IDENTITY_FALLBACK",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "source_class": "OFFICIAL_SUBMITTED_PICKS",
+   "stale": true
+  },
+  "our15_element_ids": [
+   8,
+   31,
+   40,
+   68,
+   109,
+   115,
+   124,
+   154,
+   165,
+   249,
+   279,
+   391,
+   411,
+   427,
+   572
+  ],
+  "personal_resolution": {
+   "gw": 8,
+   "observed_at": "2026-10-26T15:33:40.016323+00:00",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "stale": true,
+   "status": "PREVIOUS_GW_IDENTITY_FALLBACK"
+  }
+ },
+ "20261029_213000": {
+  "current15_authority": {
+   "applicable_gw": 8,
+   "auth_state": "UNAVAILABLE",
+   "entry_id": 3462711,
+   "finance_availability": "DEGRADED",
+   "observed_at": "2026-10-29T15:37:38.417327+00:00",
+   "planning_gw": 9,
+   "resolution_status": "PREVIOUS_GW_IDENTITY_FALLBACK",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "source_class": "OFFICIAL_SUBMITTED_PICKS",
+   "stale": true
+  },
+  "our15_element_ids": [
+   8,
+   31,
+   40,
+   68,
+   109,
+   115,
+   124,
+   154,
+   165,
+   249,
+   279,
+   391,
+   411,
+   427,
+   572
+  ],
+  "personal_resolution": {
+   "gw": 8,
+   "observed_at": "2026-10-29T15:37:38.417327+00:00",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "stale": true,
+   "status": "PREVIOUS_GW_IDENTITY_FALLBACK"
+  }
+ },
+ "20261030_123000": {
+  "current15_authority": {
+   "applicable_gw": 8,
+   "auth_state": "UNAVAILABLE",
+   "entry_id": 3462711,
+   "finance_availability": "DEGRADED",
+   "observed_at": "2026-10-30T06:29:39.294789+00:00",
+   "planning_gw": 9,
+   "resolution_status": "PREVIOUS_GW_IDENTITY_FALLBACK",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "source_class": "OFFICIAL_SUBMITTED_PICKS",
+   "stale": true
+  },
+  "our15_element_ids": [
+   8,
+   31,
+   40,
+   68,
+   109,
+   115,
+   124,
+   154,
+   165,
+   249,
+   279,
+   391,
+   411,
+   427,
+   572
+  ],
+  "personal_resolution": {
+   "gw": 8,
+   "observed_at": "2026-10-30T06:29:39.294789+00:00",
+   "source": "PRIVATE:personal/submitted_picks.json",
+   "stale": true,
+   "status": "PREVIOUS_GW_IDENTITY_FALLBACK"
+  }
+ }
+}

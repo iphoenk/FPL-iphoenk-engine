@@ -95,3 +95,42 @@ D0-D5 schedule acceptance requires:
 - precompute T-15/T-10;
 - V6 core `:30` authority unchanged;
 - no second scheduler.
+
+
+## 8. BARATAYUDA material MATCH delivery (2 Nov 2026, draft implementation)
+
+The sole ChatGPT Master task remains hourly at HH:30 Asia/Jakarta and the
+independent existing GitHub-native operational clock remains 35 * * * * UTC
+(HH:35 WIB). There is no new cron or extra scheduler.
+
+For GitHub schedule-origin occurrences only, fpl-github-clock.yml may, when
+the normal resolver says NONE, call public read-only Official FPL endpoints for
+fixtures, bootstrap and published GW owner picks. This bound detector may
+select the unique first HH:30 after a verified LIVE kickoff involving at least
+one of the owner's 15 locked players. It requires exact positive fixture/GW,
+is_current Official event, passed deadline, live fixture flags, full 15 unique
+submitted picks, team identity, and no future kickoff. The existing
+fpl-external-clock-fallback.yml then accepts MATCH with an
+OFFICIAL_FPL_OWNER_KICKOFF proof and calls the existing
+fpl-master-occurrence-orchestrator.yml MATCH route, not a new runner.
+The separately configured independent external clock trigger remains
+DEEP/PRICE-only in ops/external_clock_gate.py; manual/unsigned origins
+are never promoted to GitHub-native schedule proof.
+
+The owner-visible ChatGPT HH:30 consumer remains read-only and may render a
+noncanonical MATCH checkpoint using validated V6/Official fixture/event live
+scores when no new exact canonical MATCH is published. The existing
+resolve_delivery_decision quiet-hour material exception is broader than the
+native kickoff clock: verified OUR15/captain points, relevant owner fixture
+start/finish, or FULL-coverage provisional league-rank changes may bypass
+quiet once per new event fingerprint. Stale sources, missing prior comparison,
+score-only unrelated fixtures or repeat snapshots cannot alert during quiet.
+Outside quiet, verified LIVE fixture state may be shown on eligible MATCH
+checkpoints. When a fixed DEEP or PRICE report overlaps, embed MATCH changes
+in one coherent report.
+
+No OIDC credentials, private financial values, hidden GW picks, independent
+score model, new xPts, GitHub mutation by ChatGPT or additional scheduler are
+allowed. Do not call a read-only checkpoint canonical MATCH13, infer
+GitHub/ChatGPT natural acceptance, or declare MATCH production GREEN without
+fresh actual event and native delivery receipts.

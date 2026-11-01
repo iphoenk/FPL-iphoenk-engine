@@ -8,7 +8,7 @@ already-produced personal evidence and validates that authoritative V12
 analytics are materially visible in the DEEP report.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping, Sequence
 
 from src.engines.v12_competitive_window import resolve_competitive_window
@@ -37,16 +37,47 @@ def select_personal_evidence(
     planning_gw: int,
     expected_entry_id: int | None = None,
     as_of: str | None = None,
+    source_cutoff: str | datetime | None = None,
 ) -> dict[str, Any]:
     """Select freshest semantically valid personal evidence.
+
+    O1 (point-in-time): when ``source_cutoff`` is supplied, mutable personal
+    evidence (authenticated current team, user confirmation) must have been
+    observed at or before the cutoff; later observations are rejected as future
+    evidence instead of being tolerated by a fixed slot window.  Without a
+    cutoff the legacy ``as_of + 15 min`` guard is unchanged (PRICE path).
 
     AUTH_EXPIRED timestamps cannot outrank a valid authenticated or explicitly
     user-confirmed current-team candidate. Previous-GW submitted picks are
     identity fallback only and are never allowed to invent current finance.
     """
+    cutoff_ts = (
+        source_cutoff
+        if isinstance(source_cutoff, datetime) and source_cutoff.tzinfo is not None
+        else _aware_timestamp(source_cutoff)
+        if source_cutoff
+        else None
+    )
+    cutoff_invalid = bool(source_cutoff) and cutoff_ts is None
+    if cutoff_ts is not None:
+        cutoff_ts = cutoff_ts.astimezone(timezone.utc)
     normalized: list[dict[str, Any]] = []
+    reconstruction_reasons: list[str] = []
+    transfers_evidence: list[dict[str, Any]] | None = None
     for index, raw in enumerate(candidates):
         payload = dict(raw.get("payload") or {})
+        if str(raw.get("source_class") or "").upper() == "PUBLIC_INFERRED_RECONSTRUCTION":
+            recon = dict(payload.get("reconstruction") or {})
+            if isinstance(payload.get("transfers_evidence"), list):
+                transfers_evidence = [
+                    dict(t) for t in payload["transfers_evidence"] if isinstance(t, Mapping)
+                ]
+            if recon.get("status") != "PUBLIC_INFERRED":
+                reconstruction_reasons.extend(str(r) for r in recon.get("reasons") or [])
+        elif "transfers_evidence" in payload and isinstance(payload.get("transfers_evidence"), list):
+            transfers_evidence = [
+                dict(t) for t in payload["transfers_evidence"] if isinstance(t, Mapping)
+            ]
         rows = _identity_rows(payload)
         observed = (
             raw.get("observed_at")
@@ -100,11 +131,26 @@ def select_personal_evidence(
                 or editable_gw == planning_gw
             )
             and ts is not None
-            and (as_of is None or (slot_ts is not None and ts <= slot_ts + timedelta(minutes=15)))
+            and not cutoff_invalid
+            and (
+                ts <= cutoff_ts
+                if cutoff_ts is not None
+                else (as_of is None or (slot_ts is not None and ts <= slot_ts + timedelta(minutes=15)))
+            )
             and (expected_entry_id is None or {"me", "my_team"} <= verified_endpoints)
             and (
                 expected_entry_id is None
                 or str(payload.get("entry_id") or "") == str(expected_entry_id)
+            )
+        )
+        mutable_class = source_class in {"AUTHENTICATED_CURRENT_TEAM", "USER_CONFIRMED"}
+        # A cutoff that was supplied but cannot be parsed fails closed: no
+        # mutable evidence may be treated as available at an unknown time.
+        future_evidence = bool(
+            mutable_class
+            and (
+                cutoff_invalid
+                or (cutoff_ts is not None and (ts is None or ts > cutoff_ts))
             )
         )
         previous_gw = gw is not None and gw < planning_gw
@@ -113,6 +159,7 @@ def select_personal_evidence(
         public_submitted_current = False
         current_semantic = bool(
             exact15
+            and not future_evidence
             and (
                 user_current
                 or authenticated
@@ -135,9 +182,46 @@ def select_personal_evidence(
             "user_current": user_current,
             "previous_gw": previous_gw,
             "current_semantic": current_semantic,
+            "future_evidence": future_evidence,
         })
 
+    def _newer_transfer_after(snapshot_ts: datetime | None) -> bool | None:
+        """True when a public transfer for the planning GW falls after the
+        snapshot but not after the cutoff; None when no transfer evidence."""
+        if transfers_evidence is None or cutoff_ts is None or snapshot_ts is None:
+            return None
+        for transfer in transfers_evidence:
+            try:
+                if int(transfer.get("event")) != int(planning_gw):
+                    continue
+            except (TypeError, ValueError):
+                continue
+            if expected_entry_id is not None and str(transfer.get("entry")) != str(expected_entry_id):
+                continue
+            when = _aware_timestamp(transfer.get("time"))
+            if when is None:
+                return True  # unplaceable transfer: cannot prove the snapshot is complete
+            if snapshot_ts < when <= cutoff_ts:
+                return True
+        return False
+
     valid = [row for row in normalized if row["current_semantic"]]
+    gap_check = "NOT_PERFORMED_NO_TRANSFER_EVIDENCE"
+    if valid and cutoff_ts is not None:
+        best = max(
+            valid,
+            key=lambda row: (
+                row["timestamp"].timestamp() if row["timestamp"] is not None else float("-inf"),
+                1 if row["authenticated"] else 0,
+                -row["index"],
+            ),
+        )
+        newer = _newer_transfer_after(best["timestamp"])
+        if newer is True:
+            valid = []  # snapshot predates a transfer made before the cutoff
+            gap_check = "FAILED_TRANSFER_AFTER_SNAPSHOT"
+        elif newer is False:
+            gap_check = "PASSED"
     if valid:
         selected = max(
             valid,
@@ -157,11 +241,41 @@ def select_personal_evidence(
                 selected["authenticated"] or selected["user_current"]
             ),
             "candidate_count": len(normalized),
+            "transfer_gap_check": gap_check if cutoff_ts is not None else None,
+            "snapshot_age_minutes": (
+                round((cutoff_ts - selected["timestamp"]).total_seconds() / 60.0, 3)
+                if cutoff_ts is not None and selected["timestamp"] is not None
+                else None
+            ),
         }
+
+    # O1: a public reconstruction (previous finished GW picks + public transfers
+    # up to the cutoff) outranks the stale previous-GW fallback.  It is never
+    # authenticated-current: stale stays True and finance stays unavailable.
+    for row in normalized:
+        if str(row["source_class"]).upper() != "PUBLIC_INFERRED_RECONSTRUCTION":
+            continue
+        recon = dict(row["payload"].get("reconstruction") or {})
+        if (
+            recon.get("status") == "PUBLIC_INFERRED"
+            and row["exact15"]
+            and (expected_entry_id is None or str(row["payload"].get("entry_id") or "") == str(expected_entry_id))
+        ):
+            return {
+                **row,
+                "resolution_status": "PUBLIC_INFERRED",
+                "auth_state": "PUBLIC_INFERRED",
+                "gw": planning_gw,
+                "stale": True,
+                "finance_allowed": False,
+                "candidate_count": len(normalized),
+                "transfer_gap_check": "RECONSTRUCTED_FROM_PUBLIC_TRANSFERS",
+                "reconstruction": recon,
+            }
 
     identity_fallbacks = []
     for row in normalized:
-        if not row["exact15"]:
+        if not row["exact15"] or row.get("future_evidence"):
             continue
         payload = row["payload"]
         if row["source_class"] == "OFFICIAL_SUBMITTED_PICKS":
@@ -205,6 +319,7 @@ def select_personal_evidence(
             "candidate_count": len(normalized),
             "rows": [],
             "payload": {},
+            "reconstruction_failures": list(dict.fromkeys(reconstruction_reasons)),
         }
     selected = max(
         identity_fallbacks,
@@ -224,6 +339,10 @@ def select_personal_evidence(
         "stale": True,
         "finance_allowed": False,
         "candidate_count": len(normalized),
+        "transfer_gap_check": (
+            gap_check if cutoff_ts is not None else None
+        ),
+        "reconstruction_failures": list(dict.fromkeys(reconstruction_reasons)),
     }
 
 
@@ -325,6 +444,32 @@ def validate_deep_decision_content_delivery(
 
     def state(section_id: str) -> str:
         return str((sections.get(section_id) or {}).get("state") or "").upper()
+
+    # O2 defence in depth: an executable Captain/XI is invalid without
+    # CURRENT_VALID OUR15 evidence recorded in the same report.
+    s02_resolution = (content("S02").get("personal_resolution") or {})
+    if isinstance(s02_resolution, Mapping) and s02_resolution:
+        resolution_status = str(s02_resolution.get("status") or "").upper()
+        if resolution_status != "CURRENT_VALID":
+            dashboard = content("S01").get("decision_dashboard") or {}
+            judgement_status = str(
+                (content("S19").get("final_judgement") or {}).get("recommendation_status") or ""
+            ).upper()
+            executable_surfaces = [
+                name
+                for name, value in (
+                    ("S08_CAPTAIN_LOCK", content("S08").get("decision_state")),
+                    ("S01_CAPTAIN_LOCK", dashboard.get("CAPTAIN")),
+                    ("S01_XI_LOCK", dashboard.get("XI")),
+                    ("S19_EXECUTABLE_LOCK", "LOCK" if judgement_status == "EXECUTABLE_LOCK" else None),
+                )
+                if str(value or "").upper() == "LOCK"
+            ]
+            if executable_surfaces:
+                failures.append(
+                    "O2_EXECUTABLE_DECISION_WITHOUT_CURRENT_OUR15:"
+                    + ",".join(executable_surfaces)
+                )
 
     s14 = content("S14")
     routes = [

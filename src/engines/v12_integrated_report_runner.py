@@ -27,12 +27,17 @@ import os
 import subprocess
 import time
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from src.engines.v12_lineup_optimizer import optimize_lineup
 from src.engines.v12_captain_frontier import decide_captain_vice
+from src.engines.v12_decision_safety_gate import (
+    clamp_state as _gate_clamp_state,
+    evaluate_decision_safety_gate,
+    gate_summary as _gate_summary,
+)
 from src.engines.v12_report_freshness_provenance import attach_report_provenance
 from src.engines.v12_mini_league_overlay import (
     attach_mini_league_overlay,
@@ -1126,6 +1131,31 @@ def _official_payload(runtime_root: Path) -> dict[str, Any]:
     }
 
 
+def _official_source_cutoff(official: Mapping[str, Any]) -> datetime | None:
+    """Report source cutoff = Official payload ``checked_at`` (UTC-aware)."""
+    raw = ((official or {}).get("payload") or {}).get("checked_at")
+    try:
+        parsed = datetime.fromisoformat(str(raw or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _official_source_cutoff_or_sentinel(official: Mapping[str, Any]) -> datetime | str | None:
+    """Cutoff for the resolver.
+
+    Absent ``checked_at`` keeps the legacy (pre-O1) path; a ``checked_at`` that is
+    present but unparseable or timezone-naive fails closed via a sentinel string.
+    """
+    cutoff = _official_source_cutoff(official)
+    if cutoff is not None:
+        return cutoff
+    raw = ((official or {}).get("payload") or {}).get("checked_at")
+    return "UNPARSEABLE_SOURCE_CUTOFF" if raw not in (None, "") else None
+
+
 def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str | None]:
     """Load the occurrence-bound full-history artifact from supported V6 layouts."""
     candidates = [
@@ -1481,7 +1511,26 @@ def _personal_evidence_resolution(
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
     report_slot: str | None = None,
+    source_cutoff: datetime | str | None = None,
+    bootstrap: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # O1: point-in-time inputs.  Public transfers come from an optional
+    # occurrence-bound artifact; no producer is wired yet, so absence means
+    # "no transfer evidence" and the resolver never fabricates a transfer set.
+    public_transfers = _load_public_transfers(runtime_root, private_data_root)
+    element_meta = (
+        {
+            int(row["id"]): {
+                "name": row.get("web_name"),
+                "element_type": row.get("element_type"),
+                "team": row.get("team"),
+            }
+            for row in (bootstrap or {}).get("elements") or []
+            if isinstance(row, Mapping) and row.get("id") is not None
+        }
+        if public_transfers is not None
+        else None
+    )
     candidates = collect_personal_evidence_candidates(
         runtime_root=runtime_root,
         legacy_state=state,
@@ -1490,13 +1539,37 @@ def _personal_evidence_resolution(
         allow_legacy_private_sources=allow_legacy_private_sources,
         require_private_personal=require_private_personal,
         enforce_public_disclosure=not allow_legacy_private_sources,
+        source_cutoff=source_cutoff if isinstance(source_cutoff, datetime) else None,
+        include_snapshot_archive=isinstance(source_cutoff, datetime),
+        public_transfers=public_transfers,
+        element_meta=element_meta,
     )
     return select_personal_evidence(
         candidates,
         planning_gw=planning_gw,
         expected_entry_id=3462711,
         as_of=report_slot,
+        source_cutoff=source_cutoff,
     )
+
+
+def _load_public_transfers(
+    runtime_root: Path, private_root: Path | None
+) -> list[dict[str, Any]] | None:
+    """Optional public Official ``entry/{id}/transfers`` artifact (list or
+    ``{"transfers": [...]}``).  Returns None when absent or malformed."""
+    for base in (
+        runtime_root / "data/v6/personal",
+        runtime_root / "data/v6/current",
+        (private_root / "personal") if private_root is not None else None,
+    ):
+        if base is None:
+            continue
+        payload = _read_json(base / "entry_transfers.json", None)
+        rows = payload.get("transfers") if isinstance(payload, Mapping) else payload
+        if isinstance(rows, list):
+            return [dict(row) for row in rows if isinstance(row, Mapping)]
+    return None
 
 def _position_from_official(row: Mapping[str, Any]) -> str:
     mapping = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -4420,6 +4493,7 @@ def _captain_decision_surface(
     lineup_state: str,
     mini_detail: Mapping[str, Any],
     projections: Mapping[str, Any] | None = None,
+    our15_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One canonical C/VC decision surface.
 
@@ -4693,6 +4767,14 @@ def _captain_decision_surface(
     )
     if decision_state not in {"WAIT", "PREPARE", "LOCK"}:
         decision_state = "PREPARE"
+    # O2: never publish an executable captain when OUR15 or critical evidence
+    # cannot be proven; clamp only (LOCK->PREPARE, or WAIT when unavailable).
+    gate_clamped_from: str | None = None
+    if our15_gate is not None:
+        clamped_state = _gate_clamp_state(decision_state, our15_gate)
+        if clamped_state != decision_state:
+            gate_clamped_from = decision_state
+            decision_state = clamped_state
 
     classification = str(decision.get("classification") or "FRAGILE").upper()
     mini_override = bool(decision.get("mini_league_override_applied"))
@@ -4706,6 +4788,12 @@ def _captain_decision_surface(
         reconciliation += (
             " Competitive evidence did not force a switch; no exposure-only "
             "candidate is allowed outside the football frontier."
+        )
+
+    if gate_clamped_from is not None:
+        reconciliation += (
+            f" DECISION SAFETY GATE: {gate_clamped_from} lowered to {decision_state}; "
+            + _gate_summary(our15_gate)
         )
 
     review_pair = dict(decision.get("review_pair") or {})
@@ -4773,6 +4861,9 @@ def _captain_decision_surface(
             "frontier_candidate_count": len(decorated_frontier),
         },
         "reconciliation_reason": reconciliation,
+        "decision_safety_gate": (
+            dict(our15_gate) if our15_gate is not None else None
+        ),
         "authority": (
             "P1.7 final-XI legality + P1.3B canonical one-GW return distributions "
             "+ P1.8 LEAGUE/COMPETITIVE context; no second football optimizer"
@@ -4965,7 +5056,11 @@ def _decision_dashboard(
     price_radar: Mapping[str, Any] | None,
     auth_state: str,
     finance: Mapping[str, Any] | None,
+    our15_gate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    gate = our15_gate
+    if gate is None and isinstance(captain_surface.get("decision_safety_gate"), Mapping):
+        gate = captain_surface.get("decision_safety_gate")
     battle = dict((lineup or {}).get("main_starting_xi_battle") or {})
     xi_state = (
         "WAIT"
@@ -4980,6 +5075,10 @@ def _decision_dashboard(
     ).upper()
     if captain_state not in {"WAIT", "PREPARE", "LOCK"}:
         captain_state = "WAIT"
+    captain_near_tie = captain_state == "PREPARE"
+    if gate is not None:
+        xi_state = _gate_clamp_state(xi_state, gate)
+        captain_state = _gate_clamp_state(captain_state, gate)
 
     price_rows = [
         dict(row)
@@ -5023,7 +5122,9 @@ def _decision_dashboard(
         blockers.append("EXECUTION_FINANCE_DEGRADED")
     if not chip_available:
         blockers.append("CHIP_AUTHORITY_UNAVAILABLE")
-    if captain_state == "PREPARE":
+    if gate is not None and gate.get("executable") is False:
+        blockers.extend(str(code) for code in gate.get("reason_codes") or [])
+    if captain_near_tie:
         blockers.append("CAPTAIN_NEAR_TIE_OR_FRESH_EVIDENCE_PENDING")
     if price_rows and not fresh_rows:
         blockers.append("PRICE_PREDICTOR_STALE")
@@ -5043,7 +5144,9 @@ def _decision_dashboard(
         "KEY_DRIVER": (
             "P1.2 package utility + canonical P1.4 MC + P1.8 bounded mini-league overlay"
         ),
-        "CURRENT_BLOCKERS": blockers,
+        "CURRENT_BLOCKERS": list(dict.fromkeys(blockers)),
+        "DECISION_EXECUTABLE": bool(gate is None or gate.get("executable") is True),
+        "DECISION_SAFETY_GATE": dict(gate) if gate is not None else None,
         "finance_available": finance_available,
         "price_fresh_count": len(fresh_rows),
         "price_row_count": len(price_rows),
@@ -7378,12 +7481,19 @@ def refresh_mini_league_only_state(
         calendar_context=calendar_context,
     )
     lineup_state = "COMPLETE"
+    frozen_s02 = dict((section_payloads.get("S02") or {}).get("content") or {})
+    frozen_resolution = dict(frozen_s02.get("personal_resolution") or {})
+    frozen_resolution.setdefault(
+        "resolution_status", frozen_resolution.get("status")
+    )
+    our15_gate = evaluate_decision_safety_gate(frozen_resolution)
     captain_surface = _captain_decision_surface(
         owned=owned,
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
         projections=projections,
+        our15_gate=our15_gate,
     )
 
     captain_frontier_ids = {
@@ -7496,6 +7606,7 @@ def refresh_mini_league_only_state(
         price_radar=dict(warm.get("price_radar") or {}),
         auth_state=auth_state,
         finance=finance,
+        our15_gate=our15_gate,
     )
     action_board = _action_board_surface(
         dashboard=decision_dashboard,
@@ -8048,6 +8159,8 @@ def run_deep(
             allow_legacy_private_sources=allow_legacy_private_sources,
             require_private_personal=require_private_personal,
             report_slot=report_slot,
+            source_cutoff=_official_source_cutoff_or_sentinel(official),
+            bootstrap=bootstrap,
         ),
         required=True,
     )
@@ -9193,12 +9306,30 @@ def run_deep(
         "bgw_context": dict(bgw_context),
         "bgw_reoptimization_trigger": bool(bgw_context.get("active")),
     }
+    our15_gate = evaluate_decision_safety_gate(
+        personal_resolution,
+        critical_evidence={
+            "V6_PUBLISH_INTEGRITY": (v6_source_trace or {}).get("v6_publish_integrity"),
+            "OFFICIAL_TEAM_IDENTITY": (
+                "FAIL"
+                if "V6_OFFICIAL_TEAM_IDENTITY_NOT_PROVEN"
+                in ((v6_source_trace or {}).get("failures") or [])
+                else "PASS"
+            ),
+        },
+        our15_consistency_failures=(
+            []
+            if len({_surface_element(row) for row in owned}) == 15
+            else ["OUR15_NOT_15_UNIQUE_ELEMENTS"]
+        ),
+    )
     captain_surface = _captain_decision_surface(
         owned=owned,
         lineup=lineup,
         lineup_state=lineup_state,
         mini_detail=mini_deep_detail,
         projections=projections,
+        our15_gate=our15_gate,
     )
     chip_state = (finance or {}).get("chips")
     chip_available = (
@@ -9549,6 +9680,8 @@ def run_deep(
                         else "DEGRADED"
                     ),
                     "stale": (personal_resolution or {}).get("stale"),
+                    "transfer_gap_check": (personal_resolution or {}).get("transfer_gap_check"),
+                    "reconstruction_failures": (personal_resolution or {}).get("reconstruction_failures"),
                 },
                 "personal_resolution": {
                     "status": (personal_resolution or {}).get("resolution_status"),

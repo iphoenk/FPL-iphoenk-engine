@@ -258,7 +258,9 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
         return f"{label}\nUNAVAILABLE: invalid standings entry."
     if len(rows) != len(raw) or any(entry <= 0 for entry in rows):
         return f"{label}\nUNAVAILABLE: duplicate or invalid league membership."
-    complete_standings = (standings.get("complete") is True and
+    transport = snapshot.get("transport", "UNVERIFIED")
+    authoritative = transport in {"OFFICIAL_DIRECT", "V6_OFFICIAL_VERIFIED"}
+    complete_standings = (authoritative and standings.get("complete") is True and
                           standings.get("failed_pages") in ([], None) and
                           standings.get("expected_manager_count") == len(rows))
     user = rows.get(owner_id)
@@ -274,6 +276,7 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
     status = "FULL" if complete_standings else "PARTIAL"
     out = [
         label,
+        f"Source transport: {transport} | independent provenance: {'PASS' if authoritative else 'UNVERIFIED'}",
         f"Official FPL league {league_id} | standings {status} | collected {members}"
         + (f"/{members}" if complete_standings else "/UNKNOWN")
         + f" | observed {observed}",
@@ -302,7 +305,11 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
         if not isinstance(record, Mapping) or record.get("status") != "AVAILABLE":
             continue
         submitted = record.get("picks")
-        if record.get("gw") != picks_gw or not isinstance(submitted, list) or len(submitted) != 15:
+        history = record.get("entry_history")
+        if (record.get("gw") != picks_gw
+            or (isinstance(history, Mapping) and history.get("event") is not None
+                and history["event"] != picks_gw)
+            or not isinstance(submitted, list) or len(submitted) != 15):
             invalid += 1
             continue
         try:
@@ -362,3 +369,114 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
     out.append(f"{len(ordered)} unique players in {'complete league' if full_picks else 'collected sample'};"
                f" showing {min(limit, len(ordered))}. EO requires FULL multiplier coverage.")
     return "\n".join(out)
+
+
+
+def acquire_public_s15b(
+    *, league_id: int = 9477, owner_entry_id: int = 3462711,
+    disclosed_gw: int | None = None, transport: str = "auto",
+    now: Any = None, client_factory: Any = None,
+) -> dict[str, Any]:
+    """Direct Official FPL first; proxy fallback cannot certify itself as Official.
+
+    GET-only, public endpoint classes. Does not inspect credentials, FPL my-team,
+    canonical V12, OAuth/OIDC, a private repository, or an owner decision.
+    """
+    from datetime import datetime, timezone
+    from src.runtime_v6.domains.report_plane.league_prefetch import build_independent_s15b_snapshot
+    from src.runtime_v6.domains.acquisition.official_fpl_client import OfficialFPLClient
+
+    if transport not in {"auto", "official", "dashboard"}:
+        raise ValueError("Unsupported public S15B source")
+    if type(league_id) is not int or league_id <= 0 or type(owner_entry_id) is not int or owner_entry_id <= 0:
+        raise ValueError("Invalid public S15B league/owner identity")
+    checked_at = now if now is not None else datetime.now(timezone.utc)
+    if not isinstance(checked_at, datetime) or checked_at.tzinfo is None or checked_at.utcoffset() is None:
+        raise ValueError("S15B acquisition requires an aware clock")
+    modes = ("official", "dashboard") if transport == "auto" else (transport,)
+    source_bases = {
+        "official": "https://fantasy.premierleague.com/api",
+        "dashboard": "https://fpl-iphoenk.vercel.app/api",
+    }
+    failures = []
+    for mode in modes:
+        try:
+            # OfficialFPLClient's public methods never attach FPL auth headers,
+            # even if its separate private-auth environment has been configured.
+            client = (client_factory(source_bases[mode]) if client_factory is not None
+                      else OfficialFPLClient(base_url=source_bases[mode],
+                                             timeout_seconds=8.0, retries=1))
+            bootstrap = client.bootstrap()
+            if bootstrap.get("status") != "LIVE":
+                raise ValueError("PUBLIC_BOOTSTRAP_NOT_LIVE")
+            data = bootstrap.get("payload")
+            if not isinstance(data, Mapping) or not isinstance(data.get("events"), list):
+                raise ValueError("PUBLIC_BOOTSTRAP_INVALID")
+            disclosed = []
+            for event in data["events"]:
+                if not isinstance(event, Mapping) or type(event.get("id")) is not int:
+                    continue
+                try:
+                    deadline = datetime.fromisoformat(str(event["deadline_time"]).replace("Z", "+00:00"))
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if deadline.tzinfo is not None and deadline <= checked_at:
+                    disclosed.append(int(event["id"]))
+            if not disclosed:
+                raise ValueError("NO_DISCLOSED_GAMEWEEK")
+            last_gw = max(disclosed)
+            gw = last_gw if disclosed_gw is None else disclosed_gw
+            if type(gw) is not int or gw < 1 or gw > last_gw:
+                raise ValueError("HIDDEN_OR_INVALID_GAMEWEEK")
+            player_index = {
+                str(p["id"]): p.get("web_name", f"ID {p['id']}")
+                for p in (data.get("elements") or [])
+                if isinstance(p, Mapping) and type(p.get("id")) is int
+            }
+            snap = build_independent_s15b_snapshot(
+                client, league_id=league_id, owner_entry_id=owner_entry_id,
+                gw=gw, deadline_passed=True, source_transport=(
+                    "OFFICIAL_DIRECT" if mode == "official" else "DASHBOARD_PROXY"
+                ), player_index=player_index,
+            )
+            snap["last_disclosed_gw"] = last_gw
+            snap["requested_source"] = mode
+            snap["official_fetch_failures"] = list(failures)
+            return snap
+        except Exception as exc:
+            # Never expose URLs, tokens, upstream bodies or exception details.
+            failures.append(f"{mode}: {type(exc).__name__}")
+    raise ValueError("PUBLIC_S15B_UNAVAILABLE: " + ", ".join(failures))
+
+
+def public_s15b_cli(argv: Sequence[str] | None = None) -> int:
+    """Independent read-only five-section factual report for ad-hoc verification."""
+    import argparse
+    import sys
+    parser = argparse.ArgumentParser(description="Read-only public Official FPL S15B")
+    parser.add_argument("--league-id", type=int, default=9477)
+    parser.add_argument("--entry-id", type=int, default=3462711)
+    parser.add_argument("--gw", type=int)
+    parser.add_argument("--source", choices=("auto", "official", "dashboard"), default="auto")
+    parser.add_argument("--max-players", type=int, default=20)
+    args = parser.parse_args(argv)
+    try:
+        snap = acquire_public_s15b(
+            league_id=args.league_id, owner_entry_id=args.entry_id,
+            disclosed_gw=args.gw, transport=args.source,
+        )
+        if 1 <= args.max_players <= 200:
+            snap["max_players"] = args.max_players
+        content = build_degraded_fallback(
+            "V12 CANONICAL NOT REQUESTED IN PUBLIC AD-HOC",
+            public_s15b_snapshot=snap,
+        )
+        print(content)
+        return 0
+    except ValueError as exc:
+        print(build_degraded_fallback(str(exc)), file=sys.stdout)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(public_s15b_cli())

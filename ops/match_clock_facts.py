@@ -123,22 +123,22 @@ def public_kickoff_match_candidate(
             continue
         published = fetch(f"entry/{OWNER}/event/{gw}/picks/")
         if not isinstance(published, Mapping):
-            return None
+            continue
         picks = published.get("picks")
         if not isinstance(picks, list) or len(picks) != 15:
-            return None
+            continue
         if (any(type(p.get("element")) is not int
                 or type(p.get("position")) is not int
                 or type(p.get("multiplier")) is not int
                 for p in picks if isinstance(p, Mapping))
             or not all(isinstance(p, Mapping) for p in picks)):
-            return None
+            continue
         ids = [p["element"] for p in picks]
         if (len(set(ids)) != 15 or min(ids) <= 0
             or {p["position"] for p in picks} != set(range(1, 16))
             or sum(p.get("is_captain") is True for p in picks) != 1
             or sum(p.get("is_vice_captain") is True for p in picks) != 1):
-            return None
+            continue
         owner_fixture = any(teams.get(pid) in {fixture["team_h"], fixture["team_a"]} for pid in ids)
         # Nonowner fixtures can be included in the next regular report; at
         # night only owner-relevant kickoff may generate an additional alert.
@@ -160,7 +160,7 @@ def public_kickoff_match_candidate(
         }
         material = assess_verified_match_materiality(proof, observed_at=now)
         if not material["eligible"]:
-            return None
+            continue
         return {
             "report_mode": "MATCH",
             "report_slot": slot.isoformat(),

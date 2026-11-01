@@ -210,3 +210,83 @@ def test_baseline_pair_is_still_checked_for_membership_distinctness_and_state():
     body = _body(cv_state="PREPARE").replace("Captain baseline: Haaland (PREPARE)", "Captain baseline: Haaland (LOCK)")
     assert "CV_STATE_INCONSISTENT" in _check(body)
     assert "CV_MISSING_S08" in _check(_body(cv_state="PREPARE").replace("Current C baseline: Haaland;", ""))
+
+
+# S15B public-only fallback is additive: canonical pointer gate must stay unchanged.
+def _official_s15b(full=True, deadline=True):
+    managers = [
+        {"entry_id": 3462711, "league_rank": 2, "league_total": 50},
+        {"entry_id": 7, "league_rank": 1, "league_total": 60},
+    ]
+    def record(entry_id):
+        return {
+            "gw": 9, "status": "AVAILABLE",
+            "picks": [
+                {"element_id": element + (100 if entry_id == 7 else 0),
+                 "squad_position": element, "multiplier": (2 if element == 1 else 1 if element <= 11 else 0),
+                 "captain": element == 1, "vice_captain": element == 2}
+                for element in range(1, 16)
+            ],
+        }
+    return {
+        "league_id": 9477, "owner_entry_id": 3462711,
+        "standings": {
+            "authority": "OFFICIAL_FPL", "league_id": 9477, "generated_at": "2026-11-01T14:30:00Z",
+            "complete": True, "failed_pages": [], "expected_manager_count": 2, "managers": managers,
+        },
+        "submitted_picks": {
+            "authority": "OFFICIAL_FPL", "league_id": 9477, "gw": 9,
+            "deadline_passed": deadline, "complete": full, "expected_manager_count": 2,
+            "entries": {"3462711": record(3462711), **({"7": record(7)} if full else {})},
+        },
+        "player_index": {"1": {"web_name": "Test Player"}},
+    }
+
+
+def test_degraded_fallback_with_public_s15b_preserves_five_sections_and_gate():
+    out = fs.build_degraded_fallback("private read failed", public_s15b_snapshot=_official_s15b())
+    assert fs.validate_view(out) == []
+    assert [l[3:] for l in out.splitlines() if l.startswith("## ")] == TITLES
+    league = out.split("## MINI-LEAGUE & COMPETITIVE", 1)[1].split("## FINAL DECISION", 1)[0]
+    assert "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL" in league
+    assert "rank 2; points 50; gap leader 10" in league
+    assert "Submitted picks: GW9 | FULL | 2/2" in league
+    assert "Test Player (1) | 1/2" in league
+    assert "100.0%" in league and "TRANSFER" not in league
+    assert "XI:" not in out and "Current C:" not in out
+
+
+def test_public_s15b_partial_never_claims_full_league_or_eo():
+    out = fs.render_official_s15b_factual(_official_s15b(full=False))
+    assert "PARTIAL | 1/2" in out
+    assert "EO requires FULL multiplier coverage" in out
+    assert "UNAVAILABLE" in out
+    assert "FULL | 2/2" not in out
+
+
+def test_public_s15b_blocks_predeadline_and_dashboard_only_authority():
+    data = _official_s15b(deadline=False)
+    assert "deadline not passed" in fs.render_official_s15b_factual(data)
+    data["standings"]["authority"] = "DASHBOARD"
+    assert "UNAVAILABLE: standings lack Official FPL authority" in fs.render_official_s15b_factual(data)
+    data = _official_s15b()
+    data["submitted_picks"]["league_id"] = 1
+    assert "league mismatch" in fs.render_official_s15b_factual(data)
+
+
+def test_public_s15b_invalid_multiplier_and_duplicate_membership_fail_closed():
+    data = _official_s15b()
+    data["submitted_picks"]["entries"]["3462711"]["picks"][0]["multiplier"] = None
+    assert "PARTIAL | 1/2 | invalid 1" in fs.render_official_s15b_factual(data)
+    data = _official_s15b()
+    data["standings"]["managers"].append(dict(data["standings"]["managers"][0]))
+    assert "duplicate or invalid" in fs.render_official_s15b_factual(data)
+
+
+def test_public_s15b_is_not_silent_canonical_upgrade():
+    data = _official_s15b()
+    out = fs.build_degraded_fallback("verified pointer stale", public_s15b_snapshot=data)
+    assert fs.load_config()["degraded_marker"] in out
+    assert fs.validate_view(out) == []
+    # Existing canonical validation requires original body; public rows cannot impersonate it.
+    assert "CANONICAL_BODY_REQUIRED" in fs.validate_view(out.replace(fs.load_config()["degraded_marker"], "STATUS"))

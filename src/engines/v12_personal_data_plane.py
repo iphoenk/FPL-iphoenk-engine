@@ -9,8 +9,15 @@ captain, transfer, or Stage3 mathematics lives here.
 
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
+
+from src.engines.v12_current15_resolution import (
+    SOURCE_CLASS,
+    collect_archive_candidates,
+    reconstruct_public_current15,
+)
 
 
 class PersonalDataPlaneError(RuntimeError):
@@ -219,6 +226,11 @@ def collect_personal_evidence_candidates(
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
     enforce_public_disclosure: bool = True,
+    source_cutoff: datetime | None = None,
+    include_snapshot_archive: bool = False,
+    public_transfers: Sequence[Mapping[str, Any]] | None = None,
+    element_meta: Mapping[Any, Mapping[str, Any]] | None = None,
+    chip_in_planning_gw: str | None = None,
 ) -> list[dict[str, Any]]:
     """Assemble inputs while keeping V12 selection semantics external.
 
@@ -237,6 +249,13 @@ def collect_personal_evidence_candidates(
                 source_prefix="PRIVATE:personal/",
             )
         )
+        if include_snapshot_archive:
+            # O1: bounded, cutoff-aware read of archived authenticated snapshots.
+            candidates.extend(
+                collect_archive_candidates(
+                    private_personal / "snapshots", cutoff=source_cutoff
+                )
+            )
         candidates.extend(
             _manual_capture_candidates(
                 private_personal / "manual",
@@ -277,6 +296,56 @@ def collect_personal_evidence_candidates(
                 )
 
     private_candidate_count = len(candidates)
+    if (
+        public_transfers is not None
+        and source_cutoff is not None
+        and element_meta
+        and private_root is not None
+    ):
+        base = _read_json(private_root / "personal" / "submitted_picks.json", {}) or {}
+        try:
+            base_gw = int(base.get("gw") or 0)
+        except (TypeError, ValueError):
+            base_gw = 0
+        base_rows = [
+            dict(row)
+            for row in (base.get("players") or base.get("picks") or [])
+            if isinstance(row, Mapping)
+        ]
+        entry_id = base.get("entry_id")
+        recon = reconstruct_public_current15(
+            base_picks=base_rows,
+            transfers=list(public_transfers),
+            planning_gw=int(planning_gw),
+            cutoff=source_cutoff,
+            element_meta=element_meta,
+            expected_entry_id=int(entry_id) if str(entry_id or "").isdigit() else None,
+            chip_in_planning_gw=chip_in_planning_gw,
+            base_gw=base_gw or None,
+        )
+        if base_gw != int(planning_gw) - 1:
+            recon = {
+                **recon,
+                "status": "UNAVAILABLE",
+                "rows": [],
+                "reasons": list(recon.get("reasons") or []) + [f"BASE_PICKS_GW_NOT_PREVIOUS:{base_gw}"],
+            }
+        candidates.append(
+            {
+                "source": "PUBLIC:submitted_picks+entry_transfers",
+                "source_class": SOURCE_CLASS,
+                "payload": {
+                    "entry_id": entry_id,
+                    "players": recon.get("rows") or [],
+                    "reconstruction": recon,
+                    "transfers_evidence": [dict(t) for t in public_transfers],
+                },
+                "observed_at": source_cutoff.isoformat(),
+                "gw": int(planning_gw),
+                "auth_state": "PUBLIC_INFERRED",
+            }
+        )
+
     if require_private_personal and private_candidate_count == 0:
         raise PersonalDataPlaneError(
             "private personal input required but no private current/manual state found"

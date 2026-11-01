@@ -27,7 +27,7 @@ import os
 import subprocess
 import time
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -1131,6 +1131,18 @@ def _official_payload(runtime_root: Path) -> dict[str, Any]:
     }
 
 
+def _official_source_cutoff(official: Mapping[str, Any]) -> datetime | None:
+    """Report source cutoff = Official payload ``checked_at`` (UTC-aware)."""
+    raw = ((official or {}).get("payload") or {}).get("checked_at")
+    try:
+        parsed = datetime.fromisoformat(str(raw or "").replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
 def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str | None]:
     """Load the occurrence-bound full-history artifact from supported V6 layouts."""
     candidates = [
@@ -1486,7 +1498,26 @@ def _personal_evidence_resolution(
     allow_legacy_private_sources: bool = True,
     require_private_personal: bool = False,
     report_slot: str | None = None,
+    source_cutoff: datetime | None = None,
+    bootstrap: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # O1: point-in-time inputs.  Public transfers come from an optional
+    # occurrence-bound artifact; no producer is wired yet, so absence means
+    # "no transfer evidence" and the resolver never fabricates a transfer set.
+    public_transfers = _load_public_transfers(runtime_root, private_data_root)
+    element_meta = (
+        {
+            int(row["id"]): {
+                "name": row.get("web_name"),
+                "element_type": row.get("element_type"),
+                "team": row.get("team"),
+            }
+            for row in (bootstrap or {}).get("elements") or []
+            if isinstance(row, Mapping) and row.get("id") is not None
+        }
+        if public_transfers is not None
+        else None
+    )
     candidates = collect_personal_evidence_candidates(
         runtime_root=runtime_root,
         legacy_state=state,
@@ -1495,13 +1526,37 @@ def _personal_evidence_resolution(
         allow_legacy_private_sources=allow_legacy_private_sources,
         require_private_personal=require_private_personal,
         enforce_public_disclosure=not allow_legacy_private_sources,
+        source_cutoff=source_cutoff,
+        include_snapshot_archive=source_cutoff is not None,
+        public_transfers=public_transfers,
+        element_meta=element_meta,
     )
     return select_personal_evidence(
         candidates,
         planning_gw=planning_gw,
         expected_entry_id=3462711,
         as_of=report_slot,
+        source_cutoff=source_cutoff,
     )
+
+
+def _load_public_transfers(
+    runtime_root: Path, private_root: Path | None
+) -> list[dict[str, Any]] | None:
+    """Optional public Official ``entry/{id}/transfers`` artifact (list or
+    ``{"transfers": [...]}``).  Returns None when absent or malformed."""
+    for base in (
+        runtime_root / "data/v6/personal",
+        runtime_root / "data/v6/current",
+        (private_root / "personal") if private_root is not None else None,
+    ):
+        if base is None:
+            continue
+        payload = _read_json(base / "entry_transfers.json", None)
+        rows = payload.get("transfers") if isinstance(payload, Mapping) else payload
+        if isinstance(rows, list):
+            return [dict(row) for row in rows if isinstance(row, Mapping)]
+    return None
 
 def _position_from_official(row: Mapping[str, Any]) -> str:
     mapping = {1: "GK", 2: "DEF", 3: "MID", 4: "FWD"}
@@ -8091,6 +8146,8 @@ def run_deep(
             allow_legacy_private_sources=allow_legacy_private_sources,
             require_private_personal=require_private_personal,
             report_slot=report_slot,
+            source_cutoff=_official_source_cutoff(official),
+            bootstrap=bootstrap,
         ),
         required=True,
     )
@@ -9610,6 +9667,8 @@ def run_deep(
                         else "DEGRADED"
                     ),
                     "stale": (personal_resolution or {}).get("stale"),
+                    "transfer_gap_check": (personal_resolution or {}).get("transfer_gap_check"),
+                    "reconstruction_failures": (personal_resolution or {}).get("reconstruction_failures"),
                 },
                 "personal_resolution": {
                     "status": (personal_resolution or {}).get("resolution_status"),

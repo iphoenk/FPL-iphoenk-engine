@@ -62,6 +62,7 @@ def public_kickoff_match_candidate(
     observed_at: datetime,
     *,
     fetch: FETCH = _official_json,
+    previous_fixture_states: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> dict[str, str] | None:
     """Create one MATCH candidate at the FIRST HH:30 after a verified kickoff.
 
@@ -144,6 +145,17 @@ def public_kickoff_match_candidate(
         # night only owner-relevant kickoff may generate an additional alert.
         if not owner_fixture:
             continue
+        # A single live snapshot does not prove a transition. Require a
+        # separately observed previous Official fixture snapshot; callers
+        # without one fail closed instead of inventing NOT_STARTED.
+        previous = (previous_fixture_states or {}).get(fixture["id"])
+        if not isinstance(previous, Mapping):
+            continue
+        if (previous.get("id") != fixture["id"]
+                or previous.get("event") != gw
+                or previous.get("started") is not False
+                or previous.get("finished") is not False):
+            continue
         proof = {
             "authority": "OFFICIAL_FPL",
             "owner_locked_picks_verified": True,
@@ -152,8 +164,7 @@ def public_kickoff_match_candidate(
             "official_fixture_id": fixture["id"],
             "checked_at": now.isoformat(),
             "event_kind": "OWNER_MATCH_STARTED",
-            # At the unique first post-kickoff checkpoint, Official started=True
-            # plus Official kickoff identity proves the schedule-to-LIVE edge.
+            # The preceding Official snapshot independently proves the edge.
             "previous_value": "NOT_STARTED",
             "current_value": "LIVE",
             "owner_fixture_verified": True,

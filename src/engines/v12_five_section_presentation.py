@@ -260,7 +260,8 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
         return f"{label}\nUNAVAILABLE: duplicate or invalid league membership."
     transport = snapshot.get("transport", "UNVERIFIED")
     authoritative = transport in {"OFFICIAL_DIRECT", "V6_OFFICIAL_VERIFIED"}
-    complete_standings = (authoritative and standings.get("complete") is True and
+    complete_standings = (authoritative and owner_id in rows and
+                          standings.get("complete") is True and
                           standings.get("failed_pages") in ([], None) and
                           standings.get("expected_manager_count") == len(rows))
     user = rows.get(owner_id)

@@ -401,11 +401,11 @@ def acquire_public_s15b(
     failures = []
     for mode in modes:
         try:
-            # OfficialFPLClient's public methods never attach FPL auth headers,
-            # even if its separate private-auth environment has been configured.
+            # public_only prevents even inspecting or rotating OIDC credentials.
+            # Only public Official FPL GET endpoint classes are called.
             client = (client_factory(source_bases[mode]) if client_factory is not None
                       else OfficialFPLClient(base_url=source_bases[mode],
-                                             timeout_seconds=8.0, retries=1))
+                                             timeout_seconds=8.0, retries=1, public_only=True))
             bootstrap = client.bootstrap()
             if bootstrap.get("status") != "LIVE":
                 raise ValueError("PUBLIC_BOOTSTRAP_NOT_LIVE")

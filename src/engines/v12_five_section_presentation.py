@@ -119,13 +119,18 @@ def build_view(body: str, cfg: Mapping[str, Any] | None = None) -> str:
     return "\n".join(out).rstrip("\n") + "\n"
 
 
-def build_degraded_fallback(reason: str, cfg: Mapping[str, Any] | None = None) -> str:
-    """Explicit non-canonical output: still exactly five sections, no report values."""
+def build_degraded_fallback(
+    reason: str, cfg: Mapping[str, Any] | None = None,
+    *, public_s15b_snapshot: Mapping[str, Any] | None = None,
+) -> str:
+    """Five sections; optionally include validated public S15B facts, never V12 decisions."""
     cfg = dict(cfg or load_config())
     safe = re.sub(r"\s+", " ", str(reason or "UNSPECIFIED"))[:200]
     out = [f"{cfg['degraded_marker']}: no verified report available ({safe})"]
     for title in cfg["top_level_sections"]:
         out += ["", f"## {title}", "NOT AVAILABLE: no verified canonical data. Nothing was inferred or reused."]
+        if title == "MINI-LEAGUE & COMPETITIVE" and public_s15b_snapshot is not None:
+            out += ["", render_official_s15b_factual(public_s15b_snapshot)]
     return "\n".join(out) + "\n"
 
 
@@ -222,3 +227,138 @@ def gate(body: str, *, expected_gw: int, expected_slot_wib: str) -> list[str]:
                              expected_slot_wib=expected_slot_wib)
     except Exception as exc:  # fail closed on any parser error
         return [f"PRESENTATION_ERROR={type(exc).__name__}"]
+
+
+def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
+    """Render ONLY published Official FPL league facts, independently of V12.
+
+    Expected inputs are the factual V6 standings_artifact and acquire_manager_picks
+    artifacts. This function never fetches owner-private data or upgrades a
+    report to canonical. A dashboard copy is not an authority for these fields.
+    """
+    label = "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL"
+    if not isinstance(snapshot, Mapping):
+        return f"{label}\nUNAVAILABLE: official snapshot missing."
+    standings = snapshot.get("standings")
+    if not isinstance(standings, Mapping) or standings.get("authority") != "OFFICIAL_FPL":
+        return f"{label}\nUNAVAILABLE: standings lack Official FPL authority."
+    try:
+        league_id = int(snapshot["league_id"])
+        owner_id = int(snapshot["owner_entry_id"])
+        if league_id <= 0 or owner_id <= 0 or int(standings["league_id"]) != league_id:
+            raise ValueError
+    except (KeyError, ValueError, TypeError):
+        return f"{label}\nUNAVAILABLE: league/owner identity mismatch."
+    raw = standings.get("managers")
+    if not isinstance(raw, list) or not raw:
+        return f"{label}\nUNAVAILABLE: no official standings rows."
+    try:
+        rows = {int(row["entry_id"]): row for row in raw if isinstance(row, Mapping)}
+    except (ValueError, KeyError, TypeError):
+        return f"{label}\nUNAVAILABLE: invalid standings entry."
+    if len(rows) != len(raw) or any(entry <= 0 for entry in rows):
+        return f"{label}\nUNAVAILABLE: duplicate or invalid league membership."
+    complete_standings = (standings.get("complete") is True and
+                          standings.get("failed_pages") in ([], None) and
+                          standings.get("expected_manager_count") == len(rows))
+    user = rows.get(owner_id)
+    members = len(rows)
+    rank = user.get("league_rank") if user else None
+    points = user.get("league_total") if user else None
+    if not isinstance(points, int):
+        points = None
+    scores = [r.get("league_total") for r in rows.values() if isinstance(r.get("league_total"), int)]
+    leader = max(scores) if complete_standings and len(scores) == members else None
+    gap = leader - points if leader is not None and points is not None else None
+    observed = str(standings.get("generated_at") or "UNKNOWN")[:35]
+    status = "FULL" if complete_standings else "PARTIAL"
+    out = [
+        label,
+        f"Official FPL league {league_id} | standings {status} | collected {members}"
+        + (f"/{members}" if complete_standings else "/UNKNOWN")
+        + f" | observed {observed}",
+        f"Owner entry {owner_id}: rank {rank if rank is not None else 'UNAVAILABLE'}"
+        + f"; points {points if points is not None else 'UNAVAILABLE'}"
+        + f"; gap leader {gap if gap is not None else 'UNAVAILABLE'}",
+    ]
+    picks = snapshot.get("submitted_picks")
+    if not isinstance(picks, Mapping) or picks.get("authority") != "OFFICIAL_FPL":
+        return "\n".join(out + ["Submitted-picks exposure: UNAVAILABLE (no official picks)."])
+    try:
+        picks_gw = int(picks["gw"])
+        picks_league = int(picks["league_id"])
+    except (ValueError, KeyError, TypeError):
+        return "\n".join(out + ["Submitted-picks exposure: UNAVAILABLE (GW or league missing)."])
+    if picks_league != league_id or picks_gw < 1 or picks.get("deadline_passed") is not True:
+        return "\n".join(out + ["Submitted-picks exposure: UNAVAILABLE (league mismatch or deadline not passed)."])
+    entries = picks.get("entries")
+    if not isinstance(entries, Mapping):
+        return "\n".join(out + [f"Submitted picks GW{picks_gw}: UNAVAILABLE (missing entries)."])
+    exposure: dict[int, dict[str, int]] = {}
+    collected = 0
+    invalid = 0
+    for entry_id in rows:
+        record = entries.get(str(entry_id))
+        if not isinstance(record, Mapping) or record.get("status") != "AVAILABLE":
+            continue
+        submitted = record.get("picks")
+        if record.get("gw") != picks_gw or not isinstance(submitted, list) or len(submitted) != 15:
+            invalid += 1
+            continue
+        try:
+            ids = [int(p["element_id"]) for p in submitted]
+            positions = [int(p["squad_position"]) for p in submitted]
+            multipliers = [p["multiplier"] for p in submitted]
+            captains = [p["captain"] for p in submitted]
+            vice = [p["vice_captain"] for p in submitted]
+        except (TypeError, ValueError, KeyError):
+            invalid += 1
+            continue
+        if (len(set(ids)) != 15 or min(ids) < 1 or set(positions) != set(range(1, 16))
+            or any(type(m) is not int or m < 0 or m > 3 for m in multipliers)
+            or any(type(c) is not bool for c in captains + vice)
+            or sum(captains) != 1 or sum(vice) != 1
+            or any(c and v for c, v in zip(captains, vice))):
+            invalid += 1
+            continue
+        collected += 1
+        for element_id, position, multiplier, captain, vice_captain in zip(
+                ids, positions, multipliers, captains, vice):
+            v = exposure.setdefault(element_id, {"owned": 0, "starter": 0, "bench": 0,
+                                                 "captain": 0, "vice": 0, "multiplier": 0})
+            v["owned"] += 1
+            v["starter" if position <= 11 else "bench"] += 1
+            v["captain"] += int(captain)
+            v["vice"] += int(vice_captain)
+            v["multiplier"] += multiplier
+    full_picks = (complete_standings and collected == members and invalid == 0
+                  and picks.get("complete") is True
+                  and picks.get("expected_manager_count") == members
+                  and set(entries) == {str(k) for k in rows})
+    out.append(f"Submitted picks: GW{picks_gw} | {'FULL' if full_picks else 'PARTIAL' if collected else 'UNAVAILABLE'}"
+               f" | {collected}/{members} | invalid {invalid} | disclosed previous/current GW only")
+    out.append("Never interpret these disclosed picks as still-hidden planning-GW selections.")
+    if not collected:
+        return "\n".join(out)
+    index = snapshot.get("player_index")
+    names = index if isinstance(index, Mapping) else {}
+    def safe_name(element: int) -> str:
+        value = names.get(str(element), names.get(element))
+        if isinstance(value, Mapping):
+            value = value.get("web_name") or value.get("name")
+        text = str(value or f"ID {element}")
+        return re.sub(r"[^\w .,'-]", "", text, flags=re.UNICODE)[:44] or f"ID {element}"
+    cap = snapshot.get("max_players", 20)
+    limit = cap if type(cap) is int and 1 <= cap <= 200 else 20
+    out.extend(["Player | Owned | Starter | Bench | Captain | Vice | EO",
+                "---|---:|---:|---:|---:|---:|---:"])
+    ordered = sorted(exposure.items(), key=lambda pair: (-pair[1]["owned"], pair[0]))
+    for player, v in ordered[:limit]:
+        den = members if full_picks else collected
+        eo = f'{100 * v["multiplier"] / den:.1f}%' if full_picks else "UNAVAILABLE"
+        out.append(f'{safe_name(player)} ({player}) | {v["owned"]}/{den}'
+                   f' | {v["starter"]}/{den} | {v["bench"]}/{den}'
+                   f' | {v["captain"]}/{den} | {v["vice"]}/{den} | {eo}')
+    out.append(f"{len(ordered)} unique players in {'complete league' if full_picks else 'collected sample'};"
+               f" showing {min(limit, len(ordered))}. EO requires FULL multiplier coverage.")
+    return "\n".join(out)

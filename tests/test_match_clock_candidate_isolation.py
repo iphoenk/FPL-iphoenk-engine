@@ -14,6 +14,9 @@ def test_same_gw_second_owner_fixture_survives_first_materiality_rejection():
          "started": True, "finished": False, "finished_provisional": False,
          "kickoff_time": "2026-11-01T20:00:00Z"}
         for fid, team in [(101, 1), (102, 3)]
+        {"id": 103, "event": 9, "team_h": 4, "team_a": 5,
+         "started": False, "finished": False, "finished_provisional": False,
+         "kickoff_time": "2026-11-02T20:00:00Z"},
     ]
     picks = [
         {"element": i, "position": i, "multiplier": 1 if i <= 11 else 0,
@@ -62,4 +65,15 @@ def test_unstarted_final_fixture_is_not_reported_as_live():
                  "started": False, "finished": False,
                  "finished_provisional": False,
                  "kickoff_time": "2026-11-02T20:00:00Z"}]
+    assert public_kickoff_match_candidate(now, fetch=fetch) is None
+
+def test_first_checkpoint_does_not_replay_at_next_hour():
+    # Same LIVE fixture at a later hourly tick is not a new kickoff.
+    now = datetime(2026, 11, 1, 21, 35, tzinfo=timezone.utc)
+    def fetch(path):
+        assert path == "fixtures/"
+        return [{"id": 102, "event": 9, "team_h": 3, "team_a": 4,
+                 "started": True, "finished": False,
+                 "finished_provisional": False,
+                 "kickoff_time": "2026-11-01T20:00:00Z"}]
     assert public_kickoff_match_candidate(now, fetch=fetch) is None

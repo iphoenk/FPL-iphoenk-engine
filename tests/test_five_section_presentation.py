@@ -410,8 +410,9 @@ def test_public_s15b_never_uses_hidden_gw_and_blocks_duplicate_members():
         now=datetime(2026, 11, 1, tzinfo=timezone.utc),
     )
     txt = fs.render_official_s15b_factual(snap)
-    assert "Submitted picks: GW9" in txt
-    assert "standings PARTIAL" in txt
+    assert "UNAVAILABLE: no official standings rows" in txt
+    assert snap["standings"]["complete"] is False
+    assert snap["standings"]["failed_pages"][0]["status"] == "DUPLICATE_OR_INVALID_ENTRY"
 
 
 def test_public_s15b_provenance_missing_cannot_claim_full():

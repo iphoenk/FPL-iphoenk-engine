@@ -13,8 +13,8 @@ def test_invalid_first_fixture_does_not_block_valid_second_owner_fixture():
          "started": True, "finished": False, "finished_provisional": False,
          "kickoff_time": "2026-11-01T20:00:00Z"},
     ]
-    # Both fixtures are at 03:00 WIB; the first eligible HH:30 is 03:30 WIB.
-    # Only the second fixture has a valid owner-submitted squad.
+    # Both fixtures kick off at 03:00 WIB; the first eligible HH:30 is 03:30 WIB.
+    # First picks payload is malformed; the second candidate must still be checked.
     picks = [
         {"element": i, "position": i, "multiplier": 1 if i <= 11 else 0,
          "is_captain": i == 1, "is_vice_captain": i == 2}

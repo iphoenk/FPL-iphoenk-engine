@@ -1143,6 +1143,19 @@ def _official_source_cutoff(official: Mapping[str, Any]) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def _official_source_cutoff_or_sentinel(official: Mapping[str, Any]) -> datetime | str | None:
+    """Cutoff for the resolver.
+
+    Absent ``checked_at`` keeps the legacy (pre-O1) path; a ``checked_at`` that is
+    present but unparseable or timezone-naive fails closed via a sentinel string.
+    """
+    cutoff = _official_source_cutoff(official)
+    if cutoff is not None:
+        return cutoff
+    raw = ((official or {}).get("payload") or {}).get("checked_at")
+    return "UNPARSEABLE_SOURCE_CUTOFF" if raw not in (None, "") else None
+
+
 def _load_official_detail(runtime_data_root: Path) -> tuple[dict[str, Any], str | None]:
     """Load the occurrence-bound full-history artifact from supported V6 layouts."""
     candidates = [
@@ -8146,7 +8159,7 @@ def run_deep(
             allow_legacy_private_sources=allow_legacy_private_sources,
             require_private_personal=require_private_personal,
             report_slot=report_slot,
-            source_cutoff=_official_source_cutoff(official) or "UNPARSEABLE_SOURCE_CUTOFF",
+            source_cutoff=_official_source_cutoff_or_sentinel(official),
             bootstrap=bootstrap,
         ),
         required=True,

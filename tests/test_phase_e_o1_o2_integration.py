@@ -90,3 +90,11 @@ def test_integration_unparseable_cutoff_is_not_silently_legacy(tmp_path):
         report_slot=report["slot"], source_cutoff="UNPARSEABLE_SOURCE_CUTOFF", bootstrap=BOOTSTRAP,
     )
     assert res["resolution_status"] != "CURRENT_VALID"
+
+
+def test_integration_cutoff_helper_distinguishes_absent_from_invalid():
+    f = runner._official_source_cutoff_or_sentinel
+    assert f({"payload": {}}) is None
+    assert f({"payload": {"checked_at": "garbage"}}) == "UNPARSEABLE_SOURCE_CUTOFF"
+    assert f({"payload": {"checked_at": "2026-10-30T06:25:38"}}) == "UNPARSEABLE_SOURCE_CUTOFF"
+    assert f({"payload": {"checked_at": "2026-10-30T06:25:38Z"}}).isoformat().startswith("2026-10-30T06:25:38")

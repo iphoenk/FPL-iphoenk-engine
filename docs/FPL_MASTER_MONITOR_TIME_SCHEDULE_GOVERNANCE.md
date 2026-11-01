@@ -30,11 +30,12 @@ Quiet window is strictly after 21:30 through before 04:30 Asia/Jakarta.
 
 Extra visible notifications are suppressed during this window except:
 - an explicit owner ADHOC request;
-- the deadline window from T-3 hours through lock.
+- the deadline window from T-3 hours through lock;
+- a new Official FPL material MATCH event verified against locked submitted GW picks and owner/rival evidence (OUR15 fixture started/finished, owner or captain points changed, or full-coverage live league rank changed). The matched event key must differ from the last delivered MATCH key and Official evidence must be recent.
 
 The fixed 21:30 and 04:30 DEEP reports remain visible.
 
-Live MATCH and POST_MATCH work may continue silently during quiet hours and feed the next permitted visible report.
+Unchanged or unverifiable MATCH activity stays silent, then joins the next due report. Material quiet-hour events may generate one MATCH checkpoint at the existing hourly :30. If no exact canonical MATCH publication exists, ChatGPT may deliver a clearly labelled READ-ONLY MATCH CHECKPOINT | NOT V12-CANONICAL from public V6/Official facts without claiming private model execution. Never infer a kickoff or result from schedule alone. Keep quiet suppression for repeat snapshots and avoid duplicate DEEP+MATCH reports.
 
 ## 4. Deadline checkpoints
 

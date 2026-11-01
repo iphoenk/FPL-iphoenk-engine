@@ -16,7 +16,7 @@ from .prefetch_contract import (
 from .security import safe_error
 
 
-def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
+def fetch_all_standings(client: Any, league: dict[str, Any], *, strict_duplicates: bool = False) -> dict[str, Any]:
     league_id = int(league["league_id"])
     kind = str(league["league_kind"])
     rows: list[dict[str, Any]] = []
@@ -46,6 +46,12 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
         page_ids = frozenset(
             int(row["entry"]) for row in page_rows if isinstance(row, dict) and row.get("entry") is not None
         )
+        if strict_duplicates and (
+            len(page_ids) != len(page_rows) or bool(page_ids & seen_entry_ids)
+        ):
+            failures.append({"page": page, "status": "DUPLICATE_OR_INVALID_ENTRY",
+                             "http_status": None, "error": None})
+            break
         if page_ids and page_ids <= seen_entry_ids:
             # A repeated page (pagination loop) must not inflate membership or run to the page cap.
             failures.append({"page": page, "status": "DUPLICATE_PAGE", "http_status": None, "error": None})
@@ -513,7 +519,7 @@ def build_independent_s15b_snapshot(
         "league_name": f"Classic League {league_id}",
         "league_kind": "classic",
     }
-    state = fetch_all_standings(client, league)
+    state = fetch_all_standings(client, league, strict_duplicates=True)
     if len(state["rows"]) > 1000:
         raise ValueError("S15B public league exceeds bounded participant limit")
     standings = standings_artifact(

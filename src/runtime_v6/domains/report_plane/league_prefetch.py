@@ -41,6 +41,12 @@ def fetch_all_standings(client: Any, league: dict[str, Any], *, strict_duplicate
             )
             break
         payload = result.get("payload") or {}
+        if strict_duplicates:
+            declared = (payload.get("league") or {}).get("id")
+            if declared is None or str(declared) != str(league_id):
+                failures.append({"page": page, "status": "LEAGUE_ID_MISMATCH",
+                                 "http_status": result.get("http_status"), "error": None})
+                break
         standings = payload.get("standings") or {}
         page_rows = standings.get("results") or []
         page_ids = frozenset(

@@ -284,6 +284,30 @@ def render_official_s15b_factual(snapshot: Mapping[str, Any]) -> str:
         + f"; points {points if points is not None else 'UNAVAILABLE'}"
         + f"; gap leader {gap if gap is not None else 'UNAVAILABLE'}",
     ]
+    # Rank battle is Official standings fact, independent from private P1.8
+    # strategy and independent from whether disclosed picks have arrived.
+    if user and type(rank) is int and type(points) is int:
+        ordered_rivals = sorted(
+            (row for row in rows.values()
+             if type(row.get("league_rank")) is int
+             and type(row.get("league_total")) is int),
+            key=lambda row: (row["league_rank"], row["entry_id"]),
+        )
+        ours_index = next(
+            (i for i, row in enumerate(ordered_rivals)
+             if row["entry_id"] == owner_id), None,
+        )
+        if ours_index is not None:
+            rivals = ordered_rivals[max(0, ours_index - 3):ours_index] + (
+                ordered_rivals[ours_index + 1:ours_index + 4]
+            )
+            out.extend(["Direct rank neighbours (standings only):",
+                        "Rank | Entry | Points | Gap vs OUR",
+                        "---:|---:|---:|---:"])
+            for rival in rivals:
+                diff = rival["league_total"] - points
+                out.append(f'{rival["league_rank"]} | {rival["entry_id"]} | '
+                           f'{rival["league_total"]} | {diff:+d}')
     picks = snapshot.get("submitted_picks")
     if not isinstance(picks, Mapping) or picks.get("authority") != "OFFICIAL_FPL":
         return "\n".join(out + ["Submitted-picks exposure: UNAVAILABLE (no official picks)."])
@@ -462,7 +486,7 @@ def public_s15b_cli(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--entry-id", type=int, default=3462711)
     parser.add_argument("--gw", type=int)
     parser.add_argument("--source", choices=("auto", "official", "dashboard"), default="auto")
-    parser.add_argument("--max-players", type=int, default=20)
+    parser.add_argument("--max-players", type=int, default=200)
     args = parser.parse_args(argv)
     try:
         snap = acquire_public_s15b(

@@ -177,3 +177,160 @@ def test_existing_orchestrator_admits_exact_t30_final_review_not_other_deadline_
         item not in permitted
         for item in rows if item.contract in {"DELTA", "DELTA_EXECUTION", "GO_NO_GO", "FINAL_CONFIRMATION"}
     )
+
+
+
+# BARATAYUDA night-MATCH acceptance, no second scheduler or model.
+def _night_match_event(**overrides):
+    row = {
+        "authority": "OFFICIAL_FPL",
+        "owner_locked_picks_verified": True,
+        "official_event_facts_verified": True,
+        "scoring_gw": 10,
+        "official_fixture_id": 9876,
+        "checked_at": "2026-11-01T18:29:00Z",
+        "event_kind": "OWNER_MATCH_STARTED",
+        "previous_value": "NOT_STARTED",
+        "current_value": "LIVE",
+        "owner_fixture_verified": True,
+        "captain_locked_verified": True,
+        "league_coverage_full": True,
+    }
+    row.update(overrides)
+    return row
+
+
+def test_night_match_verified_owner_kickoff_bypasses_quiet_once():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    resolved = resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=_night_match_event()
+    )
+    assert resolved.visible is True
+    assert resolved.quiet_window is True
+    assert resolved.quiet_suppressed is False
+    assert resolved.material_match_override is True
+    assert resolved.primary_mode == "MATCH"
+    assert resolved.single_visible_report is True
+    assert resolved.material_match_event_key.startswith("GW10|FIX9876|")
+
+
+def test_night_match_owner_points_delta_is_material():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    resolved = resolve_delivery_decision(
+        slot, match_live=True,
+        match_material_evidence=_night_match_event(
+            event_kind="OWNER_POINTS_CHANGED",
+            previous_value=3, current_value=8,
+        ),
+    )
+    assert resolved.visible
+    assert "OWNER_POINTS_CHANGED|3>8" in resolved.material_match_event_key
+
+
+def test_night_match_captain_delta_requires_locked_captain():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    event = _night_match_event(
+        event_kind="CAPTAIN_POINTS_CHANGED",
+        previous_value=2, current_value=5, captain_locked_verified=False,
+    )
+    assert not resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event
+    ).visible
+    event["captain_locked_verified"] = True
+    assert resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event
+    ).visible
+
+
+def test_night_match_live_league_rank_change_requires_full_coverage():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    event = _night_match_event(
+        event_kind="LEAGUE_RANK_CHANGED",
+        previous_value=7, current_value=6, league_coverage_full=False,
+    )
+    assert not resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event
+    ).visible
+    event["league_coverage_full"] = True
+    assert resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event
+    ).visible
+
+
+def test_night_match_verified_owner_finish_can_report_post_all_match_once():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    event = _night_match_event(
+        event_kind="OWNER_MATCH_FINISHED",
+        previous_value="LIVE", current_value="FINAL",
+    )
+    resolved = resolve_delivery_decision(
+        slot, post_all_match=True, match_material_evidence=event,
+    )
+    assert resolved.visible
+    assert resolved.primary_mode == "POST_ALL_MATCH"
+    assert resolved.single_visible_report
+
+
+def test_night_match_stale_or_future_evidence_never_bypasses_quiet():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    for when in ("2026-11-01T16:00:00Z", "2026-11-01T18:31:00Z", "BAD", ""):
+        assert not resolve_delivery_decision(
+            slot, match_live=True,
+            match_material_evidence=_night_match_event(checked_at=when),
+        ).visible
+
+
+def test_night_match_dedupes_exact_material_event_key():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    event = _night_match_event()
+    first = resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event
+    )
+    second = resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=event,
+        last_delivered_match_event_key=first.material_match_event_key,
+    )
+    assert first.visible and not second.visible
+    assert second.material_match_reason == "MATCH_EVENT_ALREADY_DELIVERED"
+
+
+def test_night_match_unknown_source_or_unverified_picks_is_suppressed():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    for changes in (
+        {"authority": "DASHBOARD"},
+        {"owner_locked_picks_verified": False},
+        {"official_event_facts_verified": False},
+        {"scoring_gw": 0},
+        {"official_fixture_id": None},
+        {"event_kind": "UNSPECIFIED_HYPE"},
+    ):
+        got = resolve_delivery_decision(
+            slot, match_live=True, match_material_evidence=_night_match_event(**changes)
+        )
+        assert not got.visible
+        assert got.quiet_suppressed
+
+
+def test_night_match_no_owner_change_is_suppressed_even_when_live():
+    slot = datetime(2026, 11, 2, 1, 30, tzinfo=WIB)
+    for event in (
+        _night_match_event(owner_fixture_verified=False),
+        _night_match_event(
+            event_kind="OWNER_POINTS_CHANGED", previous_value=3, current_value=3
+        ),
+        None,
+    ):
+        assert not resolve_delivery_decision(
+            slot, match_live=True, match_material_evidence=event
+        ).visible
+
+
+def test_overlap_deep_with_match_material_remains_one_report():
+    slot = datetime(2026, 11, 1, 21, 30, tzinfo=WIB)
+    got = resolve_delivery_decision(
+        slot, match_live=True, match_material_evidence=_night_match_event()
+    )
+    assert got.visible and got.single_visible_report
+    assert set(got.obligations) == {"DEEP", "MATCH"}
+    assert got.primary_mode == "DEEP"
+    assert got.material_match_override is False  # not quiet, existing DEEP wins

@@ -444,6 +444,10 @@ def acquire_public_s15b(
             snap["official_fetch_failures"] = list(failures)
             return snap
         except Exception as exc:
+            if isinstance(exc, ValueError) and str(exc) == "HIDDEN_OR_INVALID_GAMEWEEK":
+                # A future or invalid requested GW is a hard rejection, not a
+                # source outage that the public proxy may circumvent.
+                raise
             # Never expose URLs, tokens, upstream bodies or exception details.
             failures.append(f"{mode}: {type(exc).__name__}")
     raise ValueError("PUBLIC_S15B_UNAVAILABLE: " + ", ".join(failures))

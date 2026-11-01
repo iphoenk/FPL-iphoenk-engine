@@ -14,6 +14,7 @@ def test_same_gw_second_owner_fixture_survives_first_materiality_rejection():
          "started": True, "finished": False, "finished_provisional": False,
          "kickoff_time": "2026-11-01T20:00:00Z"}
         for fid, team in [(101, 1), (102, 3)]
+    ] + [
         {"id": 103, "event": 9, "team_h": 4, "team_a": 5,
          "started": False, "finished": False, "finished_provisional": False,
          "kickoff_time": "2026-11-02T20:00:00Z"},

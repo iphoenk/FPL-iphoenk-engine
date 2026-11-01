@@ -264,3 +264,38 @@ No new scheduler or authority is introduced.
 ## S15B full league player ownership (16 Oct 2026)
 
 The existing canonical `league_full_composition` computes exposure across all unique Official FPL element identities on the submitted 58-manager league scope; this is distinct from the OUR15 and the dynamic Competitive Window. In addition to the eight locked original tables, DEEP S15B renders a ninth `ALL LEAGUE PLAYER OWNERSHIP` table with Player, Pos, Owned, Ownership, Starter, Bench, Captain, Vice, EO. Players are ordered by descending owned count; positions are GK, DEF, MID and FWD for native filtering. Every population ratio uses 58 as the denominator, including our own team, and EO may exceed 100% due to multipliers. The submitted picks represent the prior-GW behavioural baseline, **not** future private selections. The canonical report's visible lock and QA enforce one row per unique player and the position mapping; no forecasting, optimizer, scheduler or Stage3 decision authority is added. Source audit at 2026-10-16 21:30 WIB found 58/58 squads and 158 unique identities; a private additive appendix exists without rewriting immutable occurrence receipts.
+
+
+## Public factual S15B recovery (1 Nov 2026)
+
+Documentation sync: 2026-11-01T23:19:00+07:00. Draft PR #1208 only; not merged, deployed or naturally accepted.
+
+S15B factual acquisition is independent from owner-private OIDC and the V12 verified pointer.
+The additive build_independent_s15b_snapshot V6 adapter reuses fetch_all_standings,
+standings_artifact and acquire_manager_picks without modifying their
+default data semantics. The strict S15B mode rejects duplicate/invalid
+participant rows; an incomplete page or picks response is PARTIAL/UNAVAILABLE,
+never 58/58 by assumption. Official FPL remains the only factual authority.
+
+The standalone ad-hoc five-section public report is invoked by:
+
+    python -m src.engines.v12_five_section_presentation --source auto --league-id 9477 --entry-id 3462711
+
+It selects the latest disclosed GW using Official FPL event deadline UTC timestamps,
+or rejects an explicit hidden GW. The public_only client bypasses environment
+credential discovery, including rotating OIDC. It makes only public Official FPL
+bootstrap/standings/submitted-picks GETs. A failed direct Official fetch can try
+the allowlisted fpl-iphoenk.vercel.app/api read-only proxy. The dashboard proxy
+alone is not independent source proof: its standings are marked PARTIAL
+provenance and league-wide EO is suppressed until independent Official evidence
+is available. Never confuse prior-GW submitted picks with future GW selections.
+
+build_degraded_fallback(public_s15b_snapshot=...) may show a public-only
+mini-league section inside the existing five-section ChatGPT view without
+claiming V12 canonical status or changing any owner-private decision. Other
+four sections remain NOT AVAILABLE when the canonical body is unverified.
+The CLI is an executable ad-hoc consumer, not a new scheduled pipeline; the
+ChatGPT scheduled task already has a separate Official-first S15B instruction.
+CI/governance verification and natural scheduled delivery remain independent
+acceptance requirements. No changes to P1.7, MC500K, Stage3, GW7,
+private receipts, GitHub operational clock or ChatGPT schedule.

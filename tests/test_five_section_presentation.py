@@ -210,3 +210,245 @@ def test_baseline_pair_is_still_checked_for_membership_distinctness_and_state():
     body = _body(cv_state="PREPARE").replace("Captain baseline: Haaland (PREPARE)", "Captain baseline: Haaland (LOCK)")
     assert "CV_STATE_INCONSISTENT" in _check(body)
     assert "CV_MISSING_S08" in _check(_body(cv_state="PREPARE").replace("Current C baseline: Haaland;", ""))
+
+
+# S15B public-only fallback is additive: canonical pointer gate must stay unchanged.
+def _official_s15b(full=True, deadline=True):
+    managers = [
+        {"entry_id": 3462711, "league_rank": 2, "league_total": 50},
+        {"entry_id": 7, "league_rank": 1, "league_total": 60},
+    ]
+    def record(entry_id):
+        return {
+            "gw": 9, "status": "AVAILABLE",
+            "picks": [
+                {"element_id": element + (100 if entry_id == 7 else 0),
+                 "squad_position": element, "multiplier": (2 if element == 1 else 1 if element <= 11 else 0),
+                 "captain": element == 1, "vice_captain": element == 2}
+                for element in range(1, 16)
+            ],
+        }
+    return {
+        "league_id": 9477, "owner_entry_id": 3462711, "transport": "OFFICIAL_DIRECT",
+        "standings": {
+            "authority": "OFFICIAL_FPL", "league_id": 9477, "generated_at": "2026-11-01T14:30:00Z",
+            "complete": True, "failed_pages": [], "expected_manager_count": 2, "managers": managers,
+        },
+        "submitted_picks": {
+            "authority": "OFFICIAL_FPL", "league_id": 9477, "gw": 9,
+            "deadline_passed": deadline, "complete": full, "expected_manager_count": 2,
+            "entries": {"3462711": record(3462711), **({"7": record(7)} if full else {})},
+        },
+        "player_index": {"1": {"web_name": "Test Player"}},
+    }
+
+
+def test_degraded_fallback_with_public_s15b_preserves_five_sections_and_gate():
+    out = fs.build_degraded_fallback("private read failed", public_s15b_snapshot=_official_s15b())
+    assert fs.validate_view(out) == []
+    assert [l[3:] for l in out.splitlines() if l.startswith("## ")] == TITLES
+    league = out.split("## MINI-LEAGUE & COMPETITIVE", 1)[1].split("## FINAL DECISION", 1)[0]
+    assert "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL" in league
+    assert "rank 2; points 50; gap leader 10" in league
+    assert "Submitted picks: GW9 | FULL | 2/2" in league
+    assert "Test Player (1) | 1/2" in league
+    assert "100.0%" in league and "TRANSFER" not in league
+    assert "XI:" not in out and "Current C:" not in out
+
+
+def test_public_s15b_partial_never_claims_full_league_or_eo():
+    out = fs.render_official_s15b_factual(_official_s15b(full=False))
+    assert "PARTIAL | 1/2" in out
+    assert "EO requires FULL multiplier coverage" in out
+    assert "UNAVAILABLE" in out
+    assert "FULL | 2/2" not in out
+
+
+def test_public_s15b_blocks_predeadline_and_dashboard_only_authority():
+    data = _official_s15b(deadline=False)
+    assert "deadline not passed" in fs.render_official_s15b_factual(data)
+    data["standings"]["authority"] = "DASHBOARD"
+    assert "UNAVAILABLE: standings lack Official FPL authority" in fs.render_official_s15b_factual(data)
+    data = _official_s15b()
+    data["submitted_picks"]["league_id"] = 1
+    assert "league mismatch" in fs.render_official_s15b_factual(data)
+
+
+def test_public_s15b_invalid_multiplier_and_duplicate_membership_fail_closed():
+    data = _official_s15b()
+    data["submitted_picks"]["entries"]["3462711"]["picks"][0]["multiplier"] = None
+    assert "PARTIAL | 1/2 | invalid 1" in fs.render_official_s15b_factual(data)
+    data = _official_s15b()
+    data["standings"]["managers"].append(dict(data["standings"]["managers"][0]))
+    assert "duplicate or invalid" in fs.render_official_s15b_factual(data)
+
+
+def test_public_s15b_is_not_silent_canonical_upgrade():
+    data = _official_s15b()
+    out = fs.build_degraded_fallback("verified pointer stale", public_s15b_snapshot=data)
+    assert fs.load_config()["degraded_marker"] in out
+    assert fs.validate_view(out) == []
+    # Existing canonical validation requires original body; public rows cannot impersonate it.
+    assert "CANONICAL_BODY_REQUIRED" in fs.validate_view(out.replace(fs.load_config()["degraded_marker"], "STATUS"))
+
+
+
+class _PublicS15BClient:
+    def __init__(self, base, *, broken=False, missing=None, mismatch=False, wrong_league=False):
+        self.base = base
+        self.broken = broken
+        self.missing = missing
+        self.mismatch = mismatch
+        self.wrong_league = wrong_league
+        self.public_calls = []
+
+    def bootstrap(self):
+        self.public_calls.append("bootstrap")
+        if self.broken:
+            return {"status": "UNAVAILABLE"}
+        return {"status": "LIVE", "payload": {
+            "events": [
+                {"id": 9, "deadline_time": "2026-10-30T13:00:00Z"},
+                {"id": 10, "deadline_time": "2026-11-07T13:00:00Z"},
+            ],
+            "elements": [{"id": 1, "web_name": "Player One"}],
+        }}
+
+    def classic_standings(self, league_id, page):
+        self.public_calls.append("standings")
+        rows = [
+            {"entry": 3462711, "rank": 2, "total": 50, "player_name": "Owner", "entry_name": "Our team"},
+            {"entry": 7, "rank": 1, "total": 60, "player_name": "Rival", "entry_name": "Other team"},
+        ]
+        if self.mismatch:
+            rows[1]["entry"] = 3462711
+        return {"status": "LIVE", "checked_at": "2026-11-01T15:00:00Z",
+                "http_status": 200, "endpoint_class": "classic_standings",
+                "payload": {"league": {"id": 999 if self.wrong_league else league_id}, "standings": {
+                    "results": rows, "has_next": False,
+                }}}
+
+    def submitted_picks(self, entry_id, gw):
+        self.public_calls.append("submitted_picks")
+        if self.missing == entry_id:
+            return {"status": "UNAVAILABLE", "http_status": 503}
+        return {"status": "LIVE", "checked_at": "2026-11-01T15:00:00Z",
+                "http_status": 200, "endpoint_class": "submitted_picks",
+                "payload": {"active_chip": None, "entry_history": {"event": gw},
+                            "picks": [
+                                {"element": i + (100 if entry_id == 7 else 0),
+                                 "position": i, "multiplier": (2 if i == 1 else 1 if i <= 11 else 0),
+                                 "is_captain": i == 1, "is_vice_captain": i == 2}
+                                for i in range(1, 16)
+                            ]}}
+
+
+def test_public_s15b_end_to_end_uses_existing_v6_facts_and_direct_official():
+    from datetime import datetime, timezone
+    clients = []
+    def factory(base):
+        client = _PublicS15BClient(base)
+        clients.append(client)
+        return client
+    snap = fs.acquire_public_s15b(
+        client_factory=factory, now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    assert snap["transport"] == "OFFICIAL_DIRECT" and snap["snapshot_gw"] == 9
+    assert snap["standings"]["expected_manager_count"] == 2
+    assert snap["submitted_picks"]["submitted_picks_available_count"] == 2
+    assert clients[0].public_calls.count("submitted_picks") == 2
+    assert set(clients[0].public_calls) == {"bootstrap", "standings", "submitted_picks"}
+    output = fs.build_degraded_fallback("OIDC unavailable", public_s15b_snapshot=snap)
+    assert fs.validate_view(output) == []
+    assert "Player One (1)" in output
+    assert "FULL | 2/2" in output
+    assert "1 | 7 | 60 | +10" in output  # rank neighbour above OUR
+    assert "100.0%" in output  # captain multiplier 2/2 managers
+    assert "S15B OFFICIAL FACTUAL ONLY | NOT V12-CANONICAL" in output
+
+
+def test_public_s15b_auto_dashboard_fallback_never_promotes_full_or_eo():
+    from datetime import datetime, timezone
+    clients = []
+    def factory(base):
+        client = _PublicS15BClient(base, broken="fantasy.premierleague.com" in base)
+        clients.append(client)
+        return client
+    snap = fs.acquire_public_s15b(
+        client_factory=factory, transport="auto", now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    assert snap["transport"] == "DASHBOARD_PROXY"
+    assert snap["official_fetch_failures"] == ["official: ValueError"]
+    txt = fs.render_official_s15b_factual(snap)
+    assert "independent provenance: UNVERIFIED" in txt
+    assert "standings PARTIAL" in txt
+    assert "UNAVAILABLE" in txt
+    assert "FULL | 2/2" not in txt
+    assert len(clients) == 2
+
+
+def test_public_s15b_direct_partial_picks_keeps_sample_denominator():
+    from datetime import datetime, timezone
+    snap = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, missing=7),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    txt = fs.render_official_s15b_factual(snap)
+    assert "PARTIAL | 1/2" in txt
+    assert "EO requires FULL multiplier coverage" in txt
+    assert "| UNAVAILABLE" in txt
+
+
+def test_public_s15b_never_uses_hidden_gw_and_blocks_duplicate_members():
+    from datetime import datetime, timezone
+    import pytest
+    with pytest.raises(ValueError, match="HIDDEN_OR_INVALID_GAMEWEEK"):
+        fs.acquire_public_s15b(
+            client_factory=lambda base: _PublicS15BClient(base), disclosed_gw=10,
+            now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        )
+    snap = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, mismatch=True),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+    )
+    txt = fs.render_official_s15b_factual(snap)
+    assert "UNAVAILABLE: no official standings rows" in txt
+    assert snap["standings"]["complete"] is False
+    assert snap["standings"]["failed_pages"][0]["status"] == "DUPLICATE_OR_INVALID_ENTRY"
+    wrong = fs.acquire_public_s15b(
+        client_factory=lambda base: _PublicS15BClient(base, wrong_league=True),
+        now=datetime(2026, 11, 1, tzinfo=timezone.utc),
+        transport="official",
+    )
+    assert wrong["standings"]["failed_pages"][0]["status"] == "LEAGUE_ID_MISMATCH"
+
+
+def test_public_s15b_provenance_missing_cannot_claim_full():
+    raw = _official_s15b()
+    raw.pop("transport")
+    txt = fs.render_official_s15b_factual(raw)
+    assert "independent provenance: UNVERIFIED" in txt
+    assert "standings PARTIAL" in txt
+    assert "FULL | 2/2" not in txt
+    raw = _official_s15b()
+    raw["standings"]["managers"][0]["entry_id"] = 3456711
+    txt = fs.render_official_s15b_factual(raw)
+    assert "standings PARTIAL" in txt
+    assert "Owner entry 3462711: rank UNAVAILABLE" in txt
+
+
+
+def test_public_fpl_client_does_not_inspect_oidc_or_account_credentials(monkeypatch):
+    from src.runtime_v6.domains.acquisition import official_fpl_client as client_mod
+
+    def forbidden_env_read():
+        raise AssertionError("Public S15B must not load or rotate OIDC")
+
+    monkeypatch.setattr(client_mod, "auth_material_from_env", forbidden_env_read)
+    monkeypatch.setenv("FPL_AUTH_MODE", "rotating_oidc")
+    monkeypatch.setenv("FPL_OIDC_CLIENT_ID", "do-not-read")
+    client = client_mod.OfficialFPLClient(public_only=True)
+    assert client.auth_material is None
+    assert client.auth_available is False
+    assert client.auth_configuration_state == "UNAVAILABLE"
+    assert client.secret_values == ()

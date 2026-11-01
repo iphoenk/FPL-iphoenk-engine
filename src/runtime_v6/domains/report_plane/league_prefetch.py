@@ -16,7 +16,7 @@ from .prefetch_contract import (
 from .security import safe_error
 
 
-def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
+def fetch_all_standings(client: Any, league: dict[str, Any], *, strict_duplicates: bool = False) -> dict[str, Any]:
     league_id = int(league["league_id"])
     kind = str(league["league_kind"])
     rows: list[dict[str, Any]] = []
@@ -41,11 +41,23 @@ def fetch_all_standings(client: Any, league: dict[str, Any]) -> dict[str, Any]:
             )
             break
         payload = result.get("payload") or {}
+        if strict_duplicates:
+            declared = (payload.get("league") or {}).get("id")
+            if declared is None or str(declared) != str(league_id):
+                failures.append({"page": page, "status": "LEAGUE_ID_MISMATCH",
+                                 "http_status": result.get("http_status"), "error": None})
+                break
         standings = payload.get("standings") or {}
         page_rows = standings.get("results") or []
         page_ids = frozenset(
             int(row["entry"]) for row in page_rows if isinstance(row, dict) and row.get("entry") is not None
         )
+        if strict_duplicates and (
+            len(page_ids) != len(page_rows) or bool(page_ids & seen_entry_ids)
+        ):
+            failures.append({"page": page, "status": "DUPLICATE_OR_INVALID_ENTRY",
+                             "http_status": None, "error": None})
+            break
         if page_ids and page_ids <= seen_entry_ids:
             # A repeated page (pagination loop) must not inflate membership or run to the page cap.
             failures.append({"page": page, "status": "DUPLICATE_PAGE", "http_status": None, "error": None})
@@ -487,3 +499,63 @@ def add_manager_live_totals(
         "manager_live_aggregation": "DOWNSTREAM_ONLY",
     }
     return value
+
+
+
+def build_independent_s15b_snapshot(
+    client: Any, *, league_id: int, owner_entry_id: int, gw: int,
+    deadline_passed: bool, season: str = "2026-27",
+    source_transport: str = "OFFICIAL_DIRECT", workers: int = 4,
+    player_index: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Factual public S15B bridge. No private auth, optimizer or canonical promotion.
+
+    Reuses V6's governed standings/picks normalization. The caller supplies an
+    exclusively public HTTP client and MUST prove the disclosed-GW deadline before
+    setting deadline_passed=True. Proxy transport is never an independent authority.
+    """
+    if any(type(value) is not int or value <= 0 for value in (league_id, owner_entry_id, gw)):
+        raise ValueError("S15B public identity/GW must contain positive integers")
+    if source_transport not in {"OFFICIAL_DIRECT", "DASHBOARD_PROXY"}:
+        raise ValueError("S15B public transport is not allowlisted")
+    if type(deadline_passed) is not bool:
+        raise ValueError("S15B disclosed deadline must be a boolean")
+    league = {
+        "league_id": league_id,
+        "league_name": f"Classic League {league_id}",
+        "league_kind": "classic",
+    }
+    state = fetch_all_standings(client, league, strict_duplicates=True)
+    if len(state["rows"]) > 1000:
+        raise ValueError("S15B public league exceeds bounded participant limit")
+    standings = standings_artifact(
+        league=league, state=state, entry_id=owner_entry_id,
+        generated_at=iso(utc_now()),
+    )
+    standings["source_transport"] = source_transport
+    picks = None
+    if deadline_passed and state["rows"]:
+        ids = [row["entry_id"] for row in state["rows"]]
+        picks, _ = acquire_manager_picks(
+            client, previous_path=None, season=season, league_id=league_id,
+            gw=gw, manager_ids=ids, deadline_passed=True,
+            workers=max(1, min(workers, 6)), force=True,
+            cache_enabled=False, include_previous_history=False,
+        )
+        picks["source_transport"] = source_transport
+    return {
+        "schema": "S15B_PUBLIC_FACTUAL_SNAPSHOT_V1",
+        "league_id": league_id,
+        "owner_entry_id": owner_entry_id,
+        "snapshot_gw": gw,
+        "transport": source_transport,
+        "provenance": (
+            "DIRECT_OFFICIAL_ENDPOINT" if source_transport == "OFFICIAL_DIRECT"
+            else "DASHBOARD_PROXY_NOT_INDEPENDENTLY_VERIFIED"
+        ),
+        "observed_at": iso(utc_now()),
+        "standings": standings,
+        "submitted_picks": picks,
+        "player_index": player_index or {},
+        "max_players": 20,
+    }

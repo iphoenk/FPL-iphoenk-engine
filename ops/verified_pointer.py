@@ -83,15 +83,17 @@ def receipt_present(comments: Sequence[str], oid: str, run_id: str) -> bool:
 
 
 def _require_presentation_qa(reader: Reader, history: str) -> None:
-    """DEEP requires the occurrence's own presentation QA: 22 sections, exact order, no root failure."""
+    """DEEP requires the occurrence's own presentation QA: 22 sections (23 when S16B is due), exact order, no root failure."""
     try:
         qa = json.loads(reader.read_bytes(f"{history}/presentation_qa.json"))
     except NotFound:
         raise Unverified(["PRESENTATION_QA_MISSING"])
     except ValueError:
         raise Unverified(["PRESENTATION_QA_INVALID"])
+    # 22 canonical sections, plus the conditional S16B when it is due (23).
+    expected = 23 if qa.get("s16b_due") is True else 22
     ok = (
-        qa.get("section_count") == qa.get("expected_section_count") == 22
+        qa.get("section_count") == qa.get("expected_section_count") == expected
         and qa.get("section_order_exact") is True
         and qa.get("root_failure_count") == 0
         and qa.get("visible_report_body_non_empty") is True
@@ -108,7 +110,8 @@ def _require_five_section_contract(reader: Reader, history: str, slot: str) -> N
 
     match = re.search(r"/gw_(\d+)/", history)
     wib = datetime.fromisoformat(slot).astimezone(timezone(timedelta(hours=7)))
-    slot_text = f"{wib.day} {wib:%b %Y}, {wib:%H:%M} WIB"
+    # The report prints a zero-padded day ("01 Nov 2026, 21:30 WIB").
+    slot_text = f"{wib:%d %b %Y}, {wib:%H:%M} WIB"
     body = reader.read_bytes(f"{history}/serving_report.md").decode("utf-8")
     failures = contract.gate(body, expected_gw=int(match.group(1)) if match else -1, expected_slot_wib=slot_text)
     if failures:

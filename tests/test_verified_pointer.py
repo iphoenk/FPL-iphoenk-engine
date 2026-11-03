@@ -10,6 +10,7 @@ import pytest
 
 from ops import verified_pointer as vp
 from test_p0b_missed_slot_reconciliation import (
+    synthetic_deep_body,
     DEEP_SLOT,
     PRICE_SLOT,
     FakeReader,
@@ -276,3 +277,54 @@ def test_invalid_candidate_leaves_existing_pointer_byte_identical():
     with pytest.raises(vp.Unverified):
         vp.build_entry(FakeReader(bad_files), "DEEP", LATER_DEEP, now=NOW, orchestrator_run="2")
     assert store.files == before
+
+
+# --- 3 Nov 2026 regressions: real DEEPs refused by two over-strict pointer gates ---
+def _qa(files, **update):
+    key = next(k for k in files if k.endswith("/presentation_qa.json"))
+    qa = json.loads(files[key])
+    qa.update(update)
+    files[key] = json.dumps(qa).encode()
+
+
+def test_deep_with_due_s16b_and_23_sections_is_publishable():
+    """DEEP 2026-11-03T04:30+07:00: 23/23 sections with s16b_due=true was refused (hard-coded 22)."""
+    files = private_files("DEEP", DEEP_SLOT)
+    _qa(files, section_count=23, expected_section_count=23, s16b_due=True)
+    entry = vp.build_entry(FakeReader(files), "DEEP", DEEP_SLOT, now=NOW, orchestrator_run="9001")
+    assert entry["presentation_contract"] == "FIVE_SECTION_V1_PASS"
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {"section_count": 23, "expected_section_count": 23},  # 23 without s16b_due
+        {"section_count": 23, "expected_section_count": 23, "s16b_due": False},
+        {"section_count": 22, "expected_section_count": 22, "s16b_due": True},  # due but not rendered
+        {"section_count": 23, "expected_section_count": 22, "s16b_due": True},
+        {"section_count": 24, "expected_section_count": 24, "s16b_due": True},
+    ],
+)
+def test_section_count_must_match_s16b_state_exactly(update):
+    files = private_files("DEEP", DEEP_SLOT)
+    _qa(files, **update)
+    with pytest.raises(vp.Unverified):
+        vp.build_entry(FakeReader(files), "DEEP", DEEP_SLOT, now=NOW, orchestrator_run="9001")
+
+
+def test_single_digit_day_slot_matches_zero_padded_report_text():
+    """DEEP 2026-11-01T21:30+07:00 printed '01 Nov 2026'; the gate expected '1 Nov 2026'."""
+    slot = "2026-11-01T21:30:00+07:00"
+    entry = vp.build_entry(
+        FakeReader(private_files("DEEP", slot)), "DEEP", slot, now=NOW, orchestrator_run="9001"
+    )
+    assert entry["report_slot"] == slot
+
+
+def test_wrong_slot_text_is_still_refused():
+    slot = "2026-11-01T21:30:00+07:00"
+    wrong_body = synthetic_deep_body(7, "2026-11-02T21:30:00+07:00")
+    files = private_files("DEEP", slot, body=wrong_body)
+    with pytest.raises(vp.Unverified) as exc:
+        vp.build_entry(FakeReader(files), "DEEP", slot, now=NOW, orchestrator_run="9001")
+    assert "OCCURRENCE_SLOT_MISMATCH" in exc.value.reasons

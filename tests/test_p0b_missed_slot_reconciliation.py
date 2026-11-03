@@ -287,7 +287,7 @@ def synthetic_deep_body(gw, slot, *, status="READY_FULL", captain="Haaland", vic
                  else f"Captain baseline: {captain} ({cv_state}); Vice baseline: {vice}."),
     }
     lines = ["FPL MASTER V12 — DEEP REPORT", f"Planning GW: GW{gw}",
-             f"Logical report slot: {t.day} {t:%b %Y}, {t:%H:%M} WIB",
+             f"Logical report slot: {t:%d %b %Y}, {t:%H:%M} WIB",
              f"Report: {'🟡 READY_DEGRADED' if 'DEGRADED' in status else '🟢 READY_FULL'} · Exact occurrence",
              "Sections: 22/22 lifecycle-visible · S16B not due", ""]
     for i in ids:

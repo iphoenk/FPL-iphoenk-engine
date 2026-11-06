@@ -19,7 +19,7 @@ from .league_prefetch import (
     standings_artifact,
 )
 from .official_fpl_client import OfficialFPLClient
-from .official_gw_history import retrospective_gw_partition
+from .official_gw_history import retrospective_gw_partition, validated_finalized_historical_gws
 from .personal_prefetch import (
     discover_memberships,
     normalise_submitted_picks,
@@ -106,12 +106,14 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
         for row in fixtures if row.get("id") is not None
     }
     identity_anomalies: list[dict[str, Any]] = []
+    metric_anomalies: list[dict[str, Any]] = []
     verified_fixture_rows = 0
     # A historical slot may exist in the payload while its event remains
     # provisional. Such slots are coverage-visible, never finalized evidence.
     pending_historical_gws = [
         gw for gw in historical_gws
         if events.get(gw, {}).get("finished") is not True
+        or events.get(gw, {}).get("data_checked") is not True
         or not fixture_by_gw.get(gw)
         or any(row.get("finished") is not True for row in fixture_by_gw[gw])
     ]
@@ -144,6 +146,11 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
                 })
             elif fixture_ids:
                 verified_fixture_rows += 1
+            if row.get("minutes") is None:
+                metric_anomalies.append({
+                    "element": element_id, "gw": row_gw,
+                    "fixture_id": fixture_id, "reason": "MISSING_MINUTES",
+                })
             if fixture_id is not None:
                 seen_fixtures.add(fixture_id)
         player_records: dict[str, Any] = {}
@@ -154,20 +161,27 @@ def _reconcile_full_history(snapshot: dict[str, Any], summaries: dict[str, Any])
             if summary is None:
                 missing.append({"element": element_id, "gw": gw})
                 continue
-            minutes = sum(float(row.get("minutes") or 0) for row in rows)
-            status = "PENDING" if event.get("finished") is not True else ("FINAL" if rows and minutes > 0 else ("DNP" if rows else "BLANK"))
+            missing_minutes = any(row.get("minutes") is None for row in rows)
+            minutes = sum(float(row["minutes"]) for row in rows if row.get("minutes") is not None)
+            status = (
+                "PENDING" if gw in pending_historical_gws else
+                "UNAVAILABLE" if missing_minutes else
+                "FINAL" if rows and minutes > 0 else
+                "DNP" if rows else "BLANK"
+            )
             player_records[str(gw)] = {"gw": gw, "status": status, "fixtures": rows, "fixture_context": fixture_rows, "fixture_count": len(rows) if rows else len(fixture_rows), "source": f"Official FPL element-summary/{element_id}/"}
             available += 1
         players[str(element_id)] = {"element_id": element_id, "position": element.get("element_type"), "team": element.get("team"), "history": player_records, "coverage": {"expected_gw_slots": len(historical_gws), "available_gw_slots": len(player_records), "missing_gw_slots": len(historical_gws) - len(player_records)}}
     expected = len(element_ids) * len(historical_gws)
     fixture_identity_complete = bool(fixture_ids) and not identity_anomalies
-    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing and fixture_identity_complete and not pending_historical_gws else "PARTIAL"
+    metric_identity_complete = not metric_anomalies
+    status = "PASS" if len(players) == len(element_ids) and available == expected and not missing and fixture_identity_complete and metric_identity_complete and not pending_historical_gws else "PARTIAL"
     return {
         "contract": "OFFICIAL_FULL_SEASON_PLAYER_HISTORY_V1",
         "generated_at": snapshot.get("generated_at"),
         "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"},
-        "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0},
-        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "fixture_identity_status": "PASS" if fixture_identity_complete else "PARTIAL", "fixture_catalog_count": len(fixture_ids), "verified_fixture_rows": verified_fixture_rows, "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
+        "universe": {"expected_players": len(element_ids), "covered_players": len(players), "element_ids": element_ids, "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0},
+        "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available, "expected_player_slots": expected, "missing_records": missing, "fixture_identity_status": "PASS" if fixture_identity_complete else "PARTIAL", "metric_identity_status": "PASS" if metric_identity_complete else "PARTIAL", "metric_identity_anomalies": metric_anomalies, "fixture_catalog_count": len(fixture_ids), "verified_fixture_rows": verified_fixture_rows, "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True},
         "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False},
         "players": players,
     }
@@ -1162,9 +1176,7 @@ class PrefetchService:
                 # They expose the already-acquired post-deadline match facts;
                 # never admit historical source-as-of or scheduler evidence.
                 partitions: dict[str, Any] = {}
-                for retrospective_gw in sorted(set((full_history.get("coverage_gate") or {}).get("finalized_historical_gws") or [])):
-                    if retrospective_gw not in (full_history.get("as_of") or {}).get("historical_gws", []):
-                        continue
+                for retrospective_gw in validated_finalized_historical_gws(full_history):
                     partition = retrospective_gw_partition(full_history, retrospective_gw)
                     partition["report_prefetch_run_id"] = report_prefetch_run_id
                     partition["target_logical_report_slot"] = slot.isoformat()
@@ -1183,8 +1195,40 @@ class PrefetchService:
                 summary_artifact["retrospective_gw_1_6"] = {k: v for k, v in partitions.items() if int(k) <= 6}
                 summary_artifact["retrospective_all_finalized_gws"] = partitions
                 write_json(self.output_root / summary_relative, summary_artifact, secrets=secrets)
+                coverage_relative = "history/official_history_coverage.json"
+                write_json(self.output_root / coverage_relative, {
+                    "schema_version": SCHEMA_VERSION,
+                    "contract": "OFFICIAL_FPL_HISTORY_COVERAGE_V1",
+                    "authority": "OFFICIAL_FPL",
+                    "generated_at": generated_at,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                    "target_logical_report_slot": slot.isoformat(),
+                    "as_of": dict(full_history.get("as_of") or {}),
+                    "universe": dict(full_history.get("universe") or {}),
+                    "coverage_gate": dict(full_history.get("coverage_gate") or {}),
+                    "partitions": partitions,
+                }, secrets=secrets)
+                provenance_relative = "history/source_provenance.json"
+                write_json(self.output_root / provenance_relative, {
+                    "schema_version": SCHEMA_VERSION,
+                    "contract": "OFFICIAL_FPL_HISTORY_SOURCE_PROVENANCE_V1",
+                    "authority": "OFFICIAL_FPL",
+                    "observation_class": "RETROSPECTIVE_POST_DEADLINE_FACTS",
+                    "historical_predeadline_source_asof": "NOT_ATTESTED",
+                    "natural_scheduler_proof": "NOT_APPLICABLE",
+                    "generated_at": generated_at,
+                    "report_prefetch_run_id": report_prefetch_run_id,
+                    "target_logical_report_slot": slot.isoformat(),
+                    "endpoint_templates": [
+                        "bootstrap-static/", "fixtures/", "element-summary/{element_id}/",
+                    ],
+                    "full_history_artifact": artifact_meta(self.output_root, history_relative),
+                    "fallback_used": False,
+                }, secrets=secrets)
                 artifacts.append(artifact_meta(self.output_root, history_relative))
                 artifacts.append(artifact_meta(self.output_root, summary_relative))
+                artifacts.append(artifact_meta(self.output_root, coverage_relative))
+                artifacts.append(artifact_meta(self.output_root, provenance_relative))
             except Exception as exc:
                 full_history_status = "UNAVAILABLE"
                 advisory_source_failures.append({

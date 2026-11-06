@@ -88,7 +88,7 @@ def test_history_reconciliation_requires_authoritative_team_id(monkeypatch, tmp_
 
 
 def test_full_season_history_covers_all_slots_and_aggregates_dgw():
-    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "fixtures": [{"id": 101, "event": 1, "finished": True}, {"id": 102, "event": 2, "finished": True}, {"id": 103, "event": 2, "finished": True}, {"id": 104, "event": 3, "finished": True}], "bootstrap": {"events": [{"id": 1, "finished": True}, {"id": 2, "finished": True}, {"id": 3, "finished": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
+    snapshot = {"generated_at": "2026-10-12T00:00:00Z", "phase": {"current_gw": 4}, "fixtures": [{"id": 101, "event": 1, "finished": True}, {"id": 102, "event": 2, "finished": True}, {"id": 103, "event": 2, "finished": True}, {"id": 104, "event": 3, "finished": True}], "bootstrap": {"events": [{"id": 1, "finished": True, "data_checked": True}, {"id": 2, "finished": True, "data_checked": True}, {"id": 3, "finished": True, "data_checked": True}], "elements": [{"id": 10, "element_type": 1, "team": 1}]}}
     detail = {"element_summaries": {"10": {"history": [{"event": 1, "fixture": 101, "minutes": 90, "total_points": 6, "saves": 3}, {"event": 2, "fixture": 102, "minutes": 0, "total_points": 0, "saves": 0}, {"event": 2, "fixture": 103, "minutes": 90, "total_points": 8, "saves": 6}], "fixtures": [{"event": 1, "id": 101, "finished": True}, {"event": 2, "id": 102, "finished": True}, {"event": 2, "id": 103, "finished": True}]}}}
     out = mod.build_full_season_history(snapshot=snapshot, detail=detail)
     assert out["coverage_gate"]["status"] == "PASS"
@@ -163,7 +163,7 @@ def test_full_history_identity_gate_fails_closed_without_fixture_catalog():
     snapshot = {
         "phase": {"current_gw": 2},
         "bootstrap": {
-            "events": [{"id": 1, "finished": True}],
+                "events": [{"id": 1, "finished": True, "data_checked": True}],
             "elements": [{"id": 10, "element_type": 1, "team": 1}],
         },
     }
@@ -182,7 +182,7 @@ def test_full_history_identity_gate_rejects_duplicate_player_fixture():
         "phase": {"current_gw": 2},
         "fixtures": [{"id": 101, "event": 1}],
         "bootstrap": {
-            "events": [{"id": 1, "finished": True}],
+            "events": [{"id": 1, "finished": True, "data_checked": True}],
             "elements": [{"id": 10, "element_type": 2, "team": 1}],
         },
     }
@@ -205,7 +205,7 @@ def test_v6_production_reconciliation_rejects_bad_fixture_identity():
         "generated_at": "2026-10-13T04:00:00Z",
         "bootstrap": {
             "elements": [{"id": 10, "element_type": 3, "team": 1}],
-            "events": [{"id": 1, "finished": True}],
+            "events": [{"id": 1, "finished": True, "data_checked": True}],
         },
         "fixtures": [{"id": 101, "event": 1, "finished": True}],
         "phase": {"current_gw": 2},
@@ -253,7 +253,7 @@ def test_v6_history_fails_closed_on_provisional_or_unfinished_official_gw():
         "phase": {"current_gw": 7},
         "bootstrap": {
             "elements": [{"id": 10, "element_type": 3, "team": 1}],
-            "events": [{"id": gw, "finished": gw < 6} for gw in range(1, 7)],
+            "events": [{"id": gw, "finished": gw < 6, "data_checked": gw < 6} for gw in range(1, 7)],
         },
         "fixtures": [
             {"id": 100 + gw, "event": gw, "finished": gw < 6, "finished_provisional": gw == 6}
@@ -273,6 +273,7 @@ def test_v6_history_fails_closed_on_provisional_or_unfinished_official_gw():
         assert result["as_of"]["historical_gws"] == [1, 2, 3, 4, 5, 6]
 
     snapshot["bootstrap"]["events"][-1]["finished"] = True
+    snapshot["bootstrap"]["events"][-1]["data_checked"] = True
     snapshot["fixtures"][-1]["finished"] = True
     for result in (
         report_prefetch._reconcile_full_history(snapshot, summaries),
@@ -283,10 +284,36 @@ def test_v6_history_fails_closed_on_provisional_or_unfinished_official_gw():
         assert result["coverage_gate"]["all_historical_gws_finalized"] is True
 
 
+def test_history_requires_official_data_checked_and_never_coerces_missing_minutes():
+    snapshot = {
+        "generated_at": "2026-11-06T15:23:46Z",
+        "phase": {"current_gw": 2},
+        "bootstrap": {
+            "elements": [{"id": 10, "element_type": 3, "team": 1}],
+            "events": [{"id": 1, "finished": True, "data_checked": False}],
+        },
+        "fixtures": [{"id": 101, "event": 1, "team_h": 1, "team_a": 2, "finished": True}],
+    }
+    summaries = {"10": {"history": [
+        {"fixture": 101, "round": 1, "minutes": 90, "total_points": 6},
+    ]}}
+    unchecked = report_prefetch._reconcile_full_history(snapshot, summaries)
+    assert unchecked["coverage_gate"]["status"] == "PARTIAL"
+    assert unchecked["coverage_gate"]["pending_historical_gws"] == [1]
+    assert unchecked["players"]["10"]["history"]["1"]["status"] == "PENDING"
+
+    snapshot["bootstrap"]["events"][0]["data_checked"] = True
+    summaries["10"]["history"][0].pop("minutes")
+    missing_minutes = report_prefetch._reconcile_full_history(snapshot, summaries)
+    assert missing_minutes["coverage_gate"]["status"] == "PARTIAL"
+    assert missing_minutes["coverage_gate"]["metric_identity_status"] == "PARTIAL"
+    assert missing_minutes["players"]["10"]["history"]["1"]["status"] == "UNAVAILABLE"
+
+
 def test_v6_gw1_to_gw6_target_is_next_official_event_not_current_gw():
     bootstrap = {
         "events": [
-            {"id": gw, "finished": gw < 6, "is_current": gw == 6,
+            {"id": gw, "finished": gw < 6, "data_checked": gw < 6, "is_current": gw == 6,
              "is_next": gw == 7}
             for gw in range(1, 8)
         ],
@@ -322,6 +349,7 @@ def test_v6_gw1_to_gw6_target_is_next_official_event_not_current_gw():
     assert out["coverage_gate"]["status"] == "PARTIAL"
     assert out["players"]["10"]["history"]["6"]["status"] == "PENDING"
     bootstrap["events"][5]["finished"] = True
+    bootstrap["events"][5]["data_checked"] = True
     fixture_rows[-1]["finished"] = True
     accepted = report_prefetch._reconcile_full_history(snapshot, summary)
     assert accepted["coverage_gate"]["status"] == "PASS"

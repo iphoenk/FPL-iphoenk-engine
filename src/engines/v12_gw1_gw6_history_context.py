@@ -1064,7 +1064,7 @@ def build_retrospective_context(
     focus_player_ids: Sequence[int] = (154, 40, 165),
     tactical_observation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Enrich GW1..6 without changing canonical projections or FPL finality."""
+    """Enrich the occurrence-bound history without changing projections."""
     if not _aware(report_slot):
         raise ValueError("report_slot must be timezone-aware to prevent future leakage")
     # Report slot identifies the immutable logical occurrence. Sources acquired
@@ -1073,7 +1073,19 @@ def build_retrospective_context(
     if observation_cutoff_at is not None and not _aware(observation_cutoff_at):
         raise ValueError("observation_cutoff_at must be timezone-aware")
     source_cutoff = observation_cutoff_at or report_slot
-    gw_ids = list(range(1, 7))
+    raw_gws = (full_history.get("as_of") or {}).get("historical_gws")
+    if raw_gws is None:
+        # Compatibility for pre-range advisory fixtures. Production V12
+        # supplies exact occurrence-bound as_of metadata.
+        gw_ids = list(range(1, 7))
+    else:
+        if (
+            not isinstance(raw_gws, list)
+            or any(not isinstance(gw, int) or isinstance(gw, bool) or gw <= 0 for gw in raw_gws)
+            or raw_gws != list(range(1, max(raw_gws, default=0) + 1))
+        ):
+            raise ValueError("full_history historical_gws must be contiguous positive integers")
+        gw_ids = list(raw_gws)
     players, available = _official_player_rows(bootstrap, full_history, gw_ids)
     understat_source = _attach_understat(players, understat, source_cutoff)
     matches, match_source = _fotmob_matches(fotmob, official_fixtures, gw_ids, source_cutoff)
@@ -1132,7 +1144,7 @@ def build_retrospective_context(
     )
     return {
         "contract": CONTRACT,
-        "planning_target": "GW7",
+        "planning_target": f"GW{max(gw_ids, default=0) + 1}",
         "historical_gws": gw_ids,
         "official_status": (full_history.get("coverage_gate") or {}).get("status", "UNAVAILABLE"),
         "official_players_in_universe": len(players),

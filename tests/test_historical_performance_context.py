@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+import pytest
+
 from src.engines.v12_gw1_gw6_history_context import build_retrospective_context
 
 SLOT = "2026-10-13T19:45:00+07:00"
@@ -106,6 +108,29 @@ def test_understat_joins_only_verified_source_native_identity_and_season_scope()
     assert ctx["source_health"]["understat"]["unmapped_provider_count"] == 1
     assert len(ctx["players"]) == 4
     assert ctx["expected_official_gw_slots"] == 24
+
+
+def test_retrospective_context_uses_occurrence_bound_gw1_to_gw9_range():
+    history = deepcopy(HISTORY)
+    history["as_of"] = {"planning_gw": 10, "historical_gws": list(range(1, 10))}
+    for player in history["players"].values():
+        for gw in range(1, 10):
+            player.setdefault("history", {}).setdefault(
+                str(gw),
+                {"status": "DNP", "aggregate": {"minutes": 0}, "fixture_count": 1},
+            )
+    ctx = build(full_history=history)
+    assert ctx["planning_target"] == "GW10"
+    assert ctx["historical_gws"] == list(range(1, 10))
+    assert ctx["expected_official_gw_slots"] == 36
+
+
+def test_retrospective_context_rejects_duplicate_or_unsorted_gw_identity():
+    for bad in ([1, 2, 2, 3], [1, 3, 2]):
+        history = deepcopy(HISTORY)
+        history["as_of"] = {"planning_gw": 4, "historical_gws": bad}
+        with pytest.raises(ValueError, match="contiguous positive integers"):
+            build(full_history=history)
 
 
 def test_future_source_and_future_coach_observation_excluded():

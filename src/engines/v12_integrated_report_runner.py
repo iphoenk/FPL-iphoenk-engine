@@ -1326,9 +1326,13 @@ def _analytics_production_acceptance(
     modal_count = resolution_audit["modal_probability_count"]
     low_resolution = resolution_audit["status"] != "FULL_RESOLUTION"
     historical_range = str(history.get("historical_range") or "")
+    target_planning_gw = int(history.get("target_planning_gw") or 0)
+    expected_historical_range = (
+        f"GW1-GW{target_planning_gw - 1}" if target_planning_gw > 1 else "UNAVAILABLE"
+    )
     historical_coverage_status = (
-        "PASS" if historical_range == "GW1-GW6" and history.get("all_historical_gws_finalized") is True
-        else "PARTIAL"
+        "PASS" if historical_range == expected_historical_range
+        and history.get("all_historical_gws_finalized") is True else "PARTIAL"
     )
     temporal_status = "PASS" if not any(
         "future" in str(reason).lower() or "leak" in str(reason).lower()

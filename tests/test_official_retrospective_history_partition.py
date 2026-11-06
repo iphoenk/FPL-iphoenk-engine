@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from src.runtime_v6.domains.report_plane.official_gw_history import retrospective_gw_partition
 
 
@@ -73,3 +75,33 @@ def test_gw4_to_gw6_retrospective_partitions_preserve_official_rows():
         assert part["players"]["1"]["fixtures"][0]["expected_goals"] == "0.25"
         assert part["players"]["2"]["aggregate"]["minutes"] == 0
         assert part["historical_predeadline_source_asof"] == "NOT_ATTESTED"
+
+
+def test_gw7_to_gw9_partitions_require_bound_universe_and_fixture_identity():
+    source = _source()
+    source["as_of"] = {"historical_gws": list(range(1, 10)), "planning_gw": 10}
+    source["universe"] = {"expected_players": 2, "element_ids": [1, 2]}
+    source["coverage_gate"]["finalized_historical_gws"] = list(range(1, 10))
+    for gw in (7, 8, 9):
+        source["players"]["1"]["history"][str(gw)] = {
+            "status": "FINAL", "fixture_count": 1,
+            "aggregate": {"minutes": 90, "total_points": gw},
+            "fixtures": [{"fixture": gw * 10, "round": gw, "minutes": 90}],
+        }
+        source["players"]["2"]["history"][str(gw)] = {
+            "status": "DNP", "fixture_count": 1,
+            "aggregate": {"minutes": 0},
+            "fixtures": [{"fixture": gw * 10, "round": gw, "minutes": 0}],
+        }
+        part = retrospective_gw_partition(source, gw)
+        assert part["coverage"]["status"] == "PASS"
+        assert part["coverage"]["universe_identity_status"] == "PASS"
+        assert part["coverage"]["fixture_row_identity_status"] == "PASS"
+
+    duplicate_identity = deepcopy(source)
+    duplicate_identity["players"]["1"]["element_id"] = 2
+    assert retrospective_gw_partition(duplicate_identity, 7)["coverage"]["status"] == "PARTIAL"
+
+    wrong_gw = deepcopy(source)
+    wrong_gw["players"]["1"]["history"]["7"]["fixtures"][0]["round"] = 99
+    assert retrospective_gw_partition(wrong_gw, 7)["coverage"]["status"] == "PARTIAL"

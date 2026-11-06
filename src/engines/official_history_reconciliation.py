@@ -88,7 +88,12 @@ def _event_catalog(snapshot: Mapping[str, Any]) -> dict[int, dict[str, Any]]:
             continue
         gw = _gw(row.get("id"))
         if gw is not None:
-            catalog[gw] = {"finished": row.get("finished") is True, "is_current": row.get("is_current") is True, "deadline_time": row.get("deadline_time")}
+            catalog[gw] = {
+                "finished": row.get("finished") is True,
+                "data_checked": row.get("data_checked") is True,
+                "is_current": row.get("is_current") is True,
+                "deadline_time": row.get("deadline_time"),
+            }
     return catalog
 
 def _numeric(value: Any) -> int | float | None:
@@ -111,10 +116,12 @@ def _aggregate_history_rows(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]
 
 def _classify_slot(*, gw: int, rows: Sequence[Mapping[str, Any]], fixture_rows: Sequence[Mapping[str, Any]], catalog: Mapping[int, Mapping[str, Any]]) -> str:
     event = dict(catalog.get(gw) or {})
-    if event.get("finished") is not True:
+    if event.get("finished") is not True or event.get("data_checked") is not True:
         return "PENDING"
     if rows:
-        minutes = sum(float(row.get("minutes") or 0) for row in rows)
+        if any(row.get("minutes") is None for row in rows):
+            return "UNAVAILABLE"
+        minutes = sum(float(row["minutes"]) for row in rows)
         return "DNP" if minutes <= 0 else "FINAL"
     return "DNP" if fixture_rows else "BLANK"
 
@@ -142,6 +149,7 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
     pending_historical_gws = [
         gw for gw in historical_gws
         if catalog.get(gw, {}).get("finished") is not True
+        or catalog.get(gw, {}).get("data_checked") is not True
         or not fixtures_by_event.get(gw)
         or any(row.get("finished") is not True for row in fixtures_by_event[gw])
     ]
@@ -149,6 +157,7 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
     players: dict[str, Any] = {}
     missing_slots: list[dict[str, int]] = []
     identity_anomalies: list[dict[str, Any]] = []
+    metric_anomalies: list[dict[str, Any]] = []
     verified_fixture_rows = 0
     for element in elements:
         element_id = _gw(element.get("id"))
@@ -179,6 +188,11 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
                 })
             elif fixture_catalog:
                 verified_fixture_rows += 1
+            if row.get("minutes") is None:
+                metric_anomalies.append({
+                    "element": element_id, "gw": row_gw,
+                    "fixture_id": fixture_id, "reason": "MISSING_MINUTES",
+                })
             if fixture_id is not None:
                 seen_player_fixtures.add(fixture_id)
             if row_gw is not None:
@@ -199,8 +213,9 @@ def build_full_season_history(*, snapshot: Mapping[str, Any], detail: Mapping[st
     expected_slots = len(element_ids) * len(historical_gws)
     available_slots = sum(int((row.get("coverage") or {}).get("available_gw_slots") or 0) for row in players.values())
     identity_complete = bool(fixture_catalog) and not identity_anomalies
-    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots and identity_complete and not pending_historical_gws else "PARTIAL"
-    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "fixture_identity_status": "PASS" if identity_complete else "PARTIAL", "verified_fixture_rows": verified_fixture_rows, "fixture_catalog_count": len(fixture_catalog), "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
+    metric_identity_complete = not metric_anomalies
+    status = "PASS" if len(players) == len(element_ids) and available_slots == expected_slots and not missing_slots and identity_complete and metric_identity_complete and not pending_historical_gws else "PARTIAL"
+    return {"contract": FULL_SEASON_HISTORY_CONTRACT, "generated_at": iso_now(), "as_of": {"canonical_timestamp": snapshot.get("generated_at"), "planning_gw": planning_gw, "historical_gws": historical_gws, "source": "OFFICIAL_FPL_ELEMENT_SUMMARY"}, "universe": {"expected_players": len(element_ids), "covered_players": len(players), "element_ids": element_ids, "coverage_ratio": round(len(players) / len(element_ids), 6) if element_ids else 0.0}, "coverage_gate": {"status": status, "expected_gw_slots": len(historical_gws), "available_gw_slots": available_slots, "expected_player_slots": expected_slots, "missing_records": missing_slots, "fixture_identity_status": "PASS" if identity_complete else "PARTIAL", "metric_identity_status": "PASS" if metric_identity_complete else "PARTIAL", "metric_identity_anomalies": metric_anomalies, "verified_fixture_rows": verified_fixture_rows, "fixture_catalog_count": len(fixture_catalog), "fixture_identity_anomalies": identity_anomalies, "pending_historical_gws": pending_historical_gws, "finalized_historical_gws": [gw for gw in historical_gws if gw not in pending_historical_gws], "all_historical_gws_finalized": not pending_historical_gws, "pending_never_coerced_to_zero": True, "dnp_and_blank_distinguished": True, "double_gameweeks_aggregate_fixture_rows": True}, "provenance": {"authority": "Official FPL", "endpoint_template": "element-summary/{element_id}/", "fixture_level_rows_preserved": True, "single_snapshot": True, "fallback_used": False}, "players": players}
 
 
 def run() -> dict[str, Any]:

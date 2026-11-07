@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-11-07T19:35:54.264263+00:00",
+  "effective_at": "2026-11-07T19:35:48.981606+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "02e2f3144f71d3a881a8ef96e12566f766f1093e9216af49e1f66fa1dd87bd51",
+    "57549de7ea0aed4d4da3fa8cd4e233e5e670fe21755f052e680e057e26b37a45",
+    "d3744a998d3973610fbb6a544093a4b69367aacc7511e8d7754dbbe45a1f5677"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_CHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494094",
+        "source_native_league_id": "4328",
+        "event_name": "Brighton and Hove Albion vs Brentford",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "10",
+        "timestamp": "2026-11-08T14:00:00",
+        "date_event": "2026-11-08",
+        "time_event": "14:00:00",
+        "home": {
+          "source_native_id": "133619",
+          "name": "Brighton and Hove Albion"
+        },
+        "away": {
+          "source_native_id": "134355",
+          "name": "Brentford"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494098",
+        "source_native_league_id": "4328",
+        "event_name": "Nottingham Forest vs Manchester City",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "10",
+        "timestamp": "2026-11-07T17:30:00",
+        "date_event": "2026-11-07",
+        "time_event": "17:30:00",
+        "home": {
+          "source_native_id": "133720",
+          "name": "Nottingham Forest"
+        },
+        "away": {
+          "source_native_id": "133613",
+          "name": "Manchester City"
+        },
+        "home_score": "3",
+        "away_score": "1",
+        "status": "FT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}

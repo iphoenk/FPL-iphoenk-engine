@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "candidate_state": "FROZEN",
+  "frozen_at": "2026-11-14T14:30:13.793105+00:00",
+  "logical_slot": "2026-11-14T21:30:00+07:00",
+  "observed_at": "2026-11-14T14:30:11.664331+00:00",
+  "run_id": "43605110196",
+  "run_attempt": "1",
+  "candidate_generation_id": "43605110196:1:a7b09d5fca94d793",
+  "publication_generation_id": null,
+  "manifest_input_sha256": "ba0db635d65180a7ce243ecc43e19a897e728437d1fe0017933ca4391a7d6ccd",
+  "candidate_tree_sha256": "a7b09d5fca94d7932dfeec043654c607be0667521e9c2620383bea13f849b5f4",
+  "artifact_count": 441,
+  "registry_fingerprint": "b4992fc496520e1b15b7088d8d3db62d6bd617c00f297993030cb454ecc80a39",
+  "registry_epoch": null,
+  "registry_generated_at": null,
+  "pruned_legacy_analytical_artifacts": [],
+  "artifact_catalog_record_count": 439,
+  "artifact_catalog_sha256": "1adb0cecbf9142657306146261a77411fb21f718d1926784f38882226a9a42c1",
+  "governance": {
+    "post_freeze_mutation_fail_closed": true,
+    "validator_read_only": true,
+    "failed_candidate_must_not_be_promoted": true
+  }
+}

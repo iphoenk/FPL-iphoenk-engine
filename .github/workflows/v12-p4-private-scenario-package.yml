@@ -151,7 +151,7 @@ jobs:
       # Stage-2 is public-safe; P1.7/MC remain encrypted AEAD private state.
       - name: Restore deterministic Stage-2 derived projection cache
         id: p4-stage2-cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: app/.cache/v12-stage2
           key: v12-stage2-derived-${{ runner.os }}-${{ hashFiles('src/engines/v12_stage2_derived_cache.py', 'src/models/historical_projection.py', 'src/engines/v12_contextual_dynamics.py', 'src/engines/v12_player_events.py', 'src/engines/v12_player_minutes.py', 'src/engines/v12_position_probability_components.py', 'src/engines/p0_decision_quality.py', 'src/models/v12_stage1_analytics.py', 'src/rules.py', 'config/intelligence/player_events.json', 'config/intelligence/player_minutes.json', 'config/intelligence/historical_priors.json', 'config/intelligence/v12_contextual_dynamics.json') }}-p4-${{ github.run_id }}
@@ -160,7 +160,7 @@ jobs:
 
       - name: Restore encrypted P1.7 and MC decision caches
         id: p4-private-cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             app/.cache/v12-p17

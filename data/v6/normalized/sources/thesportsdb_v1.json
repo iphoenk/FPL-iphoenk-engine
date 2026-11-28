@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "normalization_version": "V6_NOAUTH_SOURCE_NATIVE_1",
+  "source_id": "thesportsdb_v1",
+  "generated_at": "2026-11-28T04:11:58.437906+00:00",
+  "effective_at": "2026-11-28T04:11:56.052687+00:00",
+  "canonical": true,
+  "semantic_class": "NORMALIZED_FACT",
+  "authority": "THESPORTSDB",
+  "source_snapshot_ids": [
+    "922390832b146c5052f0ad59283fb74a490fb9ada00d2ab45589414019d67371",
+    "d53bc329e0969822ccda52e962af580346dc629ad9adc97208c5bf4b73b7331c",
+    "dec91553a2209a89e7fbf366d5bdfd19f915501830084ba539fcd1931ce46ac1"
+  ],
+  "source_health": "GREEN",
+  "source_effective_state": "LIVE_UNCHANGED",
+  "current_run_action": "FETCHED",
+  "normalization_status": "NORMALIZED",
+  "record_count": 3,
+  "record_groups": {
+    "competition": [
+      {
+        "source_native_id": "4328",
+        "name": "English Premier League",
+        "alternate_name": "Premier League, EPL, England",
+        "sport": "Soccer",
+        "country": "England"
+      }
+    ],
+    "events": [
+      {
+        "source_native_id": "2494110",
+        "source_native_league_id": "4328",
+        "event_name": "Manchester United vs Brentford",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "12",
+        "timestamp": "2026-11-28T15:00:00",
+        "date_event": "2026-11-28",
+        "time_event": "15:00:00",
+        "home": {
+          "source_native_id": "133612",
+          "name": "Manchester United"
+        },
+        "away": {
+          "source_native_id": "134355",
+          "name": "Brentford"
+        },
+        "home_score": null,
+        "away_score": null,
+        "status": "NS",
+        "request_role": "UPCOMING",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      },
+      {
+        "source_native_id": "2494118",
+        "source_native_league_id": "4328",
+        "event_name": "Nottingham Forest vs Chelsea",
+        "league_name": "English Premier League",
+        "season": "2026-2027",
+        "round": "12",
+        "timestamp": "2026-11-27T20:00:00",
+        "date_event": "2026-11-27",
+        "time_event": "20:00:00",
+        "home": {
+          "source_native_id": "133720",
+          "name": "Nottingham Forest"
+        },
+        "away": {
+          "source_native_id": "133610",
+          "name": "Chelsea"
+        },
+        "home_score": "3",
+        "away_score": "2",
+        "status": "FT",
+        "request_role": "PAST",
+        "official_fixture_id": null,
+        "identity_status": "UNMAPPED"
+      }
+    ]
+  },
+  "governance": {
+    "data_only": true,
+    "source_native_records_preserved": true,
+    "cross_source_synthesis": false,
+    "silent_fuzzy_identity_join": false,
+    "decision_authority": "NONE",
+    "prediction_authority": "NONE",
+    "optimizer_authority": "NONE",
+    "may_override_official_fpl": false,
+    "no_auth_public_source": true,
+    "private_secret_required": false
+  },
+  "authority_ceiling": "SECONDARY",
+  "record_semantics": {
+    "competition": "SECONDARY_PROVIDER_METADATA",
+    "events": "SECONDARY_FIXTURE_EVENT_METADATA_REQUIRES_OFFICIAL_CROSSCHECK"
+  }
+}
